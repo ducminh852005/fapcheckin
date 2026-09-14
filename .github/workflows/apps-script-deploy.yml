@@ -1,0 +1,40 @@
+name: Deploy Apps Script
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps-script/**' # Chỉ trigger khi code trong thư mục apps-script thay đổi
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Clasp
+        run: npm install -g @google/clasp
+
+      - name: Setup Clasp Auth
+        env:
+          CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
+        run: |
+          echo "$CLASP_TOKEN" > ~/.clasprc.json
+
+      - name: Setup .clasp.json
+        working-directory: apps-script
+        run: |
+          # Đổi tên file clasp.json thành .clasp.json nếu bạn lưu trong repo là clasp.json
+          mv clasp.json .clasp.json
+
+      - name: Push to Apps Script
+        working-directory: apps-script
+        run: clasp push -f

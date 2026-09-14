@@ -1,0 +1,403 @@
+openapi: 3.0.3
+info:
+  title: FAP Check-in API
+  description: |
+    API documentation for FAP Check-in app (Flutter for Teachers, Web for Students).
+    Note: The actual implementation uses Google Apps Script Web App with a single endpoint and an `action` parameter.
+    Each route below conceptually corresponds to a specific `action` payload sent to the single exec URL.
+    All responses use a standardized JSON envelope containing `success`, `data`, and `error`.
+  version: 1.0.0
+servers:
+  - url: https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
+    description: Google Apps Script Web App
+paths:
+  /auth/login:
+    post:
+      summary: Đăng nhập
+      description: Apps Script Action -> `action=login`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "login"
+                idToken:
+                  type: string
+                  description: Google ID Token
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+                
+  /teacher/classes:
+    post:
+      summary: Lấy danh sách lớp học của giảng viên
+      description: Apps Script Action -> `action=getClasses`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "getClasses"
+                teacherMemberCode:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassSectionListResponse'
+
+  /teacher/sessions:
+    post:
+      summary: Mở phiên điểm danh
+      description: Apps Script Action -> `action=startSession`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "startSession"
+                classCode:
+                  type: string
+                slotCode:
+                  type: string
+                teacherIp:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartSessionResponse'
+
+  /teacher/sessions/roster:
+    post:
+      summary: Lấy danh sách điểm danh hiện tại của phiên
+      description: Apps Script Action -> `action=getRoster`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "getRoster"
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterListResponse'
+
+  /teacher/sessions/manual-checkin:
+    post:
+      summary: Điểm danh tay cho sinh viên
+      description: Apps Script Action -> `action=manualCheckin`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "manualCheckin"
+                sessionId:
+                  type: string
+                rollNumber:
+                  type: string
+                status:
+                  type: string
+                  enum: [Present, Late, Absent, ManualByGV]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+
+  /teacher/classes/stats:
+    post:
+      summary: Lấy thống kê chuyên cần của lớp
+      description: Apps Script Action -> `action=getStats`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "getStats"
+                classCode:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /student/checkin:
+    post:
+      summary: Sinh viên quét mã QR điểm danh
+      description: Apps Script Action -> `action=checkin`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "checkin"
+                qrToken:
+                  type: string
+                studentIp:
+                  type: string
+                rollNumber:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceRecordResponse'
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    ClassSectionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassSection'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    StartSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            session:
+              $ref: '#/components/schemas/AttendanceSession'
+            qrToken:
+              type: string
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    RosterListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              student:
+                $ref: '#/components/schemas/Student'
+              record:
+                $ref: '#/components/schemas/AttendanceRecord'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    AttendanceRecordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AttendanceRecord'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    GenericResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    StatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              rollNumber:
+                type: string
+              attendancePercentage:
+                type: number
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    # Entity Schemas based on ERD
+    User:
+      type: object
+      properties:
+        memberCode:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [TEACHER, STUDENT]
+
+    Teacher:
+      type: object
+      properties:
+        memberCode:
+          type: string
+
+    Student:
+      type: object
+      properties:
+        memberCode:
+          type: string
+        rollNumber:
+          type: string
+        email:
+          type: string
+
+    ClassSection:
+      type: object
+      properties:
+        classCode:
+          type: string
+        subjectName:
+          type: string
+        credits:
+          type: integer
+        room:
+          type: string
+        studentCount:
+          type: integer
+        teacherMemberCode:
+          type: string
+
+    Slot:
+      type: object
+      properties:
+        slotCode:
+          type: string
+        period:
+          type: string
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+
+    Enrollment:
+      type: object
+      properties:
+        rollNumber:
+          type: string
+        classCode:
+          type: string
+        enrollmentDate:
+          type: string
+          format: date
+
+    AttendanceSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        classCode:
+          type: string
+        sessionDate:
+          type: string
+          format: date
+        slotCode:
+          type: string
+        sessionStatus:
+          type: string
+          enum: [open, closed, expired]
+
+    AttendanceRecord:
+      type: object
+      properties:
+        recordId:
+          type: string
+        rollNumber:
+          type: string
+        sessionId:
+          type: string
+        checkinTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Present, Late, Absent, ManualByGV]
+        networkVerificationResult:
+          type: string
