@@ -72,13 +72,13 @@ lib/
 Không cần MVVM cho một trang chỉ làm đúng một việc. Toàn bộ là HTML/CSS/JS thuần, được chính Backend (Apps Script) phục vụ nên không tốn thêm chi phí hosting hay deploy riêng.
 
 ```
-checkin-web/
-├─ index.html      // khung trang + nút "Đăng nhập bằng Google"
-├─ app.js          // đọc token từ URL, gọi GIS, lấy IP, POST /checkin
-└─ style.css       // giao diện tối giản, đọc tốt trên màn hình nhỏ
+apps-script/
+├─ Code.gs
+├─ index.html      // Toàn bộ logic giao diện Web, CSS, và JS được gộp gọn trong file này
+└─ ... 
 
 // Phục vụ bởi Backend: doGet(e) trả HtmlService khi có ?page=checkin&token=...
-// (thay thế cho việc host một static site riêng)
+// (thay thế cho việc host một static site riêng ở thư mục checkin-web cũ)
 ```
 
 | Thành phần | Vai trò |

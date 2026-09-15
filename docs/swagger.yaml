@@ -8,7 +8,7 @@ info:
     All responses use a standardized JSON envelope containing `success`, `data`, and `error`.
   version: 1.0.0
 servers:
-  - url: https://script.google.com/macros/library/d/1R_B1d7t6nAwnNv0yZsoxG419b5cxiZ154j0PIRvIFKG6IqjWdKinSFMP/4
+  - url: https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec
     description: Google Apps Script Web App
 paths:
   /auth/login:

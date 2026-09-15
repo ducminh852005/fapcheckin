@@ -39,3 +39,29 @@ function doPost(e) {
     });
   }
 }
+
+/**
+ * Entry point for google.script.run from HtmlService (Web Sinh viên)
+ * Trả về raw Object thay vì TextOutput
+ */
+function handleRpc(action, params) {
+  var handlers = {
+    'login': AuthService.login,
+    'checkin': StudentService.checkin
+  };
+  
+  try {
+    if (!action) throwError('MISSING_ACTION', 'Thiếu action');
+    var handler = handlers[action];
+    if (!handler) throwError('UNKNOWN_ACTION', 'Action không hợp lệ: ' + action);
+    
+    var data = handler(params || {});
+    return { success: true, data: data, error: null };
+  } catch (err) {
+    return { 
+      success: false, 
+      data: null, 
+      error: { code: err.code || 'UNKNOWN_ERROR', message: err.message || err.toString() } 
+    };
+  }
+}
