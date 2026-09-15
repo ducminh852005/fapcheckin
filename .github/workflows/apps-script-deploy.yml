@@ -36,6 +36,11 @@ jobs:
           # Đổi tên file clasp.json thành .clasp.json nếu bạn lưu trong repo là clasp.json
           mv clasp.json .clasp.json
 
-      - name: Push to Apps Script
+      - name: Push and Deploy to Apps Script
         working-directory: apps-script
-        run: clasp push -f
+        run: |
+          # 1. Push code lên (lưu file)
+          clasp push -f
+          
+          # 2. Tạo phiên bản mới và tự động cập nhật URL Web App hiện tại
+          clasp deploy -i AKfycbyGTKgonXON98PmgcywwRkHL8batiVnp2siHUOI9HzE-u2UaXzNoEb_W8mQr_YkFmRl -d "Auto-deployed via Github Actions"
