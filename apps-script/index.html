@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FAP Check-in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --primary: #f05123;
+      /* FPT Orange */
+      --primary-dark: #d3401b;
+      --bg: #f9fafb;
+      --surface: #ffffff;
+      --text: #111827;
+      --text-light: #6b7280;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      background: var(--surface);
+      width: 100%;
+      max-width: 400px;
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      box-sizing: border-box;
+      text-align: center;
+      margin: 20px;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      margin: 0 auto 24px;
+      box-shadow: 0 4px 14px rgba(240, 81, 35, 0.3);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    p.subtitle {
+      color: var(--text-light);
+      margin: 0 0 32px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Loader */
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .status-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .error-text {
+      color: var(--error);
+    }
+
+    .success-text {
+      color: var(--success);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: background 0.2s;
+    }
+
+    .btn:active {
+      background: var(--primary-dark);
+    }
+
+    /* Google button wrapper to center it */
+    .g_id_signin {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="logo">FAP</div>
+
+    <!-- View: Kiểm tra trạng thái / Loading -->
+    <div id="view-loading" class="view active">
+      <h1>Đang xử lý...</h1>
+      <p class="subtitle">Đang thiết lập kết nối an toàn</p>
+      <div class="loader"></div>
+    </div>
+
+    <!-- View: Đăng nhập -->
+    <div id="view-login" class="view">
+      <h1>Đăng nhập Sinh viên</h1>
+      <p class="subtitle">Vui lòng đăng nhập bằng email nhà trường (@fpt.edu.vn) để tiếp tục điểm danh.</p>
+
+      <!-- CẤU HÌNH GOOGLE CLIENT ID TẠI ĐÂY -->
+      <div id="g_id_onload" data-client_id="758587877856-k1v7fh21kjan06cda3v6me2rjtvpaajq.apps.googleusercontent.com"
+        data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+        data-text="signin_with" data-size="large" data-logo_alignment="left">
+      </div>
+
+      <p style="margin-top: 16px; font-size: 12px; color: #ef4444;">*Lưu ý: Thay YOUR_GOOGLE_CLIENT_ID bằng ID thật của
+        dự án trên Google Cloud Console để nút đăng nhập hoạt động.</p>
+    </div>
+
+    <!-- View: Thành công -->
+    <div id="view-success" class="view">
+      <div class="status-icon success-text">✅</div>
+      <h1>Thành công!</h1>
+      <p class="subtitle">Bạn đã điểm danh thành công.</p>
+      <div id="student-info"
+        style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500;"></div>
+      <button class="btn" onclick="window.close()">Đóng cửa sổ</button>
+    </div>
+
+    <!-- View: Lỗi -->
+    <div id="view-error" class="view">
+      <div class="status-icon error-text">❌</div>
+      <h1 class="error-text">Thất bại</h1>
+      <p id="error-msg" class="subtitle">Đã xảy ra lỗi không xác định.</p>
+      <button class="btn" onclick="retryCheckin()" id="btn-retry" style="display:none;">Thử lại</button>
+      <button class="btn" onclick="logout()" id="btn-logout"
+        style="background: #6b7280; display:none; margin-top: 12px;">Đăng xuất & Thử lại</button>
+    </div>
+  </div>
+
+  <script>
+    // Utils
+    function showView(id) {
+      document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+      document.getElementById('view-' + id).classList.add('active');
+    }
+
+    function showError(message, canRetry = false, canLogout = false) {
+      document.getElementById('error-msg').innerText = message;
+      document.getElementById('btn-retry').style.display = canRetry ? 'block' : 'none';
+      document.getElementById('btn-logout').style.display = canLogout ? 'block' : 'none';
+      showView('error');
+    }
+
+    function logout() {
+      localStorage.removeItem('fap_session');
+      localStorage.removeItem('fap_user');
+      window.location.reload();
+    }
+
+    // Luồng ứng dụng
+    var qrToken = new URLSearchParams(window.location.search).get('token');
+
+    window.onload = function () {
+      var session = localStorage.getItem('fap_session');
+      var user = JSON.parse(localStorage.getItem('fap_user') || 'null');
+
+      if (!qrToken) {
+        showError('Không tìm thấy mã điểm danh. Vui lòng quét lại QR từ máy chiếu.');
+        return;
+      }
+
+      if (!session || !user) {
+        showView('login');
+      } else {
+        processCheckin(qrToken, user.rollNumber);
+      }
+    };
+
+    // Callback sau khi Google Login Popup trả về thành công
+    function handleGoogleLogin(response) {
+      var idToken = response.credential;
+      showView('loading');
+
+      // Gọi lên Backend (Code.gs -> handleRpc) để xác thực token và cấp session
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res.success) {
+            // Lưu local
+            localStorage.setItem('fap_session', res.data.token);
+            localStorage.setItem('fap_user', JSON.stringify(res.data.user));
+            // Tiến hành checkin
+            processCheckin(qrToken, res.data.user.rollNumber);
+          } else {
+            showError(res.error.message, false, false);
+          }
+        })
+        .withFailureHandler(function (err) {
+          showError('Lỗi kết nối máy chủ: ' + err.message);
+        })
+        .handleRpc('login', { idToken: idToken });
+    }
+
+    // Hàm thực hiện Checkin
+    function processCheckin(token, rollNumber) {
+      showView('loading');
+
+      // Lấy IP công cộng của điện thoại sinh viên
+      fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => {
+          var studentIp = data.ip;
+
+          // Gửi request checkin qua google.script.run
+          google.script.run
+            .withSuccessHandler(function (res) {
+              if (res.success) {
+                var user = JSON.parse(localStorage.getItem('fap_user'));
+                document.getElementById('student-info').innerText = user.fullName + ' - ' + user.rollNumber;
+                showView('success');
+              } else {
+                showError(res.error.message, true, true);
+              }
+            })
+            .withFailureHandler(function (err) {
+              showError('Lỗi mạng khi điểm danh: ' + err.message, true);
+            })
+            .handleRpc('checkin', { qrToken: token, studentIp: studentIp, rollNumber: rollNumber });
+
+        })
+        .catch(err => {
+          showError('Không thể lấy địa chỉ IP. Vui lòng kiểm tra lại kết nối mạng (Tắt VPN/4G).', true);
+        });
+    }
+
+    function retryCheckin() {
+      var user = JSON.parse(localStorage.getItem('fap_user') || 'null');
+      if (user) {
+        processCheckin(qrToken, user.rollNumber);
+      } else {
+        window.location.reload();
+      }
+    }
+  </script>
+</body>
+
+</html>
