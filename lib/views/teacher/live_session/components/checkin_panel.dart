@@ -530,7 +530,7 @@ class _CheckinTable extends StatelessWidget {
                     _DataCell(
                       center: true,
                       child: s.status == CheckinStatus.unchecked
-                          ? _MarkPresentButton()
+                          ? _MarkPresentButton(studentId: s.studentId, vm: vm)
                           : IconButton(
                               onPressed: () {},
                               icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textTertiary),
@@ -709,6 +709,10 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _MarkPresentButton extends StatefulWidget {
+  final String studentId;
+  final LiveSessionViewModel vm;
+  const _MarkPresentButton({required this.studentId, required this.vm});
+
   @override
   State<_MarkPresentButton> createState() => _MarkPresentButtonState();
 }
@@ -722,7 +726,9 @@ class _MarkPresentButtonState extends State<_MarkPresentButton> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          widget.vm.manualCheckin(widget.studentId);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
