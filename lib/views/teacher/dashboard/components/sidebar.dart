@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:fapcheckin/app/app_router.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
-import 'package:fapcheckin/views/auth/login_screen.dart' as fap_login;
 
 class Sidebar extends StatelessWidget {
   const Sidebar({super.key});
@@ -263,14 +265,6 @@ class _UserCard extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const fap_login.LoginScreen(),
-                    ),
-                  );
-                },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
@@ -287,6 +281,12 @@ class _UserCard extends StatelessWidget {
                     color: AppColors.error,
                   ),
                 ),
+                onPressed: () async {
+                  context.read<DashboardViewModel>().clearTeacherInfo();
+                  await context.read<AuthViewModel>().signOut();
+                  if (!context.mounted) return;
+                  context.go(AppRoutes.login);
+                },
               ),
             ],
           ),

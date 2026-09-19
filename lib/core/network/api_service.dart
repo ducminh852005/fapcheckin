@@ -5,6 +5,7 @@ import 'api_result.dart';
 
 class ApiService {
   final Dio _dio;
+  String? _sessionToken;
 
   // Thay bằng URL Web App thực tế
   static const String _baseUrl = 'https://script.google.com/macros/s/AKfycbyGTKgonXON98PmgcywwRkHL8batiVnp2siHUOI9HzE-u2UaXzNoEb_W8mQr_YkFmRl/exec';
@@ -21,6 +22,14 @@ class ApiService {
           validateStatus: (status) => status != null && status < 500,
         ));
 
+  void setSessionToken(String token) {
+    _sessionToken = token;
+  }
+
+  void clearSessionToken() {
+    _sessionToken = null;
+  }
+
   Future<ApiResult<T>> postAction<T>(
     String action, {
     Map<String, dynamic>? payload,
@@ -29,6 +38,7 @@ class ApiService {
     try {
       final requestBody = {
         'action': action,
+        if (_sessionToken != null) 'sessionToken': _sessionToken,
         if (payload != null) ...payload,
       };
 
