@@ -3,11 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/data/models/class_section_model.dart';
+import 'package:fapcheckin/data/models/class_session.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
+import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'components/activity_log_panel.dart';
 import 'components/attendance_chart.dart';
 import 'components/class_card.dart';
 import 'components/stat_card.dart';
+
+
 
 class DashboardBody extends StatelessWidget {
   const DashboardBody({super.key});
@@ -113,6 +118,19 @@ class _SchedulePanel extends StatelessWidget {
   final DashboardViewModel vm;
   const _SchedulePanel({required this.vm});
 
+  /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
+  ClassSession _toClassSession(ClassSectionModel model, int index) {
+    return ClassSession(
+      courseCode: model.classCode,
+      courseName: model.subjectName,
+      slot: (index + 1).toString(),
+      timeRange: '-- : --',
+      room: model.room,
+      studentCount: model.studentCount,
+      status: SessionStatus.notStarted,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -157,7 +175,7 @@ class _SchedulePanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
                 child: Text(
-                  '${vm.classSessions.length} lớp',
+                  '${vm.classes.length} lớp',
                   style: AppTextStyles.codeSm.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -167,7 +185,7 @@ class _SchedulePanel extends StatelessWidget {
               _IconButton(
                 icon: Icons.refresh,
                 tooltip: 'Làm mới lịch',
-                onTap: () {},
+                onTap: () => vm.loadClasses(),
               ),
               const SizedBox(width: 4),
               _IconButton(
@@ -178,18 +196,81 @@ class _SchedulePanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // Class cards
-          ...vm.classSessions.map(
-            (session) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ClassCard(session: session),
+          // Body: loading / error / empty / class cards
+          if (vm.isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (vm.status == ViewStatus.error)
+            _ErrorRetry(
+              message: vm.errorMessage ?? 'Lỗi tải dữ liệu',
+              onRetry: () => vm.loadClasses(),
+            )
+          else if (vm.classes.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Text(
+                  'Không có lớp học hôm nay.',
+                  style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            )
+          else
+            ...vm.classes.asMap().entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: ClassCard(
+                  session: _toClassSession(entry.value, entry.key),
+                  onStart: () async {
+                    final liveVm = context.read<LiveSessionViewModel>();
+                    await liveVm.startSession(
+                      classSection: entry.value,
+                      slotCode: (entry.key + 1).toString(),
+                      teacherIp: '127.0.0.1', // Mock IP as per docs
+                    );
+                    vm.navigate('diem-danh-qr');
+                  },
+                ),
+              ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorRetry extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorRetry({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Text(
+            message,
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.statusAbsent),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Thử lại'),
           ),
         ],
       ),
     );
   }
 }
+
 
 class _IconButton extends StatefulWidget {
   final IconData icon;

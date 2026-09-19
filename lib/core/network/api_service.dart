@@ -7,6 +7,7 @@ import 'api_result.dart';
 
 class ApiService {
   final Dio _dio;
+  String? _sessionToken;
 
   // Thay bằng URL Web App thực tế
   static const String _baseUrl =
@@ -26,13 +27,25 @@ class ApiService {
         ),
       );
 
+  void setSessionToken(String token) {
+    _sessionToken = token;
+  }
+
+  void clearSessionToken() {
+    _sessionToken = null;
+  }
+
   Future<ApiResult<T>> postAction<T>(
     String action, {
     Map<String, dynamic>? payload,
     T Function(dynamic)? fromJsonT,
   }) async {
     try {
-      final requestBody = {'action': action, if (payload != null) ...payload};
+      final requestBody = {
+        'action': action,
+        if (_sessionToken != null) 'sessionToken': _sessionToken,
+        if (payload != null) ...payload,
+      };
 
       // Đảm bảo gửi chuỗi JSON thô
       final response = await _dio.post('', data: jsonEncode(requestBody));

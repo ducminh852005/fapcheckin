@@ -5,6 +5,7 @@ import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
+import 'package:fapcheckin/views/teacher/class_management/dialogs/create_class_dialog.dart';
 
 class TodayClassesSection extends StatelessWidget {
   const TodayClassesSection({super.key});
@@ -49,9 +50,34 @@ class TodayClassesSection extends StatelessWidget {
                 ),
               ],
             ),
-            Text(
-              '2 ca giảng dạy theo thời khóa biểu',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            Row(
+              children: [
+                Text(
+                  '2 ca giảng dạy theo thời khóa biểu',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const CreateClassDialog(),
+                    );
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Tạo lịch học mới'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    textStyle: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
