@@ -6,8 +6,9 @@ import 'package:fapcheckin/data/models/class_session.dart';
 
 class ClassCard extends StatefulWidget {
   final ClassSession session;
+  final VoidCallback? onStart;
 
-  const ClassCard({super.key, required this.session});
+  const ClassCard({super.key, required this.session, this.onStart});
 
   @override
   State<ClassCard> createState() => _ClassCardState();
@@ -114,7 +115,7 @@ class _ClassCardState extends State<ClassCard> {
                   children: [
                     _StatusBadge(status: s.status),
                     const SizedBox(height: 8),
-                    _ActionButton(status: s.status),
+                    _ActionButton(status: s.status, onStart: widget.onStart),
                   ],
                 ),
               ],
@@ -329,7 +330,8 @@ class _StatusBadgeState extends State<_StatusBadge>
 
 class _ActionButton extends StatelessWidget {
   final SessionStatus status;
-  const _ActionButton({required this.status});
+  final VoidCallback? onStart;
+  const _ActionButton({required this.status, this.onStart});
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +340,7 @@ class _ActionButton extends StatelessWidget {
         icon: Icons.visibility_outlined,
         label: 'Xem phiên',
         primary: true,
-        onTap: () {},
+        onTap: onStart ?? () {},
       );
     }
     return _HoverButton(
@@ -346,7 +348,7 @@ class _ActionButton extends StatelessWidget {
       iconColor: AppColors.primary,
       label: 'Mở điểm danh',
       primary: false,
-      onTap: () {},
+      onTap: onStart ?? () {},
     );
   }
 }

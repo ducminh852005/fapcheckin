@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
 /// Left column: class info + QR code + session controls
 class QrPanel extends StatelessWidget {
@@ -281,10 +283,14 @@ class _QrCodeDisplay extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: CustomPaint(
-                  size: const Size(220, 220),
-                  painter: _QrCodePainter(),
-                ),
+                child: vm.qrToken.isEmpty 
+                    ? const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()))
+                    : QrImageView(
+                        data: vm.qrToken,
+                        version: QrVersions.auto,
+                        size: 220.0,
+                        backgroundColor: Colors.white,
+                      ),
               ),
               const SizedBox(height: 16),
               // Circular countdown timer bar
@@ -651,7 +657,10 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          context.read<LiveSessionViewModel>().resetSession();
+          context.read<DashboardViewModel>().navigate('tong-quan');
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: double.infinity,

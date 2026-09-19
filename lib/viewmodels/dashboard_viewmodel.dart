@@ -1,17 +1,134 @@
 import 'package:flutter/material.dart';
-import '../data/models/class_session.dart';
 import '../data/models/activity_log.dart';
+import '../data/models/class_section_model.dart';
+import '../data/repositories/teacher_repository.dart';
+import '../core/network/api_result.dart';
+import 'live_session_viewmodel.dart';
 
 class DashboardViewModel extends ChangeNotifier {
-  // Teacher info
-  final String teacherName = 'Nguyễn Văn An';
-  final String teacherEmail = 'an.nguyenvan@fpt.edu.vn';
-  final String teacherInitials = 'NA';
-  final String semester = 'Fall 2023';
-  final String campus = 'Hòa Lạc';
-  final String todayLabel = 'Thứ Ba, 24/10/2023';
+  final TeacherRepository _repository;
 
-  // Countdown timer
+  DashboardViewModel(this._repository);
+
+  // ── Teacher info (filled after login / from auth state) ─────────────────────
+  String _teacherName = '';
+  String get teacherName => _teacherName.isNotEmpty ? _teacherName : 'Giảng viên';
+
+  String _teacherEmail = '';
+  String get teacherEmail => _teacherEmail;
+
+  String get teacherInitials {
+    if (_teacherName.isEmpty) return 'GV';
+    final parts = _teacherName.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
+    return _teacherName.substring(0, 2).toUpperCase();
+  }
+
+  String _teacherMemberCode = '';
+  String get teacherMemberCode => _teacherMemberCode;
+
+  String semester = 'Fall 2023';
+  String campus = 'Hòa Lạc';
+
+  String get todayLabel {
+    final now = DateTime.now();
+    const days = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
+    final dayName = days[now.weekday - 1];
+    return '$dayName, ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+  }
+
+  // Set teacher info after login
+  void setTeacherInfo({
+    required String name,
+    required String email,
+    required String memberCode,
+  }) {
+    _teacherName = name;
+    _teacherEmail = email;
+    _teacherMemberCode = memberCode;
+    notifyListeners();
+  }
+
+  void clearTeacherInfo() {
+    _teacherName = '';
+    _teacherEmail = '';
+    _teacherMemberCode = '';
+    _classes = [];
+    _status = ViewStatus.idle;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  // ── Status ──────────────────────────────────────────────────────────────────
+
+  ViewStatus _status = ViewStatus.idle;
+  ViewStatus get status => _status;
+  bool get isLoading => _status == ViewStatus.loading;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // ── Classes ─────────────────────────────────────────────────────────────────
+
+  List<ClassSectionModel> _classes = [];
+  List<ClassSectionModel> get classes => _classes;
+
+  // Derived stats from classes list
+  int get totalClassesToday => _classes.length;
+  int get morningClasses =>
+      _classes.where((c) => _isMorning(c.classCode)).length;
+  int get afternoonClasses => totalClassesToday - morningClasses;
+
+  // These come from LiveSessionViewModel in reality, but kept here for the
+  // dashboard summary card
+  int _completedSessions = 0;
+  int get completedSessions => _completedSessions;
+  int get totalSessions => totalClassesToday;
+  double get sessionProgress =>
+      totalSessions == 0 ? 0 : completedSessions / totalSessions;
+
+  // Present students (aggregate from roster — updated when session loads)
+  int _presentStudents = 0;
+  int get presentStudents => _presentStudents;
+  int get totalStudents =>
+      _classes.fold(0, (sum, c) => sum + c.studentCount);
+  double get presentRate =>
+      totalStudents == 0 ? 0 : presentStudents / totalStudents;
+  double get avgAttendance => 0.0; // requires historical data not in MVP
+  double get prevWeekAttendance => 0.0;
+
+  // Active session info (pass-through from LiveSessionViewModel if active)
+  String _activeSessionCourse = '';
+  String get activeSessionCourse => _activeSessionCourse;
+  String _activeSessionGroup = '';
+  String get activeSessionGroup => _activeSessionGroup;
+  String _activeSessionRoom = '';
+  String get activeSessionRoom => _activeSessionRoom;
+  int _activeSessionScanned = 0;
+  int get activeSessionScanned => _activeSessionScanned;
+  int _activeSessionTotal = 0;
+  int get activeSessionTotal => _activeSessionTotal;
+
+  void updateActiveSession({
+    required String course,
+    required String group,
+    required String room,
+    required int scanned,
+    required int total,
+    required int present,
+  }) {
+    _activeSessionCourse = course;
+    _activeSessionGroup = group;
+    _activeSessionRoom = room;
+    _activeSessionScanned = scanned;
+    _activeSessionTotal = total;
+    _presentStudents = present;
+    notifyListeners();
+  }
+
+  // Countdown timer (kept for UI compat — ticks via MainScreen)
   int _remainingSeconds = 18 * 60 + 42;
   int get remainingSeconds => _remainingSeconds;
 
@@ -28,117 +145,76 @@ class DashboardViewModel extends ChangeNotifier {
     }
   }
 
-  // Stats
-  int get totalClassesToday => 4;
-  int get morningClasses => 2;
-  int get afternoonClasses => 2;
-  int get completedSessions => 3;
-  int get totalSessions => 4;
-  double get sessionProgress => completedSessions / totalSessions;
-  int get presentStudents => 126;
-  int get totalStudents => 147;
-  double get presentRate => presentStudents / totalStudents;
-  double get avgAttendance => 0.914;
-  double get prevWeekAttendance => 0.893;
+  // ── Weekly chart (static for now — requires historical API not in MVP) ──────
 
-  // Active session info
-  String get activeSessionCourse => 'SWP391';
-  String get activeSessionGroup => 'Nhóm SE1601';
-  String get activeSessionRoom => '302';
-  int get activeSessionScanned => 28;
-  int get activeSessionTotal => 35;
-
-  // Class sessions
-  List<ClassSession> get classSessions => const [
-    ClassSession(
-      courseCode: 'SWP391',
-      courseName: 'Dự án Phát triển Phần mềm ứng dụng',
-      slot: '1-2',
-      timeRange: '07:30 - 09:50',
-      room: '302',
-      studentCount: 35,
-      status: SessionStatus.active,
-      scannedCount: 28,
-    ),
-    ClassSession(
-      courseCode: 'PRN212',
-      courseName: 'Lập trình C# .NET ứng dụng',
-      slot: '3-4',
-      timeRange: '10:00 - 12:20',
-      room: '405',
-      studentCount: 32,
-      status: SessionStatus.notStarted,
-    ),
-    ClassSession(
-      courseCode: 'DBI202',
-      courseName: 'Cơ sở dữ liệu nâng cao (SQL Server)',
-      slot: '5-6',
-      timeRange: '13:00 - 15:20',
-      room: '201',
-      roomType: 'Lab',
-      studentCount: 38,
-      status: SessionStatus.notStarted,
-    ),
-    ClassSession(
-      courseCode: 'EXE201',
-      courseName: 'Kỹ năng Khởi nghiệp và Đổi mới',
-      slot: '7-8',
-      timeRange: '15:30 - 17:50',
-      room: 'A',
-      roomType: 'Hội trường',
-      studentCount: 42,
-      status: SessionStatus.notStarted,
-    ),
-  ];
-
-  // Weekly attendance chart data (T2 to T7)
   final List<WeeklyData> weeklyAttendance = const [
     WeeklyData('T2', 0.92, false),
-    WeeklyData('T3', 0.89, true), // Today
+    WeeklyData('T3', 0.89, true),
     WeeklyData('T4', 0.94, false),
     WeeklyData('T5', 0.91, false),
     WeeklyData('T6', 0.88, false),
     WeeklyData('T7', 0.95, false),
   ];
 
-  // Activity logs
-  List<ActivityLog> get activityLogs => const [
-    ActivityLog(
-      title: 'Trần Hoàng Long',
-      description: 'Quét QR thành công lớp SWP391',
-      timeLabel: '08:14',
-      type: ActivityType.qrScan,
-      subDetail: 'MSSV: SE160342 • IP: 10.14.8.192',
-    ),
-    ActivityLog(
-      title: 'Đồng bộ FAP Cloud',
-      description: 'Hệ thống đồng bộ thành công 34 bản ghi lớp PRO192 lên FAP Portal',
-      timeLabel: '08:12',
-      type: ActivityType.cloudSync,
-      subDetail: 'Trạng thái: 200 OK',
-    ),
-    ActivityLog(
-      title: 'Khởi tạo phiên QR',
-      description: 'GV. Nguyễn Văn An mở phiên QR lớp SWP391 (Hạn 30 phút)',
-      timeLabel: '08:00',
-      type: ActivityType.sessionStart,
-    ),
-    ActivityLog(
-      title: 'Điểm danh thủ công',
-      description: 'Đã lưu bảng điểm danh lớp MAS291',
-      timeLabel: 'Hôm qua',
-      type: ActivityType.manualEntry,
-      subDetail: 'Ghi chú: 3 SV đi trễ có phép',
-    ),
-  ];
+  // ── Activity logs (static for now — no dedicated API endpoint in MVP) ───────
 
-  // Navigation state
+  List<ActivityLog> get activityLogs => const [
+        ActivityLog(
+          title: 'Hệ thống sẵn sàng',
+          description: 'Kết nối API thành công. Sẵn sàng bắt đầu điểm danh.',
+          timeLabel: 'Vừa xong',
+          type: ActivityType.sessionStart,
+        ),
+      ];
+
+  // ── Class sessions (for legacy ClassSession model used by DashboardBody) ────
+
+  List<dynamic> get classSessions => _classes;
+
+  // ── Load classes from API ────────────────────────────────────────────────────
+
+  Future<void> loadClasses() async {
+    if (_teacherMemberCode.isEmpty) return;
+    _status = ViewStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _repository.getClasses(
+        teacherMemberCode: _teacherMemberCode,
+      );
+
+      switch (result) {
+        case ApiSuccess<List<ClassSectionModel>>(:final data):
+          _classes = data;
+          _status = data.isEmpty ? ViewStatus.idle : ViewStatus.success;
+        case ApiFailure<List<ClassSectionModel>>(:final error):
+          _status = ViewStatus.error;
+          _errorMessage = error.message;
+      }
+    } catch (e) {
+      _status = ViewStatus.error;
+      _errorMessage = e.toString();
+    }
+    notifyListeners();
+  }
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+
   String _currentRoute = 'tong-quan';
   String get currentRoute => _currentRoute;
 
   void navigate(String route) {
     _currentRoute = route;
     notifyListeners();
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  bool _isMorning(String classCode) {
+    // Heuristic: no real slot time without additional API data
+    // Keep simple for now
+    return false;
   }
 }
 
