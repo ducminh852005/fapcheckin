@@ -51,6 +51,16 @@ class DashboardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearTeacherInfo() {
+    _teacherName = '';
+    _teacherEmail = '';
+    _teacherMemberCode = '';
+    _classes = [];
+    _status = ViewStatus.idle;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   // ── Status ──────────────────────────────────────────────────────────────────
 
   ViewStatus _status = ViewStatus.idle;

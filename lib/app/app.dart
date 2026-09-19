@@ -1,37 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'app_router.dart';
 import '../core/theme/app_theme.dart';
 import '../core/network/api_service.dart';
+import '../core/services/google_auth_service.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/teacher_repository.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/live_session_viewmodel.dart';
 import '../viewmodels/attendance_history_viewmodel.dart';
-import '../views/auth/login_screen.dart';
 
-class FapCheckinApp extends StatelessWidget {
+class FapCheckinApp extends StatefulWidget {
   const FapCheckinApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Shared singletons
-    final apiService = ApiService();
-    final teacherRepo = TeacherRepository(apiService);
+  State<FapCheckinApp> createState() => _FapCheckinAppState();
+}
 
+class _FapCheckinAppState extends State<FapCheckinApp> {
+  late final ApiService _apiService;
+  late final GoogleAuthService _googleAuthService;
+  late final AuthRepository _authRepo;
+  late final TeacherRepository _teacherRepo;
+  late final AuthViewModel _authViewModel;
+  late final DashboardViewModel _dashboardViewModel;
+  late final LiveSessionViewModel _liveSessionViewModel;
+  late final AttendanceHistoryViewModel _attendanceHistoryViewModel;
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService();
+    _googleAuthService = GoogleAuthService();
+    _authRepo = AuthRepository(_apiService);
+    _teacherRepo = TeacherRepository(_apiService);
+    _authViewModel = AuthViewModel(_authRepo, _googleAuthService);
+    _dashboardViewModel = DashboardViewModel(_teacherRepo);
+    _liveSessionViewModel = LiveSessionViewModel(_teacherRepo);
+    _attendanceHistoryViewModel = AttendanceHistoryViewModel();
+    _router = createAppRouter(_authViewModel);
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    _authViewModel.dispose();
+    _dashboardViewModel.dispose();
+    _liveSessionViewModel.dispose();
+    _attendanceHistoryViewModel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => DashboardViewModel(teacherRepo),
+        ChangeNotifierProvider.value(
+          value: _authViewModel,
         ),
-        ChangeNotifierProvider(
-          create: (_) => LiveSessionViewModel(teacherRepo),
+        ChangeNotifierProvider.value(
+          value: _dashboardViewModel,
         ),
-        ChangeNotifierProvider(create: (_) => AttendanceHistoryViewModel()),
+        ChangeNotifierProvider.value(
+          value: _liveSessionViewModel,
+        ),
+        ChangeNotifierProvider.value(
+          value: _attendanceHistoryViewModel,
+        ),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: 'FAP Check-in',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const LoginScreen(),
+        routerConfig: _router,
       ),
     );
   }
