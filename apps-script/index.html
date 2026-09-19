@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FAP Check-in</title>
+  <title>FAP Check-in | Sinh viên</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -334,14 +334,21 @@
   </div>
 
   <script>
+    // ============ Cấu hình Backend ============
+    // Khi chạy độc lập (Standalone / Live Server), điền URL Web App của Apps Script vào đây:
+    // Ví dụ: 'https://script.google.com/macros/s/AKfycb.../exec'
+    var BACKEND_URL = '';
+
     // ============ Utils ============
     function showView(id) {
       document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-      document.getElementById('view-' + id).classList.add('active');
+      var target = document.getElementById('view-' + id);
+      if (target) target.classList.add('active');
     }
 
     function setLoadingStep(text) {
       var el = document.getElementById('loading-step');
+      if (!el) return;
       el.classList.add('fade-out');
       setTimeout(function () {
         el.innerText = text;
@@ -413,7 +420,6 @@
         hint: '', canRetry: true, canLogout: false
       };
 
-      // ALREADY_CHECKED_IN có view riêng, không dùng view lỗi
       if (code === 'ALREADY_CHECKED_IN') {
         document.getElementById('already-msg').innerText = fallbackMessage || 'Bạn đã điểm danh trong phiên này rồi.';
         showView('already');
@@ -438,6 +444,35 @@
       localStorage.removeItem('fap_session');
       localStorage.removeItem('fap_user');
       window.location.reload();
+    }
+
+    // ============ Cầu nối API kép: google.script.run HOẶC fetch ============
+    function callApi(action, payload, onSuccess, onError) {
+      // 1. Chạy trong Apps Script HtmlService
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onError)
+          .handleRpc(action, payload);
+        return;
+      }
+
+      // 2. Chạy ngoài (Standalone Web / Live Server)
+      if (!BACKEND_URL) {
+        onError(new Error('Chưa cấu hình BACKEND_URL cho môi trường Web độc lập.'));
+        return;
+      }
+
+      var bodyData = Object.assign({ action: action }, payload);
+      fetch(BACKEND_URL, {
+        method: 'POST',
+        // Dùng text/plain để né preflight OPTIONS CORS theo đúng chuẩn docs/quick-start.md
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(bodyData)
+      })
+        .then(function (res) { return res.json(); })
+        .then(onSuccess)
+        .catch(onError);
     }
 
     // ============ Luồng ứng dụng ============
@@ -472,8 +507,10 @@
       showView('loading');
       setLoadingStep('Đang xác thực tài khoản Google...');
 
-      google.script.run
-        .withSuccessHandler(function (res) {
+      callApi(
+        'login',
+        { idToken: idToken },
+        function (res) {
           if (res.success) {
             localStorage.setItem('fap_session', res.data.token);
             localStorage.setItem('fap_user', JSON.stringify(res.data.user));
@@ -481,11 +518,11 @@
           } else {
             showErrorByCode(res.error.code, res.error.message);
           }
-        })
-        .withFailureHandler(function (err) {
+        },
+        function (err) {
           showErrorByCode('NETWORK_ERROR', 'Lỗi kết nối máy chủ: ' + (err && err.message ? err.message : err));
-        })
-        .handleRpc('login', { idToken: idToken });
+        }
+      );
     }
 
     // Lấy IP công khai, có timeout + fallback sang provider dự phòng
@@ -500,7 +537,6 @@
 
       return fetchWithTimeout('https://api.ipify.org?format=json', 6000)
         .catch(function () {
-          // fallback provider nếu provider chính lỗi/timeout
           return fetchWithTimeout('https://api64.ipify.org?format=json', 6000);
         });
     }
@@ -514,8 +550,10 @@
         .then(function (studentIp) {
           setLoadingStep('Đang gửi thông tin điểm danh...');
 
-          google.script.run
-            .withSuccessHandler(function (res) {
+          callApi(
+            'checkin',
+            { qrToken: token, studentIp: studentIp, rollNumber: rollNumber },
+            function (res) {
               if (res.success) {
                 var user = JSON.parse(localStorage.getItem('fap_user') || '{}');
                 document.getElementById('info-name').innerText = user.fullName || '—';
@@ -525,11 +563,11 @@
               } else {
                 showErrorByCode(res.error.code, res.error.message);
               }
-            })
-            .withFailureHandler(function (err) {
+            },
+            function (err) {
               showErrorByCode('NETWORK_ERROR', 'Lỗi mạng khi điểm danh: ' + (err && err.message ? err.message : err));
-            })
-            .handleRpc('checkin', { qrToken: token, studentIp: studentIp, rollNumber: rollNumber });
+            }
+          );
         })
         .catch(function () {
           showErrorByCode('NETWORK_ERROR', 'Không thể lấy địa chỉ IP. Vui lòng kiểm tra lại kết nối mạng.');
