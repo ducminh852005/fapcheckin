@@ -43,4 +43,4 @@ jobs:
           clasp push -f
           
           # 2. Tạo phiên bản mới và tự động cập nhật URL Web App hiện tại
-          clasp deploy -i AKfycbyGTKgonXON98PmgcywwRkHL8batiVnp2siHUOI9HzE-u2UaXzNoEb_W8mQr_YkFmRl -d "Auto-deployed via Github Actions"
+          clasp deploy -i AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA -d "Auto-deployed via Github Actions"
