@@ -141,6 +141,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/GenericResponse'
 
+  /teacher/sessions/close:
+    post:
+      summary: Đóng phiên điểm danh
+      description: Apps Script Action -> `action=closeSession`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "closeSession"
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseSessionResponse'
+
+  /teacher/sessions/list:
+    post:
+      summary: Lấy danh sách các phiên điểm danh của lớp
+      description: Apps Script Action -> `action=getSessions`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "getSessions"
+                classCode:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+
+  /teacher/sessions/history:
+    post:
+      summary: Lấy chi tiết lịch sử điểm danh của phiên và thống kê vắng
+      description: Apps Script Action -> `action=getAttendanceHistory`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "getAttendanceHistory"
+                classCode:
+                  type: string
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceHistoryResponse'
+
   /teacher/classes/stats:
     post:
       summary: Lấy thống kê chuyên cần của lớp
@@ -164,6 +238,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StatsResponse'
+
+  /teacher/sync:
+    post:
+      summary: Đồng bộ dữ liệu điểm danh sang FAP
+      description: Apps Script Action -> `action=syncToFap`
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  example: "syncToFap"
+                classCode:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
 
   /student/checkin:
     post:
@@ -299,6 +396,92 @@ components:
         error:
           $ref: '#/components/schemas/ApiError'
 
+    CloseSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            sessionId:
+              type: string
+            sessionStatus:
+              type: string
+              example: "closed"
+            autoAbsentCount:
+              type: integer
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SessionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceSession'
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    AttendanceHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            sessionId:
+              type: string
+            classCode:
+              type: string
+            totalSessions:
+              type: integer
+            students:
+              type: array
+              items:
+                type: object
+                properties:
+                  rollNumber:
+                    type: string
+                  memberCode:
+                    type: string
+                  fullName:
+                    type: string
+                  email:
+                    type: string
+                  checkinTime:
+                    type: string
+                  status:
+                    type: string
+                    enum: [Present, Late, Absent, ManualByGV]
+                  networkVerificationResult:
+                    type: string
+                  absenceCount:
+                    type: integer
+                  totalSessions:
+                    type: integer
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    SyncResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            syncedCount:
+              type: integer
+            message:
+              type: string
+        error:
+          $ref: '#/components/schemas/ApiError'
+
     # Entity Schemas based on ERD
     User:
       type: object
@@ -310,6 +493,10 @@ components:
         role:
           type: string
           enum: [TEACHER, STUDENT]
+        rollNumber:
+          type: string
+        email:
+          type: string
 
     Teacher:
       type: object
