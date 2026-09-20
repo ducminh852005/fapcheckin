@@ -36,12 +36,12 @@ class HistoryTable extends StatelessWidget {
               direction: Axis.horizontal,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Wrap(
+                Wrap(
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Danh sách sinh viên điểm danh', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    Text('(Buổi 12 - 24/10/2023)', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                    const Text('Danh sách sinh viên điểm danh', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                    Text('(Buổi ${vm.selectedSessionSlot})', style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                   ],
                 ),
                 Wrap(
@@ -61,11 +61,11 @@ class HistoryTable extends StatelessWidget {
                           icon: const Icon(Icons.expand_more, size: 16),
                           style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
                           onChanged: (val) => vm.setStatusFilter(val ?? 'all'),
-                          items: const [
-                            DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái (35)')),
-                            DropdownMenuItem(value: 'present', child: Text('Có mặt (30)')),
-                            DropdownMenuItem(value: 'late', child: Text('Đi trễ (3)')),
-                            DropdownMenuItem(value: 'absent', child: Text('Vắng mặt (2)')),
+                          items: [
+                            DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái (${vm.students.length})')),
+                            DropdownMenuItem(value: 'present', child: Text('Có mặt (${vm.students.where((s) => s.status == CheckinStatus.present).length})')),
+                            DropdownMenuItem(value: 'late', child: Text('Đi trễ (${vm.students.where((s) => s.status == CheckinStatus.late).length})')),
+                            DropdownMenuItem(value: 'absent', child: Text('Vắng mặt (${vm.students.where((s) => s.status == CheckinStatus.absent || s.status == CheckinStatus.unchecked).length})')),
                           ],
                         ),
                       ),

@@ -7,7 +7,7 @@ function doGet(e) {
   // CORS check and HTML page rendering for student checkin web app
   if (e.parameter && e.parameter.page === 'checkin') {
     try {
-      return HtmlService.createHtmlOutputFromFile('index')
+      return HtmlService.createHtmlOutputFromFile('index.html')
         .setTitle('FAP Check-in')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     } catch(err) {

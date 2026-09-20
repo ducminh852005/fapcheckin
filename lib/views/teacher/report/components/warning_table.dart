@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/network/api_result.dart';
+import 'package:fapcheckin/data/models/sync_result_model.dart';
+import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
-class WarningTable extends StatelessWidget {
+class WarningTable extends StatefulWidget {
   const WarningTable({super.key});
+
+  @override
+  State<WarningTable> createState() => _WarningTableState();
+}
+
+class _WarningTableState extends State<WarningTable> {
+  bool _syncing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +89,56 @@ class WarningTable extends StatelessWidget {
               runSpacing: AppSpacing.xs,
               children: [
                 _buildActionBtn('Gửi cảnh báo Email FPT', Icons.mail, AppColors.statusAbsent, AppColors.onError),
-                _buildActionBtn('Đồng bộ Cổng Khảo Thí', Icons.sync, AppColors.surface, AppColors.textPrimary, iconColor: AppColors.primary),
+                GestureDetector(
+                  onTap: _syncing
+                      ? null
+                      : () async {
+                          setState(() => _syncing = true);
+                          final dashVm = context.read<DashboardViewModel>();
+                          final messenger = ScaffoldMessenger.of(context);
+                          final result = await dashVm.syncToFap();
+                          if (!mounted) return;
+                          String msg;
+                          if (result is ApiSuccess<SyncResult>) {
+                            msg = result.data.message.isNotEmpty
+                                ? result.data.message
+                                : 'Đồng bộ thành công ${result.data.syncedCount} bản ghi.';
+                          } else if (result is ApiFailure<SyncResult>) {
+                            msg = 'Lỗi: ${result.error.message}';
+                          } else {
+                            msg = 'Đồng bộ hoàn tất.';
+                          }
+                          setState(() => _syncing = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(msg),
+                              backgroundColor: result is ApiSuccess<SyncResult>
+                                  ? AppColors.statusPresent
+                                  : AppColors.statusAbsent,
+                            ),
+                          );
+                        },
+                  child: _syncing
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14, height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 6),
+                              Text('Đang đồng bộ...'),
+                            ],
+                          ),
+                        )
+                      : _buildActionBtn('Đồng bộ Cổng Khảo Thí', Icons.sync, AppColors.surface, AppColors.textPrimary, iconColor: AppColors.primary),
+                ),
               ],
             ),
           ),

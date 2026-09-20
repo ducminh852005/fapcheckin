@@ -1,11 +1,26 @@
 import 'package:flutter/foundation.dart';
-import 'package:fapcheckin/data/models/history_class.dart';
-import 'package:fapcheckin/data/models/history_student.dart';
-import 'package:fapcheckin/data/models/student_checkin.dart';
+import '../core/network/api_result.dart';
+import '../data/models/attendance_history_model.dart';
+import '../data/models/class_section_model.dart';
+import '../data/models/history_class.dart';
+import '../data/models/history_student.dart';
+import '../data/models/session_model.dart';
+import '../data/models/student_checkin.dart';
+import '../data/repositories/teacher_repository.dart';
 
 class AttendanceHistoryViewModel extends ChangeNotifier {
-  // Mock classes
-  final List<HistoryClass> classes = [
+  final TeacherRepository _repository;
+
+  AttendanceHistoryViewModel(this._repository);
+
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // Fallback / Initial classes
+  List<HistoryClass> _classes = [
     const HistoryClass(
       courseCode: 'SWP391',
       className: 'SE1704',
@@ -27,65 +42,26 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
       latestSessionDate: '20/10',
       latestSessionName: 'Buổi 08',
     ),
-    const HistoryClass(
-      courseCode: 'PRJ301',
-      className: 'SE1612',
-      courseName: 'Java Web Application',
-      attendanceRate: 0.925,
-      completedSessions: 14,
-      totalSessions: 30,
-      latestSessionDate: '19/10',
-      latestSessionName: 'Buổi 14',
-    ),
-    const HistoryClass(
-      courseCode: 'SWT301',
-      className: 'SE1620',
-      courseName: 'Software Testing & QA',
-      attendanceRate: 0.95,
-      completedSessions: 11,
-      totalSessions: 30,
-      latestSessionDate: '18/10',
-      latestSessionName: 'Buổi 11',
-    ),
-    const HistoryClass(
-      courseCode: 'MAS291',
-      className: 'AI1701',
-      courseName: 'Thống kê ứng dụng & Xác suất',
-      attendanceRate: 0.894,
-      completedSessions: 16,
-      totalSessions: 30,
-      latestSessionDate: '17/10',
-      latestSessionName: 'Buổi 16',
-      isWarning: true,
-    ),
   ];
+  List<HistoryClass> get classes => _classes;
 
   String? _selectedClassCode = 'SWP391';
   String? get selectedClassCode => _selectedClassCode;
 
-  void selectClass(String code) {
-    _selectedClassCode = code;
-    notifyListeners();
-  }
+  // Real session models from API
+  List<SessionModel> _sessionModels = [];
+  List<SessionModel> get sessionModels => _sessionModels;
 
-  // Mock sessions
-  final List<Map<String, dynamic>> sessions = [
-    {'slot': 12, 'date': '24/10 (Hôm nay)', 'isActive': true},
-    {'slot': 11, 'date': '21/10', 'isActive': false},
-    {'slot': 10, 'date': '17/10', 'isActive': false},
-    {'slot': 9, 'date': '14/10', 'isActive': false},
-    {'slot': 8, 'date': '10/10', 'isActive': false},
-    {'slot': 7, 'date': '07/10', 'isActive': false},
-    {'slot': 6, 'date': '03/10', 'isActive': false},
+  // Sessions formatted for UI
+  List<Map<String, dynamic>> _sessions = [
+    {'slot': 1, 'date': 'Buổi 1', 'sessionId': '', 'isActive': false},
   ];
+  List<Map<String, dynamic>> get sessions => _sessions;
 
-  int _selectedSessionSlot = 12;
+  int _selectedSessionSlot = 1;
   int get selectedSessionSlot => _selectedSessionSlot;
-
-  void selectSession(int slot) {
-    _selectedSessionSlot = slot;
-    notifyListeners();
-  }
+  String? _selectedSessionId;
+  String? get selectedSessionId => _selectedSessionId;
 
   String _statusFilter = 'all';
   String get statusFilter => _statusFilter;
@@ -95,106 +71,151 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Mock students
-  final List<HistoryStudent> students = [
-    const HistoryStudent(
-      index: 1,
-      studentId: 'SE160124',
-      fullName: 'Lê Hoàng Long',
-      initials: 'LH',
-      email: 'longlhse160124@fpt.edu.vn',
-      checkInTime: '07:35:12',
-      status: CheckinStatus.present,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 1,
-      totalSessions: 30,
-      absenceStatusText: 'An toàn',
-    ),
-    const HistoryStudent(
-      index: 2,
-      studentId: 'SE160892',
-      fullName: 'Phạm Thùy Trang',
-      initials: 'PT',
-      email: 'trangptse160892@fpt.edu.vn',
-      checkInTime: '07:48:20',
-      status: CheckinStatus.late,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 2,
-      totalSessions: 30,
-      absenceStatusText: 'Bình thường',
-      lateLabel: 'Đi trễ +18m',
-    ),
-    const HistoryStudent(
-      index: 3,
-      studentId: 'SE161045',
-      fullName: 'Nguyễn Tiến Đạt',
-      initials: 'NT',
-      email: 'datntse161045@fpt.edu.vn',
-      checkInTime: '08:05:14',
-      status: CheckinStatus.present, // actually manual present
-      methodLabel: 'Điểm danh bù bởi GV',
-      methodIcon: 'how_to_reg',
-      absenceCount: 0,
-      totalSessions: 30,
-      absenceStatusText: 'Tuyệt đối',
-    ),
-    const HistoryStudent(
-      index: 4,
-      studentId: 'SE160311',
-      fullName: 'Trần Quang Huy',
-      initials: 'TQ',
-      email: 'huytqse160311@fpt.edu.vn',
-      checkInTime: '--:--:--',
-      status: CheckinStatus.absent,
-      methodLabel: 'Không quét QR',
-      methodIcon: 'block',
-      absenceCount: 6,
-      totalSessions: 30,
-      absenceStatusText: 'Nguy cơ',
-    ),
-    const HistoryStudent(
-      index: 5,
-      studentId: 'SE150998',
-      fullName: 'Hoàng Tuấn Anh',
-      initials: 'HA',
-      email: 'anhhtse150998@fpt.edu.vn',
-      checkInTime: '--:--:--',
-      status: CheckinStatus.unchecked, // Manual excused
-      methodLabel: 'Đơn phép qua FAP',
-      methodIcon: 'mail',
-      absenceCount: 3,
-      totalSessions: 30,
-      absenceStatusText: 'Cho phép',
-    ),
-    const HistoryStudent(
-      index: 6,
-      studentId: 'SE160235',
-      fullName: 'Đỗ Minh Khang',
-      initials: 'ĐK',
-      email: 'khangdmse160235@fpt.edu.vn',
-      checkInTime: '07:32:41',
-      status: CheckinStatus.present,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 0,
-      totalSessions: 30,
-      absenceStatusText: 'Tuyệt đối',
-    ),
-  ];
+  // Real students from API
+  List<HistoryStudent> _students = [];
+  List<HistoryStudent> get students => _students;
+
+  /// Updates class list from Teacher's classes
+  void setTeacherClasses(List<ClassSectionModel> teacherClasses) {
+    if (teacherClasses.isEmpty) return;
+    _classes = teacherClasses.map((c) {
+      return HistoryClass(
+        courseCode: c.classCode,
+        className: c.classCode,
+        courseName: c.subjectName,
+        attendanceRate: 1.0,
+        completedSessions: 0,
+        totalSessions: 30,
+        latestSessionDate: 'Học kỳ Fall 23',
+        latestSessionName: 'Phòng ${c.room}',
+        isActive: true,
+      );
+    }).toList();
+
+    if (_selectedClassCode == null ||
+        !_classes.any((c) => c.courseCode == _selectedClassCode)) {
+      _selectedClassCode = _classes.first.courseCode;
+    }
+    notifyListeners();
+
+    if (_selectedClassCode != null) {
+      loadHistoryForClass(_selectedClassCode!);
+    }
+  }
+
+  /// Select class and load its sessions + attendance history from API
+  Future<void> selectClass(String code) async {
+    _selectedClassCode = code;
+    notifyListeners();
+    await loadHistoryForClass(code);
+  }
+
+  /// Load sessions & attendance history for a given class
+  Future<void> loadHistoryForClass(String classCode) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // 1. Fetch sessions for this class (getSessions API)
+      final sessionResult = await _repository.getSessions(classCode: classCode);
+      if (sessionResult is ApiSuccess<List<SessionModel>>) {
+        _sessionModels = sessionResult.data;
+        if (_sessionModels.isNotEmpty) {
+          _sessions = _sessionModels.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final s = entry.value;
+            final slotNum = int.tryParse(s.slotCode) ?? (idx + 1);
+            return {
+              'slot': slotNum,
+              'date': s.sessionDate.isNotEmpty ? s.sessionDate : 'Buổi $slotNum',
+              'sessionId': s.sessionId,
+              'isActive': s.isOpen,
+            };
+          }).toList();
+
+          _selectedSessionId = _sessionModels.first.sessionId;
+          _selectedSessionSlot = _sessions.first['slot'] as int;
+        } else {
+          _sessions = [
+            {'slot': 1, 'date': 'Chưa có phiên', 'sessionId': '', 'isActive': false}
+          ];
+          _selectedSessionId = null;
+          _selectedSessionSlot = 1;
+        }
+      }
+
+      // 2. Fetch attendance history for this class + selected session (getAttendanceHistory API)
+      final historyResult = await _repository.getAttendanceHistory(
+        classCode: classCode,
+        sessionId: _selectedSessionId,
+      );
+
+      if (historyResult is ApiSuccess<AttendanceHistoryResult>) {
+        final data = historyResult.data;
+        _students = data.students.asMap().entries.map((entry) {
+          return entry.value.toHistoryStudent(entry.key + 1);
+        }).toList();
+      } else if (historyResult is ApiFailure<AttendanceHistoryResult>) {
+        _errorMessage = historyResult.error.message;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Select specific session slot and fetch history for that session
+  Future<void> selectSession(int slot) async {
+    _selectedSessionSlot = slot;
+    final found = _sessions.firstWhere(
+      (s) => s['slot'] == slot,
+      orElse: () => <String, dynamic>{},
+    );
+    _selectedSessionId = found['sessionId'] as String?;
+    notifyListeners();
+
+    if (_selectedClassCode != null) {
+      _isLoading = true;
+      notifyListeners();
+
+      try {
+        final historyResult = await _repository.getAttendanceHistory(
+          classCode: _selectedClassCode!,
+          sessionId: _selectedSessionId,
+        );
+
+        if (historyResult is ApiSuccess<AttendanceHistoryResult>) {
+          _students = historyResult.data.students.asMap().entries.map((entry) {
+            return entry.value.toHistoryStudent(entry.key + 1);
+          }).toList();
+        }
+      } catch (e) {
+        _errorMessage = e.toString();
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
 
   List<HistoryStudent> get filteredStudents {
-    if (_statusFilter == 'all') return students;
+    if (_statusFilter == 'all') return _students;
     if (_statusFilter == 'present') {
-      return students.where((s) => s.status == CheckinStatus.present).toList();
+      return _students.where((s) => s.status == CheckinStatus.present).toList();
     }
     if (_statusFilter == 'late') {
-      return students.where((s) => s.status == CheckinStatus.late).toList();
+      return _students.where((s) => s.status == CheckinStatus.late).toList();
     }
     if (_statusFilter == 'absent') {
-      return students.where((s) => s.status == CheckinStatus.absent || s.status == CheckinStatus.unchecked).toList();
+      return _students
+          .where((s) =>
+              s.status == CheckinStatus.absent ||
+              s.status == CheckinStatus.unchecked)
+          .toList();
     }
-    return students;
+    return _students;
   }
 }
