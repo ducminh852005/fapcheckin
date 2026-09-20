@@ -8,9 +8,13 @@ function dispatch(action, params) {
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,
+    'closeSession': TeacherService.closeSession,
+    'getSessions': TeacherService.getSessions,
     'getRoster': TeacherService.getRoster,
+    'getAttendanceHistory': TeacherService.getAttendanceHistory,
     'manualCheckin': TeacherService.manualCheckin,
     'getStats': TeacherService.getStats,
+    'syncToFap': SyncService.syncToFap,
     'checkin': StudentService.checkin
   };
 
