@@ -6,12 +6,20 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/views/teacher/class_management/dialogs/create_class_dialog.dart';
+import 'package:fapcheckin/data/models/class_section_model.dart';
 
 class TodayClassesSection extends StatelessWidget {
   const TodayClassesSection({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<DashboardViewModel>();
+    final activeClasses = viewModel.classes.where((c) => c.isActive).toList();
+    final upcomingClasses = viewModel.classes.where((c) => !c.isActive).toList();
+    
+    final ClassSectionModel? firstActive = activeClasses.isNotEmpty ? activeClasses.first : null;
+    final ClassSectionModel? firstUpcoming = upcomingClasses.isNotEmpty ? upcomingClasses.first : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -41,7 +49,7 @@ class TodayClassesSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                   child: Text(
-                    'Thứ Ba, 24/10/2023',
+                    viewModel.todayLabel,
                     style: AppTextStyles.code.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -53,7 +61,7 @@ class TodayClassesSection extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '2 ca giảng dạy theo thời khóa biểu',
+                  '${viewModel.totalClassesToday} ca giảng dạy theo thời khóa biểu',
                   style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -82,26 +90,40 @@ class TodayClassesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 7,
-              child: _ActiveSessionCard(),
+        if (firstActive != null || firstUpcoming != null)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (firstActive != null)
+                Expanded(
+                  flex: 7,
+                  child: _ActiveSessionCard(classData: firstActive),
+                ),
+              if (firstActive != null && firstUpcoming != null)
+                const SizedBox(width: AppSpacing.md),
+              if (firstUpcoming != null)
+                Expanded(
+                  flex: 5,
+                  child: _UpcomingSessionCard(classData: firstUpcoming),
+                ),
+            ],
+          ),
+        if (firstActive == null && firstUpcoming == null)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text('Không có lớp học nào hôm nay.', style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              flex: 5,
-              child: _UpcomingSessionCard(),
-            ),
-          ],
-        ),
+          )
       ],
     );
   }
 }
 
 class _ActiveSessionCard extends StatelessWidget {
+  final ClassSectionModel classData;
+  const _ActiveSessionCard({required this.classData});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -190,7 +212,7 @@ class _ActiveSessionCard extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  'SWP391',
+                                  classData.subjectCode,
                                   style: AppTextStyles.code.copyWith(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -206,7 +228,7 @@ class _ActiveSessionCard extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                                   ),
                                   child: Text(
-                                    'Slot 1 • 07:30 - 09:50',
+                                    classData.timeLabel,
                                     style: AppTextStyles.caption.copyWith(
                                       color: AppColors.textSecondary,
                                       fontWeight: FontWeight.w500,
@@ -217,7 +239,7 @@ class _ActiveSessionCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Dự án Phát triển Phần mềm',
+                              classData.subjectName,
                               style: AppTextStyles.headlineMd.copyWith(color: AppColors.textPrimary),
                             ),
                           ],
@@ -289,7 +311,7 @@ class _ActiveSessionCard extends StatelessWidget {
                           children: [
                             Text('Mã lớp', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                             Text(
-                              'SE1704',
+                              classData.classCode,
                               style: AppTextStyles.labelMd.copyWith(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.bold,
@@ -308,13 +330,13 @@ class _ActiveSessionCard extends StatelessWidget {
                               children: [
                                 const Icon(Icons.location_on, size: 16, color: AppColors.primary),
                                 const SizedBox(width: 4),
-                                Text(
-                                  'P.302 (Tòa Alpha)',
-                                  style: AppTextStyles.labelMd.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.bold,
+                                  Text(
+                                    classData.room,
+                                    style: AppTextStyles.labelMd.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -329,14 +351,14 @@ class _ActiveSessionCard extends StatelessWidget {
                               children: [
                                 const Icon(Icons.group, size: 16, color: AppColors.textSecondary),
                                 const SizedBox(width: 4),
-                                Text(
-                                  '35 SV',
-                                  style: AppTextStyles.labelMd.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'JetBrains Mono',
+                                  Text(
+                                    '${classData.studentCount} SV',
+                                    style: AppTextStyles.labelMd.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'JetBrains Mono',
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -355,7 +377,7 @@ class _ActiveSessionCard extends StatelessWidget {
                         children: [
                           const TextSpan(text: 'Tiến độ khóa học: '),
                           TextSpan(
-                            text: 'Buổi 12 / 30',
+                            text: 'Buổi ${classData.completedSessions} / ${classData.totalSessions}',
                             style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -365,13 +387,13 @@ class _ActiveSessionCard extends StatelessWidget {
                       children: [
                         const Icon(Icons.trending_up, size: 15, color: AppColors.statusPresent),
                         const SizedBox(width: 4),
-                        Text(
-                          'Chuyên cần TB: 94.2%',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.statusPresent,
-                            fontWeight: FontWeight.w600,
+                          Text(
+                            'Chuyên cần TB: ${classData.averageAttendance.toStringAsFixed(1)}%',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.statusPresent,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -385,7 +407,7 @@ class _ActiveSessionCard extends StatelessWidget {
                   ),
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
-                    widthFactor: 0.4,
+                    widthFactor: classData.totalSessions > 0 ? classData.completedSessions / classData.totalSessions : 0,
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppColors.primaryContainer,
@@ -455,6 +477,9 @@ class _ActiveSessionCard extends StatelessWidget {
 }
 
 class _UpcomingSessionCard extends StatelessWidget {
+  final ClassSectionModel classData;
+  const _UpcomingSessionCard({required this.classData});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -496,7 +521,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            'PRN211',
+                            classData.subjectCode,
                             style: AppTextStyles.code.copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -511,7 +536,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                             ),
                             child: Text(
-                              'Slot 2 • 10:00 - 12:20',
+                              classData.timeLabel,
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
@@ -522,8 +547,10 @@ class _UpcomingSessionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Lập trình C# & .NET',
+                        classData.subjectName,
                         style: AppTextStyles.headlineMd.copyWith(color: AppColors.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -567,7 +594,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                     children: [
                       Text('Mã lớp', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                       Text(
-                        'SE1706',
+                        classData.classCode,
                         style: AppTextStyles.labelMd.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
@@ -583,7 +610,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                     children: [
                       Text('Phòng học', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                       Text(
-                        'P.405',
+                        classData.room,
                         style: AppTextStyles.labelMd.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
@@ -598,7 +625,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                     children: [
                       Text('Sĩ số', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
                       Text(
-                        '32 SV',
+                        '${classData.studentCount} SV',
                         style: AppTextStyles.labelMd.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
@@ -621,7 +648,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                   children: [
                     const TextSpan(text: 'Tiến độ khóa học: '),
                     TextSpan(
-                      text: 'Buổi 08 / 30',
+                      text: 'Buổi ${classData.completedSessions} / ${classData.totalSessions}',
                       style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -632,7 +659,7 @@ class _UpcomingSessionCard extends StatelessWidget {
                   const Icon(Icons.trending_up, size: 15, color: AppColors.statusPresent),
                   const SizedBox(width: 4),
                   Text(
-                    'Chuyên cần: 96.8%',
+                    'Chuyên cần: ${classData.averageAttendance.toStringAsFixed(1)}%',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.statusPresent,
                       fontWeight: FontWeight.w600,
@@ -651,7 +678,7 @@ class _UpcomingSessionCard extends StatelessWidget {
             ),
             child: FractionallySizedBox(
                alignment: Alignment.centerLeft,
-               widthFactor: 0.27,
+               widthFactor: classData.totalSessions > 0 ? classData.completedSessions / classData.totalSessions : 0,
                child: Container(
                  decoration: BoxDecoration(
                    color: AppColors.secondary,

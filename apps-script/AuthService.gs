@@ -38,6 +38,7 @@ var AuthService = (function() {
     
     // Tạo session token nội bộ cho user
     var sessionToken = Utilities.getUuid();
+    CacheService.getScriptCache().put('auth:' + sessionToken, String(matchedUser.memberCode), 21600);
     
     return {
       token: sessionToken,
@@ -45,7 +46,22 @@ var AuthService = (function() {
     };
   }
 
+  function requireTeacher(params) {
+    var token = params && params.sessionToken;
+    var memberCode = token && CacheService.getScriptCache().get('auth:' + token);
+    if (!memberCode) throwError('UNAUTHORIZED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    var user = SheetDB.getRowsAsObjects('Users').filter(function(u) {
+      return String(u.memberCode) === memberCode;
+    })[0];
+    var role = user ? String(user.role).trim().toUpperCase() : '';
+    if (['GV', 'TEACHER', 'GIANG_VIEN', 'GIẢNG VIÊN'].indexOf(role) === -1) {
+      throwError('FORBIDDEN', 'Tài khoản không có quyền giảng viên.');
+    }
+    return user;
+  }
+
   return {
-    login: login
+    login: login,
+    requireTeacher: requireTeacher
   };
 })();

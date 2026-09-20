@@ -1,35 +1,69 @@
-import 'package:fapcheckin/data/models/student_checkin.dart';
+import '../../core/network/json_values.dart';
 
 class HistoryStudent {
-  final int index;
-  final String studentId;
-  final String fullName;
-  final String initials;
-  final String email;
-  final String checkInTime; // e.g. "07:35:12" or "--:--:--"
-  final CheckinStatus status;
-  final String methodLabel; // e.g. "QR Động 20s", "Điểm danh bù bởi GV", "Không quét QR"
-  final String methodIcon; // e.g. "qr_code_2", "how_to_reg", "block"
-  final int absenceCount; // e.g. 1
-  final int totalSessions; // e.g. 30
-  final String absenceStatusText; // e.g. "An toàn", "Nguy cơ", "Cho phép"
-  final String? lateLabel; // e.g. "+18m"
-
+  final String rollNumber,
+      fullName,
+      email,
+      status,
+      checkinTime,
+      note,
+      revision,
+      method;
+  final int absenceCount, totalSessions;
   const HistoryStudent({
-    required this.index,
-    required this.studentId,
+    required this.rollNumber,
     required this.fullName,
-    required this.initials,
     required this.email,
-    required this.checkInTime,
     required this.status,
-    required this.methodLabel,
-    required this.methodIcon,
+    required this.checkinTime,
+    required this.note,
+    required this.revision,
+    required this.method,
     required this.absenceCount,
     required this.totalSessions,
-    required this.absenceStatusText,
-    this.lateLabel,
   });
-  
-  double get absenceRate => absenceCount / totalSessions;
+  factory HistoryStudent.fromJson(Map<String, dynamic> json) => HistoryStudent(
+    rollNumber: jsonText(json['rollNumber']) ?? '',
+    fullName: jsonText(json['fullName']) ?? '',
+    email: jsonText(json['email']) ?? '',
+    status: jsonText(json['status']) ?? 'Unchecked',
+    checkinTime: jsonText(json['checkinTime']) ?? '',
+    note: jsonText(json['note']) ?? '',
+    revision: jsonText(json['revision']) ?? '',
+    method: jsonText(json['networkVerificationResult']) ?? '',
+    absenceCount: jsonNumber(json['absenceCount'])?.toInt() ?? 0,
+    totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 0,
+  );
+  double get absenceRate =>
+      totalSessions == 0 ? 0 : absenceCount / totalSessions;
+  HistoryStudent edit({String? status, String? note}) => HistoryStudent(
+    rollNumber: rollNumber,
+    fullName: fullName,
+    email: email,
+    status: status ?? this.status,
+    checkinTime: checkinTime,
+    note: note ?? this.note,
+    revision: revision,
+    method: method,
+    absenceCount: absenceCount,
+    totalSessions: totalSessions,
+  );
+}
+
+const attendanceStatusLabels = {
+  'Present': 'Có mặt',
+  'Late': 'Đi trễ',
+  'Absent': 'Vắng mặt',
+  'ManualByGV': 'Có mặt (GV xác nhận)',
+  'Unchecked': 'Chưa điểm danh',
+};
+String historyDate(String value, {bool includeTime = false}) {
+  if (value.isEmpty) return '—';
+  final date = DateTime.tryParse(value)?.toLocal();
+  if (date == null) return value;
+  String pad(int n) => n.toString().padLeft(2, '0');
+  final day = '${pad(date.day)}/${pad(date.month)}/${date.year}';
+  return includeTime
+      ? '$day ${pad(date.hour)}:${pad(date.minute)}:${pad(date.second)}'
+      : day;
 }

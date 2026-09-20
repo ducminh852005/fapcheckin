@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'api_response.dart';
 import 'api_result.dart';
@@ -17,7 +18,10 @@ class ApiService {
     : _dio = Dio(
         BaseOptions(
           baseUrl: _baseUrl,
-          connectTimeout: const Duration(seconds: 15),
+          // Dio tracks connectTimeout with an XHR upload listener on web.
+          // That forces a CORS preflight even for text/plain POST requests,
+          // which the Apps Script endpoint cannot handle.
+          connectTimeout: kIsWeb ? null : const Duration(seconds: 15),
           receiveTimeout: const Duration(seconds: 15),
           // Bắt buộc text/plain để né lỗi với Google Apps Script (e.postData.contents)
           contentType: 'text/plain;charset=utf-8',
@@ -48,7 +52,21 @@ class ApiService {
       };
 
       // Đảm bảo gửi chuỗi JSON thô
-      final response = await _dio.post('', data: jsonEncode(requestBody));
+      const historyActions = {
+        'getHistoryClasses',
+        'getHistoryDetail',
+        'getAttendanceMatrix',
+        'saveAttendanceChanges',
+        'exportAttendanceHistory',
+        'startHistorySession',
+      };
+      final response = await _dio.post(
+        '',
+        data: jsonEncode(requestBody),
+        options: historyActions.contains(action)
+            ? Options(receiveTimeout: const Duration(seconds: 60))
+            : null,
+      );
 
       if (response.statusCode == 200 || response.statusCode == 302) {
         // Dữ liệu từ Google thường là String, ta ép parse JSON

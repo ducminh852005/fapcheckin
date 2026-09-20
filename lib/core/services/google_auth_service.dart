@@ -65,3 +65,10 @@ class GoogleIdTokenMissingException implements Exception {
     return 'Google không trả về idToken để xác thực với hệ thống.';
   }
 }
+
+class GoogleSignInCanceledException implements Exception {
+  @override
+  String toString() {
+    return 'Bạn đã hủy đăng nhập Google.';
+  }
+}
