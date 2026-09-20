@@ -1,200 +1,250 @@
 import 'package:flutter/foundation.dart';
-import 'package:fapcheckin/data/models/history_class.dart';
-import 'package:fapcheckin/data/models/history_student.dart';
-import 'package:fapcheckin/data/models/student_checkin.dart';
+
+import '../core/network/api_result.dart';
+import '../data/models/history_class.dart';
+import '../data/models/history_detail.dart';
+import '../data/models/history_student.dart';
+import '../data/models/session_model.dart';
+import '../data/repositories/attendance_history_repository.dart';
 
 class AttendanceHistoryViewModel extends ChangeNotifier {
-  // Mock classes
-  final List<HistoryClass> classes = [
-    const HistoryClass(
-      courseCode: 'SWP391',
-      className: 'SE1704',
-      courseName: 'Dự án Phát triển Phần mềm',
-      attendanceRate: 0.942,
-      completedSessions: 12,
-      totalSessions: 30,
-      latestSessionDate: 'Hôm nay 24/10',
-      latestSessionName: 'Buổi 12',
-      isActive: true,
-    ),
-    const HistoryClass(
-      courseCode: 'PRN211',
-      className: 'SE1706',
-      courseName: 'Lập trình C# & .NET Platform',
-      attendanceRate: 0.968,
-      completedSessions: 8,
-      totalSessions: 30,
-      latestSessionDate: '20/10',
-      latestSessionName: 'Buổi 08',
-    ),
-    const HistoryClass(
-      courseCode: 'PRJ301',
-      className: 'SE1612',
-      courseName: 'Java Web Application',
-      attendanceRate: 0.925,
-      completedSessions: 14,
-      totalSessions: 30,
-      latestSessionDate: '19/10',
-      latestSessionName: 'Buổi 14',
-    ),
-    const HistoryClass(
-      courseCode: 'SWT301',
-      className: 'SE1620',
-      courseName: 'Software Testing & QA',
-      attendanceRate: 0.95,
-      completedSessions: 11,
-      totalSessions: 30,
-      latestSessionDate: '18/10',
-      latestSessionName: 'Buổi 11',
-    ),
-    const HistoryClass(
-      courseCode: 'MAS291',
-      className: 'AI1701',
-      courseName: 'Thống kê ứng dụng & Xác suất',
-      attendanceRate: 0.894,
-      completedSessions: 16,
-      totalSessions: 30,
-      latestSessionDate: '17/10',
-      latestSessionName: 'Buổi 16',
-      isWarning: true,
-    ),
-  ];
-
-  String? _selectedClassCode = 'SWP391';
-  String? get selectedClassCode => _selectedClassCode;
-
-  void selectClass(String code) {
-    _selectedClassCode = code;
-    notifyListeners();
+  final AttendanceHistoryRepository repository;
+  AttendanceHistoryViewModel(this.repository);
+  List<HistoryClass> classes = [];
+  HistoryDetail? detail;
+  String? selectedClassCode;
+  String? errorMessage;
+  String searchQuery = '', classQuery = '', statusFilter = 'all';
+  bool loadingClasses = false,
+      loadingDetail = false,
+      saving = false,
+      working = false;
+  final Map<String, HistoryStudent> _edits = {};
+  int _generation = 0;
+  bool _disposed = false;
+  String? _accountToken;
+  bool get hasChanges => _edits.isNotEmpty;
+  bool get busy => loadingClasses || loadingDetail || saving || working;
+  List<HistoryClass> get visibleClasses => classes
+      .where(
+        (c) => '${c.classCode} ${c.subjectName}'.toLowerCase().contains(
+          classQuery.toLowerCase(),
+        ),
+      )
+      .toList();
+  List<HistoryStudent> get students =>
+      (detail?.students ?? []).map((s) => _edits[s.rollNumber] ?? s).toList();
+  List<HistoryStudent> get filteredStudents => students
+      .where(
+        (s) =>
+            (statusFilter == 'all' ||
+                (statusFilter == 'Present'
+                    ? ['Present', 'ManualByGV'].contains(s.status)
+                    : s.status == statusFilter)) &&
+            '${s.rollNumber} ${s.fullName} ${s.email}'.toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ),
+      )
+      .toList();
+  int count(String status) => students
+      .where(
+        (s) => status == 'Present'
+            ? ['Present', 'ManualByGV'].contains(s.status)
+            : s.status == status,
+      )
+      .length;
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
-  // Mock sessions
-  final List<Map<String, dynamic>> sessions = [
-    {'slot': 12, 'date': '24/10 (Hôm nay)', 'isActive': true},
-    {'slot': 11, 'date': '21/10', 'isActive': false},
-    {'slot': 10, 'date': '17/10', 'isActive': false},
-    {'slot': 9, 'date': '14/10', 'isActive': false},
-    {'slot': 8, 'date': '10/10', 'isActive': false},
-    {'slot': 7, 'date': '07/10', 'isActive': false},
-    {'slot': 6, 'date': '03/10', 'isActive': false},
-  ];
-
-  int _selectedSessionSlot = 12;
-  int get selectedSessionSlot => _selectedSessionSlot;
-
-  void selectSession(int slot) {
-    _selectedSessionSlot = slot;
-    notifyListeners();
+  void bindAccount(String? token) {
+    if (_accountToken == token) return;
+    _accountToken = token;
+    _generation++;
+    classes = [];
+    detail = null;
+    selectedClassCode = null;
+    _edits.clear();
+    loadingClasses = loadingDetail = saving = working = false;
+    errorMessage = null;
+    searchQuery = classQuery = '';
+    statusFilter = 'all';
+    _notify();
   }
 
-  String _statusFilter = 'all';
-  String get statusFilter => _statusFilter;
-
-  void setStatusFilter(String filter) {
-    _statusFilter = filter;
-    notifyListeners();
+  void setSearch(String value) {
+    searchQuery = value;
+    _notify();
   }
 
-  // Mock students
-  final List<HistoryStudent> students = [
-    const HistoryStudent(
-      index: 1,
-      studentId: 'SE160124',
-      fullName: 'Lê Hoàng Long',
-      initials: 'LH',
-      email: 'longlhse160124@fpt.edu.vn',
-      checkInTime: '07:35:12',
-      status: CheckinStatus.present,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 1,
-      totalSessions: 30,
-      absenceStatusText: 'An toàn',
-    ),
-    const HistoryStudent(
-      index: 2,
-      studentId: 'SE160892',
-      fullName: 'Phạm Thùy Trang',
-      initials: 'PT',
-      email: 'trangptse160892@fpt.edu.vn',
-      checkInTime: '07:48:20',
-      status: CheckinStatus.late,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 2,
-      totalSessions: 30,
-      absenceStatusText: 'Bình thường',
-      lateLabel: 'Đi trễ +18m',
-    ),
-    const HistoryStudent(
-      index: 3,
-      studentId: 'SE161045',
-      fullName: 'Nguyễn Tiến Đạt',
-      initials: 'NT',
-      email: 'datntse161045@fpt.edu.vn',
-      checkInTime: '08:05:14',
-      status: CheckinStatus.present, // actually manual present
-      methodLabel: 'Điểm danh bù bởi GV',
-      methodIcon: 'how_to_reg',
-      absenceCount: 0,
-      totalSessions: 30,
-      absenceStatusText: 'Tuyệt đối',
-    ),
-    const HistoryStudent(
-      index: 4,
-      studentId: 'SE160311',
-      fullName: 'Trần Quang Huy',
-      initials: 'TQ',
-      email: 'huytqse160311@fpt.edu.vn',
-      checkInTime: '--:--:--',
-      status: CheckinStatus.absent,
-      methodLabel: 'Không quét QR',
-      methodIcon: 'block',
-      absenceCount: 6,
-      totalSessions: 30,
-      absenceStatusText: 'Nguy cơ',
-    ),
-    const HistoryStudent(
-      index: 5,
-      studentId: 'SE150998',
-      fullName: 'Hoàng Tuấn Anh',
-      initials: 'HA',
-      email: 'anhhtse150998@fpt.edu.vn',
-      checkInTime: '--:--:--',
-      status: CheckinStatus.unchecked, // Manual excused
-      methodLabel: 'Đơn phép qua FAP',
-      methodIcon: 'mail',
-      absenceCount: 3,
-      totalSessions: 30,
-      absenceStatusText: 'Cho phép',
-    ),
-    const HistoryStudent(
-      index: 6,
-      studentId: 'SE160235',
-      fullName: 'Đỗ Minh Khang',
-      initials: 'ĐK',
-      email: 'khangdmse160235@fpt.edu.vn',
-      checkInTime: '07:32:41',
-      status: CheckinStatus.present,
-      methodLabel: 'QR Động 20s',
-      methodIcon: 'qr_code_2',
-      absenceCount: 0,
-      totalSessions: 30,
-      absenceStatusText: 'Tuyệt đối',
-    ),
-  ];
+  void setClassSearch(String value) {
+    classQuery = value;
+    _notify();
+  }
 
-  List<HistoryStudent> get filteredStudents {
-    if (_statusFilter == 'all') return students;
-    if (_statusFilter == 'present') {
-      return students.where((s) => s.status == CheckinStatus.present).toList();
+  void setStatusFilter(String value) {
+    statusFilter = value;
+    _notify();
+  }
+
+  void discardChanges() {
+    _edits.clear();
+    _notify();
+  }
+
+  void edit(HistoryStudent student, String status, String note) {
+    if (busy || detail?.selectedSession == null) return;
+    final original = detail!.students.firstWhere(
+      (s) => s.rollNumber == student.rollNumber,
+    );
+    if (original.status == status && original.note == note) {
+      _edits.remove(student.rollNumber);
+    } else {
+      _edits[student.rollNumber] = original.edit(status: status, note: note);
     }
-    if (_statusFilter == 'late') {
-      return students.where((s) => s.status == CheckinStatus.late).toList();
+    _notify();
+  }
+
+  Future<void> loadClasses() async {
+    if (busy || hasChanges) return;
+    final generation = ++_generation;
+    loadingClasses = true;
+    errorMessage = null;
+    _notify();
+    final result = await repository.getClasses();
+    if (_disposed || generation != _generation) return;
+    loadingClasses = false;
+    switch (result) {
+      case ApiSuccess<List<HistoryClass>>(:final data):
+        classes = data;
+        final code = data.any((c) => c.classCode == selectedClassCode)
+            ? selectedClassCode
+            : data.firstOrNull?.classCode;
+        if (code == null) {
+          detail = null;
+          selectedClassCode = null;
+        } else {
+          await selectClass(code);
+        }
+      case ApiFailure<List<HistoryClass>>(:final error):
+        errorMessage = error.message;
     }
-    if (_statusFilter == 'absent') {
-      return students.where((s) => s.status == CheckinStatus.absent || s.status == CheckinStatus.unchecked).toList();
+    _notify();
+  }
+
+  Future<void> selectClass(String code) async {
+    if (saving || working || hasChanges) return;
+    selectedClassCode = code;
+    searchQuery = '';
+    statusFilter = 'all';
+    await _loadDetail();
+  }
+
+  Future<void> selectSession(String id) async {
+    if (busy || hasChanges) return;
+    await _loadDetail(sessionId: id);
+  }
+
+  Future<void> _loadDetail({String? sessionId}) async {
+    final code = selectedClassCode;
+    if (code == null) return;
+    final generation = ++_generation;
+    loadingDetail = true;
+    detail = null;
+    errorMessage = null;
+    _notify();
+    final result = await repository.getDetail(code, sessionId: sessionId);
+    if (_disposed || generation != _generation) return;
+    loadingDetail = false;
+    switch (result) {
+      case ApiSuccess<HistoryDetail>(:final data):
+        _accept(data);
+      case ApiFailure<HistoryDetail>(:final error):
+        errorMessage = error.message;
     }
-    return students;
+    _notify();
+  }
+
+  void _accept(HistoryDetail data) {
+    detail = data;
+    classes = classes
+        .map(
+          (c) => c.classCode == data.classInfo.classCode ? data.classInfo : c,
+        )
+        .toList();
+  }
+
+  Future<bool> saveChanges() async {
+    if (busy || !hasChanges || detail?.selectedSession == null) return false;
+    final generation = _generation;
+    saving = true;
+    errorMessage = null;
+    _notify();
+    final result = await repository.save(
+      selectedClassCode!,
+      detail!.selectedSession!.sessionId,
+      _edits.values
+          .map(
+            (s) => <String, dynamic>{
+              'rollNumber': s.rollNumber,
+              'status': s.status,
+              'note': s.note,
+              'revision': s.revision,
+            },
+          )
+          .toList(),
+    );
+    if (_disposed || generation != _generation) return false;
+    saving = false;
+    switch (result) {
+      case ApiSuccess<HistoryDetail>(:final data):
+        _edits.clear();
+        _accept(data);
+        _notify();
+        return true;
+      case ApiFailure<HistoryDetail>(:final error):
+        errorMessage = error.message;
+        _notify();
+        return false;
+    }
+    return false;
+  }
+
+  Future<T?> _operation<T>(Future<ApiResult<T>> Function() call) async {
+    if (busy || hasChanges || selectedClassCode == null) return null;
+    final generation = _generation;
+    working = true;
+    errorMessage = null;
+    _notify();
+    final result = await call();
+    if (_disposed || generation != _generation) return null;
+    working = false;
+    switch (result) {
+      case ApiSuccess<T>(:final data):
+        _notify();
+        return data;
+      case ApiFailure<T>(:final error):
+        errorMessage = error.message;
+        _notify();
+        return null;
+    }
+    return null;
+  }
+
+  Future<AttendanceMatrix?> loadMatrix() =>
+      _operation(() => repository.getMatrix(selectedClassCode!));
+  Future<HistoryExport?> export() => _operation(
+    () => repository.export(
+      selectedClassCode!,
+      detail?.selectedSession?.sessionId,
+    ),
+  );
+  Future<SessionModel?> startSession(String slot, String ip) =>
+      _operation(() => repository.startSession(selectedClassCode!, slot, ip));
+  @override
+  void dispose() {
+    _disposed = true;
+    _generation++;
+    super.dispose();
   }
 }

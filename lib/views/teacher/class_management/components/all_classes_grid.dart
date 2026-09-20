@@ -5,11 +5,34 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
-class AllClassesGrid extends StatelessWidget {
+class AllClassesGrid extends StatefulWidget {
   const AllClassesGrid({super.key});
 
   @override
+  State<AllClassesGrid> createState() => _AllClassesGridState();
+}
+
+class _AllClassesGridState extends State<AllClassesGrid> {
+  int _currentPage = 0;
+  static const int _itemsPerPage = 10;
+
+  @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<DashboardViewModel>();
+    final classes = viewModel.classes;
+
+    final totalClasses = classes.length;
+    final totalPages = (totalClasses / _itemsPerPage).ceil();
+    if (_currentPage >= totalPages && totalPages > 0) {
+      _currentPage = totalPages - 1;
+    }
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage > totalClasses) 
+        ? totalClasses 
+        : startIndex + _itemsPerPage;
+        
+    final paginatedClasses = totalClasses > 0 ? classes.sublist(startIndex, endIndex) : [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -19,7 +42,7 @@ class AllClassesGrid extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Tất cả lớp học kỳ Fall 2023',
+                  'Tất cả lớp học kỳ ${viewModel.semester}',
                   style: AppTextStyles.headlineMd.copyWith(color: AppColors.textPrimary),
                 ),
                 const SizedBox(width: 8),
@@ -30,7 +53,7 @@ class AllClassesGrid extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                   ),
                   child: Text(
-                    '6 Lớp phân công',
+                    '${classes.length} Lớp phân công',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
@@ -66,151 +89,79 @@ class AllClassesGrid extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              _ClassListTile(
-                iconData: Icons.terminal,
-                iconColor: AppColors.primaryDark,
-                iconBgColor: AppColors.primaryLight,
-                subjectCode: 'SWP391',
-                subjectTextColor: AppColors.primaryDark,
-                title: 'Dự án Phát triển Phần mềm',
-                groupCode: 'SE1704',
-                groupBgColor: AppColors.statusPresentBg,
-                groupTextColor: AppColors.statusPresent,
-                statusLabel: 'Đang mở phiên',
-                isStatusActive: true,
-                timeLabel: 'Thứ 3 & Thứ 6 • Ca 1 (07:30 - 09:50)',
-                roomLabel: 'P.302 (Tòa Alpha)',
-                studentCount: '35 SV',
-                progressLabel: '12/30',
-                progressPercentage: 40,
-                attendanceLabel: '94.2%',
-                attendanceColor: AppColors.statusPresent,
-                buttonLabel: 'Vào điểm danh',
-                buttonIcon: Icons.qr_code_scanner,
-                isPrimaryAction: true,
-                onTap: () {
-                  context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                },
-              ),
-              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-              _ClassListTile(
-                iconData: Icons.data_object,
-                iconColor: AppColors.textSecondary,
-                iconBgColor: AppColors.surfaceMuted,
-                subjectCode: 'PRN211',
-                title: 'Lập trình C# & .NET',
-                groupCode: 'SE1706',
-                groupBgColor: AppColors.surfaceMuted,
-                groupTextColor: AppColors.textSecondary,
-                statusLabel: 'Ca kế tiếp',
-                timeLabel: 'Thứ 3 & Thứ 6 • Ca 2 (10:00 - 12:20)',
-                roomLabel: 'P.405 (Tòa Alpha)',
-                studentCount: '32 SV',
-                progressLabel: '08/30',
-                progressPercentage: 27,
-                attendanceLabel: '96.8%',
-                attendanceColor: AppColors.statusPresent,
-                buttonLabel: 'Vào phòng',
-                buttonIcon: Icons.qr_code,
-                onTap: () {
-                  context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                },
-              ),
-              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-              _ClassListTile(
-                iconData: Icons.developer_mode,
-                iconColor: AppColors.primaryDark,
-                iconBgColor: AppColors.surfaceMuted,
-                subjectCode: 'PRJ301',
-                title: 'Java Web Applications',
-                groupCode: 'SE1612',
-                groupBgColor: AppColors.surfaceMuted,
-                groupTextColor: AppColors.textSecondary,
-                timeLabel: 'Thứ 4 & Thứ 7 • Ca 3 (12:50 - 15:10)',
-                roomLabel: 'Phòng 204 • Tòa Beta',
-                studentCount: '34 SV',
-                progressLabel: '14/30',
-                progressPercentage: 47,
-                attendanceLabel: '92.5%',
-                attendanceColor: AppColors.statusPresent,
-                buttonLabel: 'Vào phòng',
-                buttonIcon: Icons.qr_code,
-                onTap: () {
-                  context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                },
-              ),
-              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-              _ClassListTile(
-                iconData: Icons.calculate,
-                iconColor: AppColors.primaryDark,
-                iconBgColor: AppColors.surfaceMuted,
-                subjectCode: 'MAS291',
-                title: 'Thống kê ứng dụng & Xác suất cho CNTT',
-                groupCode: 'AI1701',
-                groupBgColor: AppColors.surfaceMuted,
-                groupTextColor: AppColors.textSecondary,
-                timeLabel: 'Thứ 2 & Thứ 5 • Ca 4 (15:20 - 17:40)',
-                roomLabel: 'Phòng 108 • Tòa Gamma',
-                studentCount: '38 SV',
-                progressLabel: '16/30',
-                progressPercentage: 53,
-                progressColor: AppColors.statusLate,
-                attendanceLabel: '88.4%',
-                attendanceColor: AppColors.statusLate,
-                buttonLabel: 'Vào phòng',
-                buttonIcon: Icons.qr_code,
-                onTap: () {
-                  context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                },
-              ),
-              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-              _ClassListTile(
-                iconData: Icons.bug_report,
-                iconColor: AppColors.primaryDark,
-                iconBgColor: AppColors.surfaceMuted,
-                subjectCode: 'SWT301',
-                title: 'Kiểm thử phần mềm QA (Testing)',
-                groupCode: 'SE1620',
-                groupBgColor: AppColors.surfaceMuted,
-                groupTextColor: AppColors.textSecondary,
-                timeLabel: 'Thứ 3 & Thứ 6 • Ca 5 (17:50 - 20:10)',
-                roomLabel: 'Lab 3 • Tòa Innovation',
-                studentCount: '30 SV',
-                progressLabel: '11/30',
-                progressPercentage: 37,
-                attendanceLabel: '95.0%',
-                attendanceColor: AppColors.statusPresent,
-                buttonLabel: 'Vào phòng',
-                buttonIcon: Icons.qr_code,
-                onTap: () {
-                  context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                },
-              ),
-              const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-              _ClassListTile(
-                iconData: Icons.workspace_premium,
-                iconColor: AppColors.onTertiaryFixed,
-                iconBgColor: AppColors.tertiaryFixed,
-                subjectCode: 'CPV301',
-                subjectTextColor: AppColors.tertiary,
-                title: 'Đồ án tốt nghiệp Capstone',
-                groupCode: 'GD1601',
-                groupBgColor: AppColors.tertiaryFixed,
-                groupTextColor: AppColors.onTertiaryFixed,
-                statusLabel: 'Sprint Review 3',
-                timeLabel: 'Lịch Mentoring linh hoạt theo tuần',
-                roomLabel: 'Co-working Hub',
-                studentCount: '6 Nhóm (24 SV)',
-                progressLabel: 'Tiến độ họp',
-                progressLabelPrefix: '',
-                progressPercentage: 100,
-                progressColor: AppColors.primaryContainer,
-                attendanceLabel: '100%',
-                attendanceColor: AppColors.statusPresent,
-                buttonLabel: 'Quản lý nhóm',
-                buttonIcon: Icons.hub,
-                onTap: () {},
-              ),
+              ...paginatedClasses.asMap().entries.map((entry) {
+                final index = entry.key;
+                final classData = entry.value;
+                final isLast = index == paginatedClasses.length - 1;
+
+                final progressPercentage = classData.totalSessions > 0
+                    ? ((classData.completedSessions / classData.totalSessions) * 100).toInt()
+                    : 0;
+
+                Widget tile = _ClassListTile(
+                  iconData: classData.isActive ? Icons.terminal : Icons.data_object,
+                  iconColor: classData.isActive ? AppColors.primaryDark : AppColors.textSecondary,
+                  iconBgColor: classData.isActive ? AppColors.primaryLight : AppColors.surfaceMuted,
+                  subjectCode: classData.subjectCode,
+                  subjectTextColor: classData.isActive ? AppColors.primaryDark : null,
+                  title: classData.subjectName,
+                  groupCode: classData.classCode,
+                  groupBgColor: classData.isActive ? AppColors.statusPresentBg : AppColors.surfaceMuted,
+                  groupTextColor: classData.isActive ? AppColors.statusPresent : AppColors.textSecondary,
+                  statusLabel: classData.isActive ? 'Đang mở phiên' : null,
+                  isStatusActive: classData.isActive,
+                  timeLabel: classData.timeLabel,
+                  roomLabel: classData.room,
+                  studentCount: '${classData.studentCount} SV',
+                  progressLabel: '${classData.completedSessions}/${classData.totalSessions}',
+                  progressPercentage: progressPercentage,
+                  attendanceLabel: '${classData.averageAttendance.toStringAsFixed(1)}%',
+                  attendanceColor: AppColors.statusPresent,
+                  buttonLabel: classData.isActive ? 'Vào điểm danh' : 'Vào phòng',
+                  buttonIcon: classData.isActive ? Icons.qr_code_scanner : Icons.qr_code,
+                  isPrimaryAction: classData.isActive,
+                  onTap: () {
+                    context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                  },
+                );
+
+                return Column(
+                  children: [
+                    tile,
+                    if (!isLast || totalPages > 1)
+                      const Divider(height: 1, color: AppColors.surfaceContainerHigh),
+                  ],
+                );
+              }),
+              if (totalPages > 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _currentPage > 0
+                            ? () => setState(() => _currentPage--)
+                            : null,
+                        color: AppColors.textSecondary,
+                      ),
+                      Text(
+                        'Trang ${_currentPage + 1} / $totalPages',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _currentPage < totalPages - 1
+                            ? () => setState(() => _currentPage++)
+                            : null,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),

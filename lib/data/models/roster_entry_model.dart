@@ -1,3 +1,5 @@
+import '../../core/network/json_values.dart';
+
 /// Model for a single roster entry (student + attendance record)
 /// Corresponds to each item in the getRoster response data array
 class RosterEntryModel {
@@ -27,15 +29,15 @@ class RosterEntryModel {
     final student = json['student'] as Map<String, dynamic>? ?? {};
     final record = json['record'] as Map<String, dynamic>?;
     return RosterEntryModel(
-      rollNumber: student['rollNumber'] as String? ?? '',
-      memberCode: student['memberCode'] as String? ?? '',
-      email: student['email'] as String? ?? '',
-      recordId: record?['recordId'] as String?,
-      sessionId: record?['sessionId'] as String?,
-      checkinTime: record?['checkinTime'] as String?,
-      status: record?['status'] as String? ?? '',
-      networkVerificationResult: record?['networkVerificationResult'] as String?,
-      ipAddress: record?['ipAddress'] as String?,
+      rollNumber: jsonText(student['rollNumber']) ?? '',
+      memberCode: jsonText(student['memberCode']) ?? '',
+      email: jsonText(student['email']) ?? '',
+      recordId: jsonText(record?['recordId']),
+      sessionId: jsonText(record?['sessionId']),
+      checkinTime: jsonText(record?['checkinTime']),
+      status: jsonText(record?['status']) ?? '',
+      networkVerificationResult: jsonText(record?['networkVerificationResult']),
+      ipAddress: jsonText(record?['ipAddress']),
     );
   }
 

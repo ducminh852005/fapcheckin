@@ -93,10 +93,11 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      '\u0110\u0103ng nh\u1eadp h\u1ec7 th\u1ed1ng\n\u0111i\u1ec3m danh FAP',
+                      'Hệ thống điểm danh FAP',
+                      textAlign: TextAlign.center,
                       style: AppTextStyles.headlineLg.copyWith(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
@@ -107,7 +108,8 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'D\u00e0nh cho C\u00e1n b\u1ed9, Gi\u1ea3ng vi\u00ean & Sinh vi\u00ean \u0110\u1ea1i h\u1ecdc FPT. Vui l\u00f2ng s\u1eed d\u1ee5ng t\u00e0i kho\u1ea3n n\u1ed9i b\u1ed9 \u0111\u1ec3 ti\u1ebfp t\u1ee5c.',
+                      'Dành cho Cán bộ, Giảng viên & Sinh viên Đại học FPT. Vui lòng sử dụng tài khoản nội bộ để tiếp tục.',
+                      textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMd.copyWith(
                         color: AppColors.textSecondary,
                         height: 1.5,
@@ -118,7 +120,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                       buildGoogleWebSignInButton(isLoading: isGoogleLoading)
                     else
                       _SsoButton(
-                        label: 'Ti\u1ebfp t\u1ee5c v\u1edbi Google',
+                        label: 'Tiếp tục với Google',
                         svgContent: '''<svg viewBox="0 0 24 24">
                           <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z" fill="#4285F4"></path>
                           <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
@@ -127,17 +129,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                         </svg>''',
                         onTap: isGoogleLoading ? null : _loginWithGoogle,
                       ),
-                    const SizedBox(height: 12),
-                    _SsoButton(
-                      label: 'Ti\u1ebfp t\u1ee5c v\u1edbi Office 365',
-                      svgContent: '''<svg viewBox="0 0 23 23">
-                        <path d="M1 1h10v10H1z" fill="#f35325"></path>
-                        <path d="M12 1h10v10H12z" fill="#81bc06"></path>
-                        <path d="M1 12h10v10H1z" fill="#05a6f0"></path>
-                        <path d="M12 12h10v10H12z" fill="#ffba08"></path>
-                      </svg>''',
-                      onTap: _showUnsupportedLogin,
-                    ),
+
                     const SizedBox(height: 12),
                     _SsoButton(
                       label: '\u0110\u0103ng nh\u1eadp v\u1edbi FE Edu SSO',
@@ -170,7 +162,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                     ),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 40,
                       child: ElevatedButton(
                         onPressed: _showUnsupportedLogin,
                         style: ElevatedButton.styleFrom(
@@ -319,7 +311,7 @@ class _SsoButtonState extends State<_SsoButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           width: double.infinity,
-          height: 48,
+          height: 40,
           decoration: BoxDecoration(
             color: _isHovered
                 ? AppColors.primaryLight.withValues(alpha: 0.3)

@@ -1,3 +1,5 @@
+import '../../core/network/json_values.dart';
+
 /// Model for AttendanceSession returned by startSession action
 class SessionModel {
   final String sessionId;
@@ -20,23 +22,23 @@ class SessionModel {
     // The API wraps session + qrToken in the data object
     final session = json['session'] as Map<String, dynamic>? ?? json;
     return SessionModel(
-      sessionId: session['sessionId'] as String? ?? '',
-      classCode: session['classCode'] as String? ?? '',
-      sessionDate: session['sessionDate'] as String? ?? '',
-      slotCode: session['slotCode'] as String? ?? '',
-      sessionStatus: session['sessionStatus'] as String? ?? 'open',
-      qrToken: json['qrToken'] as String? ?? session['qrToken'] as String? ?? '',
+      sessionId: jsonText(session['sessionId']) ?? '',
+      classCode: jsonText(session['classCode']) ?? '',
+      sessionDate: jsonText(session['sessionDate']) ?? '',
+      slotCode: jsonText(session['slotCode']) ?? '',
+      sessionStatus: jsonText(session['sessionStatus']) ?? 'open',
+      qrToken: jsonText(json['qrToken']) ?? jsonText(session['qrToken']) ?? '',
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'sessionId': sessionId,
-        'classCode': classCode,
-        'sessionDate': sessionDate,
-        'slotCode': slotCode,
-        'sessionStatus': sessionStatus,
-        'qrToken': qrToken,
-      };
+    'sessionId': sessionId,
+    'classCode': classCode,
+    'sessionDate': sessionDate,
+    'slotCode': slotCode,
+    'sessionStatus': sessionStatus,
+    'qrToken': qrToken,
+  };
 
   bool get isOpen => sessionStatus == 'open';
 }

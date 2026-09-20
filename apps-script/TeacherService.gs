@@ -6,10 +6,47 @@ var TeacherService = (function() {
     var teacherMemberCode = params.teacherMemberCode;
     if (!teacherMemberCode) throwError('VALIDATION_ERROR', 'Thiếu teacherMemberCode.');
     
-    var classes = SheetDB.getRowsAsObjects('Class_Section');
-    return classes.filter(function(c) {
+    var classes = SheetDB.getRowsAsObjects('Class_Section').filter(function(c) {
       return c.teacherMemberCode === teacherMemberCode;
     });
+
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var records = SheetDB.getRowsAsObjects('Attendance_Record');
+
+    var enriched = classes.map(function(cls) {
+       var classSessions = sessions.filter(function(s) { return s.classCode === cls.classCode; });
+       var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
+       var activeSession = classSessions.filter(function(s) { return s.sessionStatus === 'open'; })[0] || null;
+       
+       var classRecords = records.filter(function(r) { 
+           return classSessions.some(function(s) { return s.sessionId === r.sessionId; });
+       });
+       var presentRecords = classRecords.filter(function(r) { return r.status === 'Present' || r.status === 'Late' || r.status === 'ManualByGV'; });
+       
+       var sCount = parseInt(cls.studentCount) || 0;
+       var totalExpected = classSessions.length * sCount; 
+       var avgAttendance = totalExpected > 0 ? (presentRecords.length / totalExpected) * 100 : 0.0;
+       
+       var sName = cls.subjectName || '';
+       var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
+       var timeLabel = cls.timeLabel || "Lịch học chưa cập nhật";
+       
+       return {
+         classCode: cls.classCode,
+         subjectCode: subjectCode,
+         subjectName: sName,
+         room: cls.room,
+         studentCount: sCount,
+         teacherMemberCode: cls.teacherMemberCode,
+         timeLabel: timeLabel,
+         completedSessions: completed,
+         totalSessions: 30, // Mock 30 sessions per class
+         averageAttendance: avgAttendance,
+         isActive: activeSession != null,
+         activeSessionId: activeSession ? activeSession.sessionId : null
+       };
+    });
+    return enriched;
   }
   
   function startSession(params) {

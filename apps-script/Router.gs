@@ -5,6 +5,12 @@
  */
 function dispatch(action, params) {
   var handlers = {
+    'getHistoryClasses': function(p) { return AttendanceHistoryService.getClasses(p); },
+    'getHistoryDetail': function(p) { return AttendanceHistoryService.getDetail(p); },
+    'saveAttendanceChanges': function(p) { return AttendanceHistoryService.saveChanges(p); },
+    'getAttendanceMatrix': function(p) { return AttendanceHistoryService.getMatrix(p); },
+    'exportAttendanceHistory': function(p) { return AttendanceHistoryService.exportHistory(p); },
+    'startHistorySession': function(p) { return AttendanceHistoryService.startSession(p); },
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,

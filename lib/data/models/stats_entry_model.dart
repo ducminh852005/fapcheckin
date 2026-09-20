@@ -1,3 +1,5 @@
+import '../../core/network/json_values.dart';
+
 /// Model for stats entry from getStats action
 class StatsEntryModel {
   final String rollNumber;
@@ -10,9 +12,9 @@ class StatsEntryModel {
 
   factory StatsEntryModel.fromJson(Map<String, dynamic> json) {
     return StatsEntryModel(
-      rollNumber: json['rollNumber'] as String? ?? '',
+      rollNumber: jsonText(json['rollNumber']) ?? '',
       attendancePercentage:
-          (json['attendancePercentage'] as num?)?.toDouble() ?? 0.0,
+          jsonNumber(json['attendancePercentage'])?.toDouble() ?? 0.0,
     );
   }
 }

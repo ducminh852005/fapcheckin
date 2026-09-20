@@ -91,7 +91,7 @@ class ToastNotification extends StatelessWidget {
       builder: (context, vm, _) {
         if (!vm.showToast) return const SizedBox.shrink();
         return Positioned(
-          bottom: 20,
+          top: 20,
           right: 20,
           child: Material(
             color: Colors.transparent,

@@ -4,7 +4,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../core/network/api_result.dart';
 import '../core/services/google_auth_service.dart';
 import '../data/models/auth_session_model.dart';
-import '../data/models/user_model.dart';
 import '../data/repositories/auth_repository.dart';
 import 'live_session_viewmodel.dart';
 
@@ -39,7 +38,7 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final idToken = await _googleAuthService.signInAndGetIdToken();
-      return _loginWithIdToken(idToken);
+      return await _loginWithIdToken(idToken);
     } on GoogleSignInException catch (e) {
       _status = ViewStatus.error;
       _errorMessage = _googleSignInErrorMessage(e);
@@ -74,20 +73,15 @@ class AuthViewModel extends ChangeNotifier {
       return Future.value(false);
     }
 
-    return _loginWithIdToken(idToken, account: account);
+    return _loginWithIdToken(idToken);
   }
 
-  Future<bool> _loginWithIdToken(
-    String idToken, {
-    GoogleSignInAccount? account,
-  }) async {
+  Future<bool> _loginWithIdToken(String idToken) async {
     _status = ViewStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
-    final result = await _repository.loginWithGoogleIdToken(
-      idToken: idToken,
-    );
+    final result = await _repository.loginWithGoogleIdToken(idToken: idToken);
 
     if (result is ApiSuccess<AuthSessionModel>) {
       final data = result.data;
@@ -105,13 +99,6 @@ class AuthViewModel extends ChangeNotifier {
     }
 
     if (result is ApiFailure<AuthSessionModel>) {
-      if (kIsWeb &&
-          result.error.code == 'NETWORK_ERROR' &&
-          account != null) {
-        _createLocalWebSession(account);
-        return true;
-      }
-
       _status = ViewStatus.error;
       _errorMessage = result.error.message;
       notifyListeners();
@@ -122,29 +109,6 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = 'Không thể xử lý phản hồi đăng nhập.';
     notifyListeners();
     return false;
-  }
-
-  void _createLocalWebSession(GoogleSignInAccount account) {
-    final email = account.email;
-    final localPart = email.split('@').first;
-    final displayName = account.displayName?.trim();
-
-    final session = AuthSessionModel(
-      token: 'local-google-web-${DateTime.now().millisecondsSinceEpoch}',
-      user: UserModel(
-        memberCode: localPart.isNotEmpty ? localPart : account.id,
-        fullName: displayName?.isNotEmpty == true ? displayName! : email,
-        role: 'TEACHER',
-        rollNumber: '',
-        email: email,
-      ),
-    );
-
-    _session = session;
-    _repository.attachSessionToken(session.token);
-    _status = ViewStatus.success;
-    _errorMessage = null;
-    notifyListeners();
   }
 
   Future<void> signOut() async {
