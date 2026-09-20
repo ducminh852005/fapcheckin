@@ -657,9 +657,40 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () {
-          context.read<LiveSessionViewModel>().resetSession();
-          context.read<DashboardViewModel>().navigate('tong-quan');
+        onTap: () async {
+          final liveVm = context.read<LiveSessionViewModel>();
+          final dashVm = context.read<DashboardViewModel>();
+
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Kết thúc phiên điểm danh?'),
+              content: const Text(
+                'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Hủy'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.statusAbsent,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Kết thúc phiên'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmed == true && context.mounted) {
+            await liveVm.closeCurrentSession();
+            if (context.mounted) {
+              dashVm.navigate('tong-quan');
+            }
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

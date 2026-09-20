@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/network/api_result.dart';
+import 'package:fapcheckin/data/models/sync_result_model.dart';
+import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
 class SettingsSectionSync extends StatefulWidget {
   const SettingsSectionSync({super.key});
@@ -13,6 +17,8 @@ class SettingsSectionSync extends StatefulWidget {
 class _SettingsSectionSyncState extends State<SettingsSectionSync> {
   bool _autoPush = true;
   bool _leaveApp = true;
+  bool _syncing = false;
+  String? _lastSyncMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +82,72 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Manual Sync Button
+          ElevatedButton.icon(
+            onPressed: _syncing
+                ? null
+                : () async {
+                    setState(() {
+                      _syncing = true;
+                      _lastSyncMessage = null;
+                    });
+                    final dashVm = context.read<DashboardViewModel>();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final result = await dashVm.syncToFap();
+                    if (!mounted) return;
+                    String msg;
+                    if (result is ApiSuccess<SyncResult>) {
+                      msg = result.data.message.isNotEmpty
+                          ? result.data.message
+                          : 'Đồng bộ thành công ${result.data.syncedCount} bản ghi.';
+                    } else if (result is ApiFailure<SyncResult>) {
+                      msg = 'Lỗi: ${result.error.message}';
+                    } else {
+                      msg = 'Đồng bộ hoàn tất.';
+                    }
+                    setState(() {
+                      _syncing = false;
+                      _lastSyncMessage = msg;
+                    });
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(msg),
+                        backgroundColor: result is ApiSuccess<SyncResult>
+                            ? AppColors.statusPresent
+                            : AppColors.statusAbsent,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusManual,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 44),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+            ),
+            icon: _syncing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.cloud_upload_outlined, size: 18),
+            label: Text(_syncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay lên FAP',
+                style: AppTextStyles.labelMd.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+          if (_lastSyncMessage != null) ...
+            [
+              const SizedBox(height: 8),
+              Text(_lastSyncMessage!,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+            ],
+
           const SizedBox(height: AppSpacing.lg),
-          
+
           // Sync Details Grid
           Row(
             children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/models/activity_log.dart';
 import '../data/models/class_section_model.dart';
+import '../data/models/sync_result_model.dart';
 import '../data/repositories/teacher_repository.dart';
 import '../core/network/api_result.dart';
 import 'live_session_viewmodel.dart';
@@ -198,6 +199,13 @@ class DashboardViewModel extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ── Sync to FAP ─────────────────────────────────────────────────────────────
+
+  Future<ApiResult<SyncResult>> syncToFap({String? classCode}) async {
+    return await _repository.syncToFap(classCode: classCode);
+  }
+
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 

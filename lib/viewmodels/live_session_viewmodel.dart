@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../data/models/class_section_model.dart';
+import '../data/models/close_session_model.dart';
 import '../data/models/roster_entry_model.dart';
 import '../data/models/session_model.dart';
 import '../data/models/stats_entry_model.dart';
 import '../data/models/student_checkin.dart';
 import '../data/repositories/teacher_repository.dart';
 import '../core/network/api_result.dart';
+
 
 // ---------------------------------------------------------------------------
 // ViewStatus (shared with the rest of the project)
@@ -292,6 +294,40 @@ class LiveSessionViewModel extends ChangeNotifier {
       case ApiFailure<List<StatsEntryModel>>():
         break;
     }
+  }
+
+  /// Close the session on backend (closeSession API)
+  /// Automatically marks absent students and updates sessionStatus to closed
+  Future<bool> closeCurrentSession() async {
+    if (_session == null) {
+      resetSession();
+      return true;
+    }
+
+    _stopPolling();
+    final sId = _session!.sessionId;
+    _status = ViewStatus.loading;
+    notifyListeners();
+
+    try {
+      final result = await _repository.closeSession(sessionId: sId);
+      switch (result) {
+        case ApiSuccess<CloseSessionResult>():
+          resetSession();
+          return true;
+        case ApiFailure<CloseSessionResult>(:final error):
+          _errorMessage = error.message;
+          _status = ViewStatus.error;
+          notifyListeners();
+          return false;
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+      _status = ViewStatus.error;
+      notifyListeners();
+      return false;
+    }
+    return false;
   }
 
   /// Reset session state (e.g. when navigating away)
