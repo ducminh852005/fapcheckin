@@ -3,27 +3,51 @@ import 'package:provider/provider.dart';
 
 import '../../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../../data/models/history_student.dart';
+import '../../../../core/constants/app_colors.dart';
 
 class HistoryTable extends StatelessWidget {
   const HistoryTable({super.key});
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AttendanceHistoryViewModel>();
     final session = vm.detail?.selectedSession;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              session == null
-                  ? 'Danh sách sinh viên của lớp'
-                  : 'Điểm danh ngày ${historyDate(session.sessionDate)} · Ca ${session.slotCode}',
-              style: Theme.of(context).textTheme.titleMedium,
+    final filteredStudents = vm.filteredStudents;
+    final studentsCount = vm.students.length;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  session == null
+                      ? 'Danh sách sinh viên của lớp'
+                      : 'Điểm danh ngày ${historyDate(session.sessionDate)} · Ca ${session.slotCode}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                _StudentCount(count: filteredStudents.length),
+              ],
             ),
-            const SizedBox(height: 12),
-            Wrap(
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
               spacing: 12,
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -40,25 +64,11 @@ class HistoryTable extends StatelessWidget {
                     ),
                   ),
                 ),
-                DropdownButton<String>(
+                _StatusFilter(
                   value: vm.statusFilter,
-                  onChanged: (s) {
-                    if (s != null) vm.setStatusFilter(s);
-                  },
-                  items: [
-                    DropdownMenuItem(
-                      value: 'all',
-                      child: Text('Tất cả (${vm.students.length})'),
-                    ),
-                    ...['Present', 'Late', 'Absent', 'Unchecked'].map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(
-                          '${attendanceStatusLabels[s]} (${vm.count(s)})',
-                        ),
-                      ),
-                    ),
-                  ],
+                  studentsCount: studentsCount,
+                  count: vm.count,
+                  onChanged: vm.setStatusFilter,
                 ),
                 FilledButton.icon(
                   onPressed: vm.busy || !vm.hasChanges || session == null
@@ -73,118 +83,155 @@ class HistoryTable extends StatelessWidget {
                             );
                           }
                         },
-                  icon: const Icon(Icons.save),
-                  label: Text(
-                    vm.saving ? 'Đang lưu...' : 'Lưu thay đổi thủ công',
-                  ),
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(vm.saving ? 'Đang lưu...' : 'Lưu thay đổi'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (vm.filteredStudents.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Không có sinh viên phù hợp.'),
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('STT')),
-                    DataColumn(label: Text('MSSV')),
-                    DataColumn(label: Text('Họ và tên')),
-                    DataColumn(label: Text('Thời gian điểm danh')),
-                    DataColumn(label: Text('Phương thức')),
-                    DataColumn(label: Text('Trạng thái')),
-                    DataColumn(label: Text('Vắng lũy kế')),
-                    DataColumn(label: Text('Ghi chú')),
-                    DataColumn(label: Text('Thao tác')),
-                  ],
-                  rows: vm.filteredStudents.asMap().entries.map((entry) {
-                    final s = entry.value;
-                    return DataRow(
-                      cells: [
-                        DataCell(Text('${entry.key + 1}')),
-                        DataCell(Text(s.rollNumber)),
-                        DataCell(
-                          Column(
+          ),
+          if (filteredStudents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 28),
+              child: Text(
+                'Không có sinh viên phù hợp.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStatePropertyAll(
+                  AppColors.surfaceContainerLow,
+                ),
+                dataRowMinHeight: 64,
+                dataRowMaxHeight: 76,
+                headingRowHeight: 44,
+                horizontalMargin: 20,
+                columnSpacing: 24,
+                dividerThickness: 0.6,
+                columns: const [
+                  DataColumn(label: _TableHeader('STT')),
+                  DataColumn(label: _TableHeader('MSSV')),
+                  DataColumn(label: _TableHeader('HỌ VÀ TÊN')),
+                  DataColumn(label: _TableHeader('GIỜ ĐIỂM DANH')),
+                  DataColumn(label: _TableHeader('PHƯƠNG THỨC')),
+                  DataColumn(label: _TableHeader('TRẠNG THÁI')),
+                  DataColumn(label: _TableHeader('VẮNG LŨY KẾ')),
+                  DataColumn(label: _TableHeader('GHI CHÚ')),
+                  DataColumn(label: _TableHeader('THAO TÁC')),
+                ],
+                rows: filteredStudents.asMap().entries.map((entry) {
+                  final s = entry.value;
+                  return DataRow(
+                    color: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.hovered)
+                          ? AppColors.primaryLight.withValues(alpha: 0.45)
+                          : null,
+                    ),
+                    cells: [
+                      DataCell(
+                        Text(
+                          '${entry.key + 1}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          s.rollNumber,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: 190,
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 s.fullName.isEmpty ? s.rollNumber : s.fullName,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               Text(
                                 s.email,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        DataCell(
-                          Text(historyDate(s.checkinTime, includeTime: true)),
-                        ),
-                        DataCell(
-                          Text(
-                            s.status == 'ManualByGV' || s.method == 'Manual'
-                                ? 'Giảng viên cập nhật'
-                                : s.checkinTime.isEmpty
-                                ? '—'
-                                : 'QR',
-                          ),
-                        ),
-                        DataCell(
-                          Text(attendanceStatusLabels[s.status] ?? s.status),
-                        ),
-                        DataCell(
-                          Text(
-                            '${s.absenceCount}/${s.totalSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
-                            style: TextStyle(
-                              color: s.absenceRate > .2 ? Colors.red : null,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          SizedBox(
-                            width: 180,
-                            child: Tooltip(
-                              message: s.note,
-                              child: Text(
-                                s.note.isEmpty ? '—' : s.note,
-                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Row(
-                            children: [
-                              IconButton(
-                                tooltip: 'Chỉnh sửa trạng thái',
-                                onPressed: vm.busy || session == null
-                                    ? null
-                                    : () => _edit(context, s),
-                                icon: const Icon(Icons.edit_note),
-                              ),
-                              IconButton(
-                                tooltip: 'Ghi chú sinh viên',
-                                onPressed: vm.busy || session == null
-                                    ? null
-                                    : () => _edit(context, s),
-                                icon: const Icon(Icons.comment_outlined),
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                      ),
+                      DataCell(
+                        Text(
+                          s.checkinTime.isEmpty
+                              ? '--:--'
+                              : historyDate(s.checkinTime, includeTime: true),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text(_methodLabel(s))),
+                      DataCell(_StatusBadge(status: s.status)),
+                      DataCell(
+                        Text(
+                          '${s.absenceCount}/${s.totalSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: s.absenceRate > .2
+                                ? AppColors.statusAbsent
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        SizedBox(
+                          width: 180,
+                          child: Tooltip(
+                            message: s.note,
+                            child: Text(
+                              s.note.isEmpty ? '—' : s.note,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+                      DataCell(
+                        Row(
+                          children: [
+                            IconButton(
+                              tooltip: 'Chỉnh sửa trạng thái',
+                              onPressed: vm.busy || session == null
+                                  ? null
+                                  : () => _edit(context, s),
+                              icon: const Icon(Icons.edit_note),
+                            ),
+                            IconButton(
+                              tooltip: 'Ghi chú sinh viên',
+                              onPressed: vm.busy || session == null
+                                  ? null
+                                  : () => _edit(context, s),
+                              icon: const Icon(Icons.comment_outlined),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -245,4 +292,137 @@ class HistoryTable extends StatelessWidget {
     // Dialog route may still animate out; dispose after its transition.
     Future<void>.delayed(const Duration(milliseconds: 400), note.dispose);
   }
+}
+
+class _TableHeader extends StatelessWidget {
+  const _TableHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.4,
+      ),
+    );
+  }
+}
+
+class _StudentCount extends StatelessWidget {
+  const _StudentCount({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$count sinh viên',
+        style: const TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusFilter extends StatelessWidget {
+  const _StatusFilter({
+    required this.value,
+    required this.studentsCount,
+    required this.count,
+    required this.onChanged,
+  });
+
+  final String value;
+  final int studentsCount;
+  final int Function(String status) count;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      onChanged: (status) {
+        if (status != null) onChanged(status);
+      },
+      decoration: const InputDecoration(
+        labelText: 'Lọc trạng thái',
+        prefixIcon: Icon(Icons.filter_list),
+        isDense: true,
+      ),
+      items: [
+        DropdownMenuItem(value: 'all', child: Text('Tất cả ($studentsCount)')),
+        ...['Present', 'Late', 'Absent', 'Unchecked'].map(
+          (status) => DropdownMenuItem(
+            value: status,
+            child: Text('${attendanceStatusLabels[status]} (${count(status)})'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = switch (status) {
+      'Present' || 'ManualByGV' => (
+        foreground: AppColors.statusPresent,
+        background: AppColors.statusPresentBg,
+      ),
+      'Late' => (
+        foreground: AppColors.statusLate,
+        background: AppColors.statusLateBg,
+      ),
+      'Absent' => (
+        foreground: AppColors.statusAbsent,
+        background: AppColors.statusAbsentBg,
+      ),
+      _ => (
+        foreground: AppColors.statusUnchecked,
+        background: AppColors.statusUncheckedBg,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        attendanceStatusLabels[status] ?? status,
+        style: TextStyle(
+          color: colors.foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+String _methodLabel(HistoryStudent student) {
+  if (student.status == 'ManualByGV' || student.method == 'Manual') {
+    return 'Giảng viên cập nhật';
+  }
+  return student.checkinTime.isEmpty ? '—' : 'QR';
 }
