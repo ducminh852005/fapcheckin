@@ -10,6 +10,7 @@ import 'package:fapcheckin/views/teacher/class_management/class_management_body.
 import 'package:fapcheckin/views/teacher/attendance_history/attendance_history_body.dart';
 import 'package:fapcheckin/views/teacher/report/report_body.dart';
 import 'package:fapcheckin/views/teacher/settings/settings_body.dart';
+import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/views/teacher/dashboard/components/sidebar.dart';
 import 'package:fapcheckin/views/teacher/dashboard/components/top_bar.dart';
 
@@ -27,12 +28,27 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) {
-          context.read<LiveSessionViewModel>().tickTimers();
-          context.read<DashboardViewModel>().tickCountdown();
+      if (mounted) {
+        final authVm = context.read<AuthViewModel>();
+        final dashboardVm = context.read<DashboardViewModel>();
+        
+        if (authVm.session != null && dashboardVm.teacherMemberCode.isEmpty) {
+          dashboardVm.setTeacherInfo(
+            name: authVm.session!.user.fullName,
+            email: authVm.session!.user.email,
+            memberCode: authVm.session!.user.memberCode,
+          );
         }
-      });
+        
+        dashboardVm.loadClasses();
+
+        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) {
+            context.read<LiveSessionViewModel>().tickTimers();
+            context.read<DashboardViewModel>().tickCountdown();
+          }
+        });
+      }
     });
   }
 

@@ -1,41 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fapcheckin/core/constants/app_colors.dart';
-import 'package:fapcheckin/core/constants/app_spacing.dart';
-import 'package:fapcheckin/data/models/history_student.dart';
-import 'package:fapcheckin/data/models/student_checkin.dart';
-import 'package:fapcheckin/viewmodels/attendance_history_viewmodel.dart';
+
+import '../../../../viewmodels/attendance_history_viewmodel.dart';
+import '../../../../data/models/history_student.dart';
 
 class HistoryTable extends StatelessWidget {
   const HistoryTable({super.key});
-
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AttendanceHistoryViewModel>();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Toolbar
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Flex(
-              direction: Axis.horizontal,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final session = vm.detail?.selectedSession;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              session == null
+                  ? 'Danh sách sinh viên của lớp'
+                  : 'Điểm danh ngày ${historyDate(session.sessionDate)} · Ca ${session.slotCode}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+<<<<<<< HEAD
                 Wrap(
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -67,318 +60,223 @@ class HistoryTable extends StatelessWidget {
                             DropdownMenuItem(value: 'late', child: Text('Đi trễ (${vm.students.where((s) => s.status == CheckinStatus.late).length})')),
                             DropdownMenuItem(value: 'absent', child: Text('Vắng mặt (${vm.students.where((s) => s.status == CheckinStatus.absent || s.status == CheckinStatus.unchecked).length})')),
                           ],
+=======
+                SizedBox(
+                  width: 280,
+                  child: TextFormField(
+                    key: ValueKey(vm.selectedClassCode),
+                    initialValue: vm.searchQuery,
+                    onChanged: vm.setSearch,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Tìm MSSV, họ tên, email',
+                    ),
+                  ),
+                ),
+                DropdownButton<String>(
+                  value: vm.statusFilter,
+                  onChanged: (s) {
+                    if (s != null) vm.setStatusFilter(s);
+                  },
+                  items: [
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text('Tất cả (${vm.students.length})'),
+                    ),
+                    ...['Present', 'Late', 'Absent', 'Unchecked'].map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(
+                          '${attendanceStatusLabels[s]} (${vm.count(s)})',
+>>>>>>> origin/dev
                         ),
                       ),
                     ),
-                    // Save Button
-                    ElevatedButton.icon(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryContainer,
-                        foregroundColor: AppColors.onPrimary,
-                        elevation: 0,
-                        minimumSize: const Size(0, 36),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      icon: const Icon(Icons.save, size: 16),
-                      label: const Text('Lưu thay đổi thủ công', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
                   ],
+                ),
+                FilledButton.icon(
+                  onPressed: vm.busy || !vm.hasChanges || session == null
+                      ? null
+                      : () async {
+                          final saved = await vm.saveChanges();
+                          if (context.mounted && saved) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Đã lưu điểm danh và ghi chú.'),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.save),
+                  label: Text(
+                    vm.saving ? 'Đang lưu...' : 'Lưu thay đổi thủ công',
+                  ),
                 ),
               ],
             ),
-          ),
-          
-          // Table Data
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 500),
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AppColors.surfaceMuted),
-                dataRowMinHeight: 64,
-                dataRowMaxHeight: 64,
-                horizontalMargin: 24,
-                columnSpacing: 24,
-                headingTextStyle: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.5,
+            const SizedBox(height: 16),
+            if (vm.filteredStudents.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('Không có sinh viên phù hợp.'),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('STT')),
+                    DataColumn(label: Text('MSSV')),
+                    DataColumn(label: Text('Họ và tên')),
+                    DataColumn(label: Text('Thời gian điểm danh')),
+                    DataColumn(label: Text('Phương thức')),
+                    DataColumn(label: Text('Trạng thái')),
+                    DataColumn(label: Text('Vắng lũy kế')),
+                    DataColumn(label: Text('Ghi chú')),
+                    DataColumn(label: Text('Thao tác')),
+                  ],
+                  rows: vm.filteredStudents.asMap().entries.map((entry) {
+                    final s = entry.value;
+                    return DataRow(
+                      cells: [
+                        DataCell(Text('${entry.key + 1}')),
+                        DataCell(Text(s.rollNumber)),
+                        DataCell(
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.fullName.isEmpty ? s.rollNumber : s.fullName,
+                              ),
+                              Text(
+                                s.email,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Text(historyDate(s.checkinTime, includeTime: true)),
+                        ),
+                        DataCell(
+                          Text(
+                            s.status == 'ManualByGV' || s.method == 'Manual'
+                                ? 'Giảng viên cập nhật'
+                                : s.checkinTime.isEmpty
+                                ? '—'
+                                : 'QR',
+                          ),
+                        ),
+                        DataCell(
+                          Text(attendanceStatusLabels[s.status] ?? s.status),
+                        ),
+                        DataCell(
+                          Text(
+                            '${s.absenceCount}/${s.totalSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
+                            style: TextStyle(
+                              color: s.absenceRate > .2 ? Colors.red : null,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          SizedBox(
+                            width: 180,
+                            child: Tooltip(
+                              message: s.note,
+                              child: Text(
+                                s.note.isEmpty ? '—' : s.note,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                tooltip: 'Chỉnh sửa trạng thái',
+                                onPressed: vm.busy || session == null
+                                    ? null
+                                    : () => _edit(context, s),
+                                icon: const Icon(Icons.edit_note),
+                              ),
+                              IconButton(
+                                tooltip: 'Ghi chú sinh viên',
+                                onPressed: vm.busy || session == null
+                                    ? null
+                                    : () => _edit(context, s),
+                                icon: const Icon(Icons.comment_outlined),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
                 ),
-                columns: const [
-                  DataColumn(label: Text('STT', textAlign: TextAlign.center)),
-                  DataColumn(label: Text('MSSV')),
-                  DataColumn(label: Text('HỌ VÀ TÊN')),
-                  DataColumn(label: Text('THỜI GIAN QUÉT')),
-                  DataColumn(label: Text('PHƯƠNG THỨC')),
-                  DataColumn(label: Text('TRẠNG THÁI BUỔI')),
-                  DataColumn(label: Text('TỶ LỆ VẮNG LŨY KẾ')),
-                  DataColumn(label: Text('THAO TÁC')),
-                ],
-                rows: vm.filteredStudents.map((s) => _buildDataRow(s)).toList(),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  DataRow _buildDataRow(HistoryStudent student) {
-    Color? rowBg;
-    if (student.status == CheckinStatus.absent) {
-      rowBg = AppColors.statusAbsentBg.withValues(alpha: 0.3);
-    }
-
-    return DataRow(
-      color: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.hovered)) {
-          return AppColors.surfaceContainerLow;
-        }
-        return rowBg ?? Colors.transparent;
-      }),
-      cells: [
-        DataCell(
-          Center(
-            child: Text(
-              student.index.toString().padLeft(2, '0'),
-              style: const TextStyle(fontFamily: 'JetBrains Mono', fontSize: 12, color: AppColors.textTertiary),
-            ),
-          ),
-        ),
-        DataCell(
-          Text(
-            student.studentId,
-            style: TextStyle(
-              fontFamily: 'JetBrains Mono',
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: student.status == CheckinStatus.absent ? AppColors.statusAbsent : AppColors.primaryDark,
-            ),
-          ),
-        ),
-        DataCell(
-          Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: _getAvatarBg(student),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  student.initials,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _getAvatarText(student),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(student.fullName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                  Text(student.email, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                ],
-              ),
-            ],
-          ),
-        ),
-        DataCell(
-          Text(
-            student.checkInTime,
-            style: TextStyle(
-              fontFamily: 'JetBrains Mono',
-              fontSize: 12,
-              fontWeight: student.status == CheckinStatus.late ? FontWeight.bold : FontWeight.normal,
-              color: student.status == CheckinStatus.late ? AppColors.statusLate : AppColors.textSecondary,
-            ),
-          ),
-        ),
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: student.methodLabel == 'Điểm danh bù bởi GV' ? AppColors.statusManualBg : AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
+  Future<void> _edit(BuildContext context, HistoryStudent student) async {
+    final vm = context.read<AttendanceHistoryViewModel>();
+    final note = TextEditingController(text: student.note);
+    var status = student.status;
+    if (!attendanceStatusLabels.containsKey(status)) status = 'Unchecked';
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('${student.rollNumber} · ${student.fullName}'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  _getIconData(student.methodIcon),
-                  size: 14,
-                  color: student.methodLabel == 'Điểm danh bù bởi GV' ? AppColors.statusManual : AppColors.textSecondary,
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  items: attendanceStatusLabels.entries
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e.key,
+                          child: Text(e.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) setState(() => status = value);
+                  },
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  student.methodLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: student.methodLabel == 'Điểm danh bù bởi GV' ? AppColors.statusManual : AppColors.textSecondary,
-                  ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: note,
+                  maxLines: 4,
+                  maxLength: 2000,
+                  decoration: const InputDecoration(labelText: 'Ghi chú'),
                 ),
               ],
             ),
           ),
-        ),
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getStatusBg(student.status, student.methodLabel),
-              borderRadius: BorderRadius.circular(99),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: _getStatusText(student.status, student.methodLabel),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  student.lateLabel ?? _getStatusLabel(student.status, student.methodLabel),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _getStatusText(student.status, student.methodLabel),
-                  ),
-                ),
-              ],
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Áp dụng'),
             ),
-          ),
+          ],
         ),
-        DataCell(
-          Container(
-            padding: student.absenceStatusText == 'Nguy cơ' ? const EdgeInsets.symmetric(horizontal: 8, vertical: 2) : null,
-            decoration: student.absenceStatusText == 'Nguy cơ'
-                ? BoxDecoration(
-                    color: AppColors.statusAbsentBg,
-                    borderRadius: BorderRadius.circular(4),
-                  )
-                : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (student.absenceStatusText == 'Nguy cơ') ...[
-                  const Icon(Icons.error, size: 14, color: AppColors.statusAbsent),
-                  const SizedBox(width: 4),
-                ],
-                Text(
-                  '${student.absenceCount}/${student.totalSessions} (${(student.absenceRate * 100).toStringAsFixed(0)}%)',
-                  style: TextStyle(
-                    fontFamily: 'JetBrains Mono',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: student.absenceStatusText == 'Nguy cơ'
-                        ? AppColors.statusAbsent
-                        : student.absenceStatusText == 'Tuyệt đối' ? AppColors.statusPresent : AppColors.textPrimary,
-                  ),
-                ),
-                if (student.absenceStatusText != 'Nguy cơ') ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    student.absenceStatusText,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: student.absenceStatusText == 'Tuyệt đối' ? AppColors.statusPresent : AppColors.textTertiary,
-                    ),
-                  ),
-                ] else ...[
-                  const Text(' - Nguy cơ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.statusAbsent)),
-                ]
-              ],
-            ),
-          ),
-        ),
-        DataCell(
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit_note, size: 18),
-                color: AppColors.textSecondary,
-                onPressed: () {},
-                tooltip: 'Chỉnh sửa trạng thái',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              ),
-              IconButton(
-                icon: const Icon(Icons.comment, size: 18),
-                color: AppColors.textSecondary,
-                onPressed: () {},
-                tooltip: 'Ghi chú sinh viên',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
-  }
-
-  Color _getAvatarBg(HistoryStudent s) {
-    if (s.status == CheckinStatus.absent) return AppColors.statusAbsentBg;
-    if (s.index % 2 == 0) return AppColors.secondaryContainer;
-    return AppColors.primaryLight;
-  }
-
-  Color _getAvatarText(HistoryStudent s) {
-    if (s.status == CheckinStatus.absent) return AppColors.statusAbsent;
-    if (s.index % 2 == 0) return AppColors.onSecondaryContainer;
-    return AppColors.primaryDark;
-  }
-
-  IconData _getIconData(String name) {
-    switch (name) {
-      case 'qr_code_2': return Icons.qr_code_2;
-      case 'how_to_reg': return Icons.how_to_reg;
-      case 'block': return Icons.block;
-      case 'mail': return Icons.mail;
-      default: return Icons.check;
-    }
-  }
-
-  Color _getStatusBg(CheckinStatus s, String method) {
-    if (method == 'Đơn phép qua FAP') return AppColors.statusManualBg;
-    switch (s) {
-      case CheckinStatus.present: return AppColors.statusPresentBg;
-      case CheckinStatus.late: return AppColors.statusLateBg;
-      case CheckinStatus.absent: return AppColors.statusAbsentBg;
-      case CheckinStatus.unchecked: return AppColors.statusUncheckedBg;
-    }
-  }
-
-  Color _getStatusText(CheckinStatus s, String method) {
-    if (method == 'Đơn phép qua FAP') return AppColors.statusManual;
-    switch (s) {
-      case CheckinStatus.present: return AppColors.statusPresent;
-      case CheckinStatus.late: return AppColors.statusLate;
-      case CheckinStatus.absent: return AppColors.statusAbsent;
-      case CheckinStatus.unchecked: return AppColors.statusUnchecked;
-    }
-  }
-
-  String _getStatusLabel(CheckinStatus s, String method) {
-    if (method == 'Đơn phép qua FAP') return 'Vắng có phép';
-    switch (s) {
-      case CheckinStatus.present: return 'Có mặt';
-      case CheckinStatus.late: return 'Đi trễ';
-      case CheckinStatus.absent: return 'Vắng mặt';
-      case CheckinStatus.unchecked: return 'Chưa điểm danh';
-    }
+    if (saved == true && context.mounted) vm.edit(student, status, note.text);
+    // Dialog route may still animate out; dispose after its transition.
+    Future<void>.delayed(const Duration(milliseconds: 400), note.dispose);
   }
 }

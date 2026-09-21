@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import 'app_router.dart';
 import '../core/theme/app_theme.dart';
 import '../core/network/api_service.dart';
 import '../core/services/google_auth_service.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/teacher_repository.dart';
+import '../data/repositories/attendance_history_repository.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/live_session_viewmodel.dart';
@@ -40,13 +42,25 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _authViewModel = AuthViewModel(_authRepo, _googleAuthService);
     _dashboardViewModel = DashboardViewModel(_teacherRepo);
     _liveSessionViewModel = LiveSessionViewModel(_teacherRepo);
+<<<<<<< HEAD
     _attendanceHistoryViewModel =
         AttendanceHistoryViewModel(_teacherRepo);
+=======
+    _attendanceHistoryViewModel = AttendanceHistoryViewModel(
+      AttendanceHistoryRepository(_apiService),
+    );
+    _authViewModel.addListener(_syncHistoryAccount);
+>>>>>>> origin/dev
     _router = createAppRouter(_authViewModel);
+  }
+
+  void _syncHistoryAccount() {
+    _attendanceHistoryViewModel.bindAccount(_authViewModel.session?.token);
   }
 
   @override
   void dispose() {
+    _authViewModel.removeListener(_syncHistoryAccount);
     _router.dispose();
     _authViewModel.dispose();
     _dashboardViewModel.dispose();
@@ -59,18 +73,11 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(
-          value: _authViewModel,
-        ),
-        ChangeNotifierProvider.value(
-          value: _dashboardViewModel,
-        ),
-        ChangeNotifierProvider.value(
-          value: _liveSessionViewModel,
-        ),
-        ChangeNotifierProvider.value(
-          value: _attendanceHistoryViewModel,
-        ),
+        Provider.value(value: _apiService),
+        ChangeNotifierProvider.value(value: _authViewModel),
+        ChangeNotifierProvider.value(value: _dashboardViewModel),
+        ChangeNotifierProvider.value(value: _liveSessionViewModel),
+        ChangeNotifierProvider.value(value: _attendanceHistoryViewModel),
       ],
       child: MaterialApp.router(
         title: 'FAP Check-in',

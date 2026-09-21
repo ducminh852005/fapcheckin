@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
 import '../data/models/class_section_model.dart';
 import '../data/models/close_session_model.dart';
 import '../data/models/roster_entry_model.dart';
@@ -55,8 +57,10 @@ class LiveSessionViewModel extends ChangeNotifier {
   static const int _sessionDurationSeconds = 90 * 60; // 90 min
 
   int get sessionRemainingSeconds =>
-      (_sessionDurationSeconds - _sessionElapsedSeconds)
-          .clamp(0, _sessionDurationSeconds);
+      (_sessionDurationSeconds - _sessionElapsedSeconds).clamp(
+        0,
+        _sessionDurationSeconds,
+      );
 
   String get sessionTimeDisplay {
     final remaining = sessionRemainingSeconds;
@@ -87,15 +91,13 @@ class LiveSessionViewModel extends ChangeNotifier {
   // Derived stats from roster
   int get totalStudents => _classInfo?.studentCount ?? _roster.length;
 
-  int get presentCount =>
-      _roster.where((s) => s.isPresent).length;
+  int get presentCount => _roster.where((s) => s.isPresent).length;
 
   int get lateCount => _roster.where((s) => s.isLate).length;
 
   int get checkedInCount => presentCount + lateCount;
 
-  int get uncheckedCount =>
-      _roster.where((s) => s.isUnchecked).length;
+  int get uncheckedCount => _roster.where((s) => s.isUnchecked).length;
 
   // ── Stats ────────────────────────────────────────────────────────────────────
 
@@ -134,8 +136,9 @@ class LiveSessionViewModel extends ChangeNotifier {
         status: _mapStatus(r.status),
         lateMinutes: r.isLate ? null : null,
         ipAddress: r.ipAddress ?? '--',
-        method:
-            r.status == 'ManualByGV' ? CheckinMethod.manual : CheckinMethod.qrCode,
+        method: r.status == 'ManualByGV'
+            ? CheckinMethod.manual
+            : CheckinMethod.qrCode,
       );
     }).toList();
   }
@@ -160,22 +163,25 @@ class LiveSessionViewModel extends ChangeNotifier {
     switch (_activeFilter) {
       case 'checked':
         list = list
-            .where((s) =>
-                s.status == CheckinStatus.present ||
-                s.status == CheckinStatus.late)
+            .where(
+              (s) =>
+                  s.status == CheckinStatus.present ||
+                  s.status == CheckinStatus.late,
+            )
             .toList();
         break;
       case 'unchecked':
-        list =
-            list.where((s) => s.status == CheckinStatus.unchecked).toList();
+        list = list.where((s) => s.status == CheckinStatus.unchecked).toList();
         break;
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       list = list
-          .where((s) =>
-              s.studentId.toLowerCase().contains(q) ||
-              s.fullName.toLowerCase().contains(q))
+          .where(
+            (s) =>
+                s.studentId.toLowerCase().contains(q) ||
+                s.fullName.toLowerCase().contains(q),
+          )
           .toList();
     }
     return list;
@@ -246,6 +252,20 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   /// Loads roster once (call manually or let polling handle it)
+  void adoptSession(
+    SessionModel session,
+    ClassSectionModel classInfo,
+    String teacherIp,
+  ) {
+    resetSession();
+    _session = session;
+    _classInfo = classInfo;
+    _teacherIp = teacherIp;
+    _status = ViewStatus.success;
+    _startPolling();
+    notifyListeners();
+  }
+
   Future<void> loadRoster() async {
     if (_session == null) return;
 
