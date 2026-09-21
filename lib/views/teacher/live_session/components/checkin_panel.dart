@@ -379,13 +379,36 @@ class _FilterTab extends StatelessWidget {
 }
 
 /// Data table for student check-in records
-class _CheckinTable extends StatelessWidget {
+class _CheckinTable extends StatefulWidget {
   final LiveSessionViewModel vm;
   const _CheckinTable({required this.vm});
 
   @override
+  State<_CheckinTable> createState() => _CheckinTableState();
+}
+
+class _CheckinTableState extends State<_CheckinTable> {
+  int _currentPage = 0;
+  static const int _itemsPerPage = 10;
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
     final students = vm.filteredStudents;
+    
+    final totalStudents = students.length;
+    final totalPages = (totalStudents / _itemsPerPage).ceil();
+    if (_currentPage >= totalPages && totalPages > 0) {
+      _currentPage = totalPages - 1;
+    }
+    
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage > totalStudents) 
+        ? totalStudents 
+        : startIndex + _itemsPerPage;
+        
+    final paginatedStudents = totalStudents > 0 ? students.sublist(startIndex, endIndex) : [];
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
@@ -395,163 +418,196 @@ class _CheckinTable extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 460),
-        child: SingleChildScrollView(
-          child: Table(
-            columnWidths: const {
-              0: FixedColumnWidth(50),  // STT
-              1: FlexColumnWidth(1.2),  // MSSV
-              2: FlexColumnWidth(2),    // Họ tên
-              3: FlexColumnWidth(1.2),  // Thời gian
-              4: FlexColumnWidth(1.5),  // Trạng thái
-              5: FlexColumnWidth(1.3),  // IP
-              6: FlexColumnWidth(1.2),  // Phương thức
-              7: FixedColumnWidth(90),  // Thao tác
-            },
-            children: [
-              // Header
-              TableRow(
-                decoration: const BoxDecoration(color: AppColors.surfaceMuted),
+      child: Column(
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 460),
+            child: SingleChildScrollView(
+              child: Table(
+                columnWidths: const {
+                  0: FixedColumnWidth(50),  // STT
+                  1: FlexColumnWidth(1.2),  // MSSV
+                  2: FlexColumnWidth(2),    // Họ tên
+                  3: FlexColumnWidth(1.2),  // Thời gian
+                  4: FlexColumnWidth(1.5),  // Trạng thái
+                  5: FlexColumnWidth(1.3),  // IP
+                  6: FlexColumnWidth(1.2),  // Phương thức
+                  7: FixedColumnWidth(90),  // Thao tác
+                },
                 children: [
-                  _HeaderCell('STT', center: true),
-                  _HeaderCell('MSSV'),
-                  _HeaderCell('Họ và tên'),
-                  _HeaderCell('Thời gian'),
-                  _HeaderCell('Trạng thái'),
-                  _HeaderCell('IP Mạng'),
-                  _HeaderCell('Phương thức'),
-                  _HeaderCell('Thao tác', center: true),
-                ],
-              ),
-              // Data rows
-              ...students.asMap().entries.map((e) {
-                final i = e.key;
-                final s = e.value;
-                return TableRow(
-                  decoration: BoxDecoration(
-                    color: i.isOdd
-                        ? AppColors.surfaceContainerLow.withValues(alpha: 0.3)
-                        : Colors.transparent,
+                  // Header
+                  TableRow(
+                    decoration: const BoxDecoration(color: AppColors.surfaceMuted),
+                    children: [
+                      _HeaderCell('STT', center: true),
+                      _HeaderCell('MSSV'),
+                      _HeaderCell('Họ và tên'),
+                      _HeaderCell('Thời gian'),
+                      _HeaderCell('Trạng thái'),
+                      _HeaderCell('IP Mạng'),
+                      _HeaderCell('Phương thức'),
+                      _HeaderCell('Thao tác', center: true),
+                    ],
                   ),
-                  children: [
-                    _DataCell(
-                      center: true,
-                      child: Text(
-                        s.index.toString().padLeft(2, '0'),
-                        style: AppTextStyles.codeSm.copyWith(color: AppColors.textTertiary),
-                        textAlign: TextAlign.center,
+                  // Data rows
+                  ...paginatedStudents.asMap().entries.map((e) {
+                    final i = e.key;
+                    final s = e.value;
+                    return TableRow(
+                      decoration: BoxDecoration(
+                        color: i.isOdd
+                            ? AppColors.surfaceContainerLow.withValues(alpha: 0.3)
+                            : Colors.transparent,
                       ),
-                    ),
-                    _DataCell(
-                      child: Text(
-                        s.studentId,
-                        style: AppTextStyles.code.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: s.status == CheckinStatus.unchecked
-                              ? AppColors.textSecondary
-                              : AppColors.primary,
+                      children: [
+                        _DataCell(
+                          center: true,
+                          child: Text(
+                            s.index.toString().padLeft(2, '0'),
+                            style: AppTextStyles.codeSm.copyWith(color: AppColors.textTertiary),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ),
-                    ),
-                    _DataCell(
-                      child: Row(
-                        children: [
-                          _AvatarCircle(initials: s.initials, status: s.status),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              s.fullName,
-                              style: AppTextStyles.bodySm.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        _DataCell(
+                          child: Text(
+                            s.studentId,
+                            style: AppTextStyles.code.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: s.status == CheckinStatus.unchecked
+                                  ? AppColors.textSecondary
+                                  : AppColors.primary,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    _DataCell(
-                      child: Text(
-                        s.checkInTime,
-                        style: AppTextStyles.code.copyWith(
-                          fontSize: 12,
-                          color: s.status == CheckinStatus.late
-                              ? AppColors.statusLate
-                              : AppColors.textSecondary,
-                          fontWeight: s.status == CheckinStatus.late
-                              ? FontWeight.w600
-                              : FontWeight.w400,
                         ),
-                      ),
-                    ),
-                    _DataCell(child: _StatusChip(status: s.status, lateMinutes: s.lateMinutes)),
-                    _DataCell(
-                      child: s.ipAddress == '--'
-                          ? Text(
-                              '--',
-                              style: AppTextStyles.codeSm.copyWith(color: AppColors.textTertiary),
-                            )
-                          : Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceMuted,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                s.ipAddress,
-                                style: AppTextStyles.codeSm.copyWith(
-                                  color: AppColors.textSecondary,
+                        _DataCell(
+                          child: Row(
+                            children: [
+                              _AvatarCircle(initials: s.initials, status: s.status),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  s.fullName,
+                                  style: AppTextStyles.bodySm.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
+                            ],
+                          ),
+                        ),
+                        _DataCell(
+                          child: Text(
+                            s.checkInTime,
+                            style: AppTextStyles.code.copyWith(
+                              fontSize: 12,
+                              color: s.status == CheckinStatus.late
+                                  ? AppColors.statusLate
+                                  : AppColors.textSecondary,
+                              fontWeight: s.status == CheckinStatus.late
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                             ),
-                    ),
-                    _DataCell(
-                      child: s.method == null
-                          ? Text('--', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary))
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  s.method == CheckinMethod.qrCode
-                                      ? Icons.qr_code_2_outlined
-                                      : Icons.edit_note_outlined,
-                                  size: 16,
-                                  color: AppColors.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
+                          ),
+                        ),
+                        _DataCell(child: _StatusChip(status: s.status, lateMinutes: s.lateMinutes)),
+                        _DataCell(
+                          child: s.ipAddress == '--'
+                              ? Text(
+                                  '--',
+                                  style: AppTextStyles.codeSm.copyWith(color: AppColors.textTertiary),
+                                )
+                              : Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceMuted,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
                                   child: Text(
-                                    s.method == CheckinMethod.qrCode ? 'QR Code' : 'Thủ công',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                    s.ipAddress,
+                                    style: AppTextStyles.codeSm.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              ],
-                            ),
-                    ),
-                    _DataCell(
-                      center: true,
-                      child: s.status == CheckinStatus.unchecked
-                          ? _MarkPresentButton(studentId: s.studentId, vm: vm)
-                          : IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textTertiary),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              splashRadius: 16,
-                            ),
-                    ),
-                  ],
-                );
-              }),
-            ],
+                        ),
+                        _DataCell(
+                          child: s.method == null
+                              ? Text('--', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary))
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      s.method == CheckinMethod.qrCode
+                                          ? Icons.qr_code_2_outlined
+                                          : Icons.edit_note_outlined,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        s.method == CheckinMethod.qrCode ? 'QR Code' : 'Thủ công',
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                        _DataCell(
+                          center: true,
+                          child: s.status == CheckinStatus.unchecked
+                              ? _MarkPresentButton(studentId: s.studentId, vm: vm)
+                              : IconButton(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textTertiary),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  splashRadius: 16,
+                                ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
           ),
-        ),
+          if (totalPages > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    color: AppColors.textSecondary,
+                  ),
+                  Text(
+                    'Trang ${_currentPage + 1} / $totalPages',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

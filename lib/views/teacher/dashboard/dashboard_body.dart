@@ -114,9 +114,17 @@ class _MainContent extends StatelessWidget {
 }
 
 /// Today's schedule panel with class list
-class _SchedulePanel extends StatelessWidget {
+class _SchedulePanel extends StatefulWidget {
   final DashboardViewModel vm;
   const _SchedulePanel({required this.vm});
+
+  @override
+  State<_SchedulePanel> createState() => _SchedulePanelState();
+}
+
+class _SchedulePanelState extends State<_SchedulePanel> {
+  int _currentPage = 0;
+  static const int _itemsPerPage = 10;
 
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
@@ -132,7 +140,28 @@ class _SchedulePanel extends StatelessWidget {
   }
 
   @override
+  void didUpdateWidget(covariant _SchedulePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.vm.classes.length != oldWidget.vm.classes.length) {
+      _currentPage = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
+    
+    // Pagination logic
+    final totalClasses = vm.classes.length;
+    final totalPages = (totalClasses / _itemsPerPage).ceil();
+    if (_currentPage >= totalPages && totalPages > 0) {
+      _currentPage = totalPages - 1;
+    }
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage > totalClasses) 
+        ? totalClasses 
+        : startIndex + _itemsPerPage;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -175,7 +204,7 @@ class _SchedulePanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
                 child: Text(
-                  '${vm.classes.length} lớp',
+                  '$totalClasses lớp',
                   style: AppTextStyles.codeSm.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -185,7 +214,10 @@ class _SchedulePanel extends StatelessWidget {
               _IconButton(
                 icon: Icons.refresh,
                 tooltip: 'Làm mới lịch',
-                onTap: () => vm.loadClasses(),
+                onTap: () {
+                  setState(() => _currentPage = 0);
+                  vm.loadClasses();
+                },
               ),
               const SizedBox(width: 4),
               _IconButton(
@@ -207,7 +239,10 @@ class _SchedulePanel extends StatelessWidget {
           else if (vm.status == ViewStatus.error)
             _ErrorRetry(
               message: vm.errorMessage ?? 'Lỗi tải dữ liệu',
-              onRetry: () => vm.loadClasses(),
+              onRetry: () {
+                setState(() => _currentPage = 0);
+                vm.loadClasses();
+              },
             )
           else if (vm.classes.isEmpty)
             Padding(
@@ -220,23 +255,53 @@ class _SchedulePanel extends StatelessWidget {
               ),
             )
           else
-            ...vm.classes.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ClassCard(
-                  session: _toClassSession(entry.value, entry.key),
-                  onStart: () async {
-                    final liveVm = context.read<LiveSessionViewModel>();
-                    await liveVm.startSession(
-                      classSection: entry.value,
-                      slotCode: (entry.key + 1).toString(),
-                      teacherIp: '127.0.0.1', // Mock IP as per docs
-                    );
-                    vm.navigate('diem-danh-qr');
-                  },
+            ...[
+              for (int i = startIndex; i < endIndex; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ClassCard(
+                    session: _toClassSession(vm.classes[i], i),
+                    onStart: () async {
+                      final liveVm = context.read<LiveSessionViewModel>();
+                      await liveVm.startSession(
+                        classSection: vm.classes[i],
+                        slotCode: (i + 1).toString(),
+                        teacherIp: '127.0.0.1', // Mock IP as per docs
+                      );
+                      vm.navigate('diem-danh-qr');
+                    },
+                  ),
                 ),
-              ),
-            ),
+              if (totalPages > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _currentPage > 0
+                            ? () => setState(() => _currentPage--)
+                            : null,
+                        color: AppColors.textSecondary,
+                      ),
+                      Text(
+                        'Trang ${_currentPage + 1} / $totalPages',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _currentPage < totalPages - 1
+                            ? () => setState(() => _currentPage++)
+                            : null,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
         ],
       ),
     );

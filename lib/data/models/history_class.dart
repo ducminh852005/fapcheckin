@@ -1,25 +1,25 @@
-class HistoryClass {
-  final String courseCode; // e.g. SWP391
-  final String className; // e.g. SE1704
-  final String courseName; // e.g. Dự án Phát triển Phần mềm
-  final double attendanceRate; // e.g. 0.942
-  final int completedSessions; // e.g. 12
-  final int totalSessions; // e.g. 30
-  final String latestSessionDate; // e.g. "Hôm nay 24/10"
-  final String latestSessionName; // e.g. "Buổi 12"
-  final bool isActive;
-  final bool isWarning;
+import '../../core/network/json_values.dart';
+import 'session_model.dart';
 
-  const HistoryClass({
-    required this.courseCode,
-    required this.className,
-    required this.courseName,
-    required this.attendanceRate,
-    required this.completedSessions,
-    required this.totalSessions,
-    required this.latestSessionDate,
-    required this.latestSessionName,
-    this.isActive = false,
-    this.isWarning = false,
-  });
+class HistoryClass {
+  final String classCode, subjectCode, subjectName, room;
+  final int studentCount, completedSessions, totalSessions, atRiskCount;
+  final double attendanceRate, lateRate;
+  final SessionModel? latestSession;
+  HistoryClass.fromJson(Map<String, dynamic> json)
+    : classCode = jsonText(json['classCode']) ?? '',
+      subjectCode = jsonText(json['subjectCode']) ?? '',
+      subjectName = jsonText(json['subjectName']) ?? '',
+      room = jsonText(json['room']) ?? '',
+      studentCount = jsonNumber(json['studentCount'])?.toInt() ?? 0,
+      completedSessions = jsonNumber(json['completedSessions'])?.toInt() ?? 0,
+      totalSessions = jsonNumber(json['totalSessions'])?.toInt() ?? 0,
+      atRiskCount = jsonNumber(json['atRiskCount'])?.toInt() ?? 0,
+      attendanceRate = jsonNumber(json['attendanceRate'])?.toDouble() ?? 0,
+      lateRate = jsonNumber(json['lateRate'])?.toDouble() ?? 0,
+      latestSession = json['latestSession'] == null
+          ? null
+          : SessionModel.fromJson(
+              Map<String, dynamic>.from(json['latestSession']),
+            );
 }

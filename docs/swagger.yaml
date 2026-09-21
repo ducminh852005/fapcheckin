@@ -29,13 +29,13 @@ paths:
                   type: string
                   description: Google ID Token
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-                
+                $ref: "#/components/schemas/AuthResponse"
+
   /teacher/classes:
     post:
       summary: Lấy danh sách lớp học của giảng viên
@@ -53,12 +53,12 @@ paths:
                 teacherMemberCode:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassSectionListResponse'
+                $ref: "#/components/schemas/ClassSectionListResponse"
 
   /teacher/sessions:
     post:
@@ -81,12 +81,12 @@ paths:
                 teacherIp:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StartSessionResponse'
+                $ref: "#/components/schemas/StartSessionResponse"
 
   /teacher/sessions/roster:
     post:
@@ -105,12 +105,12 @@ paths:
                 sessionId:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RosterListResponse'
+                $ref: "#/components/schemas/RosterListResponse"
 
   /teacher/sessions/manual-checkin:
     post:
@@ -134,12 +134,12 @@ paths:
                   type: string
                   enum: [Present, Late, Absent, ManualByGV]
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GenericResponse'
+                $ref: "#/components/schemas/GenericResponse"
 
   /teacher/sessions/close:
     post:
@@ -158,12 +158,12 @@ paths:
                 sessionId:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CloseSessionResponse'
+                $ref: "#/components/schemas/CloseSessionResponse"
 
   /teacher/sessions/list:
     post:
@@ -182,12 +182,12 @@ paths:
                 classCode:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SessionListResponse'
+                $ref: "#/components/schemas/SessionListResponse"
 
   /teacher/sessions/history:
     post:
@@ -208,12 +208,12 @@ paths:
                 sessionId:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttendanceHistoryResponse'
+                $ref: "#/components/schemas/AttendanceHistoryResponse"
 
   /teacher/classes/stats:
     post:
@@ -232,12 +232,12 @@ paths:
                 classCode:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StatsResponse'
+                $ref: "#/components/schemas/StatsResponse"
 
   /teacher/sync:
     post:
@@ -255,12 +255,12 @@ paths:
                 classCode:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SyncResponse'
+                $ref: "#/components/schemas/SyncResponse"
 
   /student/checkin:
     post:
@@ -283,12 +283,12 @@ paths:
                 rollNumber:
                   type: string
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttendanceRecordResponse'
+                $ref: "#/components/schemas/AttendanceRecordResponse"
 
 components:
   schemas:
@@ -311,9 +311,9 @@ components:
             token:
               type: string
             user:
-              $ref: '#/components/schemas/User'
+              $ref: "#/components/schemas/User"
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     ClassSectionListResponse:
       type: object
@@ -323,9 +323,9 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/ClassSection'
+            $ref: "#/components/schemas/ClassSection"
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     StartSessionResponse:
       type: object
@@ -336,11 +336,11 @@ components:
           type: object
           properties:
             session:
-              $ref: '#/components/schemas/AttendanceSession'
+              $ref: "#/components/schemas/AttendanceSession"
             qrToken:
               type: string
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     RosterListResponse:
       type: object
@@ -353,11 +353,11 @@ components:
             type: object
             properties:
               student:
-                $ref: '#/components/schemas/Student'
+                $ref: "#/components/schemas/Student"
               record:
-                $ref: '#/components/schemas/AttendanceRecord'
+                $ref: "#/components/schemas/AttendanceRecord"
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     AttendanceRecordResponse:
       type: object
@@ -365,9 +365,9 @@ components:
         success:
           type: boolean
         data:
-          $ref: '#/components/schemas/AttendanceRecord'
+          $ref: "#/components/schemas/AttendanceRecord"
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     GenericResponse:
       type: object
@@ -377,7 +377,7 @@ components:
         data:
           type: object
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     StatsResponse:
       type: object
@@ -394,7 +394,7 @@ components:
               attendancePercentage:
                 type: number
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     CloseSessionResponse:
       type: object
@@ -412,7 +412,7 @@ components:
             autoAbsentCount:
               type: integer
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     SessionListResponse:
       type: object
@@ -422,9 +422,9 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/AttendanceSession'
+            $ref: "#/components/schemas/AttendanceSession"
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     AttendanceHistoryResponse:
       type: object
@@ -465,7 +465,7 @@ components:
                   totalSessions:
                     type: integer
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     SyncResponse:
       type: object
@@ -480,7 +480,7 @@ components:
             message:
               type: string
         error:
-          $ref: '#/components/schemas/ApiError'
+          $ref: "#/components/schemas/ApiError"
 
     # Entity Schemas based on ERD
     User:
@@ -519,16 +519,29 @@ components:
       properties:
         classCode:
           type: string
+        subjectCode:
+          type: string
         subjectName:
           type: string
-        credits:
-          type: integer
         room:
           type: string
         studentCount:
           type: integer
         teacherMemberCode:
           type: string
+        timeLabel:
+          type: string
+        completedSessions:
+          type: integer
+        totalSessions:
+          type: integer
+        averageAttendance:
+          type: number
+        isActive:
+          type: boolean
+        activeSessionId:
+          type: string
+          nullable: true
 
     Slot:
       type: object

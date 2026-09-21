@@ -1,3 +1,5 @@
+import '../../core/network/json_values.dart';
+
 class UserModel {
   final String memberCode;
   final String fullName;
@@ -15,11 +17,11 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      memberCode: json['memberCode'] as String? ?? '',
-      fullName: json['fullName'] as String? ?? '',
-      role: json['role'] as String? ?? '',
-      rollNumber: json['rollNumber'] as String? ?? '',
-      email: json['email'] as String? ?? '',
+      memberCode: jsonText(json['memberCode']) ?? '',
+      fullName: jsonText(json['fullName']) ?? '',
+      role: jsonText(json['role']) ?? '',
+      rollNumber: jsonText(json['rollNumber']) ?? '',
+      email: jsonText(json['email']) ?? '',
     );
   }
 
@@ -34,10 +36,10 @@ class UserModel {
   String get displayName => fullName.isNotEmpty ? fullName : email;
 
   Map<String, dynamic> toJson() => {
-        'memberCode': memberCode,
-        'fullName': fullName,
-        'role': role,
-        'rollNumber': rollNumber,
-        'email': email,
-      };
+    'memberCode': memberCode,
+    'fullName': fullName,
+    'role': role,
+    'rollNumber': rollNumber,
+    'email': email,
+  };
 }
