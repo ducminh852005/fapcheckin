@@ -93,6 +93,34 @@ class TeacherRepository {
     return result;
   }
 
+  // ── manualCheckinBulk ──────────────────────────────────────────────────────
+
+  Future<ApiResult<void>> manualCheckinBulk({
+    required String sessionId,
+    required List<Map<String, dynamic>> changes,
+  }) async {
+    final result = await _api.postAction<void>(
+      'manualCheckinBulk',
+      payload: {
+        'sessionId': sessionId,
+        'changes': changes,
+      },
+    );
+    return result;
+  }
+
+  // ── closeSession ───────────────────────────────────────────────────────────
+
+  Future<ApiResult<void>> closeSession({
+    required String sessionId,
+  }) async {
+    final result = await _api.postAction<void>(
+      'closeSession',
+      payload: {'sessionId': sessionId},
+    );
+    return result;
+  }
+
   // ── getStats ───────────────────────────────────────────────────────────────
 
   Future<ApiResult<List<StatsEntryModel>>> getStats({

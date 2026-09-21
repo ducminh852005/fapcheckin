@@ -31,11 +31,8 @@ var SheetDB = (function() {
   }
   
   function getSpreadsheet() {
-    try {
-      var ss = SpreadsheetApp.getActiveSpreadsheet();
-      if (ss) return ss;
-    } catch (e) {}
-    
+    // Always use the configured data source, even when this script is bound
+    // to another workbook (for example an old demo/template copy).
     return SpreadsheetApp.openById(SPREADSHEET_ID);
   }
 

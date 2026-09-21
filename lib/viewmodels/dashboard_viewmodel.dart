@@ -199,6 +199,17 @@ class DashboardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Helper state updates ──────────────────────────────────────────────────
+
+  void markClassInactive(String classCode) {
+    for (int i = 0; i < _classes.length; i++) {
+      if (_classes[i].classCode == classCode) {
+        _classes[i] = _classes[i].copyWith(isActive: false, activeSessionId: null);
+      }
+    }
+    notifyListeners();
+  }
+
   // ── Navigation ───────────────────────────────────────────────────────────────
 
   String _currentRoute = 'tong-quan';

@@ -27,7 +27,10 @@ function backend() {
   };
   const context = vm.createContext({
     SpreadsheetApp: {
-      getActiveSpreadsheet: () => ({
+      getActiveSpreadsheet: () => { throw new Error('Must not read the bound demo spreadsheet'); },
+      openById: id => {
+        assert.equal(id, '1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4');
+        return ({
         getSheetByName: name => tables[name] && ({
           getDataRange: () => ({ getValues: () => tables[name] }),
           appendRow: row => tables[name].push(row),
@@ -35,7 +38,8 @@ function backend() {
             setValue: value => { tables[name][row - 1][col - 1] = value; },
           }),
         }),
-      }),
+        });
+      },
     },
     ContentService: {
       MimeType: { JSON: 'application/json' },

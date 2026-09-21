@@ -162,7 +162,7 @@ class _ActiveBadgeState extends State<_ActiveBadge>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 8,
@@ -283,78 +283,95 @@ class _QrCodeDisplay extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: vm.qrToken.isEmpty 
-                    ? const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()))
-                    : QrImageView(
-                        data: vm.qrToken,
-                        version: QrVersions.auto,
-                        size: 220.0,
-                        backgroundColor: Colors.white,
-                      ),
+                child: vm.session == null
+                    ? SizedBox(
+                        width: 220,
+                        height: 220,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle, size: 48, color: AppColors.textTertiary),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Phiên đã kết thúc',
+                              style: AppTextStyles.labelMd.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      )
+                    : vm.qrToken.isEmpty 
+                        ? const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()))
+                        : QrImageView(
+                            data: vm.qrToken,
+                            version: QrVersions.auto,
+                            size: 220.0,
+                            backgroundColor: Colors.white,
+                          ),
               ),
               const SizedBox(height: 16),
               // Circular countdown timer bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x0A142433), blurRadius: 3, offset: Offset(0, 1)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Circular progress
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Stack(
-                        alignment: Alignment.center,
+              if (vm.session != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A142433), blurRadius: 3, offset: Offset(0, 1)),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Circular progress
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomPaint(
+                              size: const Size(36, 36),
+                              painter: _CircularTimerPainter(
+                                progress: vm.qrProgress,
+                                trackColor: AppColors.surfaceMuted,
+                                progressColor: AppColors.primaryContainer,
+                              ),
+                            ),
+                            Text(
+                              '${vm.qrRefreshSeconds}s',
+                              style: AppTextStyles.codeSm.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CustomPaint(
-                            size: const Size(36, 36),
-                            painter: _CircularTimerPainter(
-                              progress: vm.qrProgress,
-                              trackColor: AppColors.surfaceMuted,
-                              progressColor: AppColors.primaryContainer,
+                          Text(
+                            'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
-                            '${vm.qrRefreshSeconds}s',
-                            style: AppTextStyles.codeSm.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 10,
+                            'Chống gian lận vị trí & chụp màn hình',
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
-                          style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Chống gian lận vị trí & chụp màn hình',
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -513,7 +530,7 @@ class _WebSocketBarState extends State<_WebSocketBar>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 10,
@@ -657,9 +674,57 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () {
-          context.read<LiveSessionViewModel>().resetSession();
-          context.read<DashboardViewModel>().navigate('tong-quan');
+        onTap: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              title: const Text('Xác nhận kết thúc'),
+              content: const Text('Bạn có chắc chắn muốn kết thúc phiên điểm danh này?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(
+                    'Hủy bỏ',
+                    style: AppTextStyles.labelMd.copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.statusAbsent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                  ),
+                  child: const Text('Xác nhận'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm != true || !context.mounted) return;
+
+          final vm = context.read<LiveSessionViewModel>();
+          final classCode = vm.classInfo?.classCode;
+          final success = await vm.closeSession();
+
+          if (success && context.mounted) {
+            if (classCode != null) {
+              context.read<DashboardViewModel>().markClassInactive(classCode);
+            }
+            context.read<DashboardViewModel>().navigate('tong-quan');
+            context.read<DashboardViewModel>().loadClasses();
+          } else if (context.mounted) {
+            final error = context.read<LiveSessionViewModel>().errorMessage ?? 'Lỗi khi kết thúc phiên';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error)),
+            );
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

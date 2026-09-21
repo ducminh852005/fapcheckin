@@ -6,6 +6,13 @@ Response giữ envelope `{success, data, error}`.
 
 ## Triển khai
 
+### Nguồn dữ liệu sinh viên
+
+- `SheetDB.gs` mở đúng `SPREADSHEET_ID` đã cấu hình bằng `openById`, không tự chuyển sang Sheet đang gắn với Apps Script. Tài khoản triển khai phải có quyền truy cập file đó.
+- Danh sách điểm danh trực tiếp dùng `Users.fullName` ghép theo `Enrollment.rollNumber`, không dùng phần tên email làm họ tên.
+- Bảng cảnh báo ở trang Báo cáo dùng `getHistoryClasses` và `getHistoryDetail`; không còn tên/MSSV mẫu. Tỷ lệ vắng tính trên phiên đã đóng; lỗi API được hiển thị, không thay bằng dữ liệu giả. Các KPI và biểu đồ báo cáo khác vẫn là minh họa và được ghi rõ trên trang.
+- Sau khi thay đổi `SheetDB.gs`, cần triển khai phiên bản Apps Script mới theo các bước dưới đây; sửa file trong repo chưa cập nhật Web App đang chạy.
+
 1. Cập nhật `AuthService.gs`, `SheetDB.gs`, `Router.gs` trong dự án Apps Script hiện tại.
 2. Thêm **hai file mới**: `AttendanceHistoryService.gs` và `HistoryExcel.gs`.
 3. Deploy phiên bản Web App mới vào deployment đang dùng (giữ nguyên URL `/exec`).

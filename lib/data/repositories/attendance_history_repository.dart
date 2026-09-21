@@ -18,7 +18,10 @@ class AttendanceHistoryRepository {
     String? sessionId,
   }) => _api.postAction(
     'getHistoryDetail',
-    payload: {'classCode': classCode, 'sessionId': ?sessionId},
+    payload: {
+      'classCode': classCode,
+      if (sessionId != null) 'sessionId': sessionId,
+    },
     fromJsonT: (data) =>
         HistoryDetail.fromJson(Map<String, dynamic>.from(data)),
   );
@@ -48,7 +51,10 @@ class AttendanceHistoryRepository {
     String? sessionId,
   ) => _api.postAction(
     'exportAttendanceHistory',
-    payload: {'classCode': classCode, 'sessionId': ?sessionId},
+    payload: {
+      'classCode': classCode,
+      if (sessionId != null) 'sessionId': sessionId,
+    },
     fromJsonT: (data) =>
         HistoryExport.fromJson(Map<String, dynamic>.from(data)),
   );

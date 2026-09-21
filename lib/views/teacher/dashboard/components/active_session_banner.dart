@@ -5,7 +5,7 @@ import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
-
+import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 /// Active session banner shown at the top of dashboard
 class ActiveSessionBanner extends StatelessWidget {
   const ActiveSessionBanner({super.key});
@@ -299,7 +299,19 @@ class _LiveSessionButtonState extends State<_LiveSessionButton> {
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: () {
-          context.read<DashboardViewModel>().navigate('diem-danh-qr');
+          final activeClass = context.read<DashboardViewModel>().classes.firstWhere(
+            (c) => c.isActive,
+            orElse: () => context.read<DashboardViewModel>().classes.first,
+          );
+          context.read<LiveSessionViewModel>().startSession(
+            classSection: activeClass,
+            slotCode: '1',
+            teacherIp: '192.168.1.100',
+          ).then((_) {
+            if (context.mounted) {
+              context.read<DashboardViewModel>().navigate('diem-danh-qr');
+            }
+          });
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

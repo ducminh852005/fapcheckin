@@ -3,27 +3,86 @@ import 'package:provider/provider.dart';
 
 import '../../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../../data/models/history_student.dart';
+import '../../../../core/constants/app_colors.dart';
 
-class HistoryTable extends StatelessWidget {
+class HistoryTable extends StatefulWidget {
   const HistoryTable({super.key});
+
+  @override
+  State<HistoryTable> createState() => _HistoryTableState();
+}
+
+class _HistoryTableState extends State<HistoryTable> {
+  int _currentPage = 0;
+  static const int _itemsPerPage = 10;
+  String _prevClassCode = '';
+  String _prevSessionId = '';
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AttendanceHistoryViewModel>();
     final session = vm.detail?.selectedSession;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              session == null
-                  ? 'Danh sách sinh viên của lớp'
-                  : 'Điểm danh ngày ${historyDate(session.sessionDate)} · Ca ${session.slotCode}',
-              style: Theme.of(context).textTheme.titleMedium,
+    final filteredStudents = vm.filteredStudents;
+    final totalStudents = filteredStudents.length;
+    final studentsCount = vm.students.length;
+
+    // Reset pagination when switching class or session
+    final currentClass = vm.selectedClassCode ?? '';
+    final currentSession = session?.sessionId ?? '';
+    if (currentClass != _prevClassCode || currentSession != _prevSessionId) {
+      _currentPage = 0;
+      _prevClassCode = currentClass;
+      _prevSessionId = currentSession;
+    }
+
+    final totalPages = (totalStudents / _itemsPerPage).ceil();
+    if (_currentPage >= totalPages && totalPages > 0) {
+      _currentPage = totalPages - 1;
+    }
+
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage > totalStudents)
+        ? totalStudents
+        : startIndex + _itemsPerPage;
+
+    final paginatedStudents = totalStudents > 0
+        ? filteredStudents.sublist(startIndex, endIndex)
+        : <HistoryStudent>[];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  session == null
+                      ? 'Danh sách sinh viên của lớp'
+                      : 'Điểm danh ngày ${historyDate(session.sessionDate)} · Ca ${session.slotCode}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                _StudentCount(count: totalStudents),
+              ],
             ),
-            const SizedBox(height: 12),
-            Wrap(
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
               spacing: 12,
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -33,32 +92,28 @@ class HistoryTable extends StatelessWidget {
                   child: TextFormField(
                     key: ValueKey(vm.selectedClassCode),
                     initialValue: vm.searchQuery,
-                    onChanged: vm.setSearch,
+                    onChanged: (val) {
+                      setState(() => _currentPage = 0);
+                      vm.setSearch(val);
+                    },
                     decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: Icon(Icons.search, size: 20),
                       hintText: 'Tìm MSSV, họ tên, email',
+                      isDense: true,
                     ),
                   ),
                 ),
-                DropdownButton<String>(
-                  value: vm.statusFilter,
-                  onChanged: (s) {
-                    if (s != null) vm.setStatusFilter(s);
-                  },
-                  items: [
-                    DropdownMenuItem(
-                      value: 'all',
-                      child: Text('Tất cả (${vm.students.length})'),
-                    ),
-                    ...['Present', 'Late', 'Absent', 'Unchecked'].map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(
-                          '${attendanceStatusLabels[s]} (${vm.count(s)})',
-                        ),
-                      ),
-                    ),
-                  ],
+                SizedBox(
+                  width: 200,
+                  child: _StatusFilter(
+                    value: vm.statusFilter,
+                    studentsCount: studentsCount,
+                    count: vm.count,
+                    onChanged: (val) {
+                      setState(() => _currentPage = 0);
+                      vm.setStatusFilter(val);
+                    },
+                  ),
                 ),
                 FilledButton.icon(
                   onPressed: vm.busy || !vm.hasChanges || session == null
@@ -73,120 +128,316 @@ class HistoryTable extends StatelessWidget {
                             );
                           }
                         },
-                  icon: const Icon(Icons.save),
-                  label: Text(
-                    vm.saving ? 'Đang lưu...' : 'Lưu thay đổi thủ công',
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryContainer,
+                    foregroundColor: Colors.white,
                   ),
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                  label: Text(vm.saving ? 'Đang lưu...' : 'Lưu thay đổi'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            if (vm.filteredStudents.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Không có sinh viên phù hợp.'),
-              )
-            else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('STT')),
-                    DataColumn(label: Text('MSSV')),
-                    DataColumn(label: Text('Họ và tên')),
-                    DataColumn(label: Text('Thời gian điểm danh')),
-                    DataColumn(label: Text('Phương thức')),
-                    DataColumn(label: Text('Trạng thái')),
-                    DataColumn(label: Text('Vắng lũy kế')),
-                    DataColumn(label: Text('Ghi chú')),
-                    DataColumn(label: Text('Thao tác')),
-                  ],
-                  rows: vm.filteredStudents.asMap().entries.map((entry) {
-                    final s = entry.value;
-                    return DataRow(
-                      cells: [
-                        DataCell(Text('${entry.key + 1}')),
-                        DataCell(Text(s.rollNumber)),
-                        DataCell(
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                s.fullName.isEmpty ? s.rollNumber : s.fullName,
-                              ),
-                              Text(
-                                s.email,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        DataCell(
-                          Text(historyDate(s.checkinTime, includeTime: true)),
-                        ),
-                        DataCell(
-                          Text(
-                            s.status == 'ManualByGV' || s.method == 'Manual'
-                                ? 'Giảng viên cập nhật'
-                                : s.checkinTime.isEmpty
-                                ? '—'
-                                : 'QR',
-                          ),
-                        ),
-                        DataCell(
-                          Text(attendanceStatusLabels[s.status] ?? s.status),
-                        ),
-                        DataCell(
-                          Text(
-                            '${s.absenceCount}/${s.totalSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
-                            style: TextStyle(
-                              color: s.absenceRate > .2 ? Colors.red : null,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          SizedBox(
-                            width: 180,
-                            child: Tooltip(
-                              message: s.note,
-                              child: Text(
-                                s.note.isEmpty ? '—' : s.note,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Row(
-                            children: [
-                              IconButton(
-                                tooltip: 'Chỉnh sửa trạng thái',
-                                onPressed: vm.busy || session == null
-                                    ? null
-                                    : () => _edit(context, s),
-                                icon: const Icon(Icons.edit_note),
-                              ),
-                              IconButton(
-                                tooltip: 'Ghi chú sinh viên',
-                                onPressed: vm.busy || session == null
-                                    ? null
-                                    : () => _edit(context, s),
-                                icon: const Icon(Icons.comment_outlined),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+          ),
+          if (filteredStudents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 36),
+              child: Center(
+                child: Text(
+                  'Không có sinh viên phù hợp.',
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final tableWidth = constraints.maxWidth < 980 ? 980.0 : constraints.maxWidth;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: tableWidth,
+                    child: Table(
+                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                      columnWidths: const {
+                        0: FixedColumnWidth(60),   // STT
+                        1: FixedColumnWidth(110),  // MSSV
+                        2: FlexColumnWidth(2.8),   // HỌ VÀ TÊN
+                        3: FixedColumnWidth(120),  // GIỜ ĐIỂM DANH
+                        4: FixedColumnWidth(130),  // PHƯƠNG THỨC
+                        5: FixedColumnWidth(140),  // TRẠNG THÁI
+                        6: FixedColumnWidth(110),  // VẮNG LŨY KẾ
+                        7: FlexColumnWidth(2.0),   // GHI CHÚ
+                        8: FixedColumnWidth(90),   // THAO TÁC
+                      },
+                      children: [
+                        TableRow(
+                          decoration: const BoxDecoration(
+                            color: AppColors.surfaceContainerLow,
+                          ),
+                          children: [
+                            _headerCell('STT', center: true),
+                            _headerCell('MSSV'),
+                            _headerCell('HỌ VÀ TÊN'),
+                            _headerCell('GIỜ ĐIỂM DANH', center: true),
+                            _headerCell('PHƯƠNG THỨC', center: true),
+                            _headerCell('TRẠNG THÁI', center: true),
+                            _headerCell('VẮNG LŨY KẾ', center: true),
+                            _headerCell('GHI CHÚ'),
+                            _headerCell('THAO TÁC', center: true),
+                          ],
+                        ),
+                        ...paginatedStudents.asMap().entries.map((entry) {
+                          final s = entry.value;
+                          final idx = startIndex + entry.key + 1;
+                          final isEven = entry.key.isEven;
+                          return TableRow(
+                            decoration: BoxDecoration(
+                              color: isEven
+                                  ? Colors.transparent
+                                  : AppColors.surfaceContainerLowest.withValues(alpha: 0.5),
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: AppColors.border.withValues(alpha: 0.6),
+                                  width: 0.6,
+                                ),
+                              ),
+                            ),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Text(
+                                  '$idx'.padLeft(2, '0'),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Text(
+                                  s.rollNumber,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.primaryLight,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        _getInitials(s.fullName.isEmpty ? s.rollNumber : s.fullName),
+                                        style: const TextStyle(
+                                          color: AppColors.primaryDark,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            s.fullName.isEmpty ? s.rollNumber : s.fullName,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            s.email,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Text(
+                                  s.checkinTime.isEmpty
+                                      ? '--:--'
+                                      : historyDate(s.checkinTime, includeTime: true),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Text(
+                                  _methodLabel(s),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                child: Center(
+                                  child: _StatusBadge(status: s.status),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Text(
+                                  '${s.absenceCount}/${s.totalSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: s.absenceRate > .2
+                                        ? AppColors.statusAbsent
+                                        : AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                child: Tooltip(
+                                  message: s.note,
+                                  child: Text(
+                                    s.note.isEmpty ? '—' : s.note,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Chỉnh sửa trạng thái',
+                                      iconSize: 18,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      onPressed: vm.busy || session == null
+                                          ? null
+                                          : () => _edit(context, s),
+                                      icon: const Icon(Icons.edit_note, color: AppColors.textSecondary),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Ghi chú sinh viên',
+                                      iconSize: 18,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                      onPressed: vm.busy || session == null
+                                          ? null
+                                          : () => _edit(context, s),
+                                      icon: const Icon(Icons.comment_outlined, color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (totalPages > 1) ...[
+            const Divider(height: 1, color: AppColors.border),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                    tooltip: 'Trang trước',
+                    color: AppColors.primaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Trang ${_currentPage + 1} / $totalPages',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                    tooltip: 'Trang tiếp',
+                    color: AppColors.primaryContainer,
+                  ),
+                ],
+              ),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+
+  static Widget _headerCell(String label, {bool center = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      child: Text(
+        label,
+        textAlign: center ? TextAlign.center : TextAlign.start,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
         ),
       ),
     );
+  }
+
+  static String _getInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts[0].isEmpty) return '';
+    if (parts.length == 1) {
+      return parts[0].substring(0, parts[0].length.clamp(0, 2)).toUpperCase();
+    }
+    return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   Future<void> _edit(BuildContext context, HistoryStudent student) async {
@@ -235,6 +486,9 @@ class HistoryTable extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryContainer,
+              ),
               child: const Text('Áp dụng'),
             ),
           ],
@@ -245,4 +499,118 @@ class HistoryTable extends StatelessWidget {
     // Dialog route may still animate out; dispose after its transition.
     Future<void>.delayed(const Duration(milliseconds: 400), note.dispose);
   }
+}
+
+class _StudentCount extends StatelessWidget {
+  const _StudentCount({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$count sinh viên',
+        style: const TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusFilter extends StatelessWidget {
+  const _StatusFilter({
+    required this.value,
+    required this.studentsCount,
+    required this.count,
+    required this.onChanged,
+  });
+
+  final String value;
+  final int studentsCount;
+  final int Function(String status) count;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      onChanged: (status) {
+        if (status != null) onChanged(status);
+      },
+      decoration: const InputDecoration(
+        labelText: 'Lọc trạng thái',
+        prefixIcon: Icon(Icons.filter_list),
+        isDense: true,
+      ),
+      items: [
+        DropdownMenuItem(value: 'all', child: Text('Tất cả ($studentsCount)')),
+        ...['Present', 'Late', 'Absent', 'Unchecked'].map(
+          (status) => DropdownMenuItem(
+            value: status,
+            child: Text('${attendanceStatusLabels[status]} (${count(status)})'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = switch (status) {
+      'Present' || 'ManualByGV' => (
+        foreground: AppColors.statusPresent,
+        background: AppColors.statusPresentBg,
+      ),
+      'Late' => (
+        foreground: AppColors.statusLate,
+        background: AppColors.statusLateBg,
+      ),
+      'Absent' => (
+        foreground: AppColors.statusAbsent,
+        background: AppColors.statusAbsentBg,
+      ),
+      _ => (
+        foreground: AppColors.statusUnchecked,
+        background: AppColors.statusUncheckedBg,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        attendanceStatusLabels[status] ?? status,
+        style: TextStyle(
+          color: colors.foreground,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+String _methodLabel(HistoryStudent student) {
+  if (student.status == 'ManualByGV' || student.method == 'Manual') {
+    return 'Giảng viên cập nhật';
+  }
+  return student.checkinTime.isEmpty ? '—' : 'QR';
 }

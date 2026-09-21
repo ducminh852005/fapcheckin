@@ -136,9 +136,9 @@ class ToastNotification extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                             children: [
-                              const TextSpan(text: 'Nguyễn Văn Bình ('),
+                              TextSpan(text: '${vm.lastCheckedInStudent?.displayName ?? 'Sinh viên'} ('),
                               TextSpan(
-                                text: 'SE160342',
+                                text: vm.lastCheckedInStudent?.rollNumber ?? '',
                                 style: AppTextStyles.codeSm.copyWith(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
@@ -155,7 +155,7 @@ class ToastNotification extends StatelessWidget {
                             children: [
                               const TextSpan(text: 'Vừa điểm danh thành công lúc '),
                               TextSpan(
-                                text: '07:55:01',
+                                text: vm.lastCheckedInStudent?.displayCheckinTime ?? '',
                                 style: AppTextStyles.codeSm.copyWith(
                                   color: AppColors.statusPresent,
                                   fontWeight: FontWeight.w700,
