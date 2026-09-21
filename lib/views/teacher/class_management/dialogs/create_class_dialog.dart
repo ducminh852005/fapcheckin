@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../../core/network/api_result.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../data/repositories/schedule_repository.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/constants/app_spacing.dart';
 
 class CreateClassDialog extends StatefulWidget {
   const CreateClassDialog({super.key, this.repository});
@@ -23,6 +26,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
   String _type = 'makeup';
   bool _loading = true, _saving = false;
   Map<String, dynamic>? _pending;
+  
   List<Map<String, dynamic>> _rows(String key) =>
       ((_options?[key] as List?) ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
@@ -31,8 +35,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.repository ?? ScheduleRepository(context.read<ApiService>());
+    _repository = widget.repository ?? ScheduleRepository(context.read<ApiService>());
     _load();
   }
 
@@ -64,8 +67,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
     );
     if (value != null && mounted) {
       setState(
-        () => _day =
-            '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
+        () => _day = '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}',
       );
     }
   }
@@ -73,13 +75,14 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
   Future<void> _save() async {
     if (_saving) return;
     if (_classCode == null || _slotCode == null || _room == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn lớp, ca học và phòng học.'), backgroundColor: AppColors.error),
+      );
       setState(() => _error = 'Vui lòng chọn lớp, ca học và phòng học.');
       return;
     }
-    // Keep the exact request after a timeout; retry cannot create a duplicate.
     _pending ??= {
-      'requestId':
-          '${DateTime.now().microsecondsSinceEpoch}_${Random.secure().nextInt(1 << 32)}',
+      'requestId': '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(999999)}',
       'classCode': _classCode,
       'slotCode': _slotCode,
       'room': _room,
@@ -102,13 +105,10 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
       _saving = false;
       if (result is ApiFailure<Map<String, dynamic>>) {
         _error = result.error.message;
-        // Only a definitive validation rejection permits editing a new request.
-        if ([
-          'VALIDATION_ERROR',
-          'FORBIDDEN',
-          'NOT_SUPPORTED',
-          'SCHEDULE_CONFLICT',
-        ].contains(result.error.code)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_error!), backgroundColor: AppColors.error),
+        );
+        if (['VALIDATION_ERROR', 'FORBIDDEN', 'NOT_SUPPORTED', 'SCHEDULE_CONFLICT'].contains(result.error.code)) {
           _pending = null;
         }
       }
@@ -121,263 +121,504 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
     super.dispose();
   }
 
-  Widget _dropdown(
-    String label,
-    String? value,
-    List<DropdownMenuItem<String>> items,
-    ValueChanged<String?> changed,
-  ) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
-    child: DropdownButtonFormField<String>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
+  Widget _buildLabel(String text, {bool required = true, Widget? suffix}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          RichText(
+            text: TextSpan(
+              text: text,
+              style: AppTextStyles.labelMd.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+              children: [
+                if (required) TextSpan(text: ' *', style: AppTextStyles.labelMd.copyWith(color: AppColors.error)),
+              ],
+            ),
+          ),
+          if (suffix != null) suffix,
+        ],
       ),
-      items: items,
-      onChanged: changed,
-    ),
-  );
+    );
+  }
+
+  Widget _buildDropdown(String? value, List<DropdownMenuItem<String>> items, ValueChanged<String?> changed, {String hint = ''}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          hint: Text(hint, style: AppTextStyles.bodyMd.copyWith(color: AppColors.textSecondary)),
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
+          items: items,
+          onChanged: changed,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSectionHeader(IconData icon, String title, {String? rightText}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: AppTextStyles.headlineSm.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const Spacer(),
+          if (rightText != null)
+            Text(
+              rightText,
+              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlotCard(Map<String, dynamic> slot) {
+    final slotCode = slot['slotCode'] as String;
+    final isSelected = _slotCode == slotCode;
+    final isEnabled = slot['available'] == true;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: isEnabled ? () => setState(() => _slotCode = slotCode) : null,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryLight.withOpacity(0.3) : AppColors.surface,
+            border: Border.all(
+              color: isSelected ? AppColors.primaryContainer : AppColors.surfaceContainerHigh,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Ca ${slotCode.replaceAll('Slot', '').trim()} ($slotCode)',
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: isSelected ? AppColors.primaryContainer : (isEnabled ? AppColors.textPrimary : AppColors.textTertiary),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                    ),
+                  ),
+                  if (isSelected) ...[
+                    const SizedBox(width: 4),
+                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.primaryContainer, shape: BoxShape.circle)),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${slot['startTime']} - ${slot['endTime']}',
+                style: AppTextStyles.caption.copyWith(
+                  color: isSelected ? AppColors.primaryContainer : (isEnabled ? AppColors.textSecondary : AppColors.textTertiary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final classes = _rows('classes');
-    final selected = classes
-        .where((c) => c['classCode'] == _classCode)
-        .firstOrNull;
+    final selectedClass = classes.where((c) => c['classCode'] == _classCode).firstOrNull;
+
     return PopScope(
       canPop: !_saving,
       child: Dialog(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700, maxHeight: 850),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 900),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Expanded(
-                      child: Text(
-                        'Tạo lịch học mới & Đăng ký dạy bù',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.edit_calendar, color: AppColors.primaryContainer, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Tạo lịch học mới & Đăng ký dạy bù',
+                                style: AppTextStyles.headlineSm.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.circle, size: 8, color: AppColors.primaryContainer),
+                                    const SizedBox(width: 4),
+                                    Text('Học kỳ Fall 2026', style: AppTextStyles.caption.copyWith(color: AppColors.primaryContainer, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Khởi tạo buổi học phát sinh, bù lịch nghỉ lễ hoặc tăng cường ôn tập môn học',
+                            style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
                       onPressed: _saving ? null : () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(Icons.close, color: AppColors.textTertiary),
+                      splashRadius: 20,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(),
+              ),
+              
+
+              
+              if (_loading)
+                const Expanded(child: Center(child: CircularProgressIndicator()))
+              else if (_options == null)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_error ?? 'Không tải được dữ liệu.'),
+                        const SizedBox(height: 16),
+                        FilledButton(onPressed: _load, child: const Text('Thử lại')),
+                      ],
+                    ),
                   ),
-                if (!_loading && _options == null) ...[
-                  Text(_error ?? 'Không tải được dữ liệu.'),
-                  TextButton(onPressed: _load, child: const Text('Thử lại')),
-                ],
-                if (!_loading && _options != null) ...[
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AbsorbPointer(
-                            absorbing: _saving || _pending != null,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _dropdown('Loại buổi học', _type, const [
-                                  DropdownMenuItem(
-                                    value: 'makeup',
-                                    child: Text('Học bù kế hoạch'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'workshop',
-                                    child: Text('Phụ đạo / Workshop'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'review',
-                                    child: Text('Review đồ án'),
-                                  ),
-                                ], (v) => setState(() => _type = v!)),
-                                if (classes.isEmpty)
-                                  const Text(
-                                    'Tài khoản chưa được phân công lớp nào trong Class_Section.',
-                                  ),
-                                _dropdown(
-                                  'Lớp học',
-                                  _classCode,
-                                  classes
-                                      .map(
-                                        (c) => DropdownMenuItem(
-                                          value: c['classCode'] as String,
-                                          child: Text(
-                                            '${c['classCode']} — ${c['subjectName']}',
-                                            overflow: TextOverflow.ellipsis,
+                )
+              else
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+
+                        
+                        // Section 1: Info
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.surfaceContainerHigh),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader(Icons.tune, 'THÔNG TIN MÔN HỌC & THỜI ĐIỂM HỌC', rightText: '* Bắt buộc nhập đầy đủ'),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildLabel('Loại buổi học'),
+                                        _buildDropdown(
+                                          _type,
+                                          const [
+                                            DropdownMenuItem(value: 'makeup', child: Text('Học bù kế hoạch (Make-up Class)')),
+                                            DropdownMenuItem(value: 'workshop', child: Text('Lịch tăng cường (Workshop)')),
+                                            DropdownMenuItem(value: 'review', child: Text('Review đồ án')),
+                                          ],
+                                          (v) => setState(() => _type = v!),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        _buildLabel(
+                                          'Ngày học bù',
+                                          suffix: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(4)),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.public, size: 12, color: AppColors.primaryContainer),
+                                                const SizedBox(width: 4),
+                                                Text('Giờ Việt Nam (GMT+7)', style: AppTextStyles.caption.copyWith(color: AppColors.primaryContainer, fontWeight: FontWeight.bold, fontSize: 10)),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      )
-                                      .toList(),
-                                  (v) => setState(() {
-                                    _classCode = v;
-                                  }),
-                                ),
-                                if (selected != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Text(
-                                      'Sĩ số theo Enrollment: ${selected['studentCount']} sinh viên',
+                                        InkWell(
+                                          onTap: _pickDate,
+                                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: AppColors.border),
+                                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.calendar_month, color: AppColors.textSecondary, size: 20),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    '${_day!.split('-')[2]}/${_day!.split('-')[1]}/${_day!.split('-')[0]}',
+                                                    style: AppTextStyles.bodyMd.copyWith(color: AppColors.textPrimary),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 8, left: 4),
+                                          child: Text(
+                                            'Đã chọn ngày: $_day',
+                                            style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                OutlinedButton.icon(
-                                  onPressed: _pickDate,
-                                  icon: const Icon(Icons.calendar_month),
-                                  label: Text('Ngày học: $_day (giờ Việt Nam)'),
-                                ),
-                                const SizedBox(height: 18),
-                                _dropdown(
-                                  'Ca học',
-                                  _slotCode,
-                                  _rows('slots')
-                                      .map(
-                                        (s) => DropdownMenuItem(
-                                          value: s['slotCode'] as String,
-                                          enabled: s['available'] == true,
-                                          child: Text(
-                                            '${s['slotCode']} • ${s['startTime']} – ${s['endTime']}${s['available'] == true ? '' : ' (giờ chưa hợp lệ)'}',
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _buildLabel('Lớp học & Mã môn phụ trách'),
+                                        _buildDropdown(
+                                          _classCode,
+                                          classes.map((c) => DropdownMenuItem(
+                                            value: c['classCode'] as String,
+                                            child: Text('${c['subjectName']} (${c['classCode']}) • ${c['studentCount']} sinh viên', overflow: TextOverflow.ellipsis),
+                                          )).toList(),
+                                          (v) => setState(() => _classCode = v),
+                                          hint: 'Chọn lớp học',
+                                        ),
+                                        const SizedBox(height: 20),
+                                        _buildLabel(
+                                          'Phòng học (Classroom)',
+                                          suffix: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(color: AppColors.statusPresentBg, borderRadius: BorderRadius.circular(4)),
+                                            child: Text('Trống lịch', style: AppTextStyles.caption.copyWith(color: AppColors.statusPresent, fontWeight: FontWeight.bold, fontSize: 10)),
                                           ),
                                         ),
-                                      )
-                                      .toList(),
-                                  (v) => setState(() => _slotCode = v),
-                                ),
-                                _dropdown(
-                                  'Phòng học',
-                                  _room,
-                                  (_options!['rooms'] as List)
-                                      .map(
-                                        (r) => DropdownMenuItem(
-                                          value: r as String,
-                                          child: Text(r),
+                                        _buildDropdown(
+                                          _room,
+                                          (_options!['rooms'] as List).map((r) => DropdownMenuItem(value: r as String, child: Text(r))).toList(),
+                                          (v) => setState(() => _room = v),
+                                          hint: 'Chọn phòng học',
                                         ),
-                                      )
-                                      .toList(),
-                                  (v) => setState(() => _room = v),
-                                ),
-                                const Text(
-                                  'Phòng lấy từ Class_Section. Hệ thống kiểm tra trùng giảng viên, lớp và phòng khi xác nhận.',
-                                ),
-                                const SizedBox(height: 16),
-                                const InputDecorator(
-                                  decoration: InputDecoration(
-                                    labelText: 'Hình thức học',
-                                    border: OutlineInputBorder(),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 8, left: 4),
+                                          child: Text(
+                                            'Phòng được lấy tự động từ hệ thống tài nguyên cơ sở vật chất Campus.',
+                                            style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Text(
-                                    'Trực tiếp tại phòng học (On-Campus)',
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                TextField(
-                                  controller: _note,
-                                  maxLength: 2000,
-                                  maxLines: 3,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Nội dung / Ghi chú',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SwitchListTile(
-                            value: false,
-                            onChanged: null,
-                            title: Text('Tự động mở Dynamic QR'),
-                            subtitle: Text(
-                              'Chưa hỗ trợ. Mở phiên điểm danh thủ công khi bắt đầu buổi học.',
-                            ),
-                          ),
-                          const SwitchListTile(
-                            value: false,
-                            onChanged: null,
-                            title: Text('Gửi thông báo / email sinh viên'),
-                            subtitle: Text('Chưa tích hợp dịch vụ thông báo.'),
-                          ),
-                          const SwitchListTile(
-                            value: false,
-                            onChanged: null,
-                            title: Text('Đồng bộ FAP Edu'),
-                            subtitle: Text(
-                              'Chưa có kết nối với cổng FAP. Lịch được lưu trong ứng dụng.',
-                            ),
-                          ),
-                          Text('Giảng viên: ${_options!['teacherName']}'),
-                          if (_rows('schedules').isNotEmpty) ...[
-                            const SizedBox(height: 18),
-                            const Text(
-                              'Lịch đã tạo',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            ..._rows('schedules').map(
-                              (s) => Text(
-                                '${s['scheduleDate']} • ${s['startTime']}–${s['endTime']} • ${s['classCode']} • P.${s['room']}',
+                                ],
                               ),
-                            ),
-                          ],
-                          if (_error != null)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              child: Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
+                              const SizedBox(height: 24),
+                              _buildLabel('Ca học / Slot yêu cầu'),
+                              Row(
+                                children: _rows('slots').map((slot) => _buildSlotCard(slot)).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Section 2: Teaching Format
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.surfaceContainerHigh),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader(Icons.computer, 'HÌNH THỨC & NỘI DUNG GIẢNG DẠY'),
+                              _buildLabel('Hình thức đào tạo', required: false),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        border: Border.all(color: AppColors.primaryContainer),
+                                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.domain, color: AppColors.primaryContainer, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text('Trực tiếp tại phòng học (On-Campus)', style: AppTextStyles.labelMd.copyWith(color: AppColors.primaryContainer, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        border: Border.all(color: AppColors.surfaceContainerHigh),
+                                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.devices, color: AppColors.textTertiary, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text('Trực tuyến từ xa (Hybrid / MS Teams)', style: AppTextStyles.labelMd.copyWith(color: AppColors.textTertiary, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                              _buildLabel(
+                                'Nội dung bài học & Ghi chú cho sinh viên', 
+                                required: false,
+                                suffix: Text('0 / 2000 ký tự', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                              ),
+                              TextField(
+                                controller: _note,
+                                maxLength: 2000,
+                                maxLines: 3,
+                                decoration: InputDecoration(
+                                  hintText: 'Nhập tóm tắt nội dung học bù, lý do tổ chức dạy bù (nghỉ lễ, công tác...), dặn dò chuẩn bị laptop, bài tập trước buổi học...',
+                                  hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.textTertiary),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                    borderSide: const BorderSide(color: AppColors.border),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                    borderSide: const BorderSide(color: AppColors.border),
+                                  ),
+                                  counterText: '',
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                        
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text(
+                              _error!,
+                              style: AppTextStyles.bodyMd.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
                             ),
-                          if (_pending != null && !_saving)
-                            const Text(
-                              'Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra/lưu cùng yêu cầu; nội dung tạm khóa để tránh tạo trùng.',
-                            ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.icon(
-                      onPressed: _saving || classes.isEmpty ? null : _save,
+                ),
+                
+              // Footer
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: AppColors.textTertiary, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Yêu cầu sẽ được tự động đồng bộ sau khi bấm xác nhận', 
+                        style: AppTextStyles.bodySm.copyWith(color: AppColors.textTertiary),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    OutlinedButton(
+                      onPressed: _saving ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
+                      ),
+                      child: const Text('Hủy bỏ'),
+                    ),
+
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: _saving || _options == null || classes.isEmpty ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryContainer,
+                        foregroundColor: AppColors.onPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
+                      ),
                       icon: _saving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check),
                       label: Text(
-                        _saving
-                            ? 'Đang lưu…'
-                            : _pending != null
-                            ? 'Thử lại cùng yêu cầu'
-                            : 'Xác nhận tạo lịch',
+                        _saving ? 'Đang xử lý...' : 'Xác nhận',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
+

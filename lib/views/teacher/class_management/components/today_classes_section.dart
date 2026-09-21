@@ -7,7 +7,7 @@ import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/views/teacher/class_management/dialogs/create_class_dialog.dart';
 import 'package:fapcheckin/data/models/class_section_model.dart';
-import 'saved_schedules.dart';
+import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 
 class TodayClassesSection extends StatefulWidget {
   const TodayClassesSection({super.key});
@@ -17,7 +17,7 @@ class TodayClassesSection extends StatefulWidget {
 }
 
 class _TodayClassesSectionState extends State<TodayClassesSection> {
-  int _scheduleVersion = 0;
+
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +81,7 @@ class _TodayClassesSectionState extends State<TodayClassesSection> {
                       builder: (context) => const CreateClassDialog(),
                     );
                     if (!context.mounted || result == null) return;
-                    setState(() => _scheduleVersion++);
+                    context.read<DashboardViewModel>().loadClasses();
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Đã lưu lịch ${result['classCode']} ngày ${result['scheduleDate']}, ca ${result['slotCode']}.'),
                     ));
@@ -104,7 +104,7 @@ class _TodayClassesSectionState extends State<TodayClassesSection> {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        SavedSchedules(key: ValueKey(_scheduleVersion)),
+
         if (firstActive != null || firstUpcoming != null)
           LayoutBuilder(
             builder: (context, constraints) {
@@ -456,7 +456,15 @@ class _ActiveSessionCard extends StatelessWidget {
                   elevation: 2,
                   child: InkWell(
                     onTap: () {
-                      context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                      context.read<LiveSessionViewModel>().startSession(
+                        classSection: classData,
+                        slotCode: '1',
+                        teacherIp: '192.168.1.100',
+                      ).then((_) {
+                        if (context.mounted) {
+                          context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                        }
+                      });
                     },
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     child: Padding(

@@ -20,9 +20,13 @@ class ReportBody extends StatelessWidget {
         children: [
           ReportHeader(),
           SizedBox(height: AppSpacing.lg),
+          Text(
+            'Danh sách cảnh báo lấy từ Google Sheet. Các KPI và biểu đồ bên dưới vẫn là dữ liệu minh họa.',
+          ),
+          SizedBox(height: AppSpacing.md),
           ReportKpis(),
           SizedBox(height: AppSpacing.lg),
-          
+
           // Main Content Grid
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,17 +51,10 @@ class ReportBody extends StatelessWidget {
               ),
               SizedBox(width: AppSpacing.lg),
               // RIGHT COLUMN: Warning Table & Action Hub
-              Expanded(
-                flex: 5,
-                child: Column(
-                  children: [
-                    WarningTable(),
-                  ],
-                ),
-              ),
+              Expanded(flex: 5, child: Column(children: [WarningTable()])),
             ],
           ),
-          
+
           SizedBox(height: AppSpacing.lg),
           RegulatoryNotice(),
         ],

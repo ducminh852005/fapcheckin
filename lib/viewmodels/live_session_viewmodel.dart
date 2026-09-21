@@ -128,7 +128,7 @@ class LiveSessionViewModel extends ChangeNotifier {
       return StudentCheckin(
         index: i + 1,
         studentId: r.rollNumber,
-        fullName: r.email.split('@').first,
+        fullName: r.displayName,
         initials: r.initials,
         checkInTime: r.displayCheckinTime,
         status: _mapStatus(r.status),
@@ -189,9 +189,16 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   bool _showToast = false;
   bool get showToast => _showToast;
+  
+  RosterEntryModel? _lastCheckedInStudent;
+  RosterEntryModel? get lastCheckedInStudent => _lastCheckedInStudent;
+  
+  Timer? _toastTimer;
 
   void dismissToast() {
     _showToast = false;
+    _toastTimer?.cancel();
+    _toastTimer = null;
     notifyListeners();
   }
 
@@ -271,10 +278,25 @@ class LiveSessionViewModel extends ChangeNotifier {
     switch (result) {
       case ApiSuccess<List<RosterEntryModel>>(:final data):
         final prevChecked = checkedInCount;
-        _roster = data;
-        if (checkedInCount > prevChecked) {
-          _showToast = true;
+        
+        if (checkedInCount > prevChecked || (_roster.isEmpty && data.where((s) => s.hasCheckedIn).isNotEmpty)) {
+          // Find newly checked in student
+          final newPresent = data.where((s) => s.hasCheckedIn && !_roster.any((old) => old.rollNumber == s.rollNumber && old.hasCheckedIn)).toList();
+          if (newPresent.isNotEmpty) {
+            _lastCheckedInStudent = newPresent.first;
+          } else if (data.isNotEmpty) {
+            _lastCheckedInStudent = data.firstWhere((s) => s.hasCheckedIn, orElse: () => data.first);
+          }
+          
+          if (_lastCheckedInStudent != null) {
+            _showToast = true;
+            _toastTimer?.cancel();
+            _toastTimer = Timer(const Duration(seconds: 3), () {
+              dismissToast();
+            });
+          }
         }
+        _roster = data;
         notifyListeners();
       case ApiFailure<List<RosterEntryModel>>():
         // Silently fail on background polls to avoid disrupting UI
@@ -302,6 +324,28 @@ class LiveSessionViewModel extends ChangeNotifier {
     }
   }
 
+  /// Manually mark multiple students
+  Future<void> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
+    if (_session == null) return;
+    _status = ViewStatus.loading;
+    notifyListeners();
+
+    final result = await _repository.manualCheckinBulk(
+      sessionId: _session!.sessionId,
+      changes: changes,
+    );
+
+    switch (result) {
+      case ApiSuccess<void>():
+        _status = ViewStatus.success;
+        await loadRoster();
+      case ApiFailure<void>(:final error):
+        _errorMessage = error.message;
+        _status = ViewStatus.error;
+        notifyListeners();
+    }
+  }
+
   /// Load stats for a given class
   Future<void> loadStats(String classCode) async {
     final result = await _repository.getStats(classCode: classCode);
@@ -312,6 +356,29 @@ class LiveSessionViewModel extends ChangeNotifier {
       case ApiFailure<List<StatsEntryModel>>():
         break;
     }
+  }
+
+  /// Close the session via API
+  Future<bool> closeSession() async {
+    if (_session == null) return false;
+    _status = ViewStatus.loading;
+    notifyListeners();
+
+    final result = await _repository.closeSession(
+      sessionId: _session!.sessionId,
+    );
+
+    switch (result) {
+      case ApiSuccess<void>():
+        resetSession();
+        return true;
+      case ApiFailure<void>(:final error):
+        _status = ViewStatus.error;
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
   }
 
   /// Reset session state (e.g. when navigating away)

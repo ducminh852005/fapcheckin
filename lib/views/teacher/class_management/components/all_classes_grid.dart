@@ -4,7 +4,7 @@ import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
-
+import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 class AllClassesGrid extends StatefulWidget {
   const AllClassesGrid({super.key});
 
@@ -129,7 +129,21 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                     buttonIcon: classData.isActive ? Icons.qr_code_scanner : Icons.qr_code,
                     isPrimaryAction: classData.isActive,
                     onTap: () {
-                      context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                      if (classData.isActive) {
+                        context.read<LiveSessionViewModel>().startSession(
+                          classSection: classData,
+                          slotCode: '1',
+                          teacherIp: '192.168.1.100',
+                        ).then((_) {
+                          if (context.mounted) {
+                            context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                          }
+                        });
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Chưa đến giờ điểm danh cho lớp này!')),
+                        );
+                      }
                     },
                   );
 
@@ -182,7 +196,21 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                         buttonIcon: classData.isActive ? Icons.qr_code_scanner : Icons.qr_code,
                         isPrimaryAction: classData.isActive,
                         onTap: () {
-                          context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                          if (classData.isActive) {
+                            context.read<LiveSessionViewModel>().startSession(
+                              classSection: classData,
+                              slotCode: '1',
+                              teacherIp: '192.168.1.100',
+                            ).then((_) {
+                              if (context.mounted) {
+                                context.read<DashboardViewModel>().navigate('diem-danh-qr');
+                              }
+                            });
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Chưa đến giờ điểm danh cho lớp này!')),
+                            );
+                          }
                         },
                       );
                     },
@@ -315,17 +343,6 @@ class _ClassListTile extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: iconBgColor,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(iconData, size: 22, color: iconColor),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,13 +352,6 @@ class _ClassListTile extends StatelessWidget {
                             runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(
-                                subjectCode,
-                                style: AppTextStyles.code.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: subjectTextColor ?? AppColors.textPrimary,
-                                ),
-                              ),
                               Text(
                                 title,
                                 style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary),
@@ -599,31 +609,10 @@ class _ClassGridCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                alignment: Alignment.center,
-                child: Icon(iconData, size: 20, color: iconColor),
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      subjectCode,
-                      style: AppTextStyles.code.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: subjectTextColor ?? AppColors.textPrimary,
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                     Text(
                       title,
                       style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary, fontSize: 13),
