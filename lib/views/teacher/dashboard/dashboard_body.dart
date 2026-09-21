@@ -138,17 +138,49 @@ class _SchedulePanelState extends State<_SchedulePanel> {
     }
   }
 
+  SessionStatus _deriveStatus(String timeRange, bool isActive) {
+    if (timeRange.contains('--')) return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    try {
+      final parts = timeRange.split('-');
+      if (parts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      
+      final startParts = parts[0].trim().split(':');
+      final endParts = parts[1].trim().split(':');
+      
+      if (startParts.length != 2 || endParts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      
+      final h1 = int.parse(startParts[0]);
+      final m1 = int.parse(startParts[1]);
+      
+      final h2 = int.parse(endParts[0]);
+      final m2 = int.parse(endParts[1]);
+      
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day, h1, m1).subtract(const Duration(minutes: 15));
+      final end = DateTime(now.year, now.month, now.day, h2, m2);
+      
+      if (now.isAfter(end)) return SessionStatus.completed;
+      if (isActive) return SessionStatus.active;
+      if (now.isBefore(start)) return SessionStatus.notStarted;
+      
+      return SessionStatus.ready;
+    } catch (_) {
+      return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    }
+  }
+
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
     final slotNumber = index + 1;
+    final timeRange = _getSlotTimeRange(slotNumber);
     return ClassSession(
       courseCode: model.classCode,
       courseName: model.subjectName,
       slot: slotNumber.toString(),
-      timeRange: _getSlotTimeRange(slotNumber),
+      timeRange: timeRange,
       room: model.room,
       studentCount: model.studentCount,
-      status: SessionStatus.notStarted,
+      status: _deriveStatus(timeRange, model.isActive),
     );
   }
 

@@ -18,7 +18,20 @@ class _ClassCardState extends State<ClassCard> {
   bool _hovered = false;
 
   ClassSession get s => widget.session;
-  bool get isActive => s.status == SessionStatus.active;
+  bool get isActive => s.status == SessionStatus.active || s.status == SessionStatus.ready;
+
+  Color get _bgColor {
+    switch (s.status) {
+      case SessionStatus.active:
+      case SessionStatus.ready:
+        return AppColors.primaryLight.withOpacity(0.5);
+      case SessionStatus.completed:
+        return AppColors.statusAbsentBg.withOpacity(0.5);
+      case SessionStatus.notStarted:
+      default:
+        return AppColors.surface;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +42,7 @@ class _ClassCardState extends State<ClassCard> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.surfaceBright : AppColors.surface,
+          color: _bgColor,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
@@ -244,7 +257,7 @@ class _StatusBadgeState extends State<_StatusBadge>
       duration: const Duration(milliseconds: 1000),
     );
     _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
-    if (widget.status == SessionStatus.active) {
+    if (widget.status == SessionStatus.active || widget.status == SessionStatus.ready) {
       _ctrl.repeat(reverse: true);
     }
   }
@@ -259,6 +272,7 @@ class _StatusBadgeState extends State<_StatusBadge>
   Widget build(BuildContext context) {
     switch (widget.status) {
       case SessionStatus.active:
+      case SessionStatus.ready:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -298,13 +312,13 @@ class _StatusBadgeState extends State<_StatusBadge>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.statusUncheckedBg,
+            color: AppColors.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
           ),
           child: Text(
             'Chưa bắt đầu',
             style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.statusUnchecked,
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -313,13 +327,13 @@ class _StatusBadgeState extends State<_StatusBadge>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLow,
+            color: AppColors.statusAbsentBg,
             borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
           ),
           child: Text(
             'Đã hoàn thành',
             style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.statusAbsent,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -333,23 +347,6 @@ class _ActionButton extends StatelessWidget {
   final VoidCallback? onStart;
   const _ActionButton({required this.session, this.onStart});
 
-  bool _canStartSession(String timeRange) {
-    if (timeRange.contains('--')) return true; // fallback
-    try {
-      final parts = timeRange.split('-');
-      if (parts.isEmpty) return true;
-      final startParts = parts[0].trim().split(':');
-      if (startParts.length != 2) return true;
-      final h = int.parse(startParts[0]);
-      final m = int.parse(startParts[1]);
-      final now = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day, h, m).subtract(const Duration(minutes: 15));
-      return now.isAfter(start) || now.isAtSameMomentAs(start);
-    } catch (_) {
-      return true;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (session.status == SessionStatus.active) {
@@ -361,15 +358,14 @@ class _ActionButton extends StatelessWidget {
       );
     }
     
-    if (!_canStartSession(session.timeRange)) {
+    if (session.status != SessionStatus.ready) {
       return const SizedBox.shrink();
     }
 
     return _HoverButton(
       icon: Icons.play_arrow,
-      iconColor: AppColors.primary,
       label: 'Mở điểm danh',
-      primary: false,
+      primary: true,
       onTap: onStart ?? () {},
     );
   }

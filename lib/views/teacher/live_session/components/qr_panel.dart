@@ -162,7 +162,7 @@ class _ActiveBadgeState extends State<_ActiveBadge>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 8,
@@ -530,7 +530,7 @@ class _WebSocketBarState extends State<_WebSocketBar>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 10,
