@@ -68,6 +68,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider.value(value: _apiService),
         ChangeNotifierProvider.value(value: _authViewModel),
         ChangeNotifierProvider.value(value: _dashboardViewModel),
         ChangeNotifierProvider.value(value: _liveSessionViewModel),

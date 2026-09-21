@@ -7,9 +7,17 @@ import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/views/teacher/class_management/dialogs/create_class_dialog.dart';
 import 'package:fapcheckin/data/models/class_section_model.dart';
+import 'saved_schedules.dart';
 
-class TodayClassesSection extends StatelessWidget {
+class TodayClassesSection extends StatefulWidget {
   const TodayClassesSection({super.key});
+
+  @override
+  State<TodayClassesSection> createState() => _TodayClassesSectionState();
+}
+
+class _TodayClassesSectionState extends State<TodayClassesSection> {
+  int _scheduleVersion = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +74,17 @@ class TodayClassesSection extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.md),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
+                  onPressed: () async {
+                    final result = await showDialog<Map<String, dynamic>>(
                       context: context,
+                      barrierDismissible: false,
                       builder: (context) => const CreateClassDialog(),
                     );
+                    if (!context.mounted || result == null) return;
+                    setState(() => _scheduleVersion++);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Đã lưu lịch ${result['classCode']} ngày ${result['scheduleDate']}, ca ${result['slotCode']}.'),
+                    ));
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Tạo lịch học mới'),
@@ -90,23 +104,42 @@ class TodayClassesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
+        SavedSchedules(key: ValueKey(_scheduleVersion)),
         if (firstActive != null || firstUpcoming != null)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (firstActive != null)
-                Expanded(
-                  flex: 7,
-                  child: _ActiveSessionCard(classData: firstActive),
-                ),
-              if (firstActive != null && firstUpcoming != null)
-                const SizedBox(width: AppSpacing.md),
-              if (firstUpcoming != null)
-                Expanded(
-                  flex: 5,
-                  child: _UpcomingSessionCard(classData: firstUpcoming),
-                ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = constraints.maxWidth < 800;
+              if (isSmallScreen) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (firstActive != null)
+                      _ActiveSessionCard(classData: firstActive),
+                    if (firstActive != null && firstUpcoming != null)
+                      const SizedBox(height: AppSpacing.md),
+                    if (firstUpcoming != null)
+                      _UpcomingSessionCard(classData: firstUpcoming),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (firstActive != null)
+                    Expanded(
+                      flex: 7,
+                      child: _ActiveSessionCard(classData: firstActive),
+                    ),
+                  if (firstActive != null && firstUpcoming != null)
+                    const SizedBox(width: AppSpacing.md),
+                  if (firstUpcoming != null)
+                    Expanded(
+                      flex: 5,
+                      child: _UpcomingSessionCard(classData: firstUpcoming),
+                    ),
+                ],
+              );
+            },
           ),
         if (firstActive == null && firstUpcoming == null)
           Center(
