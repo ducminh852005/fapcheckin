@@ -113,6 +113,11 @@ var SheetDB = (function() {
   }
 
   return {
+    ensureSheet: function(name, columns) {
+      var ss = getSpreadsheet();
+      if (!ss.getSheetByName(name)) ss.insertSheet(name).appendRow(columns);
+      else ensureColumns(name, columns);
+    },
     getRowsAsObjects: getRowsAsObjects,
     insertRow: insertRow,
     updateRow: updateRow,
