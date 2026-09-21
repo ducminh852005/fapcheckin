@@ -126,13 +126,26 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   int _currentPage = 0;
   static const int _itemsPerPage = 10;
 
+  String _getSlotTimeRange(int slot) {
+    switch (slot) {
+      case 1: return '07:30 - 09:50';
+      case 2: return '10:00 - 12:20';
+      case 3: return '12:50 - 15:10';
+      case 4: return '15:20 - 17:40';
+      case 5: return '18:00 - 20:20';
+      case 6: return '20:30 - 22:50';
+      default: return '-- : --';
+    }
+  }
+
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
+    final slotNumber = index + 1;
     return ClassSession(
       courseCode: model.classCode,
       courseName: model.subjectName,
-      slot: (index + 1).toString(),
-      timeRange: '-- : --',
+      slot: slotNumber.toString(),
+      timeRange: _getSlotTimeRange(slotNumber),
       room: model.room,
       studentCount: model.studentCount,
       status: SessionStatus.notStarted,

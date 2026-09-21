@@ -115,7 +115,7 @@ class _ClassCardState extends State<ClassCard> {
                   children: [
                     _StatusBadge(status: s.status),
                     const SizedBox(height: 8),
-                    _ActionButton(status: s.status, onStart: widget.onStart),
+                    _ActionButton(session: s, onStart: widget.onStart),
                   ],
                 ),
               ],
@@ -329,13 +329,30 @@ class _StatusBadgeState extends State<_StatusBadge>
 }
 
 class _ActionButton extends StatelessWidget {
-  final SessionStatus status;
+  final ClassSession session;
   final VoidCallback? onStart;
-  const _ActionButton({required this.status, this.onStart});
+  const _ActionButton({required this.session, this.onStart});
+
+  bool _canStartSession(String timeRange) {
+    if (timeRange.contains('--')) return true; // fallback
+    try {
+      final parts = timeRange.split('-');
+      if (parts.isEmpty) return true;
+      final startParts = parts[0].trim().split(':');
+      if (startParts.length != 2) return true;
+      final h = int.parse(startParts[0]);
+      final m = int.parse(startParts[1]);
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month, now.day, h, m).subtract(const Duration(minutes: 15));
+      return now.isAfter(start) || now.isAtSameMomentAs(start);
+    } catch (_) {
+      return true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (status == SessionStatus.active) {
+    if (session.status == SessionStatus.active) {
       return _HoverButton(
         icon: Icons.visibility_outlined,
         label: 'Xem phiên',
@@ -343,6 +360,11 @@ class _ActionButton extends StatelessWidget {
         onTap: onStart ?? () {},
       );
     }
+    
+    if (!_canStartSession(session.timeRange)) {
+      return const SizedBox.shrink();
+    }
+
     return _HoverButton(
       icon: Icons.play_arrow,
       iconColor: AppColors.primary,
