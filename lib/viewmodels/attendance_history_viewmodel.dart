@@ -20,39 +20,82 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
       saving = false,
       working = false;
   final Map<String, HistoryStudent> _edits = {};
+  List<HistoryClass>? _visibleClassesCache;
+  List<HistoryStudent>? _studentsCache;
+  List<HistoryStudent>? _filteredStudentsCache;
+  Map<String, int>? _statusCountsCache;
+  bool _derivedDirty = true;
   int _generation = 0;
   bool _disposed = false;
   String? _accountToken;
   bool get hasChanges => _edits.isNotEmpty;
   bool get busy => loadingClasses || loadingDetail || saving || working;
-  List<HistoryClass> get visibleClasses => classes
-      .where(
-        (c) => '${c.classCode} ${c.subjectName}'.toLowerCase().contains(
-          classQuery.toLowerCase(),
-        ),
-      )
-      .toList();
-  List<HistoryStudent> get students =>
-      (detail?.students ?? []).map((s) => _edits[s.rollNumber] ?? s).toList();
-  List<HistoryStudent> get filteredStudents => students
-      .where(
-        (s) =>
-            (statusFilter == 'all' ||
-                (statusFilter == 'Present'
-                    ? ['Present', 'ManualByGV'].contains(s.status)
-                    : s.status == statusFilter)) &&
-            '${s.rollNumber} ${s.fullName} ${s.email}'.toLowerCase().contains(
-              searchQuery.toLowerCase(),
-            ),
-      )
-      .toList();
-  int count(String status) => students
-      .where(
-        (s) => status == 'Present'
-            ? ['Present', 'ManualByGV'].contains(s.status)
-            : s.status == status,
-      )
-      .length;
+  List<HistoryClass> get visibleClasses {
+    _ensureDerived();
+    return _visibleClassesCache!;
+  }
+
+  List<HistoryStudent> get students {
+    _ensureDerived();
+    return _studentsCache!;
+  }
+
+  List<HistoryStudent> get filteredStudents {
+    _ensureDerived();
+    return _filteredStudentsCache!;
+  }
+
+  int count(String status) {
+    _ensureDerived();
+    return _statusCountsCache![status] ?? 0;
+  }
+
+  void _markDerivedDirty() {
+    _derivedDirty = true;
+  }
+
+  void _ensureDerived() {
+    if (!_derivedDirty) return;
+    final normalizedClassQuery = classQuery.trim().toLowerCase();
+    final normalizedSearchQuery = searchQuery.trim().toLowerCase();
+    final currentStudents = (detail?.students ?? const <HistoryStudent>[])
+        .map((student) => _edits[student.rollNumber] ?? student)
+        .toList(growable: false);
+
+    _visibleClassesCache = classes
+        .where(
+          (c) => '${c.classCode} ${c.subjectName}'.toLowerCase().contains(
+            normalizedClassQuery,
+          ),
+        )
+        .toList(growable: false);
+    _studentsCache = currentStudents;
+    _filteredStudentsCache = currentStudents
+        .where((student) {
+          final matchesStatus =
+              statusFilter == 'all' ||
+              (statusFilter == 'Present'
+                  ? student.status == 'Present' ||
+                        student.status == 'ManualByGV'
+                  : student.status == statusFilter);
+          final matchesSearch =
+              '${student.rollNumber} ${student.fullName} ${student.email}'
+                  .toLowerCase()
+                  .contains(normalizedSearchQuery);
+          return matchesStatus && matchesSearch;
+        })
+        .toList(growable: false);
+    _statusCountsCache = {
+      for (final status in ['Present', 'Late', 'Absent', 'Unchecked'])
+        status: currentStudents.where((student) {
+          return status == 'Present'
+              ? student.status == 'Present' || student.status == 'ManualByGV'
+              : student.status == status;
+        }).length,
+    };
+    _derivedDirty = false;
+  }
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }
@@ -69,26 +112,31 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     errorMessage = null;
     searchQuery = classQuery = '';
     statusFilter = 'all';
+    _markDerivedDirty();
     _notify();
   }
 
   void setSearch(String value) {
     searchQuery = value;
+    _markDerivedDirty();
     _notify();
   }
 
   void setClassSearch(String value) {
     classQuery = value;
+    _markDerivedDirty();
     _notify();
   }
 
   void setStatusFilter(String value) {
     statusFilter = value;
+    _markDerivedDirty();
     _notify();
   }
 
   void discardChanges() {
     _edits.clear();
+    _markDerivedDirty();
     _notify();
   }
 
@@ -102,11 +150,13 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     } else {
       _edits[student.rollNumber] = original.edit(status: status, note: note);
     }
+    _markDerivedDirty();
     _notify();
   }
 
-  Future<void> loadClasses() async {
+  Future<void> loadClasses({bool force = false}) async {
     if (busy || hasChanges) return;
+    if (!force && classes.isNotEmpty && detail != null) return;
     final generation = ++_generation;
     loadingClasses = true;
     errorMessage = null;
@@ -117,12 +167,14 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     switch (result) {
       case ApiSuccess<List<HistoryClass>>(:final data):
         classes = data;
+        _markDerivedDirty();
         final code = data.any((c) => c.classCode == selectedClassCode)
             ? selectedClassCode
             : data.firstOrNull?.classCode;
         if (code == null) {
           detail = null;
           selectedClassCode = null;
+          _markDerivedDirty();
         } else {
           await selectClass(code);
         }
@@ -137,6 +189,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     selectedClassCode = code;
     searchQuery = '';
     statusFilter = 'all';
+    _markDerivedDirty();
     await _loadDetail();
   }
 
@@ -150,7 +203,6 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     if (code == null) return;
     final generation = ++_generation;
     loadingDetail = true;
-    detail = null;
     errorMessage = null;
     _notify();
     final result = await repository.getDetail(code, sessionId: sessionId);
@@ -167,11 +219,18 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
 
   void _accept(HistoryDetail data) {
     detail = data;
+    _markDerivedDirty();
     classes = classes
         .map(
           (c) => c.classCode == data.classInfo.classCode ? data.classInfo : c,
         )
         .toList();
+    _markDerivedDirty();
+  }
+
+  Future<void> refreshDetail() async {
+    if (busy || hasChanges || selectedClassCode == null) return;
+    await _loadDetail(sessionId: detail?.selectedSession?.sessionId);
   }
 
   Future<bool> saveChanges() async {
@@ -200,6 +259,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
       case ApiSuccess<HistoryDetail>(:final data):
         _edits.clear();
         _accept(data);
+        _markDerivedDirty();
         _notify();
         return true;
       case ApiFailure<HistoryDetail>(:final error):
