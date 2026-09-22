@@ -7,18 +7,26 @@ var TeacherService = (function() {
     if (!teacherMemberCode) throwError('VALIDATION_ERROR', 'Thiếu teacherMemberCode.');
     
     var classes = SheetDB.getRowsAsObjects('Class_Section').filter(function(c) {
-      return c.teacherMemberCode === teacherMemberCode;
+      return String(c.teacherMemberCode) === String(teacherMemberCode);
     });
 
     var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
     var records = SheetDB.getRowsAsObjects('Attendance_Record');
-
-    var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
-        ? Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd")
-        : new Date().toISOString().split('T')[0];
+    var slots = [];
+    try {
+      slots = SheetDB.getRowsAsObjects('Slot');
+    } catch (e) {
+      if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
+    var schedules = [];
+    try {
+      schedules = SheetDB.getRowsAsObjects('Class_Schedule');
+    } catch (e) {
+      if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
 
     var enriched = classes.map(function(cls) {
-       var classSessions = sessions.filter(function(s) { return s.classCode === cls.classCode; });
+       var classSessions = sessions.filter(function(s) { return String(s.classCode) === String(cls.classCode); });
        var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
        // Active session must be open AND created on today's date
        var activeSession = classSessions.filter(function(s) { 
@@ -36,20 +44,60 @@ var TeacherService = (function() {
        
        var sName = cls.subjectName || '';
        var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
-       var timeLabel = cls.timeLabel || "Lịch học chưa cập nhật";
+
+       // Check if there is a scheduled make-up class for today for this class
+       var sched = schedules.filter(function(sc) {
+         if (sc.status === 'cancelled') return false;
+         if (String(sc.classCode) !== String(cls.classCode)) return false;
+         var sDate = sc.scheduleDate;
+         if (sDate instanceof Date) {
+           sDate = (typeof Utilities !== 'undefined' && Utilities.formatDate)
+             ? Utilities.formatDate(sDate, "GMT+7", "yyyy-MM-dd")
+             : sDate.toISOString().split('T')[0];
+         } else if (typeof sDate === 'string') {
+           sDate = sDate.slice(0, 10);
+         }
+         return sDate === today;
+       })[0];
+
+       var slotCode = (sched && sched.slotCode) ? String(sched.slotCode) : (cls.slotCode ? String(cls.slotCode) : '');
+       var room = (sched && sched.room) ? String(sched.room) : (cls.room || '');
+
+       var slot = slots.filter(function(s) {
+         return String(s.slotCode) === slotCode;
+       })[0];
+
+       var startTime = (sched && sched.startTime) ? String(sched.startTime) : (slot && slot.startTime ? String(slot.startTime) : '');
+       var endTime = (sched && sched.endTime) ? String(sched.endTime) : (slot && slot.endTime ? String(slot.endTime) : '');
+       var period = slot && slot.period ? String(slot.period) : '';
+
+       var timeLabel = '';
+       if (slotCode && startTime && endTime) {
+         timeLabel = 'Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')';
+       } else if (cls.timeLabel) {
+         timeLabel = cls.timeLabel;
+       } else if (slotCode) {
+         timeLabel = 'Slot ' + slotCode;
+       } else {
+         timeLabel = 'Lịch học chưa cập nhật';
+       }
        
        return {
          classCode: cls.classCode,
          subjectCode: subjectCode,
          subjectName: sName,
-         room: cls.room,
+         room: room,
          studentCount: sCount,
          teacherMemberCode: cls.teacherMemberCode,
+         slotCode: slotCode,
+         startTime: startTime,
+         endTime: endTime,
+         period: period,
          timeLabel: timeLabel,
          completedSessions: completed,
          totalSessions: 30, // Mock 30 sessions per class
          averageAttendance: avgAttendance,
-         isActive: activeSession != null,
+         isActive: activeSession !== null,
          activeSessionId: activeSession ? activeSession.sessionId : null
        };
     });
@@ -60,6 +108,18 @@ var TeacherService = (function() {
     var classCode = params.classCode;
     var slotCode = params.slotCode;
     var teacherIp = params.teacherIp;
+
+    if (!slotCode && classCode) {
+      try {
+        var clsList = SheetDB.getRowsAsObjects('Class_Section');
+        var matchedCls = clsList.filter(function(c) {
+          return String(c.classCode) === String(classCode);
+        })[0];
+        if (matchedCls && matchedCls.slotCode) {
+          slotCode = String(matchedCls.slotCode);
+        }
+      } catch (e) {}
+    }
     
     if (!classCode || !slotCode || !teacherIp) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu mở phiên.');
     
