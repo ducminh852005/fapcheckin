@@ -102,7 +102,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          if (currentRoute == 'diem-danh-qr') const ToastNotification(),
+          const ToastNotification(),
         ],
       ),
     );

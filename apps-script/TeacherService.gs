@@ -146,6 +146,50 @@ var TeacherService = (function() {
     return {}; // GenericResponse empty data
   }
   
+  function manualCheckinBulk(params) {
+    var sessionId = params.sessionId;
+    var changes = params.changes; // array of { rollNumber, status, reason }
+    
+    if (!sessionId || !Array.isArray(changes)) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu hoặc changes không hợp lệ.');
+    
+    var lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try {
+      var records = SheetDB.getRowsAsObjects('Attendance_Record');
+      var existingSessionRecords = records.filter(function(r) { return r.sessionId === sessionId; });
+      
+      var teacherMemberCode = 'GV';
+      try {
+        teacherMemberCode = AuthService.requireTeacher(params).memberCode;
+      } catch (e) {} // Fallback nếu không có token
+
+      changes.forEach(function(change) {
+        var existingRecord = existingSessionRecords.filter(function(r) { return r.rollNumber === change.rollNumber; })[0];
+        if (existingRecord) {
+          SheetDB.updateRow('Attendance_Record', 'recordId', existingRecord.recordId, {
+            status: change.status,
+            note: change.reason || '',
+            syncedToFap: false
+          });
+        } else {
+          SheetDB.insertRow('Attendance_Record', {
+            recordId: Utilities.getUuid(),
+            rollNumber: change.rollNumber,
+            sessionId: sessionId,
+            checkinTime: new Date().toISOString(),
+            status: change.status,
+            note: change.reason || '',
+            networkVerificationResult: 'Manual',
+            syncedToFap: false
+          });
+        }
+      });
+      return { updatedCount: changes.length };
+    } finally {
+      lock.releaseLock();
+    }
+  }
+  
   function getStats(params) {
     var classCode = params.classCode;
     if (!classCode) throwError('VALIDATION_ERROR', 'Thiếu classCode.');
@@ -321,6 +365,7 @@ var TeacherService = (function() {
     getRoster: getRoster,
     getAttendanceHistory: getAttendanceHistory,
     manualCheckin: manualCheckin,
+    manualCheckinBulk: manualCheckinBulk,
     getStats: getStats
   };
 })();

@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 
-import 'package:flutter/foundation.dart';
-
+import '../core/constants/app_colors.dart';
 import '../data/models/class_section_model.dart';
 import '../data/models/close_session_model.dart';
 import '../data/models/roster_entry_model.dart';
@@ -13,9 +13,27 @@ import '../core/network/api_result.dart';
 
 
 // ---------------------------------------------------------------------------
-// ViewStatus (shared with the rest of the project)
+// ViewStatus & Toast Types
 // ---------------------------------------------------------------------------
 enum ViewStatus { idle, loading, success, error }
+
+enum ToastType { checkin, startSession, closeSession, custom }
+
+class LiveSessionToastData {
+  final ToastType type;
+  final String title;
+  final String message;
+  final IconData icon;
+  final Color accentColor;
+
+  const LiveSessionToastData({
+    required this.type,
+    required this.title,
+    required this.message,
+    required this.icon,
+    required this.accentColor,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // LiveSessionViewModel
@@ -99,6 +117,10 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   int get uncheckedCount => _roster.where((s) => s.isUnchecked).length;
 
+  int get absentCount => _roster.where((s) => s.isAbsent).length;
+
+  bool get isClosed => _session?.sessionStatus == 'closed';
+
   // ── Stats ────────────────────────────────────────────────────────────────────
 
   List<StatsEntryModel> _stats = [];
@@ -130,7 +152,7 @@ class LiveSessionViewModel extends ChangeNotifier {
       return StudentCheckin(
         index: i + 1,
         studentId: r.rollNumber,
-        fullName: r.email.split('@').first,
+        fullName: r.displayName,
         initials: r.initials,
         checkInTime: r.displayCheckinTime,
         status: _mapStatus(r.status),
@@ -171,7 +193,13 @@ class LiveSessionViewModel extends ChangeNotifier {
             .toList();
         break;
       case 'unchecked':
-        list = list.where((s) => s.status == CheckinStatus.unchecked).toList();
+        list = list
+            .where(
+              (s) =>
+                  s.status == CheckinStatus.unchecked ||
+                  s.status == CheckinStatus.absent,
+            )
+            .toList();
         break;
     }
     if (_searchQuery.isNotEmpty) {
@@ -190,10 +218,44 @@ class LiveSessionViewModel extends ChangeNotifier {
   // ── Toast ────────────────────────────────────────────────────────────────────
 
   bool _showToast = false;
-  bool get showToast => _showToast;
+  bool get showToast => _showToast && _toastData != null;
+
+  LiveSessionToastData? _toastData;
+  LiveSessionToastData? get toastData => _toastData;
+
+  RosterEntryModel? _lastCheckedInStudent;
+  RosterEntryModel? get lastCheckedInStudent => _lastCheckedInStudent;
+
+  Timer? _toastTimer;
+
+  void triggerToast({
+    required ToastType type,
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color accentColor,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    _toastData = LiveSessionToastData(
+      type: type,
+      title: title,
+      message: message,
+      icon: icon,
+      accentColor: accentColor,
+    );
+    _showToast = true;
+    _toastTimer?.cancel();
+    _toastTimer = Timer(duration, () {
+      dismissToast();
+    });
+    notifyListeners();
+  }
 
   void dismissToast() {
     _showToast = false;
+    _toastData = null;
+    _toastTimer?.cancel();
+    _toastTimer = null;
     notifyListeners();
   }
 
@@ -240,6 +302,13 @@ class LiveSessionViewModel extends ChangeNotifier {
           _status = ViewStatus.success;
           _sessionElapsedSeconds = 0;
           _startPolling();
+          triggerToast(
+            type: ToastType.startSession,
+            title: 'Đã mở phiên điểm danh!',
+            message: 'Phiên điểm danh lớp ${classSection.classCode} (${classSection.subjectCode}) đã sẵn sàng.',
+            icon: Icons.qr_code_scanner,
+            accentColor: AppColors.statusPresent,
+          );
         case ApiFailure<SessionModel>(:final error):
           _status = ViewStatus.error;
           _errorMessage = error.message;
@@ -273,10 +342,28 @@ class LiveSessionViewModel extends ChangeNotifier {
     switch (result) {
       case ApiSuccess<List<RosterEntryModel>>(:final data):
         final prevChecked = checkedInCount;
-        _roster = data;
-        if (checkedInCount > prevChecked) {
-          _showToast = true;
+        
+        if (checkedInCount > prevChecked || (_roster.isEmpty && data.where((s) => s.hasCheckedIn).isNotEmpty)) {
+          // Find newly checked in student
+          final newPresent = data.where((s) => s.hasCheckedIn && !_roster.any((old) => old.rollNumber == s.rollNumber && old.hasCheckedIn)).toList();
+          if (newPresent.isNotEmpty) {
+            _lastCheckedInStudent = newPresent.first;
+          } else if (data.isNotEmpty) {
+            _lastCheckedInStudent = data.firstWhere((s) => s.hasCheckedIn, orElse: () => data.first);
+          }
+          
+          if (_lastCheckedInStudent != null) {
+            triggerToast(
+              type: ToastType.checkin,
+              title: '${_lastCheckedInStudent!.displayName} (${_lastCheckedInStudent!.rollNumber})',
+              message: 'Vừa điểm danh thành công lúc ${_lastCheckedInStudent!.displayCheckinTime}',
+              icon: Icons.check_circle_outline,
+              accentColor: AppColors.statusPresent,
+              duration: const Duration(seconds: 3),
+            );
+          }
         }
+        _roster = data;
         notifyListeners();
       case ApiFailure<List<RosterEntryModel>>():
         // Silently fail on background polls to avoid disrupting UI
@@ -304,6 +391,28 @@ class LiveSessionViewModel extends ChangeNotifier {
     }
   }
 
+  /// Manually mark multiple students
+  Future<void> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
+    if (_session == null) return;
+    _status = ViewStatus.loading;
+    notifyListeners();
+
+    final result = await _repository.manualCheckinBulk(
+      sessionId: _session!.sessionId,
+      changes: changes,
+    );
+
+    switch (result) {
+      case ApiSuccess<void>():
+        _status = ViewStatus.success;
+        await loadRoster();
+      case ApiFailure<void>(:final error):
+        _errorMessage = error.message;
+        _status = ViewStatus.error;
+        notifyListeners();
+    }
+  }
+
   /// Load stats for a given class
   Future<void> loadStats(String classCode) async {
     final result = await _repository.getStats(classCode: classCode);
@@ -320,7 +429,6 @@ class LiveSessionViewModel extends ChangeNotifier {
   /// Automatically marks absent students and updates sessionStatus to closed
   Future<bool> closeCurrentSession() async {
     if (_session == null) {
-      resetSession();
       return true;
     }
 
@@ -333,7 +441,48 @@ class LiveSessionViewModel extends ChangeNotifier {
       final result = await _repository.closeSession(sessionId: sId);
       switch (result) {
         case ApiSuccess<CloseSessionResult>():
-          resetSession();
+          if (_session != null) {
+            _session = SessionModel(
+              sessionId: _session!.sessionId,
+              classCode: _session!.classCode,
+              sessionDate: _session!.sessionDate,
+              slotCode: _session!.slotCode,
+              sessionStatus: 'closed',
+              qrToken: _session!.qrToken,
+            );
+          }
+          // Update all unchecked students in local roster to 'Absent'
+          _roster = _roster.map((student) {
+            if (student.isUnchecked) {
+              return RosterEntryModel(
+                rollNumber: student.rollNumber,
+                memberCode: student.memberCode,
+                email: student.email,
+                fullName: student.fullName,
+                recordId: student.recordId,
+                sessionId: student.sessionId,
+                checkinTime: student.checkinTime,
+                status: 'Absent',
+                networkVerificationResult: 'AutoAbsent',
+                ipAddress: student.ipAddress,
+                note: student.note,
+              );
+            }
+            return student;
+          }).toList();
+
+          _status = ViewStatus.success;
+          triggerToast(
+            type: ToastType.closeSession,
+            title: 'Đã kết thúc phiên điểm danh!',
+            message: 'Hệ thống đã tự động ghi nhận Vắng mặt cho các sinh viên chưa check-in.',
+            icon: Icons.check_circle_outline,
+            accentColor: AppColors.statusPresent,
+            duration: const Duration(seconds: 5),
+          );
+
+          // Reload roster to fetch actual saved records from backend
+          await loadRoster();
           return true;
         case ApiFailure<CloseSessionResult>(:final error):
           _errorMessage = error.message;
@@ -349,6 +498,7 @@ class LiveSessionViewModel extends ChangeNotifier {
     }
     return false;
   }
+
 
   /// Reset session state (e.g. when navigating away)
   void resetSession() {

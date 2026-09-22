@@ -1,5 +1,5 @@
 import 'history_student.dart';
-import 'student_checkin.dart';
+
 
 /// Response payload for getAttendanceHistory API
 class AttendanceHistoryResult {
@@ -87,58 +87,7 @@ class AttendanceStudentRecord {
 
   /// Convert to UI HistoryStudent
   HistoryStudent toHistoryStudent(int index) {
-    CheckinStatus checkinStatus;
-    switch (status) {
-      case 'Present':
-        checkinStatus = CheckinStatus.present;
-        break;
-      case 'Late':
-        checkinStatus = CheckinStatus.late;
-        break;
-      case 'Absent':
-        checkinStatus = CheckinStatus.absent;
-        break;
-      case 'ManualByGV':
-        checkinStatus = CheckinStatus.present;
-        break;
-      default:
-        checkinStatus = CheckinStatus.unchecked;
-        break;
-    }
-
-    String methodLabel = 'QR Động 20s';
-    String methodIcon = 'qr_code_2';
-    if (networkVerificationResult == 'Manual' || status == 'ManualByGV') {
-      methodLabel = 'Điểm danh bù bởi GV';
-      methodIcon = 'how_to_reg';
-    } else if (checkinStatus == CheckinStatus.absent) {
-      methodLabel = 'Không quét QR';
-      methodIcon = 'block';
-    }
-
-    String absenceStatusText = 'An toàn';
-    if (totalSessions > 0) {
-      final rate = absenceCount / totalSessions;
-      if (rate >= 0.20) {
-        absenceStatusText = 'Nguy cơ';
-      } else if (rate > 0) {
-        absenceStatusText = 'Bình thường';
-      } else {
-        absenceStatusText = 'Tuyệt đối';
-      }
-    }
-
-    final initials = fullName.isNotEmpty
-        ? fullName
-            .trim()
-            .split(' ')
-            .map((w) => w.isNotEmpty ? w[0] : '')
-            .take(2)
-            .join('')
-            .toUpperCase()
-        : 'SV';
-
-    String timeFormatted = '--:--:--';
+    String timeFormatted = '';
     if (checkinTime.isNotEmpty) {
       try {
         final parsed = DateTime.parse(checkinTime).toLocal();
@@ -152,18 +101,17 @@ class AttendanceStudentRecord {
     }
 
     return HistoryStudent(
-      index: index,
-      studentId: rollNumber,
+      rollNumber: rollNumber,
       fullName: fullName.isNotEmpty ? fullName : rollNumber,
-      initials: initials,
       email: email,
-      checkInTime: timeFormatted,
-      status: checkinStatus,
-      methodLabel: methodLabel,
-      methodIcon: methodIcon,
+      status: status.isEmpty ? 'Unchecked' : status,
+      checkinTime: timeFormatted,
+      note: '',
+      revision: '',
+      method: networkVerificationResult,
       absenceCount: absenceCount,
       totalSessions: totalSessions > 0 ? totalSessions : 30,
-      absenceStatusText: absenceStatusText,
     );
   }
 }
+

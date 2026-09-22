@@ -22,6 +22,7 @@ function dispatch(action, params) {
     'getRoster': TeacherService.getRoster,
     'getAttendanceHistory': TeacherService.getAttendanceHistory,
     'manualCheckin': TeacherService.manualCheckin,
+    'manualCheckinBulk': TeacherService.manualCheckinBulk,
     'getStats': TeacherService.getStats,
     'syncToFap': SyncService.syncToFap,
     'checkin': StudentService.checkin

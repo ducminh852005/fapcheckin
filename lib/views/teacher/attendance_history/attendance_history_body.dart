@@ -1,15 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-<<<<<<< HEAD
-import '../../../core/constants/app_spacing.dart';
-import '../../../viewmodels/attendance_history_viewmodel.dart';
-import '../../../viewmodels/dashboard_viewmodel.dart';
-import 'components/class_selector.dart';
-import 'components/kpi_dashboard.dart';
-import 'components/history_table.dart';
 
-=======
-
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
 import 'components/header_bar.dart';
@@ -17,7 +9,6 @@ import 'components/class_selector.dart';
 import 'components/kpi_dashboard.dart';
 import 'components/history_table.dart';
 
->>>>>>> origin/dev
 class AttendanceHistoryBody extends StatefulWidget {
   const AttendanceHistoryBody({super.key});
   @override
@@ -34,120 +25,171 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
   }
 
   @override
-  State<AttendanceHistoryBody> createState() => _AttendanceHistoryBodyState();
-}
-
-class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dashVm = context.read<DashboardViewModel>();
-      final historyVm = context.read<AttendanceHistoryViewModel>();
-      if (dashVm.classes.isNotEmpty) {
-        historyVm.setTeacherClasses(dashVm.classes);
-      } else if (historyVm.selectedClassCode != null) {
-        historyVm.loadHistoryForClass(historyVm.selectedClassCode!);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    final historyVm = context.watch<AttendanceHistoryViewModel>();
-
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClassSelector(),
-              SizedBox(height: AppSpacing.md),
-              KpiDashboard(),
-              SizedBox(height: AppSpacing.md),
-              HistoryTable(),
-            ],
-          ),
-        ),
-        if (historyVm.isLoading)
-          Container(
-            color: Colors.black12,
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
-      ],
-=======
     final vm = context.watch<AttendanceHistoryViewModel>();
+    final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.hasChanges,
+    );
+    final errorMessage = context.select<AttendanceHistoryViewModel, String?>(
+      (value) => value.errorMessage,
+    );
+    final busy = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.busy,
+    );
+    final loadingClasses = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.loadingClasses,
+    );
+    final hasClasses = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.classes.isNotEmpty,
+    );
+    final hasDetail = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.detail != null,
+    );
+    final loadingDetail = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.loadingDetail,
+    );
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const HeaderBar(),
-          const SizedBox(height: AppSpacing.md),
-          if (vm.hasChanges)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Wrap(
-                  spacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text(
-                      'Có thay đổi chưa lưu. Hãy lưu hoặc hủy trước khi đổi lớp/buổi học.',
-                    ),
-                    TextButton(
-                      onPressed: vm.busy ? null : vm.discardChanges,
-                      child: const Text('Hủy thay đổi'),
-                    ),
-                  ],
-                ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _NoticeBanner(
+              icon: Icons.error_outline,
+              color: AppColors.statusAbsent,
+              background: AppColors.statusAbsentBg,
+              message: errorMessage,
+              action: TextButton(
+                onPressed: busy || hasChanges
+                    ? null
+                    : () => vm.loadClasses(force: true),
+                child: const Text('Tải lại'),
               ),
             ),
-          if (vm.errorMessage != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+          ],
+          if (busy) ...[
+            const SizedBox(height: AppSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: const LinearProgressIndicator(minHeight: 4),
+            ),
+          ],
+          if (!loadingClasses && !hasClasses && errorMessage == null)
+            const _EmptyState(
+              icon: Icons.class_outlined,
+              message: 'Chưa có lớp được phân công cho tài khoản này.',
+            ),
+          if (hasClasses) ...[
+            const SizedBox(height: AppSpacing.md),
+            const ClassSelector(),
+          ],
+          if (hasDetail) ...[
+            const SizedBox(height: AppSpacing.md),
+            Stack(
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SelectableText(
-                      vm.errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                    KpiDashboard(),
+                    SizedBox(height: AppSpacing.md),
+                    HistoryTable(),
+                  ],
+                ),
+                if (loadingDetail)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
                       ),
                     ),
-                    TextButton(
-                      onPressed: vm.busy || vm.hasChanges
-                          ? null
-                          : vm.loadClasses,
-                      child: const Text('Tải lại'),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+              ],
             ),
-          if (vm.busy) const LinearProgressIndicator(),
-          if (!vm.loadingClasses &&
-              vm.classes.isEmpty &&
-              vm.errorMessage == null)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('Chưa có lớp được phân công cho tài khoản này.'),
-            ),
-          if (vm.classes.isNotEmpty) const ClassSelector(),
-          if (vm.detail != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            const KpiDashboard(),
-            const SizedBox(height: AppSpacing.md),
-            const HistoryTable(),
           ],
         ],
       ),
->>>>>>> origin/dev
+    );
+
+  }
+}
+
+class _NoticeBanner extends StatelessWidget {
+  const _NoticeBanner({
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.message,
+    required this.action,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color background;
+  final String message;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(message, style: TextStyle(color: color, fontSize: 13)),
+          ),
+          action,
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: AppSpacing.md),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 34, color: AppColors.textTertiary),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            style: const TextStyle(color: AppColors.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

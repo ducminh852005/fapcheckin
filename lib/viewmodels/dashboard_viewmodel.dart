@@ -200,14 +200,25 @@ class DashboardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Helper state updates ─────────────────────────────────────────────────
+
+  void markClassInactive(String classCode) {
+    for (int i = 0; i < _classes.length; i++) {
+      if (_classes[i].classCode == classCode) {
+        _classes[i] = _classes[i].copyWith(isActive: false, activeSessionId: null);
+      }
+    }
+    notifyListeners();
+  }
+
   // ── Sync to FAP ─────────────────────────────────────────────────────────────
 
   Future<ApiResult<SyncResult>> syncToFap({String? classCode}) async {
     return await _repository.syncToFap(classCode: classCode);
   }
 
-
   // ── Navigation ───────────────────────────────────────────────────────────────
+
 
   String _currentRoute = 'tong-quan';
   String get currentRoute => _currentRoute;

@@ -148,6 +148,43 @@ class _ActiveBadgeState extends State<_ActiveBadge>
 
   @override
   Widget build(BuildContext context) {
+    final liveVm = context.watch<LiveSessionViewModel>();
+    final isClosed = liveVm.isClosed;
+
+    if (isClosed) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.statusAbsentBg,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+          boxShadow: const [
+            BoxShadow(color: Color(0x0A142433), blurRadius: 2, offset: Offset(0, 1)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: AppColors.statusAbsent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Phiên đã đóng',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.statusAbsent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -162,7 +199,7 @@ class _ActiveBadgeState extends State<_ActiveBadge>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 8,
@@ -283,78 +320,95 @@ class _QrCodeDisplay extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: vm.qrToken.isEmpty 
-                    ? const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()))
-                    : QrImageView(
-                        data: vm.qrToken,
-                        version: QrVersions.auto,
-                        size: 220.0,
-                        backgroundColor: Colors.white,
-                      ),
+                child: vm.session == null
+                    ? SizedBox(
+                        width: 220,
+                        height: 220,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle, size: 48, color: AppColors.textTertiary),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Phiên đã kết thúc',
+                              style: AppTextStyles.labelMd.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      )
+                    : vm.qrToken.isEmpty 
+                        ? const SizedBox(width: 220, height: 220, child: Center(child: CircularProgressIndicator()))
+                        : QrImageView(
+                            data: vm.qrToken,
+                            version: QrVersions.auto,
+                            size: 220.0,
+                            backgroundColor: Colors.white,
+                          ),
               ),
               const SizedBox(height: 16),
               // Circular countdown timer bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x0A142433), blurRadius: 3, offset: Offset(0, 1)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Circular progress
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Stack(
-                        alignment: Alignment.center,
+              if (vm.session != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A142433), blurRadius: 3, offset: Offset(0, 1)),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Circular progress
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomPaint(
+                              size: const Size(36, 36),
+                              painter: _CircularTimerPainter(
+                                progress: vm.qrProgress,
+                                trackColor: AppColors.surfaceMuted,
+                                progressColor: AppColors.primaryContainer,
+                              ),
+                            ),
+                            Text(
+                              '${vm.qrRefreshSeconds}s',
+                              style: AppTextStyles.codeSm.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CustomPaint(
-                            size: const Size(36, 36),
-                            painter: _CircularTimerPainter(
-                              progress: vm.qrProgress,
-                              trackColor: AppColors.surfaceMuted,
-                              progressColor: AppColors.primaryContainer,
+                          Text(
+                            'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
-                            '${vm.qrRefreshSeconds}s',
-                            style: AppTextStyles.codeSm.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 10,
+                            'Chống gian lận vị trí & chụp màn hình',
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
-                          style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Chống gian lận vị trí & chụp màn hình',
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ],
@@ -513,7 +567,7 @@ class _WebSocketBarState extends State<_WebSocketBar>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, _) => Opacity(
+            builder: (_, __) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 10,
@@ -653,69 +707,101 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
 
   @override
   Widget build(BuildContext context) {
+    final liveVm = context.watch<LiveSessionViewModel>();
+    final isClosed = liveVm.isClosed;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: () async {
-          final liveVm = context.read<LiveSessionViewModel>();
-          final dashVm = context.read<DashboardViewModel>();
+        onTap: isClosed
+            ? null
+            : () async {
+                final dashVm = context.read<DashboardViewModel>();
 
-          final confirmed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Kết thúc phiên điểm danh?'),
-              content: const Text(
-                'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Hủy'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.statusAbsent,
-                    foregroundColor: Colors.white,
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Kết thúc phiên điểm danh?'),
+                    content: const Text(
+                      'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Hủy'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.statusAbsent,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Kết thúc phiên'),
+                      ),
+                    ],
                   ),
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('Kết thúc phiên'),
-                ),
-              ],
-            ),
-          );
+                );
 
-          if (confirmed == true && context.mounted) {
-            await liveVm.closeCurrentSession();
-            if (context.mounted) {
-              dashVm.navigate('tong-quan');
-            }
-          }
-        },
+                if (confirmed == true && context.mounted) {
+                  final classCode = liveVm.classInfo?.classCode;
+                  final success = await liveVm.closeCurrentSession();
+                  if (context.mounted) {
+                    if (success) {
+                      if (classCode != null) {
+                        dashVm.markClassInactive(classCode);
+                      }
+                      dashVm.loadClasses();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            liveVm.errorMessage ??
+                                'Không thể kết thúc phiên điểm danh',
+                          ),
+                          backgroundColor: AppColors.statusAbsent,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: _hovered ? AppColors.statusAbsent : AppColors.statusAbsentBg,
+            color: isClosed
+                ? AppColors.surfaceMuted
+                : (_hovered
+                    ? AppColors.statusAbsent
+                    : AppColors.statusAbsentBg),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             boxShadow: const [
-              BoxShadow(color: Color(0x0A142433), blurRadius: 2, offset: Offset(0, 1)),
+              BoxShadow(
+                color: Color(0x0A142433),
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
             ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.stop_circle_outlined,
+                isClosed ? Icons.check_circle_outline : Icons.stop_circle_outlined,
                 size: 20,
-                color: _hovered ? AppColors.onError : AppColors.statusAbsent,
+                color: isClosed
+                    ? AppColors.textSecondary
+                    : (_hovered ? AppColors.onError : AppColors.statusAbsent),
               ),
               const SizedBox(width: 8),
               Text(
-                'Kết thúc phiên điểm danh',
+                isClosed ? 'Phiên điểm danh đã kết thúc' : 'Kết thúc phiên điểm danh',
                 style: AppTextStyles.labelMd.copyWith(
-                  color: _hovered ? AppColors.onError : AppColors.statusAbsent,
+                  color: isClosed
+                      ? AppColors.textSecondary
+                      : (_hovered ? AppColors.onError : AppColors.statusAbsent),
                   fontWeight: FontWeight.w600,
                 ),
               ),
