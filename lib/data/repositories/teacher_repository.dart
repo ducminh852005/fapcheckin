@@ -1,10 +1,12 @@
 import '../../core/network/api_result.dart';
-import '../../core/network/api_response.dart';
 import '../../core/network/api_service.dart';
+import '../models/attendance_history_model.dart';
 import '../models/class_section_model.dart';
+import '../models/close_session_model.dart';
 import '../models/roster_entry_model.dart';
 import '../models/session_model.dart';
 import '../models/stats_entry_model.dart';
+import '../models/sync_result_model.dart';
 
 /// Repository for all teacher-side API calls.
 /// The only place that knows about action names and maps
@@ -54,6 +56,40 @@ class TeacherRepository {
     return result;
   }
 
+  // ── closeSession ────────────────────────────────────────────────────────────
+
+  Future<ApiResult<CloseSessionResult>> closeSession({
+    required String sessionId,
+  }) async {
+    final result = await _api.postAction<CloseSessionResult>(
+      'closeSession',
+      payload: {'sessionId': sessionId},
+      fromJsonT: (data) =>
+          CloseSessionResult.fromJson(data as Map<String, dynamic>),
+    );
+    return result;
+  }
+
+  // ── getSessions ─────────────────────────────────────────────────────────────
+
+  Future<ApiResult<List<SessionModel>>> getSessions({
+    required String classCode,
+  }) async {
+    final result = await _api.postAction<List<SessionModel>>(
+      'getSessions',
+      payload: {'classCode': classCode},
+      fromJsonT: (data) {
+        if (data is List) {
+          return data
+              .map((e) => SessionModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+        return <SessionModel>[];
+      },
+    );
+    return result;
+  }
+
   // ── getRoster ──────────────────────────────────────────────────────────────
 
   Future<ApiResult<List<RosterEntryModel>>> getRoster({
@@ -71,6 +107,25 @@ class TeacherRepository {
         }
         return <RosterEntryModel>[];
       },
+    );
+    return result;
+  }
+
+  // ── getAttendanceHistory ────────────────────────────────────────────────────
+
+  Future<ApiResult<AttendanceHistoryResult>> getAttendanceHistory({
+    required String classCode,
+    String? sessionId,
+  }) async {
+    final payload = <String, dynamic>{'classCode': classCode};
+    if (sessionId != null && sessionId.isNotEmpty) {
+      payload['sessionId'] = sessionId;
+    }
+    final result = await _api.postAction<AttendanceHistoryResult>(
+      'getAttendanceHistory',
+      payload: payload,
+      fromJsonT: (data) =>
+          AttendanceHistoryResult.fromJson(data as Map<String, dynamic>),
     );
     return result;
   }
@@ -109,17 +164,6 @@ class TeacherRepository {
     return result;
   }
 
-  // ── closeSession ───────────────────────────────────────────────────────────
-
-  Future<ApiResult<void>> closeSession({
-    required String sessionId,
-  }) async {
-    final result = await _api.postAction<void>(
-      'closeSession',
-      payload: {'sessionId': sessionId},
-    );
-    return result;
-  }
 
   // ── getStats ───────────────────────────────────────────────────────────────
 
@@ -141,4 +185,22 @@ class TeacherRepository {
     );
     return result;
   }
+
+  // ── syncToFap ───────────────────────────────────────────────────────────────
+
+  Future<ApiResult<SyncResult>> syncToFap({
+    String? classCode,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (classCode != null && classCode.isNotEmpty) {
+      payload['classCode'] = classCode;
+    }
+    final result = await _api.postAction<SyncResult>(
+      'syncToFap',
+      payload: payload,
+      fromJsonT: (data) => SyncResult.fromJson(data as Map<String, dynamic>),
+    );
+    return result;
+  }
 }
+

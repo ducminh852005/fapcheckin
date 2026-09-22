@@ -139,41 +139,50 @@ class _StatsCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showAbsent = vm.absentCount > 0 || vm.isClosed;
+    final uncheckOrAbsentCount = showAbsent ? vm.absentCount : vm.uncheckedCount;
+
     return Row(
       children: [
-        Expanded(child: _MetricCard(
-          label: 'ĐÃ ĐIỂM DANH',
-          count: vm.checkedInCount,
-          total: vm.totalStudents,
-          countSuffix: '/ ${vm.totalStudents}',
-          progress: vm.checkedInCount / vm.totalStudents,
-          color: AppColors.statusPresent,
-          bgColor: AppColors.statusPresentBg,
-          barColor: AppColors.statusPresentBorder,
-          icon: Icons.check_circle_outlined,
-        )),
+        Expanded(
+          child: _MetricCard(
+            label: 'ĐÃ ĐIỂM DANH',
+            count: vm.checkedInCount,
+            total: vm.totalStudents,
+            countSuffix: '/ ${vm.totalStudents}',
+            progress: vm.checkedInCount / vm.totalStudents,
+            color: AppColors.statusPresent,
+            bgColor: AppColors.statusPresentBg,
+            barColor: AppColors.statusPresentBorder,
+            icon: Icons.check_circle_outlined,
+          ),
+        ),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(child: _MetricCard(
-          label: 'ĐI TRỄ',
-          count: vm.lateCount,
-          countSuffix: 'sinh viên',
-          progress: vm.lateCount / vm.totalStudents,
-          color: AppColors.statusLate,
-          bgColor: AppColors.statusLateBg,
-          barColor: AppColors.statusLateBorder,
-          icon: Icons.alarm_on_outlined,
-        )),
+        Expanded(
+          child: _MetricCard(
+            label: 'ĐI TRỄ',
+            count: vm.lateCount,
+            countSuffix: 'sinh viên',
+            progress: vm.lateCount / vm.totalStudents,
+            color: AppColors.statusLate,
+            bgColor: AppColors.statusLateBg,
+            barColor: AppColors.statusLateBorder,
+            icon: Icons.alarm_on_outlined,
+          ),
+        ),
         const SizedBox(width: AppSpacing.sm),
-        Expanded(child: _MetricCard(
-          label: 'CHƯA CHECK-IN',
-          count: vm.uncheckedCount,
-          countSuffix: 'sinh viên',
-          progress: vm.uncheckedCount / vm.totalStudents,
-          color: AppColors.statusUnchecked,
-          bgColor: AppColors.statusUncheckedBg,
-          barColor: AppColors.statusUncheckedBorder,
-          icon: Icons.person_off_outlined,
-        )),
+        Expanded(
+          child: _MetricCard(
+            label: showAbsent ? 'VẮNG MẶT' : 'CHƯA CHECK-IN',
+            count: uncheckOrAbsentCount,
+            countSuffix: 'sinh viên',
+            progress: uncheckOrAbsentCount / vm.totalStudents,
+            color: showAbsent ? AppColors.statusAbsent : AppColors.statusUnchecked,
+            bgColor: showAbsent ? AppColors.statusAbsentBg : AppColors.statusUncheckedBg,
+            barColor: showAbsent ? AppColors.statusAbsentBorder : AppColors.statusUncheckedBorder,
+            icon: showAbsent ? Icons.cancel_outlined : Icons.person_off_outlined,
+          ),
+        ),
       ],
     );
   }
@@ -332,7 +341,9 @@ class _SearchAndFilter extends StatelessWidget {
                   onTap: () => vm.setFilter('checked'),
                 ),
                 _FilterTab(
-                  label: 'Chưa check-in (${vm.uncheckedCount})',
+                  label: (vm.absentCount > 0 || vm.isClosed)
+                      ? 'Vắng mặt (${vm.absentCount > 0 ? vm.absentCount : vm.uncheckedCount})'
+                      : 'Chưa check-in (${vm.uncheckedCount})',
                   isActive: vm.activeFilter == 'unchecked',
                   onTap: () => vm.setFilter('unchecked'),
                 ),

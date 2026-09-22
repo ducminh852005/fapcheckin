@@ -46,6 +46,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       AttendanceHistoryRepository(_apiService),
     );
     _authViewModel.addListener(_syncHistoryAccount);
+
     _router = createAppRouter(_authViewModel);
   }
 

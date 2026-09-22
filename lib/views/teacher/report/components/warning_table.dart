@@ -1,18 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_spacing.dart';
-import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/network/api_result.dart';
-import '../../../../core/network/api_service.dart';
-import '../../../../data/models/history_class.dart';
-import '../../../../data/models/history_detail.dart';
-import '../../../../data/models/history_student.dart';
-import '../../../../data/repositories/attendance_history_repository.dart';
-import '../../../../viewmodels/auth_viewmodel.dart';
-
-typedef _WarningRows = List<({String classCode, HistoryStudent student})>;
+import 'package:fapcheckin/core/constants/app_colors.dart';
+import 'package:fapcheckin/core/constants/app_spacing.dart';
+import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/network/api_result.dart';
+import 'package:fapcheckin/data/models/sync_result_model.dart';
+import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
 class WarningTable extends StatefulWidget {
   const WarningTable({super.key});
@@ -22,49 +15,7 @@ class WarningTable extends StatefulWidget {
 }
 
 class _WarningTableState extends State<WarningTable> {
-  String? _account;
-  Future<ApiResult<_WarningRows>>? _request;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final account = context.watch<AuthViewModel>().session?.token;
-    if (_account != account) {
-      _account = account;
-      _request = account == null ? null : _load();
-    }
-  }
-
-  Future<ApiResult<_WarningRows>> _load() async {
-    final repository = AttendanceHistoryRepository(context.read<ApiService>());
-    final classes = await repository.getClasses();
-    if (classes is ApiFailure<List<HistoryClass>>) {
-      return ApiFailure(classes.error);
-    }
-    final warnings = <({String classCode, HistoryStudent student})>[];
-    for (final cls in (classes as ApiSuccess<List<HistoryClass>>).data) {
-      final detail = await repository.getDetail(cls.classCode);
-      if (detail is ApiFailure<HistoryDetail>) {
-        return ApiFailure(detail.error);
-      }
-      for (final student
-          in (detail as ApiSuccess<HistoryDetail>).data.students) {
-        if (student.totalSessions > 0 && student.absenceRate > 0.15) {
-          warnings.add((classCode: cls.classCode, student: student));
-        }
-      }
-    }
-    warnings.sort(
-      (a, b) => b.student.absenceRate.compareTo(a.student.absenceRate),
-    );
-    return ApiSuccess(warnings);
-  }
-
-  void _refresh() {
-    setState(() {
-      _request = _load();
-    });
-  }
+  bool _syncing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -80,117 +31,210 @@ class _WarningTableState extends State<WarningTable> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Cảnh báo vắng học',
-                  style: AppTextStyles.headlineSm,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Tải lại từ Google Sheet',
-                onPressed: _account == null ? null : _refresh,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
-          Text(
-            'Sinh viên vắng >15% số buổi đã đóng. Cảnh báo không phải quyết định cấm thi.',
-            style: AppTextStyles.caption,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (_account == null)
-            const Text('Vui lòng đăng nhập để tải dữ liệu sinh viên.')
-          else
-            FutureBuilder<ApiResult<_WarningRows>>(
-              // Drop the previous account/request snapshot immediately.
-              key: ObjectKey(_request),
-              future: _request,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final result = snapshot.data;
-                if (snapshot.hasError || result is ApiFailure<_WarningRows>) {
-                  final message = result is ApiFailure<_WarningRows>
-                      ? result.error.message
-                      : snapshot.error.toString();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Không tải được danh sách sinh viên: $message'),
-                      TextButton(
-                        onPressed: _refresh,
-                        child: const Text('Thử lại'),
-                      ),
-                    ],
-                  );
-                }
-                final rows = result is ApiSuccess<_WarningRows>
-                    ? result.data
-                    : <({String classCode, HistoryStudent student})>[];
-                if (rows.isEmpty) {
-                  return const Text(
-                    'Chưa có sinh viên vượt ngưỡng cảnh báo trong dữ liệu hiện có.',
-                  );
-                }
-                return Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${rows.map((r) => r.student.rollNumber).toSet().length} sinh viên • ${rows.length} lượt theo lớp',
+                      'Cảnh báo vắng học',
+                      style: AppTextStyles.headlineSm,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Sinh viên chạm ngưỡng >15% và vượt mốc >20%',
                       style: AppTextStyles.caption,
                     ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(label: Text('Sinh viên')),
-                          DataColumn(label: Text('Lớp')),
-                          DataColumn(label: Text('Vắng')),
-                          DataColumn(label: Text('Cảnh báo')),
-                        ],
-                        rows: rows.map((row) {
-                          final student = row.student;
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      student.fullName.isEmpty
-                                          ? student.rollNumber
-                                          : student.fullName,
-                                    ),
-                                    Text(
-                                      student.rollNumber,
-                                      style: AppTextStyles.caption,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              DataCell(Text(row.classCode)),
-                              DataCell(
-                                Text(
-                                  '${student.absenceCount}/${student.totalSessions} (${(student.absenceRate * 100).toStringAsFixed(1)}%)',
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  student.absenceRate > 0.20
-                                      ? 'Vượt 20%'
-                                      : 'Vượt 15%',
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
                   ],
-                );
-              },
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.filter_list, size: 16),
+                label: const Text('Lọc nâng cao'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: AppTextStyles.labelSm,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Action Bar
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
+            child: Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                _buildActionBtn(
+                  'Gửi cảnh báo Email FPT',
+                  Icons.mail,
+                  AppColors.statusAbsent,
+                  AppColors.onError,
+                ),
+                GestureDetector(
+                  onTap: _syncing
+                      ? null
+                      : () async {
+                          setState(() => _syncing = true);
+                          final dashVm = context.read<DashboardViewModel>();
+                          final messenger = ScaffoldMessenger.of(context);
+                          final result = await dashVm.syncToFap();
+                          if (!mounted) return;
+                          String msg;
+                          if (result is ApiSuccess<SyncResult>) {
+                            msg = result.data.message.isNotEmpty
+                                ? result.data.message
+                                : 'Đồng bộ thành công ${result.data.syncedCount} bản ghi.';
+                          } else if (result is ApiFailure<SyncResult>) {
+                            msg = 'Lỗi: ${result.error.message}';
+                          } else {
+                            msg = 'Đồng bộ hoàn tất.';
+                          }
+                          setState(() => _syncing = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(msg),
+                              backgroundColor: result is ApiSuccess<SyncResult>
+                                  ? AppColors.statusPresent
+                                  : AppColors.statusAbsent,
+                            ),
+                          );
+                        },
+                  child: _syncing
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 6),
+                              Text('Đang đồng bộ...'),
+                            ],
+                          ),
+                        )
+                      : _buildActionBtn(
+                          'Đồng bộ Cổng Khảo Thí',
+                          Icons.sync,
+                          AppColors.surface,
+                          AppColors.textPrimary,
+                          iconColor: AppColors.primary,
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Table
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 600),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(3), // Sinh viên
+                  1: FlexColumnWidth(1), // Lớp
+                  2: FlexColumnWidth(1), // Vắng
+                  3: FlexColumnWidth(1.5), // Trạng thái
+                  4: FlexColumnWidth(1.2), // Thao tác
+                },
+                children: [
+                  // Header Row
+                  TableRow(
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                    ),
+                    children: [
+                      _headerCell('Sinh viên'),
+                      _headerCell('Lớp'),
+                      _headerCell('Vắng'),
+                      _headerCell('Trạng thái'),
+                      _headerCell('Thao tác'),
+                    ],
+                  ),
+                  // Placeholder row
+                  TableRow(
+                    children: [
+                      _dataCell(
+                        const Text(
+                          'Không có dữ liệu cảnh báo',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                        span: 5,
+                      ),
+                      _dataCell(const SizedBox.shrink()),
+                      _dataCell(const SizedBox.shrink()),
+                      _dataCell(const SizedBox.shrink()),
+                      _dataCell(const SizedBox.shrink()),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerCell(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSm.copyWith(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _dataCell(Widget child, {int span = 1}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: child,
+    );
+  }
+
+  Widget _buildActionBtn(
+    String label,
+    IconData icon,
+    Color bgColor,
+    Color fgColor, {
+    Color? iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: iconColor ?? fgColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSm.copyWith(color: fgColor),
+          ),
         ],
       ),
     );
