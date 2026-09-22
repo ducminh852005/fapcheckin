@@ -356,6 +356,21 @@ var TeacherService = (function() {
       students: studentList
     };
   }
+
+  function rotateQr(params) {
+    var sessionId = params.sessionId;
+    if (!sessionId) throwError('VALIDATION_ERROR', 'Thiếu sessionId.');
+
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var session = sessions.filter(function(s) { return s.sessionId === sessionId; })[0];
+    if (!session) throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên.');
+    if (session.sessionStatus !== 'open') throwError('SESSION_NOT_FOUND', 'Phiên đã đóng, không thể làm mới QR.');
+
+    var newSecret = Utilities.getUuid();
+    SheetDB.updateRow('Attendance_Session', 'sessionId', sessionId, { qrSecret: newSecret });
+
+    return { sessionId: sessionId, qrToken: newSecret };
+  }
   
   return {
     getClasses: getClasses,
@@ -366,6 +381,7 @@ var TeacherService = (function() {
     getAttendanceHistory: getAttendanceHistory,
     manualCheckin: manualCheckin,
     manualCheckinBulk: manualCheckinBulk,
-    getStats: getStats
+    getStats: getStats,
+    rotateQr: rotateQr
   };
 })();
