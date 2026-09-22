@@ -41,7 +41,7 @@ var ScheduleService = (function() {
       classes:classes.filter(function(c) { return text(c.teacherMemberCode) === text(teacher.memberCode); }).map(function(c) {
         var ids = {};
         enrollments.forEach(function(e) { if(text(e.classCode) === text(c.classCode) && text(e.rollNumber)) ids[text(e.rollNumber)] = true; });
-        return {classCode:text(c.classCode),subjectName:text(c.subjectName),room:text(c.room),studentCount:Object.keys(ids).length};
+        return {classCode:text(c.classCode),subjectName:text(c.subjectName),room:text(c.room),studentCount:Object.keys(ids).length,slotCode:text(c.slotCode)};
       }), slots:slots(), rooms:classes.map(function(c) { return text(c.room); }).filter(function(r,i,a) { return r && a.indexOf(r) === i; }).sort(),
       capabilities:{autoQR:false,sendEmail:false,syncFap:false}, schedules:listFor(teacher)};
   }

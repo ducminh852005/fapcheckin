@@ -7,11 +7,13 @@ function doGet(e) {
   // CORS check and HTML page rendering for student checkin web app
   if (e.parameter && e.parameter.page === 'checkin') {
     try {
-      return HtmlService.createHtmlOutputFromFile('index.html')
+      var template = HtmlService.createTemplateFromFile('index.html');
+      template.token = e.parameter.token || '';
+      return template.evaluate()
         .setTitle('FAP Check-in')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     } catch(err) {
-      return ContentService.createTextOutput("Check-in Web UI is not deployed yet.");
+      return ContentService.createTextOutput("Check-in Web UI is not deployed yet: " + err.message);
     }
   }
   

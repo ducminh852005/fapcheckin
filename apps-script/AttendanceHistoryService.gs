@@ -75,6 +75,7 @@ var AttendanceHistoryService = (function() {
     result.subjectCode = key(cls.subjectCode) || key(cls.classCode).split('_')[0];
     result.subjectName = key(cls.subjectName);
     result.room = key(cls.room);
+    result.slotCode = key(cls.slotCode);
     result.latestSession = data.sessions.length ? sessionDto(data.sessions[0]) : null;
     return result;
   }
