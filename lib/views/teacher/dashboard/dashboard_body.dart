@@ -171,24 +171,15 @@ class _SchedulePanelState extends State<_SchedulePanel> {
 
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
-<<<<<<< HEAD
-    final timeStr = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
-        ? '${model.startTime} - ${model.endTime}'
-        : model.timeLabel;
-    return ClassSession(
-      courseCode: model.classCode,
-      courseName: model.subjectName,
-      slot: model.slotCode.isNotEmpty ? model.slotCode : (index + 1).toString(),
-      timeRange: timeStr,
-=======
     final slotNumber = index + 1;
-    final timeRange = _getSlotTimeRange(slotNumber);
+    final timeRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
+        ? '${model.startTime} - ${model.endTime}'
+        : (model.timeLabel.isNotEmpty ? model.timeLabel : _getSlotTimeRange(slotNumber));
     return ClassSession(
       courseCode: model.classCode,
       courseName: model.subjectName,
-      slot: slotNumber.toString(),
+      slot: model.slotCode.isNotEmpty ? model.slotCode : slotNumber.toString(),
       timeRange: timeRange,
->>>>>>> origin/main
       room: model.room,
       studentCount: model.studentCount,
       status: _deriveStatus(timeRange, model.isActive),
