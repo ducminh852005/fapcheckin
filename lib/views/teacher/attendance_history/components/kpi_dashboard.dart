@@ -123,10 +123,11 @@ class KpiDashboard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
             ),
             child: detail.sessions.isEmpty
                 ? const Text(
@@ -136,41 +137,121 @@ class KpiDashboard extends StatelessWidget {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Chọn buổi học',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Chọn buổi học',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${detail.sessions.length} buổi học',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: detail.sessions
-                            .map(
-                              (s) => ChoiceChip(
-                                label: Text(
-                                  '${historyDate(s.sessionDate)} · Ca ${s.slotCode} · ${s.sessionStatus == "closed"
-                                      ? "Đã kết thúc"
-                                      : s.sessionStatus == "open"
-                                      ? "Đang mở"
-                                      : s.sessionStatus}',
+                      DropdownButtonFormField<String>(
+                        value: detail.sessions.any(
+                          (s) => s.sessionId == detail.selectedSession?.sessionId,
+                        )
+                            ? detail.selectedSession?.sessionId
+                            : (detail.sessions.isNotEmpty
+                                ? detail.sessions.first.sessionId
+                                : null),
+                        isExpanded: true,
+                        menuMaxHeight: 350,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.textSecondary,
+                        ),
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          fillColor: AppColors.surface,
+                          filled: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        items: detail.sessions.map((s) {
+                          final isClosed = s.sessionStatus == "closed";
+                          final isOpen = s.sessionStatus == "open";
+                          final statusText = isClosed
+                              ? "Đã kết thúc"
+                              : isOpen
+                                  ? "Đang mở"
+                                  : s.sessionStatus;
+                          final statusColor = isOpen
+                              ? AppColors.statusPresent
+                              : isClosed
+                                  ? AppColors.textSecondary
+                                  : AppColors.statusLate;
+
+                          return DropdownMenuItem<String>(
+                            value: s.sessionId,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: statusColor,
+                                  ),
                                 ),
-                                selected:
-                                    detail.selectedSession?.sessionId ==
-                                    s.sessionId,
-                                selectedColor: AppColors.primaryLight,
-                                side: BorderSide(
-                                  color:
-                                      detail.selectedSession?.sessionId ==
-                                          s.sessionId
-                                      ? AppColors.primary
-                                      : AppColors.border,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '${historyDate(s.sessionDate)} · Ca ${s.slotCode} · $statusText',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                onSelected: busy || hasChanges
-                                    ? null
-                                    : (_) => vm.selectSession(s.sessionId),
-                              ),
-                            )
-                            .toList(),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (busy || hasChanges)
+                            ? null
+                            : (newId) {
+                                if (newId != null &&
+                                    newId != detail.selectedSession?.sessionId) {
+                                  vm.selectSession(newId);
+                                }
+                              },
                       ),
                     ],
                   ),
