@@ -80,4 +80,34 @@ class ClassSectionModel {
     'isActive': isActive,
     'activeSessionId': activeSessionId,
   };
+
+  ClassSectionModel copyWith({
+    String? classCode,
+    String? subjectCode,
+    String? subjectName,
+    String? room,
+    int? studentCount,
+    String? teacherMemberCode,
+    String? timeLabel,
+    int? completedSessions,
+    int? totalSessions,
+    double? averageAttendance,
+    bool? isActive,
+    String? activeSessionId,
+  }) {
+    return ClassSectionModel(
+      classCode: classCode ?? this.classCode,
+      subjectCode: subjectCode ?? this.subjectCode,
+      subjectName: subjectName ?? this.subjectName,
+      room: room ?? this.room,
+      studentCount: studentCount ?? this.studentCount,
+      teacherMemberCode: teacherMemberCode ?? this.teacherMemberCode,
+      timeLabel: timeLabel ?? this.timeLabel,
+      completedSessions: completedSessions ?? this.completedSessions,
+      totalSessions: totalSessions ?? this.totalSessions,
+      averageAttendance: averageAttendance ?? this.averageAttendance,
+      isActive: isActive ?? this.isActive,
+      activeSessionId: activeSessionId ?? this.activeSessionId,
+    );
+  }
 }

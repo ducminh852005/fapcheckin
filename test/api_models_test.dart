@@ -111,6 +111,25 @@ void main() {
     expect(stats.attendancePercentage, 92.5);
   });
 
+  test('roster displays sheet fullName instead of an email username', () {
+    final roster = RosterEntryModel.fromJson({
+      'student': {
+        'rollNumber': 'TEST001',
+        'fullName': 'Sinh viên kiểm thử',
+        'email': 'unrelated-account@example.test',
+      },
+      'record': null,
+    });
+    expect(roster.fullName, 'Sinh viên kiểm thử');
+    expect(roster.displayName, 'Sinh viên kiểm thử');
+    expect(
+      RosterEntryModel.fromJson({
+        'student': {'rollNumber': 'TEST002', 'fullName': '  '},
+      }).displayName,
+      'TEST002',
+    );
+  });
+
   test('invalid structured values are rejected rather than shown as data', () {
     expect(() => jsonText({'room': 303}), throwsFormatException);
     expect(() => jsonNumber('unknown'), throwsFormatException);

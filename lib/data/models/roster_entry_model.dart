@@ -6,23 +6,27 @@ class RosterEntryModel {
   final String rollNumber;
   final String memberCode;
   final String email;
+  final String fullName;
   final String? recordId;
   final String? sessionId;
   final String? checkinTime; // ISO datetime or null
   final String status; // Present, Late, Absent, ManualByGV, or empty
   final String? networkVerificationResult;
   final String? ipAddress;
+  final String? note;
 
   const RosterEntryModel({
     required this.rollNumber,
     required this.memberCode,
     required this.email,
+    this.fullName = '',
     this.recordId,
     this.sessionId,
     this.checkinTime,
     required this.status,
     this.networkVerificationResult,
     this.ipAddress,
+    this.note,
   });
 
   factory RosterEntryModel.fromJson(Map<String, dynamic> json) {
@@ -32,14 +36,18 @@ class RosterEntryModel {
       rollNumber: jsonText(student['rollNumber']) ?? '',
       memberCode: jsonText(student['memberCode']) ?? '',
       email: jsonText(student['email']) ?? '',
+      fullName: jsonText(student['fullName']) ?? '',
       recordId: jsonText(record?['recordId']),
       sessionId: jsonText(record?['sessionId']),
       checkinTime: jsonText(record?['checkinTime']),
       status: jsonText(record?['status']) ?? '',
       networkVerificationResult: jsonText(record?['networkVerificationResult']),
       ipAddress: jsonText(record?['ipAddress']),
+      note: jsonText(record?['note']),
     );
   }
+
+  String get displayName => fullName.trim().isNotEmpty ? fullName : rollNumber;
 
   bool get hasCheckedIn =>
       status == 'Present' || status == 'Late' || status == 'ManualByGV';
@@ -50,7 +58,7 @@ class RosterEntryModel {
 
   bool get isAbsent => status == 'Absent';
 
-  bool get isUnchecked => status.isEmpty || status == 'Absent';
+  bool get isUnchecked => status.isEmpty;
 
   /// Display-friendly check-in time (extracts HH:mm:ss from ISO datetime)
   String get displayCheckinTime {

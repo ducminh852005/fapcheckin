@@ -25,6 +25,7 @@ class ClassSession {
 
 enum SessionStatus {
   active,    // Phiên đang mở
+  ready,     // Sẵn sàng (tới giờ nhưng chưa mở)
   notStarted, // Chưa bắt đầu
   completed,  // Đã hoàn thành
 }

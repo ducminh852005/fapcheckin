@@ -3,6 +3,10 @@ import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 
+import 'package:provider/provider.dart';
+import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/data/models/roster_entry_model.dart';
+
 class ManualAttendanceDialog extends StatefulWidget {
   const ManualAttendanceDialog({super.key});
 
@@ -13,79 +17,77 @@ class ManualAttendanceDialog extends StatefulWidget {
 class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
   int _selectedFilterIndex = 1; // "Chưa điểm danh" active by default like image
   
-  // Dummy data matching the image
-  final List<Map<String, dynamic>> _students = [
-    {
-      'no': '01',
-      'name': 'Đỗ Vũ Hà My',
-      'id': 'SE150998',
-      'initials': 'ĐM',
-      'avatarBg': Colors.indigo.shade50,
-      'avatarFg': Colors.indigo.shade600,
-      'email': 'my.dvh@fpt.edu.vn',
-      'sysStatus': 'Chưa quét QR phiên này',
-      'sysColor': AppColors.statusAbsent,
-      'sysBgColor': AppColors.statusAbsentBg,
-      'selectedAction': 'Có mặt',
-      'reason': 'Quên điện thoại / Máy...',
-    },
-    {
-      'no': '02',
-      'name': 'Nguyễn Hoàng Nam',
-      'id': 'SE161045',
-      'initials': 'HN',
-      'avatarBg': Colors.orange.shade50,
-      'avatarFg': Colors.orange.shade600,
-      'email': 'nam.nh@fpt.edu.vn',
-      'sysStatus': 'Quét trễ (+22p lúc 07:52)',
-      'sysColor': AppColors.statusLate,
-      'sysBgColor': AppColors.statusLateBg,
-      'selectedAction': 'Trễ',
-      'reason': 'Vào trễ do kẹt xe cầu...',
-    },
-    {
-      'no': '03',
-      'name': 'Phạm Quốc Bảo',
-      'id': 'SE160311',
-      'initials': 'QB',
-      'avatarBg': Colors.blue.shade50,
-      'avatarFg': Colors.blue.shade600,
-      'email': 'bao.pq@fpt.edu.vn',
-      'sysStatus': 'Quét trễ (+24p lúc 07:54)',
-      'sysColor': AppColors.statusLate,
-      'sysBgColor': AppColors.statusLateBg,
-      'selectedAction': 'Có mặt',
-      'reason': 'Máy hỏng camera, c...',
-    },
-    {
-      'no': '04',
-      'name': 'Lê Anh Tuấn',
-      'id': 'SE162104',
-      'initials': 'AT',
-      'avatarBg': Colors.purple.shade50,
-      'avatarFg': Colors.purple.shade600,
-      'email': 'tuan.la@fpt.edu.vn',
-      'sysStatus': 'Đã gửi đơn khám bệnh (Y tế FPT)',
-      'sysColor': Colors.blue.shade700,
-      'sysBgColor': Colors.blue.shade50,
-      'selectedAction': 'Phép',
-      'reason': 'Có giấy nghỉ phép...',
-    },
-    {
-      'no': '05',
-      'name': 'Trần Minh Quân',
-      'id': 'SE160912',
-      'initials': 'MQ',
-      'avatarBg': Colors.grey.shade100,
-      'avatarFg': Colors.grey.shade600,
-      'email': 'quan.tm@fpt.edu.vn',
-      'sysStatus': 'Chưa có mặt tại lớp',
-      'sysColor': AppColors.statusAbsent,
-      'sysBgColor': AppColors.statusAbsentBg,
-      'selectedAction': 'Vắng',
-      'reason': 'Vắng không rõ lý d...',
-    },
-  ];
+  List<Map<String, dynamic>> _students = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  void _loadData() {
+    final vm = context.read<LiveSessionViewModel>();
+    final List<Map<String, dynamic>> list = [];
+    int i = 1;
+    for (var r in vm.roster) {
+      list.add({
+        'no': i.toString().padLeft(2, '0'),
+        'name': r.displayName,
+        'id': r.rollNumber,
+        'initials': r.initials,
+        'avatarBg': Colors.indigo.shade50,
+        'avatarFg': Colors.indigo.shade600,
+        'email': r.email,
+        'sysStatus': r.status.isEmpty ? 'Chưa điểm danh' : r.status,
+        'sysColor': _mapApiStatusToColor(r.status),
+        'sysBgColor': _mapApiStatusToBgColor(r.status),
+        'selectedAction': _mapApiStatusToUI(r.status),
+        'reason': r.note ?? '',
+        '_originalAction': _mapApiStatusToUI(r.status),
+        '_originalReason': r.note ?? '',
+      });
+      i++;
+    }
+    setState(() {
+      _students = list;
+    });
+  }
+
+  Color _mapApiStatusToColor(String status) {
+    if (status == 'Present' || status == 'ManualByGV') return AppColors.statusPresent;
+    if (status == 'Late') return AppColors.statusLate;
+    if (status == 'Absent') return AppColors.statusAbsent;
+    return AppColors.textSecondary;
+  }
+
+  Color _mapApiStatusToBgColor(String status) {
+    if (status == 'Present' || status == 'ManualByGV') return AppColors.statusPresentBg;
+    if (status == 'Late') return AppColors.statusLateBg;
+    if (status == 'Absent') return AppColors.statusAbsentBg;
+    return Colors.grey.shade100;
+  }
+
+  String _mapApiStatusToUI(String status) {
+    switch (status) {
+      case 'Present':
+      case 'ManualByGV': return 'Có mặt';
+      case 'Late': return 'Trễ';
+      case 'Absent': return 'Vắng';
+      default: return 'Có mặt'; // default for un-checked
+    }
+  }
+
+  String _mapUIToApiStatus(String action) {
+    switch (action) {
+      case 'Có mặt': return 'Present'; // or ManualByGV
+      case 'Trễ': return 'Late';
+      case 'Vắng': return 'Absent';
+      case 'Phép': return 'Absent'; // Or custom status for Phép if supported
+      default: return 'Present';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +124,8 @@ class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
   }
 
   Widget _buildHeader() {
+    final vm = context.read<LiveSessionViewModel>();
+    final session = vm.session;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: const BoxDecoration(
@@ -175,13 +179,11 @@ class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
                 RichText(
                   text: TextSpan(
                     style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                    children: const [
-                      TextSpan(text: 'Lớp '),
-                      TextSpan(text: 'SWP391 - SE1704', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '  •  Buổi 12 (24/10/2023)  •  Phòng: '),
-                      TextSpan(text: 'P.302', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '  •  GV: '),
-                      TextSpan(text: 'TS. Nguyễn Văn An', style: TextStyle(fontWeight: FontWeight.bold)),
+                    children: [
+                      const TextSpan(text: 'Lớp '),
+                      TextSpan(text: session?.classCode ?? '...', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '  •  Buổi (Ca ${session?.slotCode ?? ''})  •  '),
+                      TextSpan(text: session?.sessionDate ?? '...'),
                     ],
                   ),
                 ),
@@ -581,6 +583,9 @@ class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
   }
 
   Widget _buildBottomBar() {
+    final vm = context.watch<LiveSessionViewModel>();
+    final isLoading = vm.status == ViewStatus.loading;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: const BoxDecoration(
@@ -606,7 +611,7 @@ class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
           ),
           const Spacer(),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: isLoading ? null : () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               backgroundColor: Colors.white,
@@ -619,11 +624,43 @@ class _ManualAttendanceDialogState extends State<ManualAttendanceDialog> {
           ),
           const SizedBox(width: 12),
           ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text('Lưu & Cập nhật điểm danh'),
+            onPressed: isLoading ? null : () async {
+              // Gather changes
+              final changes = <Map<String, dynamic>>[];
+              for (var s in _students) {
+                final originalAction = s['_originalAction'] as String;
+                final originalReason = s['_originalReason'] as String;
+                if (s['selectedAction'] != originalAction || s['reason'] != originalReason) {
+                  changes.add({
+                    'rollNumber': s['id'],
+                    'status': _mapUIToApiStatus(s['selectedAction']),
+                    'reason': s['reason'],
+                  });
+                }
+              }
+
+              if (changes.isEmpty) {
+                Navigator.pop(context);
+                return;
+              }
+
+              await vm.manualCheckinBulk(changes);
+              if (context.mounted) {
+                if (vm.status == ViewStatus.success) {
+                  Navigator.pop(context);
+                } else if (vm.errorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(vm.errorMessage!)),
+                  );
+                }
+              }
+            },
+            icon: isLoading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.check, size: 18),
+            label: Text(isLoading ? 'Đang cập nhật...' : 'Lưu & Cập nhật điểm danh'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary, // Using project's orange theme
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

@@ -27,8 +27,7 @@ class TeacherRepository {
       fromJsonT: (data) {
         if (data is List) {
           return data
-              .map((e) =>
-                  ClassSectionModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => ClassSectionModel.fromJson(e as Map<String, dynamic>))
               .toList();
         }
         return <ClassSectionModel>[];
@@ -70,6 +69,15 @@ class TeacherRepository {
     return result;
   }
 
+  Future<ApiResult<String>> rotateQr({required String sessionId}) async {
+    final result = await _api.postAction<String>(
+      'rotateQr',
+      payload: {'sessionId': sessionId},
+      fromJsonT: (data) => (data as Map<String, dynamic>)['qrToken'] as String,
+    );
+    return result;
+  }
+
   // ── getSessions ─────────────────────────────────────────────────────────────
 
   Future<ApiResult<List<SessionModel>>> getSessions({
@@ -101,8 +109,7 @@ class TeacherRepository {
       fromJsonT: (data) {
         if (data is List) {
           return data
-              .map((e) =>
-                  RosterEntryModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => RosterEntryModel.fromJson(e as Map<String, dynamic>))
               .toList();
         }
         return <RosterEntryModel>[];
@@ -148,6 +155,19 @@ class TeacherRepository {
     return result;
   }
 
+  // ── manualCheckinBulk ──────────────────────────────────────────────────────
+
+  Future<ApiResult<void>> manualCheckinBulk({
+    required String sessionId,
+    required List<Map<String, dynamic>> changes,
+  }) async {
+    final result = await _api.postAction<void>(
+      'manualCheckinBulk',
+      payload: {'sessionId': sessionId, 'changes': changes},
+    );
+    return result;
+  }
+
   // ── getStats ───────────────────────────────────────────────────────────────
 
   Future<ApiResult<List<StatsEntryModel>>> getStats({
@@ -159,8 +179,7 @@ class TeacherRepository {
       fromJsonT: (data) {
         if (data is List) {
           return data
-              .map((e) =>
-                  StatsEntryModel.fromJson(e as Map<String, dynamic>))
+              .map((e) => StatsEntryModel.fromJson(e as Map<String, dynamic>))
               .toList();
         }
         return <StatsEntryModel>[];
@@ -171,9 +190,7 @@ class TeacherRepository {
 
   // ── syncToFap ───────────────────────────────────────────────────────────────
 
-  Future<ApiResult<SyncResult>> syncToFap({
-    String? classCode,
-  }) async {
+  Future<ApiResult<SyncResult>> syncToFap({String? classCode}) async {
     final payload = <String, dynamic>{};
     if (classCode != null && classCode.isNotEmpty) {
       payload['classCode'] = classCode;
@@ -186,4 +203,3 @@ class TeacherRepository {
     return result;
   }
 }
-

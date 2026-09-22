@@ -89,20 +89,26 @@ class ToastNotification extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LiveSessionViewModel>(
       builder: (context, vm, _) {
-        if (!vm.showToast) return const SizedBox.shrink();
+        if (!vm.showToast || vm.toastData == null) return const SizedBox.shrink();
+        final toast = vm.toastData!;
+
         return Positioned(
           top: 20,
           right: 20,
           child: Material(
             color: Colors.transparent,
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 440),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: toast.accentColor == AppColors.statusPresent
+                    ? AppColors.statusPresentBg
+                    : (toast.accentColor == AppColors.error || toast.accentColor == AppColors.statusAbsent
+                        ? AppColors.statusAbsentBg
+                        : AppColors.surface),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                border: const Border(
-                  left: BorderSide(color: AppColors.statusPresent, width: 4),
+                border: Border(
+                  left: BorderSide(color: toast.accentColor, width: 4),
                 ),
                 boxShadow: const [
                   BoxShadow(
@@ -115,13 +121,13 @@ class ToastNotification extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
-                    decoration: const BoxDecoration(
-                      color: AppColors.statusPresentBg,
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: toast.accentColor.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check, size: 20, color: AppColors.statusPresent),
+                    child: Icon(toast.icon, size: 20, color: toast.accentColor),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -129,39 +135,18 @@ class ToastNotification extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        RichText(
-                          text: TextSpan(
-                            style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            children: [
-                              const TextSpan(text: 'Nguyễn Văn Bình ('),
-                              TextSpan(
-                                text: 'SE160342',
-                                style: AppTextStyles.codeSm.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const TextSpan(text: ')'),
-                            ],
+                        Text(
+                          toast.title,
+                          style: AppTextStyles.labelSm.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 2),
-                        RichText(
-                          text: TextSpan(
-                            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                            children: [
-                              const TextSpan(text: 'Vừa điểm danh thành công lúc '),
-                              TextSpan(
-                                text: '07:55:01',
-                                style: AppTextStyles.codeSm.copyWith(
-                                  color: AppColors.statusPresent,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          toast.message,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],

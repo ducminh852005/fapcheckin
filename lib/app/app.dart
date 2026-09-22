@@ -42,15 +42,11 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _authViewModel = AuthViewModel(_authRepo, _googleAuthService);
     _dashboardViewModel = DashboardViewModel(_teacherRepo);
     _liveSessionViewModel = LiveSessionViewModel(_teacherRepo);
-<<<<<<< HEAD
-    _attendanceHistoryViewModel =
-        AttendanceHistoryViewModel(_teacherRepo);
-=======
     _attendanceHistoryViewModel = AttendanceHistoryViewModel(
       AttendanceHistoryRepository(_apiService),
     );
     _authViewModel.addListener(_syncHistoryAccount);
->>>>>>> origin/dev
+
     _router = createAppRouter(_authViewModel);
   }
 

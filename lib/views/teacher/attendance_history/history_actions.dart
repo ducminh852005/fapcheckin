@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../viewmodels/live_session_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
@@ -37,47 +38,93 @@ Future<void> showHistoryMatrix(BuildContext context) async {
   await showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Ma trận điểm danh các buổi học'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        'Ma trận điểm danh các buổi học',
+        style: TextStyle(fontWeight: FontWeight.w800),
+      ),
       content: SizedBox(
         width: 1000,
         height: 500,
-        child: matrix.sessions.isEmpty
-            ? const Center(child: Text('Chưa có phiên điểm danh.'))
-            : SingleChildScrollView(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: [
-                      const DataColumn(label: Text('MSSV')),
-                      const DataColumn(label: Text('Họ tên')),
-                      ...matrix.sessions.map(
-                        (s) => DataColumn(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: matrix.sessions.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Chưa có phiên điểm danh.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                )
+              : SingleChildScrollView(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: const WidgetStatePropertyAll(
+                        AppColors.surfaceContainerHigh,
+                      ),
+                      dataRowMinHeight: 54,
+                      dataRowMaxHeight: 66,
+                      columnSpacing: 24,
+                      columns: [
+                        const DataColumn(
                           label: Text(
-                            '${historyDate(s.sessionDate)}\nCa ${s.slotCode}',
+                            'MSSV',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                    rows: matrix.students
-                        .map(
-                          (s) => DataRow(
-                            cells: [
-                              DataCell(Text(s.rollNumber)),
-                              DataCell(Text(s.fullName)),
-                              ...s.statuses.map(
-                                (status) => DataCell(
+                        const DataColumn(
+                          label: Text(
+                            'Họ tên',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        ...matrix.sessions.map(
+                          (s) => DataColumn(
+                            label: Text(
+                              '${historyDate(s.sessionDate)}\nCa ${s.slotCode}',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      rows: matrix.students
+                          .map(
+                            (s) => DataRow(
+                              cells: [
+                                DataCell(
                                   Text(
-                                    attendanceStatusLabels[status] ?? status,
+                                    s.rollNumber,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        )
-                        .toList(),
+                                DataCell(Text(s.fullName)),
+                                ...s.statuses.map(
+                                  (status) => DataCell(_StatusBadge(status)),
+                                ),
+                              ],
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
       actions: [
         TextButton(
@@ -110,7 +157,11 @@ Future<void> openHistorySession(BuildContext context) async {
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text('Mở phiên ${detail.classInfo.classCode}'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Mở phiên ${detail.classInfo.classCode}',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         content: SizedBox(
           width: 420,
           child: Column(
@@ -176,4 +227,48 @@ Future<void> openHistorySession(BuildContext context) async {
     address,
   );
   context.read<DashboardViewModel>().navigate('diem-danh-qr');
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge(this.status);
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = switch (status) {
+      'Present' || 'ManualByGV' => (
+        foreground: AppColors.statusPresent,
+        background: AppColors.statusPresentBg,
+      ),
+      'Late' => (
+        foreground: AppColors.statusLate,
+        background: AppColors.statusLateBg,
+      ),
+      'Absent' => (
+        foreground: AppColors.statusAbsent,
+        background: AppColors.statusAbsentBg,
+      ),
+      _ => (
+        foreground: AppColors.statusUnchecked,
+        background: AppColors.statusUncheckedBg,
+      ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.background,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        attendanceStatusLabels[status] ?? status,
+        style: TextStyle(
+          color: colors.foreground,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
 }

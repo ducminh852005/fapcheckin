@@ -25,8 +25,8 @@ class ApiService {
               // Dio tracks connectTimeout with an XHR upload listener on web.
               // That forces a CORS preflight even for text/plain POST requests,
               // which the Apps Script endpoint cannot handle.
-              connectTimeout: kIsWeb ? null : const Duration(seconds: 15),
-              receiveTimeout: const Duration(seconds: 15),
+              connectTimeout: kIsWeb ? null : const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 60),
               // Bắt buộc text/plain để né lỗi với Google Apps Script (e.postData.contents)
               contentType: 'text/plain;charset=utf-8',
               // Google Script luôn redirect 302 sau khi nhận POST
