@@ -26,7 +26,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.read<AttendanceHistoryViewModel>();
+    final vm = context.watch<AttendanceHistoryViewModel>();
     final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.hasChanges,
     );
@@ -48,6 +48,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     final loadingDetail = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.loadingDetail,
     );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -58,19 +59,6 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const HeaderBar(),
-          const SizedBox(height: AppSpacing.md),
-          if (hasChanges)
-            _NoticeBanner(
-              icon: Icons.edit_note_outlined,
-              color: AppColors.statusManual,
-              background: AppColors.statusManualBg,
-              message: 'Có thay đổi chưa lưu. Hãy lưu hoặc hủy trước khi đổi lớp/buổi học.',
-              action: TextButton(
-                onPressed: busy ? null : vm.discardChanges,
-                child: const Text('Hủy thay đổi'),
-              ),
-            ),
           if (errorMessage != null) ...[
             const SizedBox(height: AppSpacing.md),
             _NoticeBanner(
@@ -132,6 +120,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         ],
       ),
     );
+
   }
 }
 

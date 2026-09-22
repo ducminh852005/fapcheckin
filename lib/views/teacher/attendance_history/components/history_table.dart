@@ -117,6 +117,7 @@ class _HistoryTableState extends State<HistoryTable> {
                   ),
                 ),
                 FilledButton.icon(
+
                   onPressed: vm.busy || !vm.hasChanges || session == null
                       ? null
                       : () async {

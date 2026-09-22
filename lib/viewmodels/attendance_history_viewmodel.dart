@@ -301,6 +301,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
   );
   Future<SessionModel?> startSession(String slot, String ip) =>
       _operation(() => repository.startSession(selectedClassCode!, slot, ip));
+
   @override
   void dispose() {
     _disposed = true;

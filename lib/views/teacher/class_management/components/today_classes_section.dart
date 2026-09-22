@@ -82,9 +82,15 @@ class _TodayClassesSectionState extends State<TodayClassesSection> {
                     );
                     if (!context.mounted || result == null) return;
                     context.read<DashboardViewModel>().loadClasses();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Đã lưu lịch ${result['classCode']} ngày ${result['scheduleDate']}, ca ${result['slotCode']}.'),
-                    ));
+
+                    context.read<LiveSessionViewModel>().triggerToast(
+                      type: ToastType.custom,
+                      title: 'Đăng ký dạy bù thành công!',
+                      message: 'Lớp ${result['classCode']} - Ngày ${result['scheduleDate']} (Ca ${result['slotCode']}).',
+                      icon: Icons.check_circle_outline,
+                      accentColor: AppColors.statusPresent,
+                      duration: const Duration(seconds: 4),
+                    );
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Tạo lịch học mới'),

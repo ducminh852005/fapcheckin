@@ -58,7 +58,7 @@ class RosterEntryModel {
 
   bool get isAbsent => status == 'Absent';
 
-  bool get isUnchecked => status.isEmpty || status == 'Absent';
+  bool get isUnchecked => status.isEmpty;
 
   /// Display-friendly check-in time (extracts HH:mm:ss from ISO datetime)
   String get displayCheckinTime {
