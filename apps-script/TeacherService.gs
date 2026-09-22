@@ -23,6 +23,27 @@ var TeacherService = (function() {
       schedules = SheetDB.getRowsAsObjects('Class_Schedule');
     } catch (e) {
       if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
+        ? Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")
+        : new Date().toISOString().split('T')[0];
+
+    function fmtDate(v) {
+      if (!v) return '';
+      if (v instanceof Date) {
+        if (typeof Utilities !== 'undefined' && Utilities.formatDate) {
+          return Utilities.formatDate(v, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
+        }
+        var y = v.getFullYear();
+        var m = ('0' + (v.getMonth() + 1)).slice(-2);
+        var d = ('0' + v.getDate()).slice(-2);
+        return y + '-' + m + '-' + d;
+      }
+      var str = String(v).trim();
+      var match = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(str);
+      if (match) {
+        return match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+      }
+      return str.slice(0, 10);
     }
 
     var enriched = classes.map(function(cls) {
@@ -30,7 +51,7 @@ var TeacherService = (function() {
        var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
        // Active session must be open AND created on today's date
        var activeSession = classSessions.filter(function(s) { 
-         return s.sessionStatus === 'open' && s.sessionDate === today; 
+         return s.sessionStatus === 'open' && fmtDate(s.sessionDate) === today; 
        })[0] || null;
        
        var classRecords = records.filter(function(r) { 
@@ -49,15 +70,7 @@ var TeacherService = (function() {
        var sched = schedules.filter(function(sc) {
          if (sc.status === 'cancelled') return false;
          if (String(sc.classCode) !== String(cls.classCode)) return false;
-         var sDate = sc.scheduleDate;
-         if (sDate instanceof Date) {
-           sDate = (typeof Utilities !== 'undefined' && Utilities.formatDate)
-             ? Utilities.formatDate(sDate, "GMT+7", "yyyy-MM-dd")
-             : sDate.toISOString().split('T')[0];
-         } else if (typeof sDate === 'string') {
-           sDate = sDate.slice(0, 10);
-         }
-         return sDate === today;
+         return fmtDate(sc.scheduleDate) === today;
        })[0];
 
        var slotCode = (sched && sched.slotCode) ? String(sched.slotCode) : (cls.slotCode ? String(cls.slotCode) : '');
