@@ -13,6 +13,7 @@ erDiagram
     CLASS_SECTION ||--o{ ENROLLMENT : "has"
     CLASS_SECTION ||--o{ ATTENDANCE_SESSION : "has"
     SLOT ||--o{ ATTENDANCE_SESSION : "scheduled at"
+    SLOT ||--o{ CLASS_SECTION : "default slot for"
     STUDENT ||--o{ ATTENDANCE_RECORD : "makes"
     ATTENDANCE_SESSION ||--o{ ATTENDANCE_RECORD : "logs"
 
@@ -35,6 +36,7 @@ erDiagram
         string room
         int studentCount
         string teacherMemberCode FK
+        string slotCode FK "FK -> SLOT"
     }
     SLOT {
         string slotCode PK "A1 / A2 / P3 / P4"
@@ -69,7 +71,7 @@ Dựa trên ERD này, các thực thể sẽ được ánh xạ thành các tab 
 | Tab / Thực thể | Các cột dữ liệu (Schema) | Ghi chú |
 |---|---|---|
 | **Users** (Gộp USER, TEACHER, STUDENT) | `memberCode, fullName, role, rollNumber, email` | Để tối ưu số lượng tab trong Sheet, thông tin người dùng được gộp. Cột `role` phân biệt GV và SV. `rollNumber` và `email` chỉ áp dụng cho SV. |
-| **Class_Section** | `classCode, subjectName, credits, room, studentCount, teacherMemberCode` | Quản lý thông tin lớp học và phân công giảng viên (`teacherMemberCode`). |
+| **Class_Section** | `classCode, subjectName, credits, room, studentCount, teacherMemberCode, slotCode` | Quản lý thông tin lớp học, phân công giảng viên (`teacherMemberCode`) và ca học mặc định (`slotCode`). |
 | **Slot** | `slotCode, period, startTime, endTime` | Quản lý khung giờ chuẩn (VD: A1, P3). |
 | **Enrollment** | `rollNumber, classCode, enrollmentDate` | Danh sách sinh viên thuộc lớp, dùng để chặn SV quét nhầm phiên điểm danh của lớp khác. |
 | **Attendance_Session** | `sessionId, classCode, sessionDate, slotCode, sessionStatus, qrSecret, teacherIp` | `sessionStatus = open \| closed \| expired`. `teacherIp` (IP công khai của GV) và `qrSecret` được sinh ra khi mở phiên để phục vụ xử lý xác thực. |

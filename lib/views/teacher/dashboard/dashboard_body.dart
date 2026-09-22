@@ -128,11 +128,14 @@ class _SchedulePanelState extends State<_SchedulePanel> {
 
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
+    final timeStr = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
+        ? '${model.startTime} - ${model.endTime}'
+        : model.timeLabel;
     return ClassSession(
       courseCode: model.classCode,
       courseName: model.subjectName,
-      slot: (index + 1).toString(),
-      timeRange: '-- : --',
+      slot: model.slotCode.isNotEmpty ? model.slotCode : (index + 1).toString(),
+      timeRange: timeStr,
       room: model.room,
       studentCount: model.studentCount,
       status: SessionStatus.notStarted,
@@ -265,7 +268,9 @@ class _SchedulePanelState extends State<_SchedulePanel> {
                       final liveVm = context.read<LiveSessionViewModel>();
                       await liveVm.startSession(
                         classSection: vm.classes[i],
-                        slotCode: (i + 1).toString(),
+                        slotCode: vm.classes[i].slotCode.isNotEmpty
+                            ? vm.classes[i].slotCode
+                            : (i + 1).toString(),
                         teacherIp: '127.0.0.1', // Mock IP as per docs
                       );
                       vm.navigate('diem-danh-qr');

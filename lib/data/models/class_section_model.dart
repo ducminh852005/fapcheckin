@@ -8,6 +8,10 @@ class ClassSectionModel {
   final String room;
   final int studentCount;
   final String teacherMemberCode;
+  final String slotCode;
+  final String? startTime;
+  final String? endTime;
+  final String? period;
 
   // Enriched fields
   final String timeLabel;
@@ -24,6 +28,10 @@ class ClassSectionModel {
     required this.room,
     required this.studentCount,
     required this.teacherMemberCode,
+    this.slotCode = '',
+    this.startTime,
+    this.endTime,
+    this.period,
     required this.timeLabel,
     required this.completedSessions,
     required this.totalSessions,
@@ -40,6 +48,10 @@ class ClassSectionModel {
       room: jsonText(json['room']) ?? '',
       studentCount: jsonNumber(json['studentCount'])?.toInt() ?? 0,
       teacherMemberCode: jsonText(json['teacherMemberCode']) ?? '',
+      slotCode: jsonText(json['slotCode']) ?? '',
+      startTime: jsonText(json['startTime']),
+      endTime: jsonText(json['endTime']),
+      period: jsonText(json['period']),
       timeLabel: jsonText(json['timeLabel']) ?? 'Chưa rõ',
       completedSessions: jsonNumber(json['completedSessions'])?.toInt() ?? 0,
       totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 30,
@@ -57,6 +69,10 @@ class ClassSectionModel {
     'room': room,
     'studentCount': studentCount,
     'teacherMemberCode': teacherMemberCode,
+    'slotCode': slotCode,
+    if (startTime != null) 'startTime': startTime,
+    if (endTime != null) 'endTime': endTime,
+    if (period != null) 'period': period,
     'timeLabel': timeLabel,
     'completedSessions': completedSessions,
     'totalSessions': totalSessions,

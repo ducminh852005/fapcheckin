@@ -228,6 +228,16 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                                       .toList(),
                                   (v) => setState(() {
                                     _classCode = v;
+                                    if (_slotCode == null) {
+                                      final cls = classes.where((c) => c['classCode'] == v).firstOrNull;
+                                      final defaultSlot = cls?['slotCode'] as String?;
+                                      if (defaultSlot != null && defaultSlot.isNotEmpty) {
+                                        final isAvailable = _rows('slots').any((s) => s['slotCode'] == defaultSlot && s['available'] == true);
+                                        if (isAvailable) {
+                                          _slotCode = defaultSlot;
+                                        }
+                                      }
+                                    }
                                   }),
                                 ),
                                 if (selected != null)

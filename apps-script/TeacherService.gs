@@ -7,14 +7,20 @@ var TeacherService = (function() {
     if (!teacherMemberCode) throwError('VALIDATION_ERROR', 'Thiếu teacherMemberCode.');
     
     var classes = SheetDB.getRowsAsObjects('Class_Section').filter(function(c) {
-      return c.teacherMemberCode === teacherMemberCode;
+      return String(c.teacherMemberCode) === String(teacherMemberCode);
     });
 
     var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
     var records = SheetDB.getRowsAsObjects('Attendance_Record');
+    var slots = [];
+    try {
+      slots = SheetDB.getRowsAsObjects('Slot');
+    } catch (e) {
+      if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
 
     var enriched = classes.map(function(cls) {
-       var classSessions = sessions.filter(function(s) { return s.classCode === cls.classCode; });
+       var classSessions = sessions.filter(function(s) { return String(s.classCode) === String(cls.classCode); });
        var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
        var activeSession = classSessions.filter(function(s) { return s.sessionStatus === 'open'; })[0] || null;
        
@@ -29,7 +35,26 @@ var TeacherService = (function() {
        
        var sName = cls.subjectName || '';
        var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
-       var timeLabel = cls.timeLabel || "Lịch học chưa cập nhật";
+
+       var slot = slots.filter(function(s) {
+         return String(s.slotCode) === String(cls.slotCode);
+       })[0];
+
+       var slotCode = cls.slotCode ? String(cls.slotCode) : '';
+       var startTime = slot && slot.startTime ? String(slot.startTime) : '';
+       var endTime = slot && slot.endTime ? String(slot.endTime) : '';
+       var period = slot && slot.period ? String(slot.period) : '';
+
+       var timeLabel = cls.timeLabel || '';
+       if (!timeLabel) {
+         if (slotCode && startTime && endTime) {
+           timeLabel = 'Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')';
+         } else if (slotCode) {
+           timeLabel = 'Slot ' + slotCode;
+         } else {
+           timeLabel = 'Lịch học chưa cập nhật';
+         }
+       }
        
        return {
          classCode: cls.classCode,
@@ -38,6 +63,10 @@ var TeacherService = (function() {
          room: cls.room,
          studentCount: sCount,
          teacherMemberCode: cls.teacherMemberCode,
+         slotCode: slotCode,
+         startTime: startTime,
+         endTime: endTime,
+         period: period,
          timeLabel: timeLabel,
          completedSessions: completed,
          totalSessions: 30, // Mock 30 sessions per class
@@ -53,6 +82,18 @@ var TeacherService = (function() {
     var classCode = params.classCode;
     var slotCode = params.slotCode;
     var teacherIp = params.teacherIp;
+
+    if (!slotCode && classCode) {
+      try {
+        var clsList = SheetDB.getRowsAsObjects('Class_Section');
+        var matchedCls = clsList.filter(function(c) {
+          return String(c.classCode) === String(classCode);
+        })[0];
+        if (matchedCls && matchedCls.slotCode) {
+          slotCode = String(matchedCls.slotCode);
+        }
+      } catch (e) {}
+    }
     
     if (!classCode || !slotCode || !teacherIp) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu mở phiên.');
     
