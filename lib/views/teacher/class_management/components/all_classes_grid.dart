@@ -132,7 +132,60 @@ class _AllClassesGridState extends State<AllClassesGrid> {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              if (!_isGridView)
+              if (!_isGridView) ...[
+                // Table Header
+                Container(
+                  color: AppColors.surfaceContainerLow,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: const Row(
+                    children: [
+                      SizedBox(
+                        width: 50,
+                        child: Text(
+                          'STT',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          'MÔN HỌC & MÃ LỚP',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'LỊCH HỌC & PHÒNG',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'SĨ SỐ & TIẾN ĐỘ',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'TỶ LỆ ĐIỂM DANH',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          'THAO TÁC',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textTertiary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.surfaceContainerHigh),
                 ...paginatedClasses.asMap().entries.map((entry) {
                   final index = entry.key;
                   final classData = entry.value;
@@ -143,6 +196,7 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                       : 0;
 
                   Widget tile = _ClassListTile(
+                    indexNumber: startIndex + index + 1,
                     iconData: Icons.class_outlined,
                     iconColor: AppColors.textSecondary,
                     iconBgColor: AppColors.surfaceMuted,
@@ -175,6 +229,7 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                     ],
                   );
                 }),
+              ],
               if (_isGridView)
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -305,6 +360,7 @@ class _ClassListTile extends StatelessWidget {
   final IconData buttonIcon;
   final bool isPrimaryAction;
   final VoidCallback onTap;
+  final int indexNumber;
 
   const _ClassListTile({
     required this.iconData,
@@ -331,6 +387,7 @@ class _ClassListTile extends StatelessWidget {
     required this.buttonIcon,
     this.isPrimaryAction = false,
     required this.onTap,
+    this.indexNumber = 1,
   });
 
   @override
@@ -338,108 +395,139 @@ class _ClassListTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onHover: (hovering) {}, // Could update color here if stateful, but simple Material ripple is ok
-        onTap: () {}, // row tap maybe
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  iconData,
-                  size: 20,
-                  color: iconColor,
+              // STT Column
+              SizedBox(
+                width: 50,
+                child: Text(
+                  indexNumber.toString().padLeft(2, '0'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textTertiary,
+                    fontFamily: 'JetBrains Mono',
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
+              // MÔN HỌC & MÃ LỚP
               Expanded(
-                child: Row(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                title,
-                                style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: groupBgColor,
-                                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                                ),
-                                child: Text(
-                                  groupCode,
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: groupTextColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'JetBrains Mono',
-                                  ),
-                                ),
-                              ),
-                              if (statusLabel != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isStatusActive ? AppColors.statusPresentBg : AppColors.surfaceMuted,
-                                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isStatusActive) ...[
-                                        Container(
-                                          width: 6,
-                                          height: 6,
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.statusPresent,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                      ],
-                                      Text(
-                                        statusLabel!,
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: isStatusActive ? AppColors.statusPresent : AppColors.textSecondary,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                    Text(
+                      title,
+                      style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: groupBgColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        groupCode,
+                        style: AppTextStyles.caption.copyWith(
+                          color: groupTextColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          fontFamily: 'JetBrains Mono',
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.lg),
-              OutlinedButton.icon(
-                onPressed: onTap,
-                icon: const Icon(Icons.visibility_outlined, size: 16),
-                label: const Text('Xem chi tiết'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.border),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              // LỊCH HỌC & PHÒNG
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      timeLabel.isNotEmpty ? timeLabel : 'Ca học theo TKB',
+                      style: AppTextStyles.bodySm.copyWith(color: AppColors.textPrimary, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      roomLabel.isNotEmpty ? 'Phòng $roomLabel' : 'Chưa xếp phòng',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              // SĨ SỐ & TIẾN ĐỘ
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      studentCount,
+                      style: AppTextStyles.bodySm.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tiến độ: $progressLabel',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              // TỶ LỆ ĐIỂM DANH
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      attendanceLabel,
+                      style: TextStyle(
+                        color: attendanceColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: 80,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: (progressPercentage / 100).clamp(0.0, 1.0),
+                          minHeight: 4,
+                          backgroundColor: AppColors.surfaceContainerHigh,
+                          valueColor: AlwaysStoppedAnimation<Color>(attendanceColor),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // THAO TÁC
+              SizedBox(
+                width: 120,
+                child: Center(
+                  child: OutlinedButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.visibility_outlined, size: 14),
+                    label: const Text('Xem chi tiết', style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
                 ),
               ),
             ],

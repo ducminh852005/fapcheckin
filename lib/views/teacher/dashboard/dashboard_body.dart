@@ -5,6 +5,7 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/data/models/class_section_model.dart';
 import 'package:fapcheckin/data/models/class_session.dart';
+import 'package:fapcheckin/core/network/json_values.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'components/activity_log_panel.dart';
@@ -172,9 +173,10 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
     final slotNumber = index + 1;
-    final timeRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
+    final rawRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
         ? '${model.startTime} - ${model.endTime}'
         : (model.timeLabel.isNotEmpty ? model.timeLabel : _getSlotTimeRange(slotNumber));
+    final timeRange = formatTimeLabel(rawRange);
     return ClassSession(
       courseCode: model.classCode,
       courseName: model.subjectName,

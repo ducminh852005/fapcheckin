@@ -41,6 +41,9 @@ class ClassSectionModel {
   });
 
   factory ClassSectionModel.fromJson(Map<String, dynamic> json) {
+    final start = jsonText(json['startTime']);
+    final end = jsonText(json['endTime']);
+    final rawLabel = jsonText(json['timeLabel']);
     return ClassSectionModel(
       classCode: jsonText(json['classCode']) ?? '',
       subjectCode: jsonText(json['subjectCode']) ?? 'UNK',
@@ -49,10 +52,10 @@ class ClassSectionModel {
       studentCount: jsonNumber(json['studentCount'])?.toInt() ?? 0,
       teacherMemberCode: jsonText(json['teacherMemberCode']) ?? '',
       slotCode: jsonText(json['slotCode']) ?? '',
-      startTime: jsonText(json['startTime']),
-      endTime: jsonText(json['endTime']),
+      startTime: start != null ? formatTimeLabel(start) : null,
+      endTime: end != null ? formatTimeLabel(end) : null,
       period: jsonText(json['period']),
-      timeLabel: jsonText(json['timeLabel']) ?? 'Chưa rõ',
+      timeLabel: formatTimeLabel(rawLabel ?? (start != null && end != null ? '$start - $end' : 'Chưa rõ')),
       completedSessions: jsonNumber(json['completedSessions'])?.toInt() ?? 0,
       totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 30,
       averageAttendance:
