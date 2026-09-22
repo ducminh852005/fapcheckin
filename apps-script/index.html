@@ -476,7 +476,12 @@
     }
 
     // ============ Luồng ứng dụng ============
-    var qrToken = new URLSearchParams(window.location.search).get('token');
+    // Nhận token từ Apps Script server template nếu chạy qua Apps Script doGet, hoặc từ URL query nếu chạy web tĩnh
+    var serverToken = "<?= typeof token !== 'undefined' ? token : '' ?>";
+    if (serverToken.indexOf('<?') === 0) {
+      serverToken = ''; // Fallback khi file HTML được mở trực tiếp ngoài môi trường Apps Script
+    }
+    var qrToken = serverToken || new URLSearchParams(window.location.search).get('token');
 
     window.onload = function () {
       if (!qrToken) {
