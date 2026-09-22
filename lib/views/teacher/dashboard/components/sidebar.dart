@@ -55,6 +55,7 @@ class Sidebar extends StatelessWidget {
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lich-su-diem-danh'),
               ),
+              /*
               _NavItem(
                 icon: Icons.bar_chart_outlined,
                 label: 'Báo cáo',
@@ -69,6 +70,7 @@ class Sidebar extends StatelessWidget {
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('cai-dat'),
               ),
+              */
               const Spacer(),
               // User profile card
               _UserCard(vm: vm),
