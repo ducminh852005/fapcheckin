@@ -1,13 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
-import 'package:fapcheckin/core/network/api_service.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:flutter/services.dart';
@@ -345,9 +343,6 @@ class _QrCodeDisplay extends StatelessWidget {
                     ),
                   ],
                 ),
-<<<<<<< HEAD
-                child: vm.qrToken.isEmpty
-=======
                 child: vm.session == null
                     ? SizedBox(
                         width: 220,
@@ -371,18 +366,13 @@ class _QrCodeDisplay extends StatelessWidget {
                         ),
                       )
                     : vm.qrToken.isEmpty
->>>>>>> origin/main
                     ? const SizedBox(
                         width: 220,
                         height: 220,
                         child: Center(child: CircularProgressIndicator()),
                       )
                     : QrImageView(
-<<<<<<< HEAD
-                        data: '${ApiService.baseUrl}?page=checkin&token=${vm.qrToken}',
-=======
                         data: vm.checkinUrl,
->>>>>>> origin/main
                         version: QrVersions.auto,
                         size: 220.0,
                         backgroundColor: Colors.white,
@@ -390,33 +380,6 @@ class _QrCodeDisplay extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // Circular countdown timer bar
-<<<<<<< HEAD
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A142433),
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Circular progress
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Stack(
-                        alignment: Alignment.center,
-=======
               if (vm.session != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -466,7 +429,6 @@ class _QrCodeDisplay extends StatelessWidget {
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
->>>>>>> origin/main
                         children: [
                           Text(
                             'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
@@ -721,19 +683,7 @@ class _ControlButtons extends StatelessWidget {
                 icon: Icons.sync,
                 iconColor: AppColors.primary,
                 label: 'Làm mới QR ngay',
-<<<<<<< HEAD
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Mã QR điểm danh đang hoạt động cho phiên này.'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-=======
                 onTap: vm.isClosed ? () {} : () => vm.refreshQrNow(),
->>>>>>> origin/main
               ),
             ),
             const SizedBox(width: 8),
@@ -742,28 +692,6 @@ class _ControlButtons extends StatelessWidget {
                 icon: Icons.content_copy_outlined,
                 iconColor: AppColors.textSecondary,
                 label: 'Sao chép URL dự phòng',
-<<<<<<< HEAD
-                onTap: () {
-                  final liveVm = context.read<LiveSessionViewModel>();
-                  if (liveVm.qrToken.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Chưa có phiên điểm danh nào đang mở.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    return;
-                  }
-                  final url = '${ApiService.baseUrl}?page=checkin&token=${liveVm.qrToken}';
-                  Clipboard.setData(ClipboardData(text: url));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã sao chép liên kết điểm danh vào bộ nhớ tạm!'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-=======
                 onTap: () async {
                   if (vm.checkinUrl.isEmpty) return;
                   await Clipboard.setData(ClipboardData(text: vm.checkinUrl));
@@ -774,7 +702,6 @@ class _ControlButtons extends StatelessWidget {
                       ),
                     );
                   }
->>>>>>> origin/main
                 },
               ),
             ),

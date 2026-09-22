@@ -388,29 +388,6 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                                             ),
                                           ),
                                         ),
-<<<<<<< HEAD
-                                      )
-                                      .toList(),
-                                  (v) => setState(() {
-                                    _classCode = v;
-                                    if (_slotCode == null) {
-                                      final cls = classes.where((c) => c['classCode'] == v).firstOrNull;
-                                      final defaultSlot = cls?['slotCode'] as String?;
-                                      if (defaultSlot != null && defaultSlot.isNotEmpty) {
-                                        final isAvailable = _rows('slots').any((s) => s['slotCode'] == defaultSlot && s['available'] == true);
-                                        if (isAvailable) {
-                                          _slotCode = defaultSlot;
-                                        }
-                                      }
-                                    }
-                                  }),
-                                ),
-                                if (selected != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Text(
-                                      'Sĩ số theo Enrollment: ${selected['studentCount']} sinh viên',
-=======
                                         InkWell(
                                           onTap: _pickDate,
                                           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -442,7 +419,6 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                                           ),
                                         ),
                                       ],
->>>>>>> origin/main
                                     ),
                                   ),
                                   const SizedBox(width: 20),
