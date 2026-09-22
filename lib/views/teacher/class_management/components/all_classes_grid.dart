@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/data/models/class_section_model.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/views/teacher/class_management/dialogs/create_class_dialog.dart';
+import 'package:fapcheckin/views/teacher/class_management/dialogs/class_detail_dialog.dart';
 class AllClassesGrid extends StatefulWidget {
   const AllClassesGrid({super.key});
 
@@ -66,6 +69,39 @@ class _AllClassesGridState extends State<AllClassesGrid> {
             ),
             Row(
               children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final result = await showDialog<Map<String, dynamic>>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const CreateClassDialog(),
+                    );
+                    if (!context.mounted || result == null) return;
+                    context.read<DashboardViewModel>().loadClasses();
+
+                    context.read<LiveSessionViewModel>().triggerToast(
+                      type: ToastType.custom,
+                      title: 'Đăng ký dạy bù thành công!',
+                      message: 'Lớp ${result['classCode']} - Ngày ${result['scheduleDate']} (Ca ${result['slotCode']}).',
+                      icon: Icons.check_circle_outline,
+                      accentColor: AppColors.statusPresent,
+                      duration: const Duration(seconds: 4),
+                    );
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Tạo lịch học mới'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    textStyle: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
                 GestureDetector(
                   onTap: () => setState(() => _isGridView = true),
                   child: _ViewToggleButton(icon: Icons.grid_view, isActive: _isGridView),
@@ -107,17 +143,17 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                       : 0;
 
                   Widget tile = _ClassListTile(
-                    iconData: classData.isActive ? Icons.terminal : Icons.data_object,
-                    iconColor: classData.isActive ? AppColors.primaryDark : AppColors.textSecondary,
-                    iconBgColor: classData.isActive ? AppColors.primaryLight : AppColors.surfaceMuted,
+                    iconData: Icons.class_outlined,
+                    iconColor: AppColors.textSecondary,
+                    iconBgColor: AppColors.surfaceMuted,
                     subjectCode: classData.subjectCode,
-                    subjectTextColor: classData.isActive ? AppColors.primaryDark : null,
+                    subjectTextColor: null,
                     title: classData.subjectName,
                     groupCode: classData.classCode,
-                    groupBgColor: classData.isActive ? AppColors.statusPresentBg : AppColors.surfaceMuted,
-                    groupTextColor: classData.isActive ? AppColors.statusPresent : AppColors.textSecondary,
-                    statusLabel: classData.isActive ? 'Đang mở phiên' : null,
-                    isStatusActive: classData.isActive,
+                    groupBgColor: AppColors.surfaceMuted,
+                    groupTextColor: AppColors.textSecondary,
+                    statusLabel: null,
+                    isStatusActive: false,
                     timeLabel: classData.timeLabel,
                     roomLabel: classData.room,
                     studentCount: '${classData.studentCount} SV',
@@ -125,26 +161,10 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                     progressPercentage: progressPercentage,
                     attendanceLabel: '${classData.averageAttendance.toStringAsFixed(1)}%',
                     attendanceColor: AppColors.statusPresent,
-                    buttonLabel: classData.isActive ? 'Vào điểm danh' : 'Vào phòng',
-                    buttonIcon: classData.isActive ? Icons.qr_code_scanner : Icons.qr_code,
-                    isPrimaryAction: classData.isActive,
-                    onTap: () {
-                      if (classData.isActive) {
-                        context.read<LiveSessionViewModel>().startSession(
-                          classSection: classData,
-                          slotCode: '1',
-                          teacherIp: '192.168.1.100',
-                        ).then((_) {
-                          if (context.mounted) {
-                            context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                          }
-                        });
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Chưa đến giờ điểm danh cho lớp này!')),
-                        );
-                      }
-                    },
+                    buttonLabel: 'Xem chi tiết',
+                    buttonIcon: Icons.visibility_outlined,
+                    isPrimaryAction: false,
+                    onTap: () => _showClassDetailDialog(context, classData),
                   );
 
                   return Column(
@@ -174,17 +194,17 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                           ? ((classData.completedSessions / classData.totalSessions) * 100).toInt()
                           : 0;
                       return _ClassGridCard(
-                        iconData: classData.isActive ? Icons.terminal : Icons.data_object,
-                        iconColor: classData.isActive ? AppColors.primaryDark : AppColors.textSecondary,
-                        iconBgColor: classData.isActive ? AppColors.primaryLight : AppColors.surfaceMuted,
+                        iconData: Icons.class_outlined,
+                        iconColor: AppColors.textSecondary,
+                        iconBgColor: AppColors.surfaceMuted,
                         subjectCode: classData.subjectCode,
-                        subjectTextColor: classData.isActive ? AppColors.primaryDark : null,
+                        subjectTextColor: null,
                         title: classData.subjectName,
                         groupCode: classData.classCode,
-                        groupBgColor: classData.isActive ? AppColors.statusPresentBg : AppColors.surfaceMuted,
-                        groupTextColor: classData.isActive ? AppColors.statusPresent : AppColors.textSecondary,
-                        statusLabel: classData.isActive ? 'Đang mở phiên' : null,
-                        isStatusActive: classData.isActive,
+                        groupBgColor: AppColors.surfaceMuted,
+                        groupTextColor: AppColors.textSecondary,
+                        statusLabel: null,
+                        isStatusActive: false,
                         timeLabel: classData.timeLabel,
                         roomLabel: classData.room,
                         studentCount: '${classData.studentCount} SV',
@@ -192,26 +212,10 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                         progressPercentage: progressPercentage,
                         attendanceLabel: '${classData.averageAttendance.toStringAsFixed(1)}%',
                         attendanceColor: AppColors.statusPresent,
-                        buttonLabel: classData.isActive ? 'Vào điểm danh' : 'Vào phòng',
-                        buttonIcon: classData.isActive ? Icons.qr_code_scanner : Icons.qr_code,
-                        isPrimaryAction: classData.isActive,
-                        onTap: () {
-                          if (classData.isActive) {
-                            context.read<LiveSessionViewModel>().startSession(
-                              classSection: classData,
-                              slotCode: '1',
-                              teacherIp: '192.168.1.100',
-                            ).then((_) {
-                              if (context.mounted) {
-                                context.read<DashboardViewModel>().navigate('diem-danh-qr');
-                              }
-                            });
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Chưa đến giờ điểm danh cho lớp này!')),
-                            );
-                          }
-                        },
+                        buttonLabel: 'Xem chi tiết',
+                        buttonIcon: Icons.visibility_outlined,
+                        isPrimaryAction: false,
+                        onTap: () => _showClassDetailDialog(context, classData),
                       );
                     },
                   ),
@@ -340,6 +344,21 @@ class _ClassListTile extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  iconData,
+                  size: 20,
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Row(
                   children: [
@@ -405,16 +424,6 @@ class _ClassListTile extends StatelessWidget {
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 4,
-                            children: [
-                              _InfoItem(icon: Icons.calendar_today, text: timeLabel),
-                              _InfoItem(icon: Icons.meeting_room, text: roomLabel),
-                              _InfoItem(icon: Icons.groups, text: studentCount),
-                            ],
-                          ),
                         ],
                       ),
                     ),
@@ -422,95 +431,16 @@ class _ClassListTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.lg),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 140,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                                children: [
-                                  if (progressLabelPrefix.isNotEmpty)
-                                    TextSpan(text: progressLabelPrefix),
-                                  TextSpan(
-                                    text: progressLabel,
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: progressLabelPrefix.isEmpty ? AppColors.textSecondary : AppColors.textPrimary,
-                                      fontWeight: progressLabelPrefix.isEmpty ? FontWeight.normal : FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              attendanceLabel,
-                              style: AppTextStyles.caption.copyWith(
-                                color: attendanceColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          height: 6,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceMuted,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                          ),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: progressPercentage / 100.0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: progressColor ?? attendanceColor,
-                                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Material(
-                    color: isPrimaryAction ? AppColors.primaryContainer : AppColors.surfaceMuted,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    child: InkWell(
-                      onTap: onTap,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              buttonIcon,
-                              size: 18,
-                              color: isPrimaryAction ? AppColors.onPrimary : AppColors.textPrimary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              buttonLabel,
-                              style: AppTextStyles.labelMd.copyWith(
-                                color: isPrimaryAction ? AppColors.onPrimary : AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              OutlinedButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.visibility_outlined, size: 16),
+                label: const Text('Xem chi tiết'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ],
           ),
@@ -609,17 +539,27 @@ class _ClassGridCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  iconData,
+                  size: 18,
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary, fontSize: 13),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary, fontSize: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -678,88 +618,18 @@ class _ClassGridCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _InfoItem(icon: Icons.calendar_today, text: timeLabel),
-          const SizedBox(height: 4),
-          _InfoItem(icon: Icons.meeting_room, text: roomLabel),
-          const SizedBox(height: 4),
-          _InfoItem(icon: Icons.groups, text: studentCount),
           const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                  children: [
-                    TextSpan(
-                      text: progressLabel,
-                      style: AppTextStyles.caption.copyWith(
-                        color: progressLabelPrefix.isEmpty ? AppColors.textSecondary : AppColors.textPrimary,
-                        fontWeight: progressLabelPrefix.isEmpty ? FontWeight.normal : FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                attendanceLabel,
-                style: AppTextStyles.caption.copyWith(
-                  color: attendanceColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Container(
-            height: 6,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progressPercentage / 100.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: progressColor ?? attendanceColor,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           SizedBox(
             width: double.infinity,
-            child: Material(
-              color: isPrimaryAction ? AppColors.primaryContainer : AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        buttonIcon,
-                        size: 16,
-                        color: isPrimaryAction ? AppColors.onPrimary : AppColors.textPrimary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        buttonLabel,
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: isPrimaryAction ? AppColors.onPrimary : AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            child: OutlinedButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.visibility_outlined, size: 16),
+              label: const Text('Xem chi tiết'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
@@ -767,4 +637,8 @@ class _ClassGridCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showClassDetailDialog(BuildContext context, ClassSectionModel classData) {
+  ClassDetailDialog.show(context, classData);
 }
