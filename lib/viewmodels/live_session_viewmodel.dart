@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
@@ -10,7 +11,7 @@ import '../data/models/stats_entry_model.dart';
 import '../data/models/student_checkin.dart';
 import '../data/repositories/teacher_repository.dart';
 import '../core/network/api_result.dart';
-
+import '../views/teacher/live_session/components/qr_panel.dart';
 
 // ---------------------------------------------------------------------------
 // ViewStatus & Toast Types
@@ -96,6 +97,9 @@ class LiveSessionViewModel extends ChangeNotifier {
   String get dateLabel => _session?.sessionDate ?? '';
   String get sessionId => _session?.sessionId ?? '';
   String get qrToken => _session?.qrToken ?? '';
+
+  String get checkinUrl =>
+      qrToken.isEmpty ? '' : '$kCheckinBaseUrl?page=checkin&token=$qrToken';
 
   // Teacher IP (set when starting session)
   String _teacherIp = '';
@@ -270,7 +274,10 @@ class LiveSessionViewModel extends ChangeNotifier {
   void tickTimers() {
     _sessionElapsedSeconds++;
     _qrRefreshSeconds--;
-    if (_qrRefreshSeconds <= 0) _qrRefreshSeconds = qrCycleDuration;
+    if (_qrRefreshSeconds <= 0) {
+      _qrRefreshSeconds = qrCycleDuration;
+      _rotateQr(); // ← gọi backend đổi qrSecret thật
+    }
     notifyListeners();
   }
 
@@ -305,7 +312,8 @@ class LiveSessionViewModel extends ChangeNotifier {
           triggerToast(
             type: ToastType.startSession,
             title: 'Đã mở phiên điểm danh!',
-            message: 'Phiên điểm danh lớp ${classSection.classCode} (${classSection.subjectCode}) đã sẵn sàng.',
+            message:
+                'Phiên điểm danh lớp ${classSection.classCode} (${classSection.subjectCode}) đã sẵn sàng.',
             icon: Icons.qr_code_scanner,
             accentColor: AppColors.statusPresent,
           );
@@ -342,21 +350,36 @@ class LiveSessionViewModel extends ChangeNotifier {
     switch (result) {
       case ApiSuccess<List<RosterEntryModel>>(:final data):
         final prevChecked = checkedInCount;
-        
-        if (checkedInCount > prevChecked || (_roster.isEmpty && data.where((s) => s.hasCheckedIn).isNotEmpty)) {
+
+        if (checkedInCount > prevChecked ||
+            (_roster.isEmpty && data.where((s) => s.hasCheckedIn).isNotEmpty)) {
           // Find newly checked in student
-          final newPresent = data.where((s) => s.hasCheckedIn && !_roster.any((old) => old.rollNumber == s.rollNumber && old.hasCheckedIn)).toList();
+          final newPresent = data
+              .where(
+                (s) =>
+                    s.hasCheckedIn &&
+                    !_roster.any(
+                      (old) =>
+                          old.rollNumber == s.rollNumber && old.hasCheckedIn,
+                    ),
+              )
+              .toList();
           if (newPresent.isNotEmpty) {
             _lastCheckedInStudent = newPresent.first;
           } else if (data.isNotEmpty) {
-            _lastCheckedInStudent = data.firstWhere((s) => s.hasCheckedIn, orElse: () => data.first);
+            _lastCheckedInStudent = data.firstWhere(
+              (s) => s.hasCheckedIn,
+              orElse: () => data.first,
+            );
           }
-          
+
           if (_lastCheckedInStudent != null) {
             triggerToast(
               type: ToastType.checkin,
-              title: '${_lastCheckedInStudent!.displayName} (${_lastCheckedInStudent!.rollNumber})',
-              message: 'Vừa điểm danh thành công lúc ${_lastCheckedInStudent!.displayCheckinTime}',
+              title:
+                  '${_lastCheckedInStudent!.displayName} (${_lastCheckedInStudent!.rollNumber})',
+              message:
+                  'Vừa điểm danh thành công lúc ${_lastCheckedInStudent!.displayCheckinTime}',
               icon: Icons.check_circle_outline,
               accentColor: AppColors.statusPresent,
               duration: const Duration(seconds: 3),
@@ -389,6 +412,32 @@ class LiveSessionViewModel extends ChangeNotifier {
         _errorMessage = error.message;
         notifyListeners();
     }
+  }
+
+  Future<void> _rotateQr() async {
+    if (_session == null || isClosed) return;
+    final result = await _repository.rotateQr(sessionId: _session!.sessionId);
+    switch (result) {
+      case ApiSuccess<String>(:final data):
+        _session = SessionModel(
+          sessionId: _session!.sessionId,
+          classCode: _session!.classCode,
+          sessionDate: _session!.sessionDate,
+          slotCode: _session!.slotCode,
+          sessionStatus: _session!.sessionStatus,
+          qrToken: data, // token mới
+        );
+        notifyListeners();
+      case ApiFailure<String>():
+        // im lặng bỏ qua lỗi rotate nền, không làm gián đoạn UI
+        break;
+    }
+  }
+
+  /// Public method cho nút "Làm mới QR ngay"
+  Future<void> refreshQrNow() async {
+    _qrRefreshSeconds = qrCycleDuration;
+    await _rotateQr();
   }
 
   /// Manually mark multiple students
@@ -498,7 +547,6 @@ class LiveSessionViewModel extends ChangeNotifier {
     }
     return false;
   }
-
 
   /// Reset session state (e.g. when navigating away)
   void resetSession() {

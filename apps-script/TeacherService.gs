@@ -13,10 +13,17 @@ var TeacherService = (function() {
     var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
     var records = SheetDB.getRowsAsObjects('Attendance_Record');
 
+    var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
+        ? Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd")
+        : new Date().toISOString().split('T')[0];
+
     var enriched = classes.map(function(cls) {
        var classSessions = sessions.filter(function(s) { return s.classCode === cls.classCode; });
        var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
-       var activeSession = classSessions.filter(function(s) { return s.sessionStatus === 'open'; })[0] || null;
+       // Active session must be open AND created on today's date
+       var activeSession = classSessions.filter(function(s) { 
+         return s.sessionStatus === 'open' && s.sessionDate === today; 
+       })[0] || null;
        
        var classRecords = records.filter(function(r) { 
            return classSessions.some(function(s) { return s.sessionId === r.sessionId; });
@@ -56,9 +63,21 @@ var TeacherService = (function() {
     
     if (!classCode || !slotCode || !teacherIp) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu mở phiên.');
     
+    // Auto-close any existing open session for this class before starting a new one
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    for (var i = 0; i < sessions.length; i++) {
+      if (sessions[i].classCode === classCode && sessions[i].sessionStatus === 'open') {
+        SheetDB.updateRow('Attendance_Session', 'sessionId', sessions[i].sessionId, {
+          sessionStatus: 'closed'
+        });
+      }
+    }
+
     var sessionId = Utilities.getUuid();
     var qrSecret = Utilities.getUuid(); // Token tạm dùng để mã hoá vào QR
-    var sessionDate = new Date().toISOString().split('T')[0];
+    var sessionDate = (typeof Utilities !== 'undefined' && Utilities.formatDate)
+        ? Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd")
+        : new Date().toISOString().split('T')[0];
     
     var newSession = {
       sessionId: sessionId,
@@ -356,6 +375,21 @@ var TeacherService = (function() {
       students: studentList
     };
   }
+
+  function rotateQr(params) {
+    var sessionId = params.sessionId;
+    if (!sessionId) throwError('VALIDATION_ERROR', 'Thiếu sessionId.');
+
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var session = sessions.filter(function(s) { return s.sessionId === sessionId; })[0];
+    if (!session) throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên.');
+    if (session.sessionStatus !== 'open') throwError('SESSION_NOT_FOUND', 'Phiên đã đóng, không thể làm mới QR.');
+
+    var newSecret = Utilities.getUuid();
+    SheetDB.updateRow('Attendance_Session', 'sessionId', sessionId, { qrSecret: newSecret });
+
+    return { sessionId: sessionId, qrToken: newSecret };
+  }
   
   return {
     getClasses: getClasses,
@@ -366,6 +400,7 @@ var TeacherService = (function() {
     getAttendanceHistory: getAttendanceHistory,
     manualCheckin: manualCheckin,
     manualCheckinBulk: manualCheckinBulk,
-    getStats: getStats
+    getStats: getStats,
+    rotateQr: rotateQr
   };
 })();
