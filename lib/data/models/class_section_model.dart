@@ -8,6 +8,10 @@ class ClassSectionModel {
   final String room;
   final int studentCount;
   final String teacherMemberCode;
+  final String slotCode;
+  final String? startTime;
+  final String? endTime;
+  final String? period;
 
   // Enriched fields
   final String timeLabel;
@@ -24,6 +28,10 @@ class ClassSectionModel {
     required this.room,
     required this.studentCount,
     required this.teacherMemberCode,
+    this.slotCode = '',
+    this.startTime,
+    this.endTime,
+    this.period,
     required this.timeLabel,
     required this.completedSessions,
     required this.totalSessions,
@@ -33,6 +41,9 @@ class ClassSectionModel {
   });
 
   factory ClassSectionModel.fromJson(Map<String, dynamic> json) {
+    final start = jsonText(json['startTime']);
+    final end = jsonText(json['endTime']);
+    final rawLabel = jsonText(json['timeLabel']);
     return ClassSectionModel(
       classCode: jsonText(json['classCode']) ?? '',
       subjectCode: jsonText(json['subjectCode']) ?? 'UNK',
@@ -40,7 +51,11 @@ class ClassSectionModel {
       room: jsonText(json['room']) ?? '',
       studentCount: jsonNumber(json['studentCount'])?.toInt() ?? 0,
       teacherMemberCode: jsonText(json['teacherMemberCode']) ?? '',
-      timeLabel: jsonText(json['timeLabel']) ?? 'Chưa rõ',
+      slotCode: jsonText(json['slotCode']) ?? '',
+      startTime: start != null ? formatTimeLabel(start) : null,
+      endTime: end != null ? formatTimeLabel(end) : null,
+      period: jsonText(json['period']),
+      timeLabel: formatTimeLabel(rawLabel ?? (start != null && end != null ? '$start - $end' : 'Chưa rõ')),
       completedSessions: jsonNumber(json['completedSessions'])?.toInt() ?? 0,
       totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 30,
       averageAttendance:
@@ -57,6 +72,10 @@ class ClassSectionModel {
     'room': room,
     'studentCount': studentCount,
     'teacherMemberCode': teacherMemberCode,
+    'slotCode': slotCode,
+    if (startTime != null) 'startTime': startTime,
+    if (endTime != null) 'endTime': endTime,
+    if (period != null) 'period': period,
     'timeLabel': timeLabel,
     'completedSessions': completedSessions,
     'totalSessions': totalSessions,

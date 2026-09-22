@@ -7,9 +7,14 @@ const vm = require('node:vm');
 function backend() {
   const tables = {
     Class_Section: [
-      ['classCode', 'teacherMemberCode', 'subjectName', 'room', 'studentCount'],
-      [101, 7, 'SWP391 Project', 303, 1],
-      ['', '', '', '', ''],
+      ['classCode', 'teacherMemberCode', 'subjectName', 'room', 'studentCount', 'slotCode'],
+      [101, 7, 'SWP391 Project', 303, 1, 'A1'],
+      ['', '', '', '', '', ''],
+    ],
+    Slot: [
+      ['slotCode', 'period', 'startTime', 'endTime'],
+      ['A1', 'Morning', '07:30', '09:00'],
+      ['A2', 'Morning', '09:15', '10:45'],
     ],
     Attendance_Session: [
       ['sessionId', 'classCode', 'slotCode', 'sessionDate', 'sessionStatus'],
@@ -65,6 +70,11 @@ test('getClasses serializes numeric rooms and joins mixed numeric/text keys', ()
   assert.equal(result.data[0].room, '303');
   assert.equal(result.data[0].classCode, '101');
   assert.equal(result.data[0].studentCount, 1);
+  assert.equal(result.data[0].slotCode, 'A1');
+  assert.equal(result.data[0].timeLabel, 'Slot A1 (07:30 - 09:00)');
+  assert.equal(result.data[0].startTime, '07:30');
+  assert.equal(result.data[0].endTime, '09:00');
+  assert.equal(result.data[0].period, 'Morning');
   assert.equal(result.data[0].completedSessions, 1);
   assert.equal(result.data[0].averageAttendance, 100);
   assert.deepEqual(call('getClasses', { teacherMemberCode: 'unknown' }).data, []);

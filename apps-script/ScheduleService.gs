@@ -8,14 +8,31 @@ var ScheduleService = (function() {
   function text(v) { return v == null ? '' : String(v).trim(); }
   function date(v) { return v instanceof Date ? Utilities.formatDate(v, ZONE, 'yyyy-MM-dd') : text(v).slice(0,10); }
   function time(v) {
-    if (v instanceof Date) return Utilities.formatDate(v, ZONE, 'HH:mm');
-    var match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(text(v));
+    if (!v) return '';
+    if (v instanceof Date) {
+      var h = ('0' + v.getUTCHours()).slice(-2);
+      var m = ('0' + v.getUTCMinutes()).slice(-2);
+      return h + ':' + m;
+    }
+    var str = text(v);
+    var match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(str);
     return match && +match[1] < 24 && +match[2] < 60 ? ('0'+match[1]).slice(-2)+':'+match[2] : '';
   }
   function slots() {
-    return SheetDB.getRowsAsObjects('Slot').map(function(s) {
+    var raw = SheetDB.getRowsAsObjects('Slot');
+    if (!raw || raw.length === 0) {
+      return [
+        {slotCode: 'A1', startTime: '07:30', endTime: '09:50', available: true},
+        {slotCode: 'A2', startTime: '10:00', endTime: '12:20', available: true},
+        {slotCode: 'P3', startTime: '12:50', endTime: '15:10', available: true},
+        {slotCode: 'P4', startTime: '15:20', endTime: '17:40', available: true},
+        {slotCode: 'E5', startTime: '17:50', endTime: '20:10', available: true},
+        {slotCode: 'E6', startTime: '20:20', endTime: '22:40', available: true}
+      ];
+    }
+    return raw.map(function(s) {
       var start = time(s.startTime), end = time(s.endTime);
-      return {slotCode:text(s.slotCode), startTime:start, endTime:end, available:!!start && end > start};
+      return {slotCode:text(s.slotCode), startTime:start, endTime:end, available:!!start && !!end};
     });
   }
   function rows() {
@@ -41,7 +58,7 @@ var ScheduleService = (function() {
       classes:classes.filter(function(c) { return text(c.teacherMemberCode) === text(teacher.memberCode); }).map(function(c) {
         var ids = {};
         enrollments.forEach(function(e) { if(text(e.classCode) === text(c.classCode) && text(e.rollNumber)) ids[text(e.rollNumber)] = true; });
-        return {classCode:text(c.classCode),subjectName:text(c.subjectName),room:text(c.room),studentCount:Object.keys(ids).length};
+        return {classCode:text(c.classCode),subjectName:text(c.subjectName),room:text(c.room),studentCount:Object.keys(ids).length,slotCode:text(c.slotCode)};
       }), slots:slots(), rooms:classes.map(function(c) { return text(c.room); }).filter(function(r,i,a) { return r && a.indexOf(r) === i; }).sort(),
       capabilities:{autoQR:false,sendEmail:false,syncFap:false}, schedules:listFor(teacher)};
   }

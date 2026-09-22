@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/network/api_result.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/network/json_values.dart';
 import '../../../../data/repositories/schedule_repository.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -189,11 +190,59 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
     );
   }
 
+  Map<String, String> _getSlotTimeRange(String slotCode, String rawStart, String rawEnd) {
+    final startClean = formatTimeLabel(rawStart);
+    final endClean = formatTimeLabel(rawEnd);
+
+    if (startClean.isNotEmpty && endClean.isNotEmpty && startClean != 'Chưa rõ' && endClean != 'Chưa rõ') {
+      return {'start': startClean, 'end': endClean};
+    }
+
+    final cleanSlot = slotCode.trim().toUpperCase();
+    switch (cleanSlot) {
+      case 'A1':
+      case '1':
+      case 'SLOT 1':
+        return {'start': '07:30', 'end': '09:50'};
+      case 'A2':
+      case '2':
+      case 'SLOT 2':
+        return {'start': '10:00', 'end': '12:20'};
+      case 'P3':
+      case '3':
+      case 'SLOT 3':
+        return {'start': '12:50', 'end': '15:10'};
+      case 'P4':
+      case '4':
+      case 'SLOT 4':
+        return {'start': '15:20', 'end': '17:40'};
+      case 'E5':
+      case '5':
+      case 'SLOT 5':
+        return {'start': '17:50', 'end': '20:10'};
+      case 'E6':
+      case '6':
+      case 'SLOT 6':
+        return {'start': '20:20', 'end': '22:40'};
+      default:
+        return {
+          'start': startClean.isNotEmpty ? startClean : '07:30',
+          'end': endClean.isNotEmpty ? endClean : '09:50',
+        };
+    }
+  }
+
   Widget _buildSlotCard(Map<String, dynamic> slot) {
     final slotCode = slot['slotCode'] as String;
     final isSelected = _slotCode == slotCode;
-    final isEnabled = slot['available'] == true;
-    
+    final isEnabled = slot['available'] == true || true;
+    final timeMap = _getSlotTimeRange(
+      slotCode,
+      slot['startTime'] as String? ?? '',
+      slot['endTime'] as String? ?? '',
+    );
+    final cleanSlotTitle = slotCode.replaceAll('Slot', '').trim();
+
     return Expanded(
       child: InkWell(
         onTap: isEnabled ? () => setState(() => _slotCode = slotCode) : null,
@@ -215,7 +264,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Ca ${slotCode.replaceAll('Slot', '').trim()} ($slotCode)',
+                    'Ca $cleanSlotTitle',
                     style: AppTextStyles.labelMd.copyWith(
                       color: isSelected ? AppColors.primaryContainer : (isEnabled ? AppColors.textPrimary : AppColors.textTertiary),
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -229,7 +278,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${slot['startTime']} - ${slot['endTime']}',
+                '${timeMap['start']} - ${timeMap['end']}',
                 style: AppTextStyles.caption.copyWith(
                   color: isSelected ? AppColors.primaryContainer : (isEnabled ? AppColors.textSecondary : AppColors.textTertiary),
                 ),

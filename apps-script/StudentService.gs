@@ -62,9 +62,11 @@ var StudentService = (function() {
       checkinTime: now,
       status: status,
       networkVerificationResult: networkVerificationResult,
+      ipAddress: studentIp,
       syncedToFap: false
     };
-    
+
+    SheetDB.ensureColumns('Attendance_Record', ['ipAddress']);
     SheetDB.insertRow('Attendance_Record', newRecord);
     
     return newRecord;

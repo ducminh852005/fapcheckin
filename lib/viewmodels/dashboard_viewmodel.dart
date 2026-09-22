@@ -79,7 +79,7 @@ class DashboardViewModel extends ChangeNotifier {
   // Derived stats from classes list
   int get totalClassesToday => _classes.length;
   int get morningClasses =>
-      _classes.where((c) => _isMorning(c.classCode)).length;
+      _classes.where((c) => _isMorning(c)).length;
   int get afternoonClasses => totalClassesToday - morningClasses;
 
   // These come from LiveSessionViewModel in reality, but kept here for the
@@ -230,9 +230,19 @@ class DashboardViewModel extends ChangeNotifier {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  bool _isMorning(String classCode) {
-    // Heuristic: no real slot time without additional API data
-    // Keep simple for now
+  bool _isMorning(ClassSectionModel c) {
+    if (c.period != null && c.period!.isNotEmpty) {
+      final p = c.period!.toLowerCase();
+      return p.contains('morning') || p.startsWith('a');
+    }
+    if (c.slotCode.isNotEmpty) {
+      final s = c.slotCode.toUpperCase();
+      return s.startsWith('a') || ['1', '2'].contains(s);
+    }
+    if (c.startTime != null && c.startTime!.isNotEmpty) {
+      final hour = int.tryParse(c.startTime!.split(':').first);
+      if (hour != null) return hour < 12;
+    }
     return false;
   }
 }
