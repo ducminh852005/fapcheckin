@@ -23,11 +23,15 @@ var AuthService = (function() {
     }
     
     if (GOOGLE_ALLOWED_CLIENT_IDS.indexOf(tokenInfo.aud) === -1) {
-      throwError('INVALID_TOKEN', 'Token Google khĂ´ng Ä‘Æ°á»£c cáº¥p cho á»©ng dá»¥ng nĂ y.');
+      throwError(
+        'INVALID_AUDIENCE',
+        'Token Google không được cấp cho ứng dụng này. Audience nhận được: ' +
+          String(tokenInfo.aud || '(trống)')
+      );
     }
 
     if (tokenInfo.email_verified !== true && tokenInfo.email_verified !== 'true') {
-      throwError('INVALID_TOKEN', 'Email Google chÆ°a Ä‘Æ°á»£c xĂ¡c minh.');
+      throwError('INVALID_TOKEN', 'Email Google chưa được xác minh.');
     }
 
     if (params.requireLoginNonce) {
@@ -35,7 +39,10 @@ var AuthService = (function() {
       var nonceCache = CacheService.getScriptCache();
       var nonceKey = nonce ? 'google-login-nonce:' + nonce : '';
       if (!nonceKey || !nonceCache.get(nonceKey)) {
-        throwError('INVALID_TOKEN', 'YĂªu cáº§u Ä‘Äƒng nháº­p Google Ä‘Ă£ háº¿t háº¡n hoáº·c khĂ´ng há»£p lá»‡.');
+        throwError(
+          'INVALID_TOKEN',
+          'Yêu cầu đăng nhập Google đã hết hạn hoặc không hợp lệ.'
+        );
       }
       nonceCache.remove(nonceKey);
     }

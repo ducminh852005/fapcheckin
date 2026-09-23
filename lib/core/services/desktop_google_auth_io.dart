@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -51,8 +52,12 @@ Future<String> signInWithDesktopGoogle(
       ..headers.contentType = ContentType.html
       ..write(
         hasError
-            ? _callbackHtml('Đăng nhập không thành công. Bạn có thể đóng cửa sổ này.')
-            : _callbackHtml('Đăng nhập thành công. Bạn có thể quay lại FAP Check-in.'),
+            ? _callbackHtml(
+                'Đăng nhập không thành công. Bạn có thể đóng cửa sổ này.',
+              )
+            : _callbackHtml(
+                'Đăng nhập thành công. Bạn có thể quay lại FAP Check-in.',
+              ),
       );
     await request.response.close();
 
@@ -62,6 +67,7 @@ Future<String> signInWithDesktopGoogle(
       if (idToken == null || idToken.isEmpty) {
         throw StateError('Google không trả về ID token cho ứng dụng desktop.');
       }
+      _validateIdTokenAudience(idToken, clientId);
       return idToken;
     } finally {
       client.close();
@@ -74,14 +80,41 @@ Future<String> signInWithDesktopGoogle(
   }
 }
 
+void _validateIdTokenAudience(String idToken, String expectedClientId) {
+  try {
+    final parts = idToken.split('.');
+    if (parts.length != 3) throw const FormatException('JWT không hợp lệ');
+    final payload = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+    final audience = payload is Map<String, dynamic>
+        ? payload['aud']?.toString()
+        : null;
+    if (audience != expectedClientId) {
+      throw StateError(
+        'Google trả về token cho OAuth Client khác. '
+        'Audience: ${audience ?? '(trống)'}.',
+      );
+    }
+  } on StateError {
+    rethrow;
+  } catch (_) {
+    throw StateError('Không thể kiểm tra audience trong Google ID token.');
+  }
+}
+
 String _randomUrlSafeString(int length) {
   const chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
   final random = Random.secure();
-  return List.generate(length, (_) => chars[random.nextInt(chars.length)]).join();
+  return List.generate(
+    length,
+    (_) => chars[random.nextInt(chars.length)],
+  ).join();
 }
 
-String _callbackHtml(String message) => '''
+String _callbackHtml(String message) =>
+    '''
 <!doctype html>
 <html lang="vi">
   <head><meta charset="utf-8"><title>FAP Check-in</title></head>

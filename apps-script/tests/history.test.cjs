@@ -121,7 +121,9 @@ test('login rejects tokens issued for another OAuth client',()=>{
   const b=backend();
   b.context.UrlFetchApp.fetch=()=>({getContentText:()=>JSON.stringify({
     aud:'another-client.apps.googleusercontent.com',email:'teacher@example.test',email_verified:'true'})});
-  assert.equal(b.call('login',{idToken:'wrong-audience'}).error.code,'INVALID_TOKEN');
+  const r=b.call('login',{idToken:'wrong-audience'});
+  assert.equal(r.error.code,'INVALID_AUDIENCE');
+  assert.match(r.error.message,/another-client\.apps\.googleusercontent\.com/);
 });
 test('login accepts tokens issued for the desktop OAuth client',()=>{
   const b=backend();
