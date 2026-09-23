@@ -294,10 +294,19 @@ class LiveSessionViewModel extends ChangeNotifier {
     _errorMessage = null;
     _classInfo = classSection;
 
-    // Use provided IP or fetch real public IP via IpService
+    // Use a real public IP. Placeholder/local addresses must never be stored in
+    // the session because student check-in compares public egress addresses.
     String realIp = teacherIp ?? '';
-    if (realIp.isEmpty || realIp == '127.0.0.1' || realIp == '192.168.1.100') {
-      realIp = await IpService.getPublicIp();
+    if (_isPlaceholderIp(realIp)) {
+      realIp = await IpService.getPublicIp(forceRefresh: true);
+    }
+    if (_isPlaceholderIp(realIp)) {
+      _status = ViewStatus.error;
+      _errorMessage =
+          'Không thể xác định IP công khai của mạng giảng viên. '
+          'Hãy kiểm tra Internet/VPN rồi thử lại.';
+      notifyListeners();
+      return;
     }
     _teacherIp = realIp;
     notifyListeners();
@@ -307,6 +316,7 @@ class LiveSessionViewModel extends ChangeNotifier {
         _session != null &&
         _session!.classCode == classSection.classCode &&
         !isClosed) {
+      if (!await _syncSessionTeacherIp(_session!.sessionId, realIp)) return;
       _status = ViewStatus.success;
       _startPolling();
       notifyListeners();
@@ -327,6 +337,7 @@ class LiveSessionViewModel extends ChangeNotifier {
         sessionStatus: 'open',
         qrToken: '',
       );
+      if (!await _syncSessionTeacherIp(activeId, realIp)) return;
       _status = ViewStatus.success;
       _startPolling();
       await _rotateQr();
@@ -365,6 +376,35 @@ class LiveSessionViewModel extends ChangeNotifier {
       _errorMessage = e.toString();
     }
     notifyListeners();
+  }
+
+  bool _isPlaceholderIp(String ip) {
+    final value = ip.trim().toLowerCase();
+    return value.isEmpty ||
+        value == '127.0.0.1' ||
+        value == '192.168.1.100' ||
+        value == '0.0.0.0' ||
+        value == 'localhost' ||
+        value == '::1';
+  }
+
+  Future<bool> _syncSessionTeacherIp(String sessionId, String teacherIp) async {
+    final result = await _repository.syncSessionTeacherIp(
+      sessionId: sessionId,
+      teacherIp: teacherIp,
+    );
+    switch (result) {
+      case ApiSuccess<String>():
+        _teacherIp = teacherIp;
+        return true;
+      case ApiFailure<String>(:final error):
+        _status = ViewStatus.error;
+        _errorMessage =
+            'Không thể đồng bộ IP của phiên đang mở: ${error.message}';
+        notifyListeners();
+        return false;
+    }
+    return false;
   }
 
   /// Loads roster once (call manually or let polling handle it)

@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -62,7 +63,8 @@ class IpService {
       debugPrint('IpService: Fallback ip fetch failed: $e');
     }
 
-    // Default fallback if completely offline or blocked
-    return _cachedIp ?? '127.0.0.1';
+    // Never create a classroom session with localhost. It can never equal the
+    // student's public IP and makes every legitimate check-in fail.
+    return _cachedIp ?? '';
   }
 }

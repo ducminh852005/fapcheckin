@@ -168,6 +168,27 @@ test('student check-in marks Present only when the network matches',()=>{
   assert.equal(b.tables.Attendance_Record.at(-1).status,'Present');
   assert.equal(b.writes,1);
 });
+test('resuming an open session synchronizes the current teacher network',()=>{
+  const b=backend();
+  b.tables.Attendance_Session[1].teacherIp='198.51.100.99';
+  const synced=b.call('syncSessionTeacherIp',{
+    sessionId:'S2',teacherIp:'203.0.113.10'});
+  assert.equal(synced.success,true);
+  assert.equal(synced.data.teacherIp,'203.0.113.10');
+  assert.equal(b.tables.Attendance_Session[1].teacherIp,'203.0.113.10');
+
+  const checkin=b.call('checkin',{
+    qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(checkin.success,true);
+  assert.equal(checkin.data.networkVerificationResult,'Match');
+});
+test('session network synchronization requires owner and open session',()=>{
+  const b=backend();
+  assert.equal(b.call('syncSessionTeacherIp',{
+    sessionToken:'fake',sessionId:'S2',teacherIp:'203.0.113.10'}).error.code,'UNAUTHORIZED');
+  assert.equal(b.call('syncSessionTeacherIp',{
+    sessionId:'S1',teacherIp:'203.0.113.10'}).error.code,'SESSION_NOT_FOUND');
+});
 test('legacy Present plus Mismatch is unchecked and repaired on a valid retry',()=>{
   const b=backend();
   b.tables.Attendance_Record.push({recordId:'legacy-mismatch',sessionId:'S2',rollNumber:'SE1',

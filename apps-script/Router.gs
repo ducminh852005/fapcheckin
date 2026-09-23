@@ -17,6 +17,7 @@ function dispatch(action, params) {
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,
+    'syncSessionTeacherIp': TeacherService.syncSessionTeacherIp,
     'rotateQr': TeacherService.rotateQr,
     'closeSession': TeacherService.closeSession,
     'getSessions': TeacherService.getSessions,

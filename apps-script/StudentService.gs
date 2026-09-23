@@ -58,7 +58,10 @@ var StudentService = (function() {
     // The student page already handles IP_MISMATCH and lets the student retry
     // after connecting to the correct classroom Wi-Fi.
     if (!isIpMatch) {
-      throwError('IP_MISMATCH', 'Bạn đang không cùng mạng Wi-Fi với phòng học.');
+      throwError(
+        'IP_MISMATCH',
+        'IP công khai của thiết bị không trùng với IP của phiên điểm danh.'
+      );
     }
     
     // 5. Lưu kết quả
