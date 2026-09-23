@@ -74,6 +74,25 @@ class _ClassCardState extends State<ClassCard> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (s.isMakeup) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEDE7F6),
+                                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                                border: Border.all(color: const Color(0xFFB39DDB), width: 0.8),
+                              ),
+                              child: Text(
+                                'Học bù',
+                                style: AppTextStyles.labelSm.copyWith(
+                                  color: const Color(0xFF6A1B9A),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(width: 6),
                           Text(
                             '•',

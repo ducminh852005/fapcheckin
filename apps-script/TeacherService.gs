@@ -23,6 +23,8 @@ var TeacherService = (function() {
       schedules = SheetDB.getRowsAsObjects('Class_Schedule');
     } catch (e) {
       if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
+
     var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
         ? Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")
         : new Date().toISOString().split('T')[0];
@@ -45,6 +47,10 @@ var TeacherService = (function() {
       }
       return str.slice(0, 10);
     }
+
+    // Build a lookup of classCode → ClassSectionModel for make-up injection
+    var classMap = {};
+    classes.forEach(function(cls) { classMap[String(cls.classCode)] = cls; });
 
     var enriched = classes.map(function(cls) {
        var classSessions = sessions.filter(function(s) { return String(s.classCode) === String(cls.classCode); });
@@ -114,6 +120,55 @@ var TeacherService = (function() {
          activeSessionId: activeSession ? activeSession.sessionId : null
        };
     });
+
+    // Inject today's makeup/scheduled classes as additional entries.
+    // Each entry in Class_Schedule for today gets its own card in the dashboard.
+    schedules.forEach(function(sc) {
+      if (sc.status === 'cancelled') return;
+      if (fmtDate(sc.scheduleDate) !== today) return;
+      var scClassCode = String(sc.classCode);
+      // Only include if this teacher owns the class
+      var cls = classMap[scClassCode];
+      if (!cls) return;
+
+      var sCount = parseInt(cls.studentCount) || 0;
+      var sName = cls.subjectName || '';
+      var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
+      var slotCode = sc.slotCode ? String(sc.slotCode) : '';
+      var room = sc.room ? String(sc.room) : (cls.room || '');
+      var startTime = sc.startTime ? String(sc.startTime) : '';
+      var endTime = sc.endTime ? String(sc.endTime) : '';
+      var timeLabel = (slotCode && startTime && endTime)
+        ? '[Học bù] Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')'
+        : ('[Học bù] ' + (slotCode || 'Lịch chưa cập nhật'));
+
+      var classSessions = sessions.filter(function(s) { return String(s.classCode) === scClassCode; });
+      var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
+      var activeSession = classSessions.filter(function(s) {
+        return s.sessionStatus === 'open' && fmtDate(s.sessionDate) === today;
+      })[0] || null;
+
+      enriched.push({
+        classCode: scClassCode,
+        subjectCode: subjectCode,
+        subjectName: sName,
+        room: room,
+        studentCount: sCount,
+        teacherMemberCode: String(cls.teacherMemberCode),
+        slotCode: slotCode,
+        startTime: startTime,
+        endTime: endTime,
+        period: '',
+        timeLabel: timeLabel,
+        completedSessions: completed,
+        totalSessions: 30,
+        averageAttendance: 0,
+        isActive: activeSession !== null,
+        activeSessionId: activeSession ? activeSession.sessionId : null,
+        isMakeup: true
+      });
+    });
+
     return enriched;
   }
   
@@ -370,15 +425,73 @@ var TeacherService = (function() {
     var classCode = params.classCode;
     if (!classCode) throwError('VALIDATION_ERROR', 'Thiếu classCode.');
 
+    // Helper format date
+    function fmtD(v) {
+      if (!v) return '';
+      if (v instanceof Date) {
+        if (typeof Utilities !== 'undefined' && Utilities.formatDate) {
+          return Utilities.formatDate(v, 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+        }
+        var y = v.getFullYear();
+        var m = ('0' + (v.getMonth() + 1)).slice(-2);
+        var d = ('0' + v.getDate()).slice(-2);
+        return y + '-' + m + '-' + d;
+      }
+      var str = String(v).trim();
+      return str.slice(0, 10);
+    }
+
+    // 1. Lấy danh sách phiên điểm danh thực tế
     var sessions = SheetDB.getRowsAsObjects('Attendance_Session').filter(function(s) {
-      return s.classCode === classCode;
+      return String(s.classCode) === String(classCode);
+    }).map(function(s) {
+      return {
+        sessionId: s.sessionId,
+        classCode: s.classCode,
+        sessionDate: fmtD(s.sessionDate),
+        slotCode: s.slotCode || '',
+        sessionStatus: s.sessionStatus,
+        qrToken: s.qrSecret || ''
+      };
     });
 
-    // Sắp xếp ngày mới nhất lên trước
+    // 2. Lấy lịch đã đăng ký trong Class_Schedule (chưa mở phiên)
+    var schedules = [];
+    try {
+      schedules = SheetDB.getRowsAsObjects('Class_Schedule');
+    } catch (e) {
+      if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
+
+    // Build set sessionDate của những phiên đã tồn tại (để không bị trùng)
+    var existingDates = {};
+    sessions.forEach(function(s) {
+      existingDates[fmtD(s.sessionDate) + '|' + String(s.slotCode)] = true;
+    });
+
+    schedules.forEach(function(sc) {
+      if (String(sc.classCode) !== String(classCode)) return;
+      if (sc.status === 'cancelled') return;
+      var sDate = fmtD(sc.scheduleDate);
+      var sSlot = sc.slotCode ? String(sc.slotCode) : '';
+      var key = sDate + '|' + sSlot;
+      if (existingDates[key]) return; // đã có phiên điểm danh cho ngày+ca này
+      sessions.push({
+        sessionId: sc.scheduleId || '',
+        classCode: String(classCode),
+        sessionDate: sDate,
+        slotCode: sSlot,
+        sessionStatus: 'planned', // trạng thái: lịch kế hoạch chưa mở
+        qrToken: ''
+      });
+    });
+
+    // 3. Sắp xếp theo ngày tăng dần (từ cũ đến mới)
     sessions.sort(function(a, b) {
-      var dateA = new Date(a.sessionDate);
-      var dateB = new Date(b.sessionDate);
-      return dateB - dateA;
+      var da = new Date(a.sessionDate);
+      var db = new Date(b.sessionDate);
+      if (da - db !== 0) return da - db;
+      return String(a.slotCode).localeCompare(String(b.slotCode));
     });
 
     return sessions;

@@ -3,8 +3,9 @@ name: Deploy Apps Script
 on:
   push:
     branches:
-      # - main
+      - main
       - backend-data
+      - khoa-le
     paths:
       - 'apps-script/**' # Chỉ trigger khi code trong thư mục apps-script thay đổi
   workflow_dispatch: {}
@@ -34,8 +35,11 @@ jobs:
       - name: Setup .clasp.json
         working-directory: apps-script
         run: |
-          # Đổi tên file clasp.json thành .clasp.json nếu bạn lưu trong repo là clasp.json
-          mv clasp.json .clasp.json
+          # Tao .clasp.json tu clasp.json (dung cp -f de ghi de neu da ton tai)
+          cp -f clasp.json .clasp.json
+
+      - name: Validate check-in HTML template
+        run: node --test apps-script/tests/template.test.cjs
 
       - name: Push and Deploy to Apps Script
         working-directory: apps-script
