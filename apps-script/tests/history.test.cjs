@@ -123,6 +123,15 @@ test('login rejects tokens issued for another OAuth client',()=>{
     aud:'another-client.apps.googleusercontent.com',email:'teacher@example.test',email_verified:'true'})});
   assert.equal(b.call('login',{idToken:'wrong-audience'}).error.code,'INVALID_TOKEN');
 });
+test('login accepts tokens issued for the desktop OAuth client',()=>{
+  const b=backend();
+  b.context.UrlFetchApp.fetch=()=>({getContentText:()=>JSON.stringify({
+    aud:'222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com',
+    email:'teacher@example.test',email_verified:'true'})});
+  const r=b.call('login',{idToken:'desktop-id-token'});
+  assert.equal(r.success,true);
+  assert.equal(r.data.user.email,'teacher@example.test');
+});
 test('redirect login consumes its one-time nonce and rejects replay',()=>{
   const b=backend();
   assert.equal(b.context.AuthService.login({

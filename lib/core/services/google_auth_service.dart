@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../config/auth_config.dart';
+import 'desktop_google_auth.dart';
 
 class GoogleAuthService {
   final GoogleSignIn _googleSignIn;
@@ -11,12 +12,18 @@ class GoogleAuthService {
       : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   Stream<GoogleSignInAuthenticationEvent> get authenticationEvents =>
-      _googleSignIn.authenticationEvents;
+      isDesktopGoogleAuthSupported
+          ? const Stream<GoogleSignInAuthenticationEvent>.empty()
+          : _googleSignIn.authenticationEvents;
 
   Future<void> initialize() => _ensureInitialized();
 
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
+    if (isDesktopGoogleAuthSupported) {
+      _isInitialized = true;
+      return;
+    }
     await _googleSignIn.initialize(
       clientId: AuthConfig.resolvedGoogleClientId,
       serverClientId:
@@ -27,6 +34,21 @@ class GoogleAuthService {
   }
 
   Future<String> signInAndGetIdToken() async {
+    if (isDesktopGoogleAuthSupported) {
+      final clientId = AuthConfig.resolvedGoogleDesktopClientId;
+      if (clientId == null) {
+        throw StateError('Chưa cấu hình GOOGLE_DESKTOP_CLIENT_ID.');
+      }
+      final clientSecret = AuthConfig.resolvedGoogleDesktopClientSecret;
+      if (clientSecret == null) {
+        throw StateError(
+          'Thiếu GOOGLE_DESKTOP_CLIENT_SECRET. Hãy chạy ứng dụng với '
+          '--dart-define=GOOGLE_DESKTOP_CLIENT_SECRET=...',
+        );
+      }
+      return signInWithDesktopGoogle(clientId, clientSecret);
+    }
+
     await _ensureInitialized();
 
     if (!_googleSignIn.supportsAuthenticate()) {
@@ -43,6 +65,7 @@ class GoogleAuthService {
   }
 
   Future<void> signOut() async {
+    if (isDesktopGoogleAuthSupported) return;
     await _ensureInitialized();
     try {
       await _googleSignIn.disconnect();

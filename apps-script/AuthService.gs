@@ -2,6 +2,8 @@
 
 // Shared OAuth Web client for the HTML UI and backend audience validation.
 var GOOGLE_WEB_CLIENT_ID = '222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com';
+var GOOGLE_DESKTOP_CLIENT_ID = '222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com';
+var GOOGLE_ALLOWED_CLIENT_IDS = [GOOGLE_WEB_CLIENT_ID, GOOGLE_DESKTOP_CLIENT_ID];
 
 var AuthService = (function() {
   
@@ -20,7 +22,7 @@ var AuthService = (function() {
       throwError('INVALID_TOKEN', 'Token đăng nhập Google không hợp lệ hoặc đã hết hạn.');
     }
     
-    if (tokenInfo.aud !== GOOGLE_WEB_CLIENT_ID) {
+    if (GOOGLE_ALLOWED_CLIENT_IDS.indexOf(tokenInfo.aud) === -1) {
       throwError('INVALID_TOKEN', 'Token Google khĂ´ng Ä‘Æ°á»£c cáº¥p cho á»©ng dá»¥ng nĂ y.');
     }
 

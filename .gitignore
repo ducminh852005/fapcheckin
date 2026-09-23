@@ -31,6 +31,9 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+
+# Local OAuth credentials used for desktop builds
+desktop_oauth.local.json
 /coverage/
 
 # Symbolication related
