@@ -18,17 +18,40 @@ var TeacherService = (function() {
     } catch (e) {
       if (e.code !== 'SHEET_NOT_FOUND') throw e;
     }
-
+    var schedules = [];
+    try {
+      schedules = SheetDB.getRowsAsObjects('Class_Schedule');
+    } catch (e) {
+      if (e.code !== 'SHEET_NOT_FOUND') throw e;
     var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
-        ? Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd")
+        ? Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")
         : new Date().toISOString().split('T')[0];
+
+    function fmtDate(v) {
+      if (!v) return '';
+      if (v instanceof Date) {
+        if (typeof Utilities !== 'undefined' && Utilities.formatDate) {
+          return Utilities.formatDate(v, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
+        }
+        var y = v.getFullYear();
+        var m = ('0' + (v.getMonth() + 1)).slice(-2);
+        var d = ('0' + v.getDate()).slice(-2);
+        return y + '-' + m + '-' + d;
+      }
+      var str = String(v).trim();
+      var match = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(str);
+      if (match) {
+        return match[1] + '-' + ('0' + match[2]).slice(-2) + '-' + ('0' + match[3]).slice(-2);
+      }
+      return str.slice(0, 10);
+    }
 
     var enriched = classes.map(function(cls) {
        var classSessions = sessions.filter(function(s) { return String(s.classCode) === String(cls.classCode); });
        var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
        // Active session must be open AND created on today's date
        var activeSession = classSessions.filter(function(s) { 
-         return s.sessionStatus === 'open' && s.sessionDate === today; 
+         return s.sessionStatus === 'open' && fmtDate(s.sessionDate) === today; 
        })[0] || null;
        
        var classRecords = records.filter(function(r) { 
@@ -43,31 +66,40 @@ var TeacherService = (function() {
        var sName = cls.subjectName || '';
        var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
 
-       var slot = slots.filter(function(s) {
-         return String(s.slotCode) === String(cls.slotCode);
+       // Check if there is a scheduled make-up class for today for this class
+       var sched = schedules.filter(function(sc) {
+         if (sc.status === 'cancelled') return false;
+         if (String(sc.classCode) !== String(cls.classCode)) return false;
+         return fmtDate(sc.scheduleDate) === today;
        })[0];
 
-       var slotCode = cls.slotCode ? String(cls.slotCode) : '';
-       var startTime = slot && slot.startTime ? String(slot.startTime) : '';
-       var endTime = slot && slot.endTime ? String(slot.endTime) : '';
+       var slotCode = (sched && sched.slotCode) ? String(sched.slotCode) : (cls.slotCode ? String(cls.slotCode) : '');
+       var room = (sched && sched.room) ? String(sched.room) : (cls.room || '');
+
+       var slot = slots.filter(function(s) {
+         return String(s.slotCode) === slotCode;
+       })[0];
+
+       var startTime = (sched && sched.startTime) ? String(sched.startTime) : (slot && slot.startTime ? String(slot.startTime) : '');
+       var endTime = (sched && sched.endTime) ? String(sched.endTime) : (slot && slot.endTime ? String(slot.endTime) : '');
        var period = slot && slot.period ? String(slot.period) : '';
 
-       var timeLabel = cls.timeLabel || '';
-       if (!timeLabel) {
-         if (slotCode && startTime && endTime) {
-           timeLabel = 'Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')';
-         } else if (slotCode) {
-           timeLabel = 'Slot ' + slotCode;
-         } else {
-           timeLabel = 'Lịch học chưa cập nhật';
-         }
+       var timeLabel = '';
+       if (slotCode && startTime && endTime) {
+         timeLabel = 'Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')';
+       } else if (cls.timeLabel) {
+         timeLabel = cls.timeLabel;
+       } else if (slotCode) {
+         timeLabel = 'Slot ' + slotCode;
+       } else {
+         timeLabel = 'Lịch học chưa cập nhật';
        }
        
        return {
          classCode: cls.classCode,
          subjectCode: subjectCode,
          subjectName: sName,
-         room: cls.room,
+         room: room,
          studentCount: sCount,
          teacherMemberCode: cls.teacherMemberCode,
          slotCode: slotCode,
@@ -78,7 +110,7 @@ var TeacherService = (function() {
          completedSessions: completed,
          totalSessions: 30, // Mock 30 sessions per class
          averageAttendance: avgAttendance,
-         isActive: activeSession != null,
+         isActive: activeSession !== null,
          activeSessionId: activeSession ? activeSession.sessionId : null
        };
     });

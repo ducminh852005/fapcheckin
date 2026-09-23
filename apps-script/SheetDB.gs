@@ -10,12 +10,36 @@ var SheetDB = (function() {
     'memberCode', 'teacherMemberCode', 'rollNumber', 'classCode', 'subjectCode',
     'sessionId', 'recordId', 'slotCode', 'room', 'subjectName', 'fullName',
     'email', 'role', 'timeLabel', 'sessionStatus', 'status', 'qrSecret',
-    'teacherIp', 'ipAddress', 'networkVerificationResult', 'note', 'updatedBy'
+    'teacherIp', 'ipAddress', 'networkVerificationResult', 'note', 'updatedBy',
+    'startTime', 'endTime', 'period'
   ];
 
   function normalizeCell(field, value) {
     if (TEXT_FIELDS.indexOf(field) !== -1) {
-      return value == null ? '' : String(value);
+      if (value == null) return '';
+      if (Object.prototype.toString.call(value) === '[object Date]') {
+        var year = value.getFullYear();
+        if (year <= 1900) {
+          var hh = ('0' + value.getUTCHours()).slice(-2);
+          var mm = ('0' + value.getUTCMinutes()).slice(-2);
+          return hh + ':' + mm;
+        }
+        var month = ('0' + (value.getMonth() + 1)).slice(-2);
+        var day = ('0' + value.getDate()).slice(-2);
+        var hh = ('0' + value.getHours()).slice(-2);
+        var mm = ('0' + value.getMinutes()).slice(-2);
+        return day + '/' + month + '/' + year + ' ' + hh + ':' + mm;
+      }
+      var str = String(value).trim();
+      if (str.indexOf('GMT') !== -1 || str.indexOf('Indochina') !== -1 || str.indexOf('1899') !== -1) {
+        var matches = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?/g);
+        if (matches && matches.length >= 2) {
+          return matches[0].slice(0, 5) + ' - ' + matches[1].slice(0, 5);
+        } else if (matches && matches.length === 1) {
+          return matches[0].slice(0, 5);
+        }
+      }
+      return str;
     }
     return value;
   }
@@ -45,7 +69,10 @@ var SheetDB = (function() {
 
   function getRowsAsObjects(sheetName) {
     var sheet = getSheet(sheetName);
-    var data = sheet.getDataRange().getValues();
+    var range = sheet.getDataRange();
+    var data = (typeof range.getDisplayValues === 'function')
+        ? range.getDisplayValues()
+        : range.getValues();
     if (data.length <= 1) return [];
     
     var headers = getHeaders(data);
