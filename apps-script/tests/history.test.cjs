@@ -18,7 +18,7 @@ function backend() {
     Attendance_Record: [{recordId:'R1',sessionId:'S1',rollNumber:'SE1',status:'Present',checkinTime:'2026-09-19T00:30:00Z'}],
     Slot:[{slotCode:'A1',startTime:'07:00',endTime:'09:00'}],
   };
-  const cache = new Map([['auth:teacher','GV1'],['auth:student','SV1']]);
+  const cache = new Map([['auth:teacher','GV1'],['auth:student','SV1'],['google-login-nonce:test-nonce','1']]);
   let writes=0, releases=0, uuid=0, zipParts;
   const context=vm.createContext({
     SheetDB:{
@@ -27,11 +27,22 @@ function backend() {
       updateRow:(name,field,id,update)=>{const r=tables[name].find(r=>r[field]===id);if(!r)return false;Object.assign(r,update);writes++;return true;},
       insertRow:(name,row)=>{tables[name].push({...row});writes++;return row;},
     },
-    CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v)})},
-    UrlFetchApp:{fetch:()=>({getContentText:()=>JSON.stringify({email:'teacher@example.test'})})},
+    CacheService:{getScriptCache:()=>({get:k=>cache.get(k),put:(k,v)=>cache.set(k,v),remove:k=>cache.delete(k)})},
+    UrlFetchApp:{fetch:()=>({getContentText:()=>JSON.stringify({
+      aud:'222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com',
+      email:'teacher@example.test',email_verified:'true',nonce:'test-nonce'})})},
     LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>{releases++;}})},
     Utilities:{getUuid:()=>`uuid-${++uuid}`,newBlob:(body,type,name)=>({body,type,name}),
       zip:parts=>{zipParts=parts;return {getBytes:()=>[80,75]};},base64Encode:bytes=>Buffer.from(bytes).toString('base64')},
+    HtmlService:{
+      XFrameOptionsMode:{ALLOWALL:'ALLOWALL'},
+      createTemplateFromFile:()=>{
+        const template={};
+        const output={template,setTitle(){return this;},setXFrameOptionsMode(){return this;}};
+        template.evaluate=()=>output;
+        return template;
+      },
+    },
     ContentService:{MimeType:{JSON:'application/json'},createTextOutput:body=>({setMimeType:()=>JSON.parse(body)})},
   });
   for(const name of ['Response','AuthService','TeacherService','StudentService','SyncService','HistoryExcel','AttendanceHistoryService','Router','Code']) {
@@ -105,6 +116,27 @@ test('login stores server session used by history endpoints',()=>{
   const b=backend();const login=b.call('login',{idToken:'verified-by-stub'});
   assert.equal(login.success,true);
   assert.equal(b.call('getHistoryClasses',{sessionToken:login.data.token}).data.length,2);
+});
+test('login rejects tokens issued for another OAuth client',()=>{
+  const b=backend();
+  b.context.UrlFetchApp.fetch=()=>({getContentText:()=>JSON.stringify({
+    aud:'another-client.apps.googleusercontent.com',email:'teacher@example.test',email_verified:'true'})});
+  assert.equal(b.call('login',{idToken:'wrong-audience'}).error.code,'INVALID_TOKEN');
+});
+test('redirect login consumes its one-time nonce and rejects replay',()=>{
+  const b=backend();
+  assert.equal(b.context.AuthService.login({
+    idToken:'first-use',requireLoginNonce:true}).user.email,'teacher@example.test');
+  assert.throws(()=>b.context.AuthService.login({
+    idToken:'replay',requireLoginNonce:true}),error=>error.code==='INVALID_TOKEN');
+});
+test('OAuth form POST renders the check-in page with authenticated user and QR state',()=>{
+  const b=backend();
+  const output=b.context.doPost({parameter:{credential:'google-id-token',state:'qr-token'}});
+  assert.equal(output.template.token,'qr-token');
+  assert.equal(output.template.oauthResult.success,true);
+  assert.equal(output.template.oauthResult.data.user.email,'teacher@example.test');
+  assert.match(output.template.googleLoginNonce,/^uuid\d+$/);
 });
 test('opening a session requires valid slot and rejects duplicate open sessions',()=>{
   const b=backend();

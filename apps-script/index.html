@@ -283,11 +283,12 @@
       <h1>Đăng nhập Sinh viên</h1>
       <p class="subtitle">Vui lòng đăng nhập bằng email nhà trường (@fpt.edu.vn) để tiếp tục điểm danh.</p>
 
-      <div id="g_id_onload" data-client_id="222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com"
-        data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false">
+      <div id="g_id_onload" data-client_id="<?= googleClientId ?>"
+        data-context="signin" data-ux_mode="redirect" data-login_uri="<?= googleLoginUri ?>"
+        data-nonce="<?= googleLoginNonce ?>" data-auto_prompt="false">
       </div>
       <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-        data-text="signin_with" data-size="large" data-logo_alignment="left">
+        data-text="signin_with" data-size="large" data-logo_alignment="left" data-state="<?= token ?>">
       </div>
     </div>
 
@@ -480,6 +481,7 @@
     // JSON.stringify keeps the token intact and prevents special characters from
     // breaking the surrounding JavaScript when Apps Script renders the template.
     var serverToken = <?!= JSON.stringify(typeof token !== 'undefined' ? token : '').replace(/</g, '\\u003c') ?>;
+    var oauthResult = <?!= JSON.stringify(typeof oauthResult !== 'undefined' ? oauthResult : null).replace(/</g, '\\u003c') ?>;
     var qrToken = serverToken || new URLSearchParams(window.location.search).get('token');
 
     window.onload = function () {
@@ -491,6 +493,17 @@
         document.getElementById('btn-retry').style.display = 'none';
         document.getElementById('btn-logout').style.display = 'none';
         showView('error');
+        return;
+      }
+
+      if (oauthResult) {
+        if (!oauthResult.success) {
+          showErrorByCode(oauthResult.error.code, oauthResult.error.message);
+          return;
+        }
+        localStorage.setItem('fap_session', oauthResult.data.token);
+        localStorage.setItem('fap_user', JSON.stringify(oauthResult.data.user));
+        processCheckin(qrToken, oauthResult.data.user.rollNumber);
         return;
       }
 

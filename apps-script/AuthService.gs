@@ -1,5 +1,8 @@
 // File: AuthService.gs
 
+// Shared OAuth Web client for the HTML UI and backend audience validation.
+var GOOGLE_WEB_CLIENT_ID = '222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com';
+
 var AuthService = (function() {
   
   function login(params) {
@@ -7,7 +10,7 @@ var AuthService = (function() {
     if (!idToken) throwError('MISSING_TOKEN', 'Không tìm thấy idToken trong request.');
     
     // Gọi API của Google để verify token thật
-    var verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + idToken;
+    var verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken);
     var email = null;
     try {
       var response = UrlFetchApp.fetch(verifyUrl);
@@ -17,6 +20,24 @@ var AuthService = (function() {
       throwError('INVALID_TOKEN', 'Token đăng nhập Google không hợp lệ hoặc đã hết hạn.');
     }
     
+    if (tokenInfo.aud !== GOOGLE_WEB_CLIENT_ID) {
+      throwError('INVALID_TOKEN', 'Token Google khĂ´ng Ä‘Æ°á»£c cáº¥p cho á»©ng dá»¥ng nĂ y.');
+    }
+
+    if (tokenInfo.email_verified !== true && tokenInfo.email_verified !== 'true') {
+      throwError('INVALID_TOKEN', 'Email Google chÆ°a Ä‘Æ°á»£c xĂ¡c minh.');
+    }
+
+    if (params.requireLoginNonce) {
+      var nonce = tokenInfo.nonce;
+      var nonceCache = CacheService.getScriptCache();
+      var nonceKey = nonce ? 'google-login-nonce:' + nonce : '';
+      if (!nonceKey || !nonceCache.get(nonceKey)) {
+        throwError('INVALID_TOKEN', 'YĂªu cáº§u Ä‘Äƒng nháº­p Google Ä‘Ă£ háº¿t háº¡n hoáº·c khĂ´ng há»£p lá»‡.');
+      }
+      nonceCache.remove(nonceKey);
+    }
+
     if (!email) {
       throwError('INVALID_TOKEN', 'Không trích xuất được email từ token.');
     }
