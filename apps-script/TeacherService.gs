@@ -23,6 +23,8 @@ var TeacherService = (function() {
       schedules = SheetDB.getRowsAsObjects('Class_Schedule');
     } catch (e) {
       if (e.code !== 'SHEET_NOT_FOUND') throw e;
+    }
+
     var today = (typeof Utilities !== 'undefined' && Utilities.formatDate)
         ? Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")
         : new Date().toISOString().split('T')[0];
@@ -45,6 +47,10 @@ var TeacherService = (function() {
       }
       return str.slice(0, 10);
     }
+
+    // Build a lookup of classCode → ClassSectionModel for make-up injection
+    var classMap = {};
+    classes.forEach(function(cls) { classMap[String(cls.classCode)] = cls; });
 
     var enriched = classes.map(function(cls) {
        var classSessions = sessions.filter(function(s) { return String(s.classCode) === String(cls.classCode); });
@@ -114,6 +120,55 @@ var TeacherService = (function() {
          activeSessionId: activeSession ? activeSession.sessionId : null
        };
     });
+
+    // Inject today's makeup/scheduled classes as additional entries.
+    // Each entry in Class_Schedule for today gets its own card in the dashboard.
+    schedules.forEach(function(sc) {
+      if (sc.status === 'cancelled') return;
+      if (fmtDate(sc.scheduleDate) !== today) return;
+      var scClassCode = String(sc.classCode);
+      // Only include if this teacher owns the class
+      var cls = classMap[scClassCode];
+      if (!cls) return;
+
+      var sCount = parseInt(cls.studentCount) || 0;
+      var sName = cls.subjectName || '';
+      var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
+      var slotCode = sc.slotCode ? String(sc.slotCode) : '';
+      var room = sc.room ? String(sc.room) : (cls.room || '');
+      var startTime = sc.startTime ? String(sc.startTime) : '';
+      var endTime = sc.endTime ? String(sc.endTime) : '';
+      var timeLabel = (slotCode && startTime && endTime)
+        ? '[Học bù] Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')'
+        : ('[Học bù] ' + (slotCode || 'Lịch chưa cập nhật'));
+
+      var classSessions = sessions.filter(function(s) { return String(s.classCode) === scClassCode; });
+      var completed = classSessions.filter(function(s) { return s.sessionStatus === 'closed'; }).length;
+      var activeSession = classSessions.filter(function(s) {
+        return s.sessionStatus === 'open' && fmtDate(s.sessionDate) === today;
+      })[0] || null;
+
+      enriched.push({
+        classCode: scClassCode,
+        subjectCode: subjectCode,
+        subjectName: sName,
+        room: room,
+        studentCount: sCount,
+        teacherMemberCode: String(cls.teacherMemberCode),
+        slotCode: slotCode,
+        startTime: startTime,
+        endTime: endTime,
+        period: '',
+        timeLabel: timeLabel,
+        completedSessions: completed,
+        totalSessions: 30,
+        averageAttendance: 0,
+        isActive: activeSession !== null,
+        activeSessionId: activeSession ? activeSession.sessionId : null,
+        isMakeup: true
+      });
+    });
+
     return enriched;
   }
   
