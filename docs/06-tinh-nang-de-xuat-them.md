@@ -6,7 +6,7 @@
 
 | Tính năng | Mô tả | Ưu tiên |
 |---|---|---|
-| QR xoay vòng 20 giây | Chống chụp ảnh QR gửi hộ bạn không có mặt trong lớp. | **PHẢI CÓ** |
+| QR xoay vòng 60 giây | Hạn chế chia sẻ ảnh nhưng vẫn đủ thời gian quét và đăng nhập Google. | **ĐÃ CÓ** |
 | Chống trùng điểm danh | Một SV chỉ được ghi nhận 1 lần / phiên, dù quét nhiều lần. | **PHẢI CÓ** |
 | Điểm danh thủ công dự phòng | GV tick tay theo danh sách nếu trang web lỗi hoặc SV không có điện thoại. | **PHẢI CÓ** |
 | Kiểm tra qua địa chỉ IP mạng | So IP công khai của SV lúc quét với IP của GV lúc mở phiên (cùng mạng Wi-Fi trường); khác IP thì từ chối. Không xin quyền vị trí thiết bị. | **PHẢI CÓ** |

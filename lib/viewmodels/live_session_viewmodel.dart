@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/services/ip_service.dart';
 import '../data/models/class_section_model.dart';
 import '../data/models/close_session_model.dart';
 import '../data/models/roster_entry_model.dart';
@@ -64,11 +65,11 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   // ── QR / session timers ─────────────────────────────────────────────────────
 
-  /// Seconds remaining until QR auto-refreshes (visual only)
+  /// QR token rotation interval. One minute gives students enough time to scan
+  /// and complete Google sign-in before the displayed token changes.
+  static const int qrCycleDuration = 60;
   int _qrRefreshSeconds = qrCycleDuration;
   int get qrRefreshSeconds => _qrRefreshSeconds;
-  static const int qrCycleDuration = 20;
-
   double get qrProgress => _qrRefreshSeconds / qrCycleDuration;
 
   /// Elapsed seconds since session started (displayed as countdown from 90 min)
@@ -270,37 +271,75 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   // ── Public API ───────────────────────────────────────────────────────────────
 
-  /// Called by the timer in MainScreen every second for UI countdown
+  /// Called by MainScreen every second to update session and QR countdowns.
   void tickTimers() {
     _sessionElapsedSeconds++;
     _qrRefreshSeconds--;
     if (_qrRefreshSeconds <= 0) {
       _qrRefreshSeconds = qrCycleDuration;
-      _rotateQr(); // ← gọi backend đổi qrSecret thật
+      _rotateQr();
     }
     notifyListeners();
   }
 
-  /// Start a session for a given class.
-  /// classCode: the ClassSection's classCode
-  /// slotCode: e.g. "1", "2", etc.
-  /// teacherIp: fetched externally via ipify or similar
+  /// Start or resume a session for a given class.
+  /// If the class already has an open active session, resumes it without closing existing records.
   Future<void> startSession({
     required ClassSectionModel classSection,
     required String slotCode,
-    required String teacherIp,
+    String? teacherIp,
+    bool forceNew = false,
   }) async {
     _status = ViewStatus.loading;
     _errorMessage = null;
     _classInfo = classSection;
-    _teacherIp = teacherIp;
+
+    // Use provided IP or fetch real public IP via IpService
+    String realIp = teacherIp ?? '';
+    if (realIp.isEmpty || realIp == '127.0.0.1' || realIp == '192.168.1.100') {
+      realIp = await IpService.getPublicIp();
+    }
+    _teacherIp = realIp;
     notifyListeners();
 
+    // 1. Check if we already have this session active in memory
+    if (!forceNew &&
+        _session != null &&
+        _session!.classCode == classSection.classCode &&
+        !isClosed) {
+      _status = ViewStatus.success;
+      _startPolling();
+      notifyListeners();
+      return;
+    }
+
+    // 2. Check if classSection is active and has an activeSessionId on backend
+    final activeId = classSection.activeSessionId;
+    if (!forceNew &&
+        classSection.isActive &&
+        activeId != null &&
+        activeId.isNotEmpty) {
+      _session = SessionModel(
+        sessionId: activeId,
+        classCode: classSection.classCode,
+        sessionDate: classSection.timeLabel,
+        slotCode: slotCode.isNotEmpty ? slotCode : classSection.slotCode,
+        sessionStatus: 'open',
+        qrToken: '',
+      );
+      _status = ViewStatus.success;
+      _startPolling();
+      await _rotateQr();
+      notifyListeners();
+      return;
+    }
+
+    // 3. Otherwise, create a brand new session on backend
     try {
       final result = await _repository.startSession(
         classCode: classSection.classCode,
         slotCode: slotCode,
-        teacherIp: teacherIp,
+        teacherIp: realIp,
       );
 
       switch (result) {
@@ -425,16 +464,15 @@ class LiveSessionViewModel extends ChangeNotifier {
           sessionDate: _session!.sessionDate,
           slotCode: _session!.slotCode,
           sessionStatus: _session!.sessionStatus,
-          qrToken: data, // token mới
+          qrToken: data,
         );
         notifyListeners();
       case ApiFailure<String>():
-        // im lặng bỏ qua lỗi rotate nền, không làm gián đoạn UI
+        // Keep the current QR when a background rotation request fails.
         break;
     }
   }
 
-  /// Public method cho nút "Làm mới QR ngay"
   Future<void> refreshQrNow() async {
     _qrRefreshSeconds = qrCycleDuration;
     await _rotateQr();

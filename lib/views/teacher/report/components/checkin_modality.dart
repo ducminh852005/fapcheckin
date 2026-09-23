@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
@@ -29,7 +30,7 @@ class CheckinModality extends StatelessWidget {
           const SizedBox(height: 2),
           Text('Phân bổ kênh ghi nhận điểm danh', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.md),
-          
+
           // Donut Chart
           Center(
             child: SizedBox(
@@ -54,13 +55,21 @@ class CheckinModality extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          
+
           // Legend
-          _buildLegendRow('Quét QR mã động 20s', '88%', AppColors.primaryContainer),
+          _buildLegendRow(
+            'Quét QR động 60 giây',
+            '88%',
+            AppColors.primaryContainer,
+          ),
           const SizedBox(height: 8),
           _buildLegendRow('Đơn phép FAP hợp lệ', '8%', AppColors.statusManual),
           const SizedBox(height: 8),
-          _buildLegendRow('GV xác nhận bù thủ công', '4%', AppColors.statusLate),
+          _buildLegendRow(
+            'GV xác nhận bù thủ công',
+            '4%',
+            AppColors.statusLate,
+          ),
         ],
       ),
     );
@@ -78,10 +87,18 @@ class CheckinModality extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
-            Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary)),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
           ],
         ),
-        Text(value, style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }

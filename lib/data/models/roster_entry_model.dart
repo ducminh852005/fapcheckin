@@ -64,7 +64,7 @@ class RosterEntryModel {
   String get displayCheckinTime {
     if (checkinTime == null || checkinTime!.isEmpty) return '--:--:--';
     try {
-      final dt = DateTime.parse(checkinTime!);
+      final dt = DateTime.parse(checkinTime!).toLocal();
       final h = dt.hour.toString().padLeft(2, '0');
       final m = dt.minute.toString().padLeft(2, '0');
       final s = dt.second.toString().padLeft(2, '0');

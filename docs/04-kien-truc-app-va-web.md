@@ -20,7 +20,7 @@ flowchart LR
 | State (ViewModel) | `provider` | `ChangeNotifier` = ViewModel; View "lắng nghe" qua `Consumer`/`Selector`. |
 | Gọi API | `dio` | Interceptor tự đính kèm token phiên vào mỗi request tới BE. |
 | Đăng nhập | `google_sign_in` | SSO bằng tài khoản Google của trường. |
-| Sinh QR | `qr_flutter` | Vẽ QR (mã hoá URL trang web) từ `qrToken`, làm mới theo `Timer` 20s. |
+| Sinh QR | `qr_flutter` | Vẽ QR từ URL chứa `qrToken`, làm mới mỗi 60 giây. |
 | Lấy IP công khai | `http` (gọi ipify) | Lấy `teacherIp` lúc mở phiên để Backend đối chiếu với SV — không dùng `geolocator`/GPS. |
 | Token an toàn | `flutter_secure_storage` | Lưu session token của GV, tách khỏi cache thường. |
 | Biểu đồ | `fl_chart` | % chuyên cần theo môn, xem trong app GV. |
@@ -39,7 +39,7 @@ lib/
 │  ├─ services/
 │  │  ├─ api_service.dart       // Dio client + interceptor token
 │  │  ├─ auth_service.dart      // google_sign_in, quản lý session
-│  │  ├─ qr_service.dart        // timer xoay token, mã hoá URL vào QR
+│  │  ├─ qr_service.dart        // timer 60 giây và mã hoá URL vào QR
 │  │  └─ ip_service.dart        // gọi ipify lấy teacherIp
 │  └─ utils/
 ├─ data/
@@ -54,13 +54,13 @@ lib/
 │     └─ attendance_repository.dart   // nơi duy nhất biết "nguồn dữ liệu" là gì
 ├─ viewmodels/
 │  ├─ login_viewmodel.dart
-│  ├─ teacher_session_viewmodel.dart  // tạo phiên, xoay QR, roster real-time
+│  ├─ teacher_session_viewmodel.dart  // tạo phiên, xoay QR 60 giây, roster real-time
 │  └─ history_viewmodel.dart          // lịch sử điểm danh của lớp, thống kê
 └─ views/
    ├─ auth/login_screen.dart
    └─ teacher/
       ├─ class_list_screen.dart
-      ├─ start_session_screen.dart    // hiển thị QR xoay
+      ├─ start_session_screen.dart    // hiển thị QR xoay mỗi phút
       ├─ live_roster_screen.dart      // danh sách đã điểm danh + điểm danh tay
       └─ class_stats_screen.dart      // biểu đồ % chuyên cần
 ```
