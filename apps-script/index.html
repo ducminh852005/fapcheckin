@@ -477,10 +477,9 @@
 
     // ============ Luồng ứng dụng ============
     // Nhận token từ Apps Script server template nếu chạy qua Apps Script doGet, hoặc từ URL query nếu chạy web tĩnh
-    var serverToken = "<?= typeof token !== 'undefined' ? token : '' ?>";
-    if (serverToken.indexOf('<?') === 0) {
-      serverToken = ''; // Fallback khi file HTML được mở trực tiếp ngoài môi trường Apps Script
-    }
+    // JSON.stringify keeps the token intact and prevents special characters from
+    // breaking the surrounding JavaScript when Apps Script renders the template.
+    var serverToken = <?!= JSON.stringify(typeof token !== 'undefined' ? token : '').replace(/</g, '\\u003c') ?>;
     var qrToken = serverToken || new URLSearchParams(window.location.search).get('token');
 
     window.onload = function () {
