@@ -251,6 +251,11 @@ var TeacherService = (function() {
     // Kết hợp
     var roster = enrolledStudents.map(function(student) {
       var record = sessionRecords.filter(function(r) { return r.rollNumber === student.rollNumber; })[0] || null;
+      if (record && String(record.networkVerificationResult || '').trim().toLowerCase() === 'mismatch') {
+        // Legacy protection: old versions could persist Present + Mismatch.
+        // Keep the network evidence visible but never report it as attendance.
+        record = Object.assign({}, record, { status: '', checkinTime: '' });
+      }
       return {
         student: student,
         record: record
@@ -276,6 +281,7 @@ var TeacherService = (function() {
       // Cập nhật
       SheetDB.updateRow('Attendance_Record', 'recordId', existingRecord.recordId, {
         status: status,
+        networkVerificationResult: 'Manual',
         syncedToFap: false
       });
     } else {
@@ -316,6 +322,7 @@ var TeacherService = (function() {
           SheetDB.updateRow('Attendance_Record', 'recordId', existingRecord.recordId, {
             status: change.status,
             note: change.reason || '',
+            networkVerificationResult: 'Manual',
             syncedToFap: false
           });
         } else {

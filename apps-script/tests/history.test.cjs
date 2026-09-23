@@ -14,7 +14,7 @@ function backend() {
     Enrollment: [{classCode:'C1',rollNumber:'SE1'},{classCode:'C1',rollNumber:'SE2'},
       {classCode:'C1',rollNumber:'SE1'},{classCode:'C2',rollNumber:'SE2'}],
     Attendance_Session: [{sessionId:'S1',classCode:'C1',sessionDate:'2026-09-19',slotCode:'A1',sessionStatus:'closed',qrSecret:'secret'},
-      {sessionId:'S2',classCode:'C1',sessionDate:'2026-09-20',slotCode:'A1',sessionStatus:'open',qrSecret:'secret2'}],
+      {sessionId:'S2',classCode:'C1',sessionDate:'2026-09-20',slotCode:'A1',sessionStatus:'open',qrSecret:'secret2',teacherIp:'203.0.113.10'}],
     Attendance_Record: [{recordId:'R1',sessionId:'S1',rollNumber:'SE1',status:'Present',checkinTime:'2026-09-19T00:30:00Z'}],
     Slot:[{slotCode:'A1',startTime:'07:00',endTime:'09:00'}],
   };
@@ -137,6 +137,52 @@ test('OAuth form POST renders the check-in page with authenticated user and QR s
   assert.equal(output.template.oauthResult.success,true);
   assert.equal(output.template.oauthResult.data.user.email,'teacher@example.test');
   assert.match(output.template.googleLoginNonce,/^uuid\d+$/);
+});
+test('student check-in rejects a mismatched network without creating attendance',()=>{
+  const b=backend();
+  const before=b.tables.Attendance_Record.length;
+  const r=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'198.51.100.20'});
+  assert.equal(r.success,false);
+  assert.equal(r.error.code,'IP_MISMATCH');
+  assert.equal(b.tables.Attendance_Record.length,before);
+  assert.equal(b.writes,0);
+});
+test('student check-in marks Present only when the network matches',()=>{
+  const b=backend();
+  const r=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(r.success,true);
+  assert.equal(r.data.status,'Present');
+  assert.equal(r.data.networkVerificationResult,'Match');
+  assert.equal(r.data.ipAddress,'203.0.113.10');
+  assert.equal(b.tables.Attendance_Record.at(-1).status,'Present');
+  assert.equal(b.writes,1);
+});
+test('legacy Present plus Mismatch is unchecked and repaired on a valid retry',()=>{
+  const b=backend();
+  b.tables.Attendance_Record.push({recordId:'legacy-mismatch',sessionId:'S2',rollNumber:'SE1',
+    status:'Present',checkinTime:'2026-09-20T07:00:00Z',networkVerificationResult:'Mismatch',ipAddress:'198.51.100.20'});
+
+  const before=b.call('getRoster',{sessionId:'S2'}).data[0].record;
+  assert.equal(before.status,'');
+  assert.equal(before.checkinTime,'');
+  assert.equal(before.networkVerificationResult,'Mismatch');
+
+  const retry=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(retry.success,true);
+  assert.equal(retry.data.status,'Present');
+  assert.equal(retry.data.networkVerificationResult,'Match');
+  assert.equal(b.tables.Attendance_Record.length,2);
+  assert.equal(b.tables.Attendance_Record[1].networkVerificationResult,'Match');
+  assert.equal(b.writes,1);
+});
+test('teacher manual override converts a mismatched legacy row to Manual',()=>{
+  const b=backend();
+  b.tables.Attendance_Record.push({recordId:'legacy-manual',sessionId:'S2',rollNumber:'SE1',
+    status:'Present',checkinTime:'2026-09-20T07:00:00Z',networkVerificationResult:'Mismatch'});
+  const r=b.call('manualCheckin',{sessionId:'S2',rollNumber:'SE1',status:'Present'});
+  assert.equal(r.success,true);
+  assert.equal(b.tables.Attendance_Record[1].networkVerificationResult,'Manual');
+  assert.equal(b.call('getRoster',{sessionId:'S2'}).data[0].record.status,'Present');
 });
 test('opening a session requires valid slot and rejects duplicate open sessions',()=>{
   const b=backend();
