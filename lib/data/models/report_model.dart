@@ -2,6 +2,7 @@ import '../../core/network/json_values.dart';
 
 class ReportData {
   final String generatedAt;
+  final String semester;
   final ReportKpiSummary kpis;
   final List<ReportMethod> methods;
   final List<ReportWeek> weekly;
@@ -12,6 +13,7 @@ class ReportData {
 
   ReportData.fromJson(Map<String, dynamic> json)
     : generatedAt = jsonText(json['generatedAt']) ?? '',
+      semester = jsonText(json['semester']) ?? '',
       kpis = ReportKpiSummary.fromJson(
         Map<String, dynamic>.from(json['kpis'] ?? {}),
       ),

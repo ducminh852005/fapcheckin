@@ -19,6 +19,27 @@ class WarningTable extends StatefulWidget {
 
 class _WarningTableState extends State<WarningTable> {
   bool _syncing = false;
+  static const _pageSize = 8;
+  int _currentPage = 0;
+
+  List<ReportWarning> get _visibleWarnings {
+    final start = _currentPage * _pageSize;
+    final end = (start + _pageSize).clamp(0, widget.data.warnings.length);
+    return widget.data.warnings.sublist(start, end);
+  }
+
+  int get _pageCount => (widget.data.warnings.length / _pageSize)
+      .ceil()
+      .clamp(1, double.infinity)
+      .toInt();
+
+  @override
+  void didUpdateWidget(covariant WarningTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data.warnings.length != widget.data.warnings.length) {
+      _currentPage = _currentPage.clamp(0, _pageCount - 1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +204,7 @@ class _WarningTableState extends State<WarningTable> {
                         _dataCell(const SizedBox.shrink()),
                       ],
                     ),
-                  ...widget.data.warnings.map(
+                  ..._visibleWarnings.map(
                     (warning) => TableRow(
                       children: [
                         _dataCell(
@@ -229,8 +250,61 @@ class _WarningTableState extends State<WarningTable> {
               ),
             ),
           ),
+          if (widget.data.warnings.length > _pageSize) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _buildPagination(),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildPagination() {
+    final firstItem = _currentPage * _pageSize + 1;
+    final lastItem = ((_currentPage + 1) * _pageSize).clamp(
+      0,
+      widget.data.warnings.length,
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
+      children: [
+        Text(
+          '$firstItem-$lastItem / ${widget.data.warnings.length} sinh viên',
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Trang trước',
+              onPressed: _currentPage == 0
+                  ? null
+                  : () => setState(() => _currentPage--),
+              icon: const Icon(Icons.chevron_left, size: 20),
+              visualDensity: VisualDensity.compact,
+            ),
+            Text(
+              '${_currentPage + 1} / $_pageCount',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Trang sau',
+              onPressed: _currentPage >= _pageCount - 1
+                  ? null
+                  : () => setState(() => _currentPage++),
+              icon: const Icon(Icons.chevron_right, size: 20),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ],
     );
   }
 

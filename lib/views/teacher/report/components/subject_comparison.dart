@@ -83,19 +83,28 @@ class SubjectComparison extends StatelessWidget {
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: AppTextStyles.code.copyWith(color: ReportColors.text),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.code.copyWith(color: ReportColors.text),
+                softWrap: true,
+              ),
             ),
-            Text(
-              '${percentage.toStringAsFixed(1)}%',
-              style: AppTextStyles.code.copyWith(
-                fontWeight: FontWeight.w700,
-                color: color == ReportColors.primary
-                    ? ReportColors.primary
-                    : color,
+            const SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 52,
+              child: Text(
+                '${percentage.toStringAsFixed(1)}%',
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: AppTextStyles.code.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color == ReportColors.primary
+                      ? ReportColors.primary
+                      : color,
+                ),
               ),
             ),
           ],
