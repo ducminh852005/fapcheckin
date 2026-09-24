@@ -26,6 +26,24 @@ var ReportService = (function() {
       };
     });
   }
+  function semesterLabel(classes, sessions) {
+    var sources = classes.concat(sessions);
+    for (var i = 0; i < sources.length; i++) {
+      var value = sources[i].semester || sources[i].semesterName || sources[i].term;
+      if (value != null && String(value).trim()) return String(value).trim();
+    }
+
+    var dated = sessions.filter(function(s) { return s.sessionDate; })
+      .sort(function(a, b) {
+        return new Date(b.sessionDate) - new Date(a.sessionDate);
+      });
+    if (!dated.length) return '';
+
+    var date = new Date(dated[0].sessionDate);
+    var month = date.getMonth() + 1;
+    var season = month >= 1 && month <= 5 ? 'Spring' : (month >= 6 && month <= 8 ? 'Summer' : 'Fall');
+    return season + ' ' + date.getFullYear();
+  }
   function getReport(params) {
     var teacher = AuthService.requireTeacher(params);
     var classes = ownedClasses(teacher);
@@ -142,7 +160,8 @@ var ReportService = (function() {
       subjects: subjects,
       warnings: warnings,
       classCount: classes.length,
-      closedSessionCount: closed.length
+      closedSessionCount: closed.length,
+      semester: semesterLabel(classes, closed)
     };
   }
   return { getReport: getReport };
