@@ -8,12 +8,10 @@ import 'package:fapcheckin/data/models/class_session.dart';
 import 'package:fapcheckin/core/network/json_values.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
-import 'components/activity_log_panel.dart';
-import 'components/attendance_chart.dart';
+
 import 'components/class_card.dart';
 import 'components/stat_card.dart';
-
-
+import 'components/weekly_timetable.dart';
 
 class DashboardBody extends StatelessWidget {
   const DashboardBody({super.key});
@@ -36,7 +34,6 @@ class DashboardBody extends StatelessWidget {
     );
   }
 }
-
 
 /// 4-column stats row
 class _StatsRow extends StatelessWidget {
@@ -81,281 +78,69 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-/// Two-column main layout: schedule list (left) + chart & logs (right)
+/// Main layout below the stats row: weekly timetable grid.
+/// "Lịch dạy hôm nay", "Chuyên cần theo tuần" và "Nhật ký hoạt động"
+/// đã bị bỏ, thay bằng WeeklyTimetable.
+///
+/// Mỗi lớp trong vm.classes lặp lại 2 buổi/tuần theo slotCode (A1..A6,
+/// P1..P6,...) — xem SlotCodeParser trong weekly_timetable.dart để biết
+/// quy tắc giải mã. Vì vậy mỗi lớp sẽ tự sinh ra 2 ô trên bảng tuần,
+/// không cần API lấy lịch cả tuần riêng.
 class _MainContent extends StatelessWidget {
+  DateTime get _weekStart {
+    final now = DateTime.now();
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left column: today's schedule (65% ~ 8/12)
-            Expanded(
-              flex: 8,
-              child: _SchedulePanel(vm: vm),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            // Right column: chart + activity log (35% ~ 4/12)
-            Expanded(
-              flex: 4,
-              child: Column(
-                children: [
-                  const AttendanceChart(),
-                  const SizedBox(height: AppSpacing.md),
-                  const ActivityLogPanel(),
-                ],
+        final entries = <TimetableEntry>[];
+
+        for (final c in vm.classes) {
+          final info = SlotCodeParser.parse(c.slotCode);
+          final timeRange = (c.startTime != null && c.endTime != null)
+              ? '${c.startTime}-${c.endTime}'
+              : c.timeLabel;
+
+          if (info != null) {
+            // Lớp học lặp lại 2 buổi/tuần theo slotCode
+            for (final day in info.weekdays) {
+              entries.add(
+                TimetableEntry(
+                  dayOfWeek: day,
+                  slot: info.slot,
+                  courseCode: c.classCode,
+                  room: c.room,
+                  timeRange: timeRange,
+                ),
+              );
+            }
+          } else {
+            // Không giải mã được slotCode -> tạm hiện đúng hôm nay
+            entries.add(
+              TimetableEntry(
+                dayOfWeek: DateTime.now().weekday,
+                slot:
+                    int.tryParse(
+                      c.slotCode.replaceAll(RegExp(r'[^0-9]'), ''),
+                    ) ??
+                    1,
+                courseCode: c.classCode,
+                room: c.room,
+                timeRange: timeRange,
               ),
-            ),
-          ],
-        );
+            );
+          }
+        }
+
+        return WeeklyTimetable(weekStart: _weekStart, entries: entries);
       },
-    );
-  }
-}
-
-/// Today's schedule panel with class list
-class _SchedulePanel extends StatefulWidget {
-  final DashboardViewModel vm;
-  const _SchedulePanel({required this.vm});
-
-  @override
-  State<_SchedulePanel> createState() => _SchedulePanelState();
-}
-
-class _SchedulePanelState extends State<_SchedulePanel> {
-  int _currentPage = 0;
-  static const int _itemsPerPage = 10;
-
-  String _getSlotTimeRange(int slot) {
-    switch (slot) {
-      case 1: return '07:30 - 09:50';
-      case 2: return '10:00 - 12:20';
-      case 3: return '12:50 - 15:10';
-      case 4: return '15:20 - 17:40';
-      case 5: return '18:00 - 20:20';
-      case 6: return '20:30 - 22:50';
-      default: return '-- : --';
-    }
-  }
-
-  SessionStatus _deriveStatus(String timeRange, bool isActive) {
-    if (timeRange.contains('--')) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-    try {
-      final parts = timeRange.split('-');
-      if (parts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
-      final startParts = parts[0].trim().split(':');
-      final endParts = parts[1].trim().split(':');
-      
-      if (startParts.length != 2 || endParts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
-      final h1 = int.parse(startParts[0]);
-      final m1 = int.parse(startParts[1]);
-      
-      final h2 = int.parse(endParts[0]);
-      final m2 = int.parse(endParts[1]);
-      
-      final now = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day, h1, m1).subtract(const Duration(minutes: 15));
-      final end = DateTime(now.year, now.month, now.day, h2, m2);
-      
-      if (now.isAfter(end)) return SessionStatus.completed;
-      if (isActive) return SessionStatus.active;
-      if (now.isBefore(start)) return SessionStatus.notStarted;
-      
-      return SessionStatus.ready;
-    } catch (_) {
-      return isActive ? SessionStatus.active : SessionStatus.notStarted;
-    }
-  }
-
-  /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
-  ClassSession _toClassSession(ClassSectionModel model, int index) {
-    final slotNumber = index + 1;
-    final rawRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
-        ? '${model.startTime} - ${model.endTime}'
-        : (model.timeLabel.isNotEmpty ? model.timeLabel : _getSlotTimeRange(slotNumber));
-    final timeRange = formatTimeLabel(rawRange);
-    return ClassSession(
-      courseCode: model.classCode,
-      courseName: model.subjectName,
-      slot: model.slotCode.isNotEmpty ? model.slotCode : slotNumber.toString(),
-      timeRange: timeRange,
-      room: model.room,
-      studentCount: model.studentCount,
-      status: _deriveStatus(timeRange, model.isActive),
-      isMakeup: model.isMakeup,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant _SchedulePanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.vm.classes.length != oldWidget.vm.classes.length) {
-      _currentPage = 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = widget.vm;
-    
-    // Pagination logic
-    final totalClasses = vm.classes.length;
-    final totalPages = (totalClasses / _itemsPerPage).ceil();
-    if (_currentPage >= totalPages && totalPages > 0) {
-      _currentPage = totalPages - 1;
-    }
-    final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage > totalClasses) 
-        ? totalClasses 
-        : startIndex + _itemsPerPage;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A142433),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Lịch dạy hôm nay',
-                style: AppTextStyles.headlineMd.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                ),
-                child: Text(
-                  '$totalClasses lớp',
-                  style: AppTextStyles.codeSm.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              _IconButton(
-                icon: Icons.refresh,
-                tooltip: 'Làm mới lịch',
-                onTap: () {
-                  setState(() => _currentPage = 0);
-                  vm.loadClasses();
-                },
-              ),
-              const SizedBox(width: 4),
-              _IconButton(
-                icon: Icons.filter_list,
-                tooltip: 'Bộ lọc',
-                onTap: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Body: loading / error / empty / class cards
-          if (vm.isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (vm.status == ViewStatus.error)
-            _ErrorRetry(
-              message: vm.errorMessage ?? 'Lỗi tải dữ liệu',
-              onRetry: () {
-                setState(() => _currentPage = 0);
-                vm.loadClasses();
-              },
-            )
-          else if (vm.classes.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: Text(
-                  'Không có lớp học hôm nay.',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
-                ),
-              ),
-            )
-          else
-            ...[
-              for (int i = startIndex; i < endIndex; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ClassCard(
-                    session: _toClassSession(vm.classes[i], i),
-                    onStart: () async {
-                      final liveVm = context.read<LiveSessionViewModel>();
-                      await liveVm.startSession(
-                        classSection: vm.classes[i],
-                        slotCode: vm.classes[i].slotCode.isNotEmpty
-                            ? vm.classes[i].slotCode
-                            : (i + 1).toString(),
-                        teacherIp: '127.0.0.1', // Mock IP as per docs
-                      );
-                      vm.navigate('diem-danh-qr');
-                    },
-                  ),
-                ),
-              if (totalPages > 1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: _currentPage > 0
-                            ? () => setState(() => _currentPage--)
-                            : null,
-                        color: AppColors.textSecondary,
-                      ),
-                      Text(
-                        'Trang ${_currentPage + 1} / $totalPages',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: _currentPage < totalPages - 1
-                            ? () => setState(() => _currentPage++)
-                            : null,
-                        color: AppColors.textSecondary,
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-        ],
-      ),
     );
   }
 }
@@ -387,7 +172,6 @@ class _ErrorRetry extends StatelessWidget {
     );
   }
 }
-
 
 class _IconButton extends StatefulWidget {
   final IconData icon;
@@ -423,11 +207,7 @@ class _IconButtonState extends State<_IconButton> {
               color: _hovered ? AppColors.surfaceMuted : Colors.transparent,
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            child: Icon(
-              widget.icon,
-              size: 18,
-              color: AppColors.textSecondary,
-            ),
+            child: Icon(widget.icon, size: 18, color: AppColors.textSecondary),
           ),
         ),
       ),
