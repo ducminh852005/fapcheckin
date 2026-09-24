@@ -13,11 +13,8 @@ class HeaderBar extends StatelessWidget {
     final busy = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.busy,
     );
-    final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.hasChanges,
-    );
-    final hasDetail = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.detail != null,
+    final hasSummary = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.summary != null,
     );
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
@@ -46,7 +43,7 @@ class HeaderBar extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Theo dõi tình trạng điểm danh theo lớp và từng buổi học.',
+                  'Tổng hợp lịch sử điểm danh theo từng lớp, từ buổi đầu đến nay.',
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 13,
@@ -56,14 +53,12 @@ class HeaderBar extends StatelessWidget {
             ),
           ),
           OutlinedButton.icon(
-            onPressed: busy || hasChanges
-                ? null
-                : () => vm.loadClasses(force: true),
+            onPressed: busy ? null : () => vm.loadClasses(force: true),
             icon: const Icon(Icons.refresh_outlined),
             label: const Text('Làm mới'),
           ),
           FilledButton.icon(
-            onPressed: busy || hasChanges || !hasDetail
+            onPressed: busy || !hasSummary
                 ? null
                 : () => exportHistory(context),
             icon: const Icon(Icons.file_download_outlined),

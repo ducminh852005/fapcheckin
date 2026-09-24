@@ -62,6 +62,7 @@ class ApiService {
         'createClassSchedule',
         'getHistoryClasses',
         'getHistoryDetail',
+        'getHistorySummary',
         'getAttendanceMatrix',
         'saveAttendanceChanges',
         'exportAttendanceHistory',

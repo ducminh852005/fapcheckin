@@ -46,13 +46,23 @@ class AttendanceMatrix {
 
 class MatrixStudent {
   final String rollNumber, fullName;
-  final List<String> statuses;
+  final List<MatrixCell> cells;
   MatrixStudent.fromJson(Map<String, dynamic> json)
     : rollNumber = jsonText(json['rollNumber']) ?? '',
       fullName = jsonText(json['fullName']) ?? '',
-      statuses = (json['statuses'] as List)
-          .map((s) => jsonText(s) ?? 'Unchecked')
+      cells = (json['cells'] as List)
+          .map((c) => MatrixCell.fromJson(Map<String, dynamic>.from(c)))
           .toList();
+}
+
+class MatrixCell {
+  final String sessionId, status, note, checkinTime, revision;
+  MatrixCell.fromJson(Map<String, dynamic> json)
+    : sessionId = jsonText(json['sessionId']) ?? '',
+      status = jsonText(json['status']) ?? 'Unchecked',
+      note = jsonText(json['note']) ?? '',
+      checkinTime = jsonText(json['checkinTime']) ?? '',
+      revision = jsonText(json['revision']) ?? '';
 }
 
 class HistoryExport {

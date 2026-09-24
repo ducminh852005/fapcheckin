@@ -76,7 +76,7 @@ test('all history endpoints enforce authenticated teacher and class ownership',(
   const b=backend();
   assert.equal(b.call('getHistoryClasses',{sessionToken:'fake',teacherMemberCode:'GV1'}).error.code,'UNAUTHORIZED');
   assert.equal(b.call('getHistoryClasses',{sessionToken:'student'}).error.code,'FORBIDDEN');
-  for(const action of ['getHistoryDetail','getAttendanceMatrix','exportAttendanceHistory','startHistorySession']){
+  for(const action of ['getHistoryDetail','getHistorySummary','getAttendanceMatrix','exportAttendanceHistory','startHistorySession']){
     assert.equal(b.call(action,{classCode:'OTHER'}).error.code,'FORBIDDEN');
   }
   assert.equal(b.call('getHistoryDetail',{classCode:'C1',sessionId:'wrong'}).error.code,'SESSION_NOT_FOUND');
@@ -98,10 +98,23 @@ test('validates entire change batch before any writes',()=>{
   params.changes=[{rollNumber:'SE1',status:'invented',note:'',revision:''}];
   assert.equal(b.call('saveAttendanceChanges',params).error.code,'VALIDATION_ERROR');assert.equal(b.writes,0);
 });
-test('matrix uses actual session identities and student status',()=>{
+test('matrix uses actual session identities and per-cell status with revision for editing',()=>{
   const r=backend().call('getAttendanceMatrix',{classCode:'C1'});
   assert.deepEqual(r.data.sessions.map(s=>s.sessionId),['S2','S1']);
-  assert.deepEqual(r.data.students[0].statuses,['Unchecked','Present']);
+  assert.deepEqual(r.data.students[0].cells.map(c=>c.status),['Unchecked','Present']);
+  assert.equal(r.data.students[0].cells[0].revision,'');
+  assert.notEqual(r.data.students[0].cells[1].revision,'');
+});
+test('summary aggregates present/late/absent per student across closed sessions only',()=>{
+  const b=backend();const r=b.call('getHistorySummary',{classCode:'C1'});
+  assert.equal(r.success,true);assert.equal(r.data.selectedSession,undefined);
+  assert.equal(r.data.students.length,2);
+  const se1=r.data.students.find(s=>s.rollNumber==='SE1'),se2=r.data.students.find(s=>s.rollNumber==='SE2');
+  assert.equal(se1.presentCount,1);assert.equal(se1.lateCount,0);assert.equal(se1.absentCount,0);
+  assert.equal(se1.closedSessions,1);assert.equal(se1.totalSessions,2);
+  assert.equal(se2.presentCount,0);assert.equal(se2.absentCount,1);
+  assert.equal(b.call('getHistorySummary',{classCode:'C2'}).data.students[0].closedSessions,0);
+  assert.equal(b.call('getHistorySummary',{classCode:'OTHER'}).error.code,'FORBIDDEN');
 });
 test('xlsx export escapes user data and writes inline text rather than formulas',()=>{
   const b=backend();b.tables.Users[1].fullName='=1+1 & <text>';
@@ -111,6 +124,14 @@ test('xlsx export escapes user data and writes inline text rather than formulas'
   const xml=b.zipParts.find(p=>p.name==='xl/worksheets/sheet1.xml').body;
   assert.match(xml,/=1\+1 &amp; &lt;text&gt;/);assert.ok(!xml.includes('<f>'));
   assert.ok(b.zipParts.some(p=>p.name==='[Content_Types].xml'));
+});
+test('xlsx export without sessionId aggregates whole class history per student',()=>{
+  const b=backend();
+  const r=b.call('exportAttendanceHistory',{classCode:'C1'});
+  assert.equal(r.success,true);assert.equal(r.data.filename,'Attendance_C1.xlsx');
+  const xml=b.zipParts.find(p=>p.name==='xl/worksheets/sheet1.xml').body;
+  assert.match(xml,/SE1/);assert.match(xml,/SE2/);
+  assert.ok(!xml.includes('<f>'));
 });
 test('login stores server session used by history endpoints',()=>{
   const b=backend();const login=b.call('login',{idToken:'verified-by-stub'});

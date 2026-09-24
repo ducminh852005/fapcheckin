@@ -10,6 +10,7 @@ function dispatch(action, params) {
     'createClassSchedule': function(p) { return ScheduleService.create(p); },
     'getHistoryClasses': function(p) { return AttendanceHistoryService.getClasses(p); },
     'getHistoryDetail': function(p) { return AttendanceHistoryService.getDetail(p); },
+    'getHistorySummary': function(p) { return AttendanceHistoryService.getSummary(p); },
     'saveAttendanceChanges': function(p) { return AttendanceHistoryService.saveChanges(p); },
     'getAttendanceMatrix': function(p) { return AttendanceHistoryService.getMatrix(p); },
     'exportAttendanceHistory': function(p) { return AttendanceHistoryService.exportHistory(p); },
