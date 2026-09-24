@@ -6,6 +6,7 @@ on:
       - main
       - backend-data
       - khoa-le
+      - feature/report
     paths:
       - 'apps-script/**' # Chỉ trigger khi code trong thư mục apps-script thay đổi
   workflow_dispatch: {}
@@ -40,6 +41,12 @@ jobs:
 
       - name: Validate Apps Script
         run: node --test apps-script/tests/*.test.cjs
+
+      - name: Verify report action is included
+        working-directory: apps-script
+        run: |
+          test -f ReportService.gs
+          grep -F "'getReport'" Router.gs
 
       - name: Push and Deploy to Apps Script
         working-directory: apps-script
