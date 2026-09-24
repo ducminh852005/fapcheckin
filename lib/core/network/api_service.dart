@@ -67,6 +67,7 @@ class ApiService {
         'saveAttendanceChanges',
         'exportAttendanceHistory',
         'startHistorySession',
+        'getReport',
       };
       var response = await _dio.post(
         '',

@@ -45,7 +45,7 @@ function backend() {
     },
     ContentService:{MimeType:{JSON:'application/json'},createTextOutput:body=>({setMimeType:()=>JSON.parse(body)})},
   });
-  for(const name of ['Response','AuthService','TeacherService','StudentService','SyncService','HistoryExcel','AttendanceHistoryService','Router','Code']) {
+  for(const name of ['Response','AuthService','TeacherService','StudentService','SyncService','HistoryExcel','AttendanceHistoryService','ReportService','Router','Code']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name+'.gs'),'utf8'),context);
   }
   function call(action,params={}) {return context.doPost({postData:{contents:JSON.stringify({action,sessionToken:'teacher',...params})}});}
@@ -115,6 +115,17 @@ test('summary aggregates present/late/absent per student across closed sessions 
   assert.equal(se2.presentCount,0);assert.equal(se2.absentCount,1);
   assert.equal(b.call('getHistorySummary',{classCode:'C2'}).data.students[0].closedSessions,0);
   assert.equal(b.call('getHistorySummary',{classCode:'OTHER'}).error.code,'FORBIDDEN');
+});
+test('report aggregates real closed sessions and warns only enrolled students',()=>{
+  const b=backend();const r=b.call('getReport');
+  assert.equal(r.success,true);
+  assert.equal(r.data.kpis.totalCheckins,1);
+  assert.equal(r.data.kpis.studentCount,3);
+  assert.equal(r.data.kpis.atRiskCount,1);
+  assert.equal(r.data.closedSessionCount,1);
+  assert.deepEqual(r.data.weekly.map(w=>w.label),['W1']);
+  assert.equal(r.data.subjects.length,2);
+  assert.equal(r.data.warnings[0].rollNumber,'SE2');
 });
 test('xlsx export escapes user data and writes inline text rather than formulas',()=>{
   const b=backend();b.tables.Users[1].fullName='=1+1 & <text>';
