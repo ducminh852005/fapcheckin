@@ -5,9 +5,11 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/data/models/class_section_model.dart';
 import 'package:fapcheckin/data/models/class_session.dart';
+import 'package:fapcheckin/data/models/timetable_scan_model.dart';
 import 'package:fapcheckin/core/network/json_values.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/views/teacher/class_management/dialogs/import_timetable_dialog.dart';
 
 import 'components/class_card.dart';
 import 'components/stat_card.dart';
@@ -25,10 +27,64 @@ class DashboardBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const _DashboardActions(),
+            const SizedBox(height: AppSpacing.md),
             _StatsRow(),
             const SizedBox(height: AppSpacing.md),
             _MainContent(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardActions extends StatelessWidget {
+  const _DashboardActions();
+
+  Future<void> _scanTimetable(BuildContext context) async {
+    final result = await showDialog<TimetableImportResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const ImportTimetableDialog(),
+    );
+    if (!context.mounted || result == null) return;
+
+    await context.read<DashboardViewModel>().loadClasses();
+    if (!context.mounted) return;
+
+    context.read<LiveSessionViewModel>().triggerToast(
+      type: ToastType.custom,
+      title: 'Đã cập nhật thời khóa biểu',
+      message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
+      icon: Icons.check_circle_outline,
+      accentColor: AppColors.statusPresent,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: ElevatedButton.icon(
+        onPressed: () => _scanTimetable(context),
+        icon: const Icon(Icons.document_scanner_outlined, size: 18),
+        label: const Text('Quét thời khóa biểu'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
+          textStyle: AppTextStyles.labelMd.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

@@ -5,6 +5,8 @@
  */
 function dispatch(action, params) {
   var handlers = {
+    'scanTimetableImage': function(p) { return TimetableImportService.scan(p); },
+    'importTimetableAssignments': function(p) { return TimetableImportService.importAssignments(p); },
     'getScheduleOptions': function(p) { return ScheduleService.getOptions(p); },
     'getClassSchedules': function(p) { return ScheduleService.list(p); },
     'createClassSchedule': function(p) { return ScheduleService.create(p); },
