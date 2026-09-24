@@ -1,6 +1,6 @@
 // Imports a teacher's FAP timetable screenshot using temporary Google Drive OCR.
 var TimetableImportService = (function() {
-  var MAX_FILE_BYTES = 4 * 1024 * 1024;
+  var MAX_FILE_BYTES = 500 * 1024 * 1024;
   var CACHE_SECONDS = 600;
   var ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp'];
 
@@ -116,7 +116,7 @@ var TimetableImportService = (function() {
       throwError('INVALID_IMAGE', 'Dữ liệu ảnh không hợp lệ.');
     }
     if (bytes.length > MAX_FILE_BYTES) {
-      throwError('IMAGE_TOO_LARGE', 'Ảnh vượt quá 4 MB. Vui lòng cắt gọn hoặc nén ảnh rồi thử lại.');
+      throwError('IMAGE_TOO_LARGE', 'Ảnh vượt quá 500 MB. Vui lòng chọn ảnh nhỏ hơn rồi thử lại.');
     }
 
     var blob = Utilities.newBlob(bytes, mimeType, text(params.fileName) || 'timetable');

@@ -23,6 +23,8 @@ class ImportTimetableDialog extends StatefulWidget {
 enum _Step { pick, scanning, review, importing }
 
 class _ImportTimetableDialogState extends State<ImportTimetableDialog> {
+  static const int _maxFileSizeBytes = 500 * 1024 * 1024;
+
   late final TimetableRepository _repository;
 
   TimetableScanResult? _scan;
@@ -65,9 +67,10 @@ class _ImportTimetableDialogState extends State<ImportTimetableDialog> {
       setState(() => _error = 'Không thể đọc tệp ảnh đã chọn.');
       return;
     }
-    if (bytes.lengthInBytes > 4 * 1024 * 1024) {
+    if (bytes.lengthInBytes > _maxFileSizeBytes) {
       setState(
-        () => _error = 'Ảnh vượt quá 4 MB. Hãy cắt gọn hoặc nén ảnh rồi thử lại.',
+        () => _error =
+            'Ảnh vượt quá 500 MB. Hãy chọn ảnh nhỏ hơn rồi thử lại.',
       );
       return;
     }
@@ -450,7 +453,7 @@ class _PickStep extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Hỗ trợ JPG, PNG, GIF, BMP · Tối đa 4 MB',
+                        'Hỗ trợ JPG, PNG, GIF, BMP · Tối đa 500 MB',
                         style: AppTextStyles.bodySm.copyWith(
                           color: AppColors.textSecondary,
                         ),
