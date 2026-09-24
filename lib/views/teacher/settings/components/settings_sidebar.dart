@@ -200,7 +200,7 @@ class SettingsSidebar extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Mã QR 60 giây kết hợp kiểm tra mạng Wi-Fi của lớp học.',
+                      'Mã QR 60 giây kết hợp kiểm tra mạng Wi-Fi của tiết học.',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.textSecondary,
                       ),

@@ -183,7 +183,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Độ tương phản và kích cỡ khung hình QR cho hội trường & lớp học.',
+                        'Độ tương phản và kích cỡ khung hình QR cho hội trường & tiết học.',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
                         ),

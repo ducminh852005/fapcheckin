@@ -36,6 +36,48 @@ class SheetFixtureRepository extends TeacherRepository {
   }
 }
 
+class SortFixtureRepository extends TeacherRepository {
+  SortFixtureRepository() : super(ApiService());
+
+  @override
+  Future<ApiResult<List<ClassSectionModel>>> getClasses({
+    required String teacherMemberCode,
+  }) async {
+    return ApiSuccess([
+      ClassSectionModel.fromJson({
+        ...sheetClass,
+        'classCode': 'DONE',
+        'isActive': false,
+        'startTime': '00:00',
+        'endTime': '00:01',
+        'timeLabel': '00:00 - 00:01',
+      }),
+      ClassSectionModel.fromJson({
+        ...sheetClass,
+        'classCode': 'NEXT',
+        'isActive': false,
+        'timeLabel': '',
+      }),
+      ClassSectionModel.fromJson({
+        ...sheetClass,
+        'classCode': 'OVERNIGHT',
+        'isActive': false,
+        'startTime': '20:00',
+        'endTime': '04:15',
+        'timeLabel': '20:00 - 04:15',
+      }),
+      ClassSectionModel.fromJson({
+        ...sheetClass,
+        'classCode': 'ACTIVE',
+        'isActive': true,
+        'startTime': '08:00',
+        'endTime': '10:00',
+        'timeLabel': '08:00 - 10:00',
+      }),
+    ]);
+  }
+}
+
 void main() {
   test('numeric room 303 and spreadsheet text numbers parse correctly', () {
     final model = ClassSectionModel.fromJson(sheetClass);
@@ -76,6 +118,26 @@ void main() {
       expect(dashboard.totalStudents, 30);
     },
   );
+
+  test('dashboard prioritizes active, upcoming, then completed classes', () async {
+    final dashboard = DashboardViewModel(
+      SortFixtureRepository(),
+      now: () => DateTime(2026, 9, 24, 12),
+    );
+    addTearDown(dashboard.dispose);
+    dashboard.setTeacherInfo(
+      name: 'Teacher',
+      email: 'teacher@example.test',
+      memberCode: '7',
+    );
+
+    await dashboard.loadClasses();
+
+    expect(
+      dashboard.classes.map((c) => c.classCode),
+      ['ACTIVE', 'OVERNIGHT', 'NEXT', 'DONE'],
+    );
+  });
 
   test('session and roster accept numeric IDs and slot numbers', () {
     final session = SessionModel.fromJson({

@@ -31,7 +31,7 @@ class ClassSelector extends StatelessWidget {
         Row(
           children: [
             const Text(
-              'Lớp học phụ trách',
+              'Tiết học phụ trách',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,

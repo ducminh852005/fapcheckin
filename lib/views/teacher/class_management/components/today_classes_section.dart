@@ -51,7 +51,7 @@ class _TodayClassesSectionState extends State<TodayClassesSection> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Lớp học hôm nay',
+                  'Tiết học hôm nay',
                   style: AppTextStyles.headlineMd.copyWith(
                     color: AppColors.textPrimary,
                   ),
@@ -170,7 +170,7 @@ class _TodayClassesSectionState extends State<TodayClassesSection> {
             child: Padding(
               padding: const EdgeInsets.all(32.0),
               child: Text(
-                'Không có lớp học nào hôm nay.',
+                'Không có tiết học nào hôm nay.',
                 style: AppTextStyles.bodyMd.copyWith(
                   color: AppColors.textSecondary,
                 ),
