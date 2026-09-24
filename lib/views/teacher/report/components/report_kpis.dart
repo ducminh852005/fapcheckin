@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 
 class ReportKpis extends StatelessWidget {
-  const ReportKpis({super.key});
+  final ReportData data;
+  const ReportKpis({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +30,7 @@ class ReportKpis extends StatelessWidget {
           children: [
             _buildKpiCard(
               title: 'Tỷ lệ chuyên cần TB',
-              value: '93.8%',
+              value: '${(data.kpis.attendanceRate * 100).toStringAsFixed(1)}%',
               icon: Icons.check_circle_outline,
               iconColor: AppColors.statusPresent,
               iconBg: AppColors.statusPresentBg,
@@ -40,7 +43,7 @@ class ReportKpis extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '+1.4% so với Summer 2023',
+                    '${data.closedSessionCount} phiên đã kết thúc',
                     style: AppTextStyles.labelSm.copyWith(
                       color: AppColors.statusPresent,
                     ),
@@ -53,20 +56,20 @@ class ReportKpis extends StatelessWidget {
             ),
             _buildKpiCard(
               title: 'Tổng số lượt điểm danh',
-              value: '4,820',
+              value: '${data.kpis.totalCheckins}',
               icon: Icons.qr_code_scanner,
-              iconColor: AppColors.primary,
-              iconBg: AppColors.primaryLight,
+              iconColor: ReportColors.primary,
+              iconBg: ReportColors.primaryLight,
               bottomLeft: Row(
                 children: [
                   Text(
-                    'QR động: ',
+                    'Tổng lượt có mặt: ',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      color: ReportColors.muted,
                     ),
                   ),
                   Text(
-                    '96.2%',
+                    '${data.kpis.totalCheckins}',
                     style: AppTextStyles.code.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -76,13 +79,13 @@ class ReportKpis extends StatelessWidget {
               bottomRight: Row(
                 children: [
                   Text(
-                    'Bù: ',
+                    'Lớp phụ trách: ',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      color: ReportColors.muted,
                     ),
                   ),
                   Text(
-                    '3.8%',
+                    '${data.classCount}',
                     style: AppTextStyles.code.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -92,8 +95,8 @@ class ReportKpis extends StatelessWidget {
             ),
             _buildKpiCard(
               title: 'Nguy cơ cấm thi (>20%)',
-              value: '14',
-              valueSuffix: '/ 185 sinh viên',
+              value: '${data.kpis.atRiskCount}',
+              valueSuffix: '/ ${data.kpis.studentCount} sinh viên',
               valueColor: AppColors.statusAbsent,
               icon: Icons.warning_amber_rounded,
               iconColor: AppColors.statusAbsent,
@@ -110,7 +113,7 @@ class ReportKpis extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Cần gửi nhắc nhở gấp',
+                    'Theo dữ liệu phiên đã đóng',
                     style: AppTextStyles.labelSm.copyWith(
                       color: AppColors.statusAbsent,
                     ),
@@ -123,7 +126,7 @@ class ReportKpis extends StatelessWidget {
             ),
             _buildKpiCard(
               title: 'Tỷ lệ đi trễ TB',
-              value: '4.2%',
+              value: '${(data.kpis.lateRate * 100).toStringAsFixed(1)}%',
               valueColor: AppColors.statusLate,
               icon: Icons.schedule,
               iconColor: AppColors.statusLate,
@@ -131,15 +134,15 @@ class ReportKpis extends StatelessWidget {
               bottomLeft: Row(
                 children: [
                   Text(
-                    'Thời gian trễ TB: ',
+                    'Tổng số sinh viên: ',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textSecondary,
+                      color: ReportColors.muted,
                     ),
                   ),
                   Text(
-                    '11 phút',
+                    '${data.kpis.studentCount}',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textPrimary,
+                      color: ReportColors.text,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -197,7 +200,7 @@ class ReportKpis extends StatelessWidget {
                         Text(
                           title.toUpperCase(),
                           style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.textSecondary,
+                            color: ReportColors.muted,
                             letterSpacing: 0.5,
                           ),
                           maxLines: 1,
@@ -211,7 +214,7 @@ class ReportKpis extends StatelessWidget {
                             Text(
                               value,
                               style: AppTextStyles.headlineLg.copyWith(
-                                color: valueColor ?? AppColors.textPrimary,
+                                color: valueColor ?? ReportColors.text,
                               ),
                             ),
                             if (valueSuffix != null) ...[
@@ -242,7 +245,7 @@ class ReportKpis extends StatelessWidget {
               vertical: 8,
             ),
             decoration: const BoxDecoration(
-              color: AppColors.surfaceBright,
+              color: ReportColors.background,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(AppSpacing.radiusXl),
                 bottomRight: Radius.circular(AppSpacing.radiusXl),
@@ -252,7 +255,7 @@ class ReportKpis extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 bottomLeft,
-                if (bottomRight != null) bottomRight,
+                bottomRight ?? const SizedBox.shrink(),
                 if (badgeText != null)
                   Container(
                     padding: const EdgeInsets.symmetric(

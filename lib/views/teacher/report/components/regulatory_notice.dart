@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
 
 class RegulatoryNotice extends StatelessWidget {
   const RegulatoryNotice({super.key});
@@ -12,7 +13,7 @@ class RegulatoryNotice extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.surface, AppColors.surfaceBright],
+          colors: [Colors.white, ReportColors.warningBackground],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -45,27 +46,49 @@ class RegulatoryNotice extends StatelessWidget {
                     color: AppColors.statusAbsentBg,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   ),
-                  child: const Icon(Icons.policy, color: AppColors.statusAbsent, size: 20),
+                  child: const Icon(
+                    Icons.policy,
+                    color: AppColors.statusAbsent,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Quy chế đào tạo FPT University (QĐ số 868/QĐ-ĐHFPT):', style: AppTextStyles.labelMd),
+                      Text(
+                        'Quy chế đào tạo FPT University (QĐ số 868/QĐ-ĐHFPT):',
+                        style: AppTextStyles.labelMd,
+                      ),
                       const SizedBox(height: 2),
                       RichText(
                         text: TextSpan(
-                          style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                           children: [
                             const TextSpan(text: 'Sinh viên vắng '),
-                            TextSpan(text: 'từ slot thứ 7 trở đi', style: AppTextStyles.bodySm.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                            const TextSpan(text: ' (vượt quá 20% tổng số 30 slot học quy định) sẽ tự động bị hệ thống FAP gán trạng thái '),
+                            TextSpan(
+                              text: 'từ slot thứ 7 trở đi',
+                              style: AppTextStyles.bodySm.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const TextSpan(
+                              text: ' (vượt quá 20% tổng số 30 slot học quy định) sẽ tự động bị hệ thống FAP gán trạng thái ',
+                            ),
                             TextSpan(
                               text: 'NOT QUALIFIED (Cấm thi cuối kỳ)',
-                              style: AppTextStyles.code.copyWith(fontWeight: FontWeight.bold, color: AppColors.statusAbsent),
+                              style: AppTextStyles.code.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.statusAbsent,
+                              ),
                             ),
-                            const TextSpan(text: '. Giảng viên cần xuất dữ liệu trước buổi 28 để phòng Đào tạo kịp thời công bố danh sách chính thức.'),
+                            const TextSpan(
+                              text: '. Giảng viên cần xuất dữ liệu trước buổi 28 để phòng Đào tạo kịp thời công bố danh sách chính thức.',
+                            ),
                           ],
                         ),
                       ),
@@ -75,14 +98,22 @@ class RegulatoryNotice extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Action Buttons
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildBtn('Xem quy chế FAP 2023', AppColors.surfaceMuted, AppColors.textPrimary),
+              _buildBtn(
+                'Xem quy chế FAP 2025',
+                ReportColors.background,
+                ReportColors.text,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              _buildBtn('Xác nhận số liệu kỳ này', AppColors.primaryContainer, AppColors.onPrimary),
+              _buildBtn(
+                'Xác nhận số liệu kỳ này',
+                ReportColors.primary,
+                Colors.white,
+              ),
             ],
           ),
         ],
@@ -98,7 +129,10 @@ class RegulatoryNotice extends StatelessWidget {
         onTap: () {},
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           ),

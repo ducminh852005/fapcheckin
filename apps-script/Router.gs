@@ -15,6 +15,7 @@ function dispatch(action, params) {
     'getAttendanceMatrix': function(p) { return AttendanceHistoryService.getMatrix(p); },
     'exportAttendanceHistory': function(p) { return AttendanceHistoryService.exportHistory(p); },
     'startHistorySession': function(p) { return AttendanceHistoryService.startSession(p); },
+    'getReport': function(p) { return ReportService.getReport(p); },
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,
