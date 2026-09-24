@@ -15,13 +15,19 @@ const String kCheckinBaseUrl =
 
 /// Left column: class info + QR code + session controls
 class QrPanel extends StatelessWidget {
-  const QrPanel({super.key});
+  final double? minHeight;
+
+  const QrPanel({super.key, this.minHeight});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<LiveSessionViewModel>(
       builder: (context, vm, _) {
         return Container(
+          width: double.infinity,
+          constraints: minHeight == null
+              ? null
+              : BoxConstraints(minHeight: minHeight!),
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -35,6 +41,7 @@ class QrPanel extends StatelessWidget {
             ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _ClassInfoHeader(vm: vm),
               const SizedBox(height: AppSpacing.md),
@@ -62,37 +69,30 @@ class _ClassInfoHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    vm.courseCategory.toUpperCase(),
-                    style: AppTextStyles.codeSm.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${vm.courseCode} — ${vm.courseName}',
-                    style: AppTextStyles.headlineMd.copyWith(
-                      color: AppColors.textPrimary,
-                      letterSpacing: -0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: Text(
+                vm.courseCategory.toUpperCase(),
+                style: AppTextStyles.codeSm.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
             const SizedBox(width: 8),
             _ActiveBadge(),
           ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${vm.courseCode} — ${vm.courseName}',
+          style: AppTextStyles.headlineMd.copyWith(
+            color: AppColors.textPrimary,
+            letterSpacing: -0.3,
+          ),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 8),
         // Meta chips row
@@ -287,18 +287,20 @@ class _QrCodeDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
-          BoxShadow(color: Color(0x05142433), blurRadius: 8, spreadRadius: 2),
-        ],
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 360),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          boxShadow: const [
+            BoxShadow(color: Color(0x05142433), blurRadius: 8, spreadRadius: 2),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
           // Background blurs
           Positioned(
             top: -48,
@@ -450,7 +452,8 @@ class _QrCodeDisplay extends StatelessWidget {
                 ),
             ],
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

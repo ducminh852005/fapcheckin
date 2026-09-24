@@ -109,7 +109,7 @@ class _MainContent extends StatelessWidget {
               : c.timeLabel;
 
           if (info != null) {
-            // Lớp học lặp lại 2 buổi/tuần theo slotCode
+            // Tiết học lặp lại 2 buổi/tuần theo slotCode
             for (final day in info.weekdays) {
               entries.add(
                 TimetableEntry(

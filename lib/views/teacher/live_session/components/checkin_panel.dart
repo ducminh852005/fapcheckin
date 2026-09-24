@@ -400,7 +400,7 @@ class _CheckinTable extends StatefulWidget {
 
 class _CheckinTableState extends State<_CheckinTable> {
   int _currentPage = 0;
-  static const int _itemsPerPage = 10;
+  static const int _itemsPerPage = 8;
 
   @override
   Widget build(BuildContext context) {
@@ -431,17 +431,18 @@ class _CheckinTableState extends State<_CheckinTable> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 460),
-            child: SingleChildScrollView(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 920,
               child: Table(
                 columnWidths: const {
-                  0: FixedColumnWidth(50),  // STT
-                  1: FlexColumnWidth(1.2),  // MSSV
-                  2: FlexColumnWidth(2),    // Họ tên
-                  3: FlexColumnWidth(1.2),  // Thời gian
-                  4: FlexColumnWidth(1.5),  // Trạng thái
-                  5: FlexColumnWidth(1.3),  // IP
+                  0: FixedColumnWidth(52), // STT
+                  1: FixedColumnWidth(118), // MSSV
+                  2: FixedColumnWidth(300), // Họ tên
+                  3: FixedColumnWidth(120), // Thời gian
+                  4: FixedColumnWidth(180), // Trạng thái
+                  5: FixedColumnWidth(150), // IP
                 },
                 children: [
                   // Header
@@ -457,7 +458,7 @@ class _CheckinTableState extends State<_CheckinTable> {
                     ],
                   ),
                   // Data rows
-                  ...paginatedStudents.asMap().entries.map((e) {
+                      ...paginatedStudents.asMap().entries.map((e) {
                     final i = e.key;
                     final s = e.value;
                     return TableRow(
@@ -498,8 +499,8 @@ class _CheckinTableState extends State<_CheckinTable> {
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w500,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
@@ -538,7 +539,7 @@ class _CheckinTableState extends State<_CheckinTable> {
                                       color: AppColors.textSecondary,
                                     ),
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    overflow: TextOverflow.visible,
                                   ),
                                 ),
                         ),

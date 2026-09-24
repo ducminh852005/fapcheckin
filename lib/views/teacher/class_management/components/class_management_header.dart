@@ -85,7 +85,7 @@ class ClassManagementHeader extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'Quản lý Lớp học',
+                          'Quản lý Tiết học',
                           style: AppTextStyles.headlineLg.copyWith(
                             color: AppColors.textPrimary,
                           ),
@@ -153,7 +153,7 @@ class ClassManagementHeader extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Row(
                 children: [
-                  _FilterChip(label: 'Tất cả lớp (6)', isActive: true, onTap: () {}),
+                  _FilterChip(label: 'Tất cả tiết (6)', isActive: true, onTap: () {}),
                   const SizedBox(width: 8),
                   _FilterChip(label: 'Hôm nay (2)', isActive: false, onTap: () {}),
                   const SizedBox(width: 8),
