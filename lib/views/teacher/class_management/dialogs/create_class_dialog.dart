@@ -475,7 +475,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        _buildLabel('Lớp học & Mã môn phụ trách'),
+                                        _buildLabel('Tiết học & Mã môn phụ trách'),
                                         _buildDropdown(
                                           _classCode,
                                           classes.map((c) => DropdownMenuItem(
@@ -483,7 +483,7 @@ class _CreateClassDialogState extends State<CreateClassDialog> {
                                             child: Text('${c['subjectName']} (${c['classCode']}) • ${c['studentCount']} sinh viên', overflow: TextOverflow.ellipsis),
                                           )).toList(),
                                           (v) => setState(() => _classCode = v),
-                                          hint: 'Chọn lớp học',
+                                          hint: 'Chọn tiết học',
                                         ),
                                         const SizedBox(height: 20),
                                         _buildLabel(

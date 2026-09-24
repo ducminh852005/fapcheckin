@@ -43,8 +43,9 @@ class Sidebar extends StatelessWidget {
               ),
               _NavItem(
                 icon: Icons.school_outlined,
-                label: 'Lớp học',
+                label: 'Tiết học',
                 route: 'lop-hoc',
+                activeRoutes: const {'diem-danh-qr'},
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lop-hoc'),
               ),
@@ -106,6 +107,7 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String route;
+  final Set<String> activeRoutes;
   final String currentRoute;
   final VoidCallback onTap;
 
@@ -113,11 +115,13 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.route,
+    this.activeRoutes = const {},
     required this.currentRoute,
     required this.onTap,
   });
 
-  bool get isActive => currentRoute == route;
+  bool get isActive =>
+      currentRoute == route || activeRoutes.contains(currentRoute);
 
   @override
   Widget build(BuildContext context) {

@@ -13,6 +13,8 @@ class LiveSessionBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNarrow = MediaQuery.sizeOf(context).width < 1220;
+
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
       child: Padding(
@@ -20,33 +22,6 @@ class LiveSessionBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Main 2-column grid (5/12 + 7/12)
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 900) {
-                  // Stack vertically on small screens
-                  return const Column(
-                    children: [
-                      QrPanel(),
-                      SizedBox(height: 16),
-                      CheckinPanel(),
-                    ],
-                  );
-                }
-                return const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left column (~40%)
-                    Expanded(flex: 5, child: QrPanel()),
-                    SizedBox(width: 16),
-                    // Right column (~60%)
-                    Expanded(flex: 7, child: CheckinPanel()),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            // Back button
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
@@ -55,7 +30,7 @@ class LiveSessionBody extends StatelessWidget {
                 },
                 icon: const Icon(Icons.arrow_back, size: 20),
                 label: Text(
-                  'Quay lại Quản lý Lớp học',
+                  'Quay lại Quản lý Tiết học',
                   style: AppTextStyles.labelMd.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -63,23 +38,43 @@ class LiveSessionBody extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   backgroundColor: AppColors.surface,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    side: const BorderSide(color: AppColors.surfaceContainerHigh),
+                    side: const BorderSide(
+                      color: AppColors.surfaceContainerHigh,
+                    ),
                   ),
                 ),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            if (isNarrow)
+              const Column(
+                children: [
+                  QrPanel(),
+                  SizedBox(height: 16),
+                  CheckinPanel(),
+                ],
+              )
+            else
+              const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 4, child: QrPanel(minHeight: 820)),
+                  SizedBox(width: 16),
+                  Expanded(flex: 8, child: CheckinPanel()),
+                ],
+              ),
           ],
-
         ),
       ),
     );
   }
 }
-
-
 
 /// Toast notification (bottom-right)
 class ToastNotification extends StatelessWidget {

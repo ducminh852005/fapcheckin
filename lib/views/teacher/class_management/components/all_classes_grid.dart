@@ -48,7 +48,7 @@ class _AllClassesGridState extends State<AllClassesGrid> {
             Row(
               children: [
                 Text(
-                  'Tất cả lớp học kỳ ${viewModel.semester}',
+                  'Tất cả tiết học kỳ ${viewModel.semester}',
                   style: AppTextStyles.headlineMd.copyWith(color: AppColors.textPrimary),
                 ),
                 const SizedBox(width: 8),
@@ -59,7 +59,7 @@ class _AllClassesGridState extends State<AllClassesGrid> {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                   ),
                   child: Text(
-                    '${classes.length} Lớp phân công',
+                    '${classes.length} tiết phân công',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,

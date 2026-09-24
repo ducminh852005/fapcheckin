@@ -33,6 +33,7 @@ migrate_working_dir/
 /build/
 
 # Local OAuth credentials used for desktop builds
+desktop_oauth.json
 desktop_oauth.local.json
 /coverage/
 

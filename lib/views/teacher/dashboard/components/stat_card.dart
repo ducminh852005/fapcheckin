@@ -100,7 +100,7 @@ class TodayScheduleStatCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'lớp học',
+            'tiết học',
             style: AppTextStyles.bodySm.copyWith(
               fontWeight: FontWeight.w500,
             ),
