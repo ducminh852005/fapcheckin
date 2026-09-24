@@ -442,8 +442,6 @@ class _CheckinTableState extends State<_CheckinTable> {
                   3: FlexColumnWidth(1.2),  // Thời gian
                   4: FlexColumnWidth(1.5),  // Trạng thái
                   5: FlexColumnWidth(1.3),  // IP
-                  6: FlexColumnWidth(1.2),  // Phương thức
-                  7: FixedColumnWidth(90),  // Thao tác
                 },
                 children: [
                   // Header
@@ -456,8 +454,6 @@ class _CheckinTableState extends State<_CheckinTable> {
                       _HeaderCell('Thời gian'),
                       _HeaderCell('Trạng thái'),
                       _HeaderCell('IP Mạng'),
-                      _HeaderCell('Phương thức'),
-                      _HeaderCell('Thao tác', center: true),
                     ],
                   ),
                   // Data rows
@@ -544,42 +540,6 @@ class _CheckinTableState extends State<_CheckinTable> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                        ),
-                        _DataCell(
-                          child: s.method == null
-                              ? Text('--', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary))
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      s.method == CheckinMethod.qrCode
-                                          ? Icons.qr_code_2_outlined
-                                          : Icons.edit_note_outlined,
-                                      size: 16,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        s.method == CheckinMethod.qrCode ? 'QR Code' : 'Thủ công',
-                                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                        _DataCell(
-                          center: true,
-                          child: s.status == CheckinStatus.unchecked
-                              ? _MarkPresentButton(studentId: s.studentId, vm: vm)
-                              : IconButton(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textTertiary),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  splashRadius: 16,
                                 ),
                         ),
                       ],

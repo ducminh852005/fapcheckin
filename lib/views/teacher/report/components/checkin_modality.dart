@@ -1,11 +1,15 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 
 class CheckinModality extends StatelessWidget {
-  const CheckinModality({super.key});
+  final ReportData data;
+  const CheckinModality({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +33,7 @@ class CheckinModality extends StatelessWidget {
           const SizedBox(height: 2),
           Text('Phân bổ kênh ghi nhận điểm danh', style: AppTextStyles.caption),
           const SizedBox(height: AppSpacing.md),
-          
+
           // Donut Chart
           Center(
             child: SizedBox(
@@ -40,13 +44,27 @@ class CheckinModality extends StatelessWidget {
                 children: [
                   CustomPaint(
                     size: const Size(144, 144),
-                    painter: _DonutChartPainter(),
+                    painter: _DonutChartPainter(
+                      qrRate: _rate('qr'),
+                      otherRate: _rate('other'),
+                      manualRate: _rate('manual'),
+                    ),
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('88%', style: AppTextStyles.headlineMd),
-                      Text('QR Code', style: AppTextStyles.caption),
+                      Text(
+                        data.methods.isEmpty
+                            ? '0%'
+                            : '${(data.methods.first.rate * 100).toStringAsFixed(0)}%',
+                        style: AppTextStyles.headlineMd,
+                      ),
+                      Text(
+                        data.methods.isEmpty
+                            ? 'Chưa có dữ liệu'
+                            : data.methods.first.label,
+                        style: AppTextStyles.caption,
+                      ),
                     ],
                   ),
                 ],
@@ -54,17 +72,33 @@ class CheckinModality extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          
+
           // Legend
-          _buildLegendRow('Quét QR mã động 20s', '88%', AppColors.primaryContainer),
-          const SizedBox(height: 8),
-          _buildLegendRow('Đơn phép FAP hợp lệ', '8%', AppColors.statusManual),
-          const SizedBox(height: 8),
-          _buildLegendRow('GV xác nhận bù thủ công', '4%', AppColors.statusLate),
+          ...data.methods.map(
+            (method) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildLegendRow(
+                method.label,
+                '${(method.rate * 100).toStringAsFixed(1)}%',
+                method.key == 'manual'
+                    ? ReportColors.orange
+                    : method.key == 'other'
+                    ? ReportColors.red
+                    : ReportColors.primary,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+
+  double _rate(String key) =>
+      data.methods
+          .where((method) => method.key == key)
+          .map((method) => method.rate)
+          .firstOrNull ??
+      0;
 
   Widget _buildLegendRow(String label, String value, Color color) {
     return Row(
@@ -78,16 +112,34 @@ class CheckinModality extends StatelessWidget {
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
-            Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary)),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
           ],
         ),
-        Text(value, style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
 }
 
 class _DonutChartPainter extends CustomPainter {
+  final double qrRate;
+  final double otherRate;
+  final double manualRate;
+
+  const _DonutChartPainter({
+    required this.qrRate,
+    required this.otherRate,
+    required this.manualRate,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
@@ -95,7 +147,7 @@ class _DonutChartPainter extends CustomPainter {
     const strokeWidth = 14.0;
 
     final bgPaint = Paint()
-      ..color = AppColors.surfaceContainer
+      ..color = ReportColors.border
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -103,21 +155,19 @@ class _DonutChartPainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // QR: 88%
+    // The report currently uses the real method split returned by the API.
     final qrPaint = Paint()
-      ..color = AppColors.primary
+      ..color = ReportColors.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // FAP: 8%
     final fapPaint = Paint()
       ..color = AppColors.statusManual
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Manual: 4%
     final manualPaint = Paint()
       ..color = AppColors.statusLate
       ..style = PaintingStyle.stroke
@@ -126,18 +176,15 @@ class _DonutChartPainter extends CustomPainter {
 
     double startAngle = -pi / 2;
 
-    // Draw QR
-    double sweepAngle = 2 * pi * 0.88;
+    double sweepAngle = 2 * pi * qrRate;
     canvas.drawArc(rect, startAngle, sweepAngle, false, qrPaint);
     startAngle += sweepAngle;
 
-    // Draw FAP
-    sweepAngle = 2 * pi * 0.08;
+    sweepAngle = 2 * pi * otherRate;
     canvas.drawArc(rect, startAngle, sweepAngle, false, fapPaint);
     startAngle += sweepAngle;
 
-    // Draw Manual
-    sweepAngle = 2 * pi * 0.04;
+    sweepAngle = 2 * pi * manualRate;
     canvas.drawArc(rect, startAngle, sweepAngle, false, manualPaint);
   }
 

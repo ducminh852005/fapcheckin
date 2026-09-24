@@ -372,9 +372,9 @@
     // Map mã lỗi backend -> { title, message, hint, canRetry, canLogout }
     var ERROR_MAP = {
       IP_MISMATCH: {
-        title: 'Sai mạng Wi-Fi',
-        message: 'Bạn đang không cùng mạng Wi-Fi với phòng học.',
-        hint: 'Vui lòng tắt 4G/VPN, kết nối vào đúng Wi-Fi của trường rồi bấm "Thử lại".',
+        title: 'Không xác minh được mạng',
+        message: 'IP công khai của thiết bị không trùng với IP của phiên điểm danh.',
+        hint: 'Hãy tắt VPN/proxy, kết nối đúng Wi-Fi rồi bấm "Thử lại". Giảng viên có thể cần mở lại màn hình phiên để đồng bộ IP.',
         canRetry: true, canLogout: false
       },
       SESSION_NOT_FOUND: {

@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 
 class ReportKpis extends StatelessWidget {
-  const ReportKpis({super.key});
+  final ReportData data;
+  const ReportKpis({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 4;
-        if (constraints.maxWidth < 600) {
+        if (constraints.maxWidth < 700) {
           crossAxisCount = 1;
-        } else if (constraints.maxWidth < 1100) {
+        } else if (constraints.maxWidth < 1200) {
           crossAxisCount = 2;
         }
 
@@ -23,19 +26,28 @@ class ReportKpis extends StatelessWidget {
           mainAxisSpacing: AppSpacing.md,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: constraints.maxWidth > 1100 ? 1.6 : 2.0,
+          childAspectRatio: constraints.maxWidth >= 1200 ? 2.0 : 1.85,
           children: [
             _buildKpiCard(
               title: 'Tỷ lệ chuyên cần TB',
-              value: '93.8%',
+              value: '${(data.kpis.attendanceRate * 100).toStringAsFixed(1)}%',
               icon: Icons.check_circle_outline,
               iconColor: AppColors.statusPresent,
               iconBg: AppColors.statusPresentBg,
               bottomLeft: Row(
                 children: [
-                  const Icon(Icons.trending_up, size: 16, color: AppColors.statusPresent),
+                  const Icon(
+                    Icons.trending_up,
+                    size: 16,
+                    color: AppColors.statusPresent,
+                  ),
                   const SizedBox(width: 4),
-                  Text('+1.4% so với Summer 2023', style: AppTextStyles.labelSm.copyWith(color: AppColors.statusPresent)),
+                  Text(
+                    '${data.closedSessionCount} phiên đã kết thúc',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.statusPresent,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Tốt',
@@ -44,36 +56,68 @@ class ReportKpis extends StatelessWidget {
             ),
             _buildKpiCard(
               title: 'Tổng số lượt điểm danh',
-              value: '4,820',
+              value: '${data.kpis.totalCheckins}',
               icon: Icons.qr_code_scanner,
-              iconColor: AppColors.primary,
-              iconBg: AppColors.primaryLight,
+              iconColor: ReportColors.primary,
+              iconBg: ReportColors.primaryLight,
               bottomLeft: Row(
                 children: [
-                  Text('QR động: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('96.2%', style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    'Tổng lượt có mặt: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: ReportColors.muted,
+                    ),
+                  ),
+                  Text(
+                    '${data.kpis.totalCheckins}',
+                    style: AppTextStyles.code.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               bottomRight: Row(
                 children: [
-                  Text('Bù: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('3.8%', style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    'Lớp phụ trách: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: ReportColors.muted,
+                    ),
+                  ),
+                  Text(
+                    '${data.classCount}',
+                    style: AppTextStyles.code.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
             _buildKpiCard(
               title: 'Nguy cơ cấm thi (>20%)',
-              value: '14',
-              valueSuffix: '/ 185 sinh viên',
+              value: '${data.kpis.atRiskCount}',
+              valueSuffix: '/ ${data.kpis.studentCount} sinh viên',
               valueColor: AppColors.statusAbsent,
               icon: Icons.warning_amber_rounded,
               iconColor: AppColors.statusAbsent,
               iconBg: AppColors.statusAbsentBg,
               bottomLeft: Row(
                 children: [
-                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.statusAbsent, shape: BoxShape.circle)),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.statusAbsent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  Text('Cần gửi nhắc nhở gấp', style: AppTextStyles.labelSm.copyWith(color: AppColors.statusAbsent)),
+                  Text(
+                    'Theo dữ liệu phiên đã đóng',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.statusAbsent,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Báo động',
@@ -82,15 +126,26 @@ class ReportKpis extends StatelessWidget {
             ),
             _buildKpiCard(
               title: 'Tỷ lệ đi trễ TB',
-              value: '4.2%',
+              value: '${(data.kpis.lateRate * 100).toStringAsFixed(1)}%',
               valueColor: AppColors.statusLate,
               icon: Icons.schedule,
               iconColor: AppColors.statusLate,
               iconBg: AppColors.statusLateBg,
               bottomLeft: Row(
                 children: [
-                  Text('Thời gian trễ TB: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('11 phút', style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Tổng số sinh viên: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: ReportColors.muted,
+                    ),
+                  ),
+                  Text(
+                    '${data.kpis.studentCount}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: ReportColors.text,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Chấp nhận',
@@ -133,7 +188,7 @@ class ReportKpis extends StatelessWidget {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,7 +200,7 @@ class ReportKpis extends StatelessWidget {
                         Text(
                           title.toUpperCase(),
                           style: AppTextStyles.labelSm.copyWith(
-                            color: AppColors.textSecondary,
+                            color: ReportColors.muted,
                             letterSpacing: 0.5,
                           ),
                           maxLines: 1,
@@ -159,54 +214,59 @@ class ReportKpis extends StatelessWidget {
                             Text(
                               value,
                               style: AppTextStyles.headlineLg.copyWith(
-                                color: valueColor ?? AppColors.textPrimary,
+                                color: valueColor ?? ReportColors.text,
                               ),
                             ),
                             if (valueSuffix != null) ...[
                               const SizedBox(width: 4),
-                              Text(
-                                valueSuffix,
-                                style: AppTextStyles.caption,
-                              ),
-                            ]
+                              Text(valueSuffix, style: AppTextStyles.caption),
+                            ],
                           ],
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: iconBg,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
-                    child: Icon(icon, color: iconColor),
+                    child: Icon(icon, color: iconColor, size: 19),
                   ),
                 ],
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: const BoxDecoration(
-              color: AppColors.surfaceBright,
+              color: ReportColors.background,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(AppSpacing.radiusXl),
                 bottomRight: Radius.circular(AppSpacing.radiusXl),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 bottomLeft,
-                if (bottomRight != null) bottomRight,
+                ?bottomRight,
                 if (badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeBg,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
                     ),
                     child: Text(
                       badgeText,

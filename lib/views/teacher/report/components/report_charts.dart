@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 
 class ReportCharts extends StatelessWidget {
-  const ReportCharts({super.key});
+  final ReportData data;
+  const ReportCharts({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -32,17 +35,23 @@ class ReportCharts extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Xu hướng chuyên cần theo tuần', style: AppTextStyles.headlineSm),
+                  Text(
+                    'Xu hướng chuyên cần theo tuần',
+                    style: AppTextStyles.headlineSm,
+                  ),
                   const SizedBox(height: 2),
-                  Text('Diễn biến tỷ lệ Có mặt, Đi trễ, Vắng mặt qua 10 tuần học (Slot 1 - Slot 30)', style: AppTextStyles.caption),
+                  Text(
+                    'Tỷ lệ Có mặt, Đi trễ, Vắng mặt theo các tuần có phiên đã kết thúc',
+                    style: AppTextStyles.caption,
+                  ),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildLegendItem(AppColors.primaryContainer, 'Có mặt'),
+                  _buildLegendItem(ReportColors.primary, 'Có mặt'),
                   const SizedBox(width: AppSpacing.md),
-                  _buildLegendItem(AppColors.statusLate, 'Đi trễ'),
+                  _buildLegendItem(ReportColors.orange, 'Đi trễ'),
                   const SizedBox(width: AppSpacing.md),
                   _buildLegendItem(AppColors.statusAbsent, 'Vắng mặt'),
                 ],
@@ -50,7 +59,7 @@ class ReportCharts extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          
+
           // Chart Area
           SizedBox(
             height: 200,
@@ -60,10 +69,7 @@ class ReportCharts extends StatelessWidget {
                 Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(4, (index) {
-                    return Container(
-                      height: 1,
-                      color: AppColors.surfaceContainerHigh,
-                    );
+                    return Container(height: 1, color: ReportColors.border);
                   }),
                 ),
                 // Bars
@@ -71,33 +77,30 @@ class ReportCharts extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _buildBar(96, 3, 1),
-                    _buildBar(95, 3, 2),
-                    _buildBar(94, 4, 2),
-                    _buildBar(93, 4, 3),
-                    _buildBar(91, 5, 4),
-                    _buildBar(92, 4, 4),
-                    _buildBar(95, 3, 2),
-                    _buildBar(93, 4, 3),
-                    _buildBar(89, 5, 6), // W9 assignment
-                    _buildBar(94, 4, 2),
+                    ...data.weekly.map(
+                      (week) => _buildBar(
+                        week.presentRate,
+                        week.lateRate,
+                        week.absentRate,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // X Axis Labels
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(10, (index) {
-              final isCurrent = index == 9;
+            children: List.generate(data.weekly.length, (index) {
+              final isCurrent = index == data.weekly.length - 1;
               return Text(
-                'W${index + 1}${isCurrent ? '*' : ''}',
+                data.weekly[index].label,
                 style: AppTextStyles.code.copyWith(
                   fontSize: 12,
-                  color: isCurrent ? AppColors.primary : AppColors.textTertiary,
+                  color: isCurrent ? ReportColors.primary : ReportColors.muted,
                   fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
                 ),
               );
@@ -122,11 +125,9 @@ class ReportCharts extends StatelessWidget {
     );
   }
 
-  Widget _buildBar(int present, int late, int absent) {
-    // Total should be 100
-    // Height factor: total height is ~180px, so we scale.
+  Widget _buildBar(double present, double late, double absent) {
     const double maxHeight = 180.0;
-    
+
     return SizedBox(
       width: 32,
       height: maxHeight,
@@ -134,21 +135,24 @@ class ReportCharts extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            height: maxHeight * (absent / 100),
+            height: maxHeight * absent,
             decoration: const BoxDecoration(
-              color: AppColors.statusAbsent,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(3), topRight: Radius.circular(3)),
+              color: ReportColors.red,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(3),
+                topRight: Radius.circular(3),
+              ),
             ),
           ),
+          Container(height: maxHeight * late, color: ReportColors.orange),
           Container(
-            height: maxHeight * (late / 100),
-            color: AppColors.statusLate,
-          ),
-          Container(
-            height: maxHeight * (present / 100),
+            height: maxHeight * present,
             decoration: const BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(3), bottomRight: Radius.circular(3)),
+              color: ReportColors.primary,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(3),
+                bottomRight: Radius.circular(3),
+              ),
             ),
           ),
         ],

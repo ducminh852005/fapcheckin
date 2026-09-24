@@ -52,7 +52,7 @@ class ApiService {
       final requestBody = {
         'action': action,
         if (_sessionToken != null) 'sessionToken': _sessionToken,
-        if (payload != null) ...payload,
+        ...?payload,
       };
 
       // Đảm bảo gửi chuỗi JSON thô
@@ -62,24 +62,72 @@ class ApiService {
         'createClassSchedule',
         'getHistoryClasses',
         'getHistoryDetail',
+        'getHistorySummary',
         'getAttendanceMatrix',
         'saveAttendanceChanges',
         'exportAttendanceHistory',
         'startHistorySession',
+        'getReport',
       };
-      final response = await _dio.post(
+      var response = await _dio.post(
         '',
         data: jsonEncode(requestBody),
-        options: historyActions.contains(action)
-            ? Options(receiveTimeout: const Duration(seconds: 60))
-            : null,
+        options: Options(
+          // Dart's native HttpClient does not reliably follow a 302 after a
+          // POST. Apps Script returns the JSON result through the Location URL,
+          // so native platforms must follow that redirect with a GET.
+          followRedirects: kIsWeb,
+          responseType: kIsWeb ? null : ResponseType.plain,
+          receiveTimeout: historyActions.contains(action)
+              ? const Duration(seconds: 60)
+              : null,
+        ),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 302) {
+      if (!kIsWeb &&
+          response.statusCode != null &&
+          response.statusCode! >= 300 &&
+          response.statusCode! < 400) {
+        final location = response.headers.value('location');
+        if (location == null || location.trim().isEmpty) {
+          return ApiFailure(
+            ApiError(
+              code: 'EMPTY_REDIRECT',
+              message: 'Apps Script trả về redirect nhưng thiếu URL kết quả.',
+            ),
+          );
+        }
+        response = await _dio.getUri(
+          Uri.parse(location),
+          options: Options(
+            followRedirects: true,
+            responseType: ResponseType.plain,
+            receiveTimeout: const Duration(seconds: 60),
+          ),
+        );
+      }
+
+      if (response.statusCode == 200) {
         // Dữ liệu từ Google thường là String, ta ép parse JSON
-        final data = response.data is String
-            ? jsonDecode(response.data)
-            : response.data;
+        final rawData = response.data;
+        if (rawData == null || (rawData is String && rawData.trim().isEmpty)) {
+          return ApiFailure(
+            ApiError(
+              code: 'EMPTY_RESPONSE',
+              message: 'Apps Script không trả về dữ liệu. Vui lòng thử lại.',
+            ),
+          );
+        }
+
+        final data = rawData is String ? jsonDecode(rawData) : rawData;
+        if (data is! Map<String, dynamic>) {
+          return ApiFailure(
+            ApiError(
+              code: 'INVALID_RESPONSE',
+              message: 'Apps Script trả về dữ liệu không đúng định dạng JSON.',
+            ),
+          );
+        }
         final apiResponse = ApiResponse<T>.fromJson(data, fromJsonT: fromJsonT);
 
         if (apiResponse.success) {

@@ -2,97 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
 
 class ReportHeader extends StatelessWidget {
-  const ReportHeader({super.key});
+  final String generatedAt;
+  final String semester;
+  final int classCount;
+
+  const ReportHeader({
+    super.key,
+    required this.generatedAt,
+    required this.semester,
+    required this.classCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000), // shadow-sm roughly
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-        ],
+        border: Border.all(color: ReportColors.border),
       ),
-      child: Wrap(
-        spacing: AppSpacing.md,
-        runSpacing: AppSpacing.md,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          // Left side: Title and context
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                      ),
-                      child: Text(
-                        'HỌC VỤ FAP',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text('•', style: AppTextStyles.caption),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'Cập nhật lần cuối: 10:45 AM - Hôm nay',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Báo cáo & Thống kê Chuyên cần',
-                  style: AppTextStyles.headlineLg.copyWith(
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Tổng hợp dữ liệu chuyên cần, phân tích xu hướng vắng mặt và danh sách sinh viên chạm ngưỡng cảnh báo cấm thi theo quy chế đào tạo FPT University.',
-                  style: AppTextStyles.bodySm,
-                ),
-              ],
-            ),
-          ),
-          
-          // Right side: Filters and Exports
-          Wrap(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final controls = Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
+            alignment: WrapAlignment.start,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _buildDropdown('Fall 2023 (Kỳ hiện tại)'),
-              _buildDropdown('Tất cả lớp phụ trách (5 lớp)'),
-              
+              _buildDropdown(
+                semester.isEmpty
+                    ? 'Chưa xác định học kỳ'
+                    : '$semester (Kỳ hiện tại)',
+              ),
+              _buildDropdown('Tất cả lớp phụ trách ($classCount lớp)'),
+
               // Divider
               Container(
                 width: 1,
                 height: 24,
-                color: AppColors.surfaceContainerHigh,
+                color: ReportColors.border,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
               ),
-              
+
               _buildActionButton(
                 icon: Icons.download_rounded,
                 label: 'Xuất Báo Cáo FAP (.xlsx)',
@@ -104,17 +59,52 @@ class ReportHeader extends StatelessWidget {
                 isPrimary: true,
               ),
             ],
-          ),
-        ],
+          );
+
+          return constraints.maxWidth < 900
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTitle(),
+                    const SizedBox(height: AppSpacing.md),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth,
+                      ),
+                      child: controls,
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: _buildTitle()),
+                    const SizedBox(width: AppSpacing.md),
+                    Flexible(child: controls),
+                  ],
+                );
+        },
       ),
+    );
+  }
+
+  Widget _buildTitle() {
+    return Text(
+      'Báo cáo & Thống kê Chuyên cần',
+      style: AppTextStyles.headlineLg.copyWith(letterSpacing: -0.5),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
   Widget _buildDropdown(String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: ReportColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
       child: Row(
@@ -122,7 +112,7 @@ class ReportHeader extends StatelessWidget {
         children: [
           Text(value, style: AppTextStyles.labelMd),
           const SizedBox(width: 8),
-          const Icon(Icons.expand_more, size: 18, color: AppColors.textSecondary),
+          const Icon(Icons.expand_more, size: 18, color: ReportColors.muted),
         ],
       ),
     );
@@ -133,10 +123,10 @@ class ReportHeader extends StatelessWidget {
     required String label,
     required bool isPrimary,
   }) {
-    final bgColor = isPrimary ? AppColors.primaryContainer : AppColors.surface;
-    final textColor = isPrimary ? AppColors.onPrimary : AppColors.textPrimary;
-    final iconColor = isPrimary ? AppColors.onPrimary : AppColors.primary;
-    
+    final bgColor = isPrimary ? AppColors.primaryContainer : Colors.white;
+    final textColor = isPrimary ? Colors.white : ReportColors.text;
+    final iconColor = isPrimary ? Colors.white : ReportColors.primary;
+
     return Material(
       color: bgColor,
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -144,10 +134,13 @@ class ReportHeader extends StatelessWidget {
         onTap: () {},
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 8,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: isPrimary ? null : Border.all(color: AppColors.surfaceContainerHigh),
+            border: isPrimary ? null : Border.all(color: ReportColors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

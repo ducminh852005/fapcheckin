@@ -9,10 +9,12 @@ import '../core/services/google_auth_service.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/teacher_repository.dart';
 import '../data/repositories/attendance_history_repository.dart';
+import '../data/repositories/report_repository.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/live_session_viewmodel.dart';
 import '../viewmodels/attendance_history_viewmodel.dart';
+import '../viewmodels/report_viewmodel.dart';
 
 class FapCheckinApp extends StatefulWidget {
   const FapCheckinApp({super.key});
@@ -30,6 +32,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   late final DashboardViewModel _dashboardViewModel;
   late final LiveSessionViewModel _liveSessionViewModel;
   late final AttendanceHistoryViewModel _attendanceHistoryViewModel;
+  late final ReportViewModel _reportViewModel;
   late final GoRouter _router;
 
   @override
@@ -45,6 +48,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _attendanceHistoryViewModel = AttendanceHistoryViewModel(
       AttendanceHistoryRepository(_apiService),
     );
+    _reportViewModel = ReportViewModel(ReportRepository(_apiService));
     _authViewModel.addListener(_syncHistoryAccount);
 
     _router = createAppRouter(_authViewModel);
@@ -62,6 +66,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _dashboardViewModel.dispose();
     _liveSessionViewModel.dispose();
     _attendanceHistoryViewModel.dispose();
+    _reportViewModel.dispose();
     super.dispose();
   }
 
@@ -74,6 +79,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         ChangeNotifierProvider.value(value: _dashboardViewModel),
         ChangeNotifierProvider.value(value: _liveSessionViewModel),
         ChangeNotifierProvider.value(value: _attendanceHistoryViewModel),
+        ChangeNotifierProvider.value(value: _reportViewModel),
       ],
       child: MaterialApp.router(
         title: 'FAP Check-in',

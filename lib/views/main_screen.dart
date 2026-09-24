@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
@@ -31,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
       if (mounted) {
         final authVm = context.read<AuthViewModel>();
         final dashboardVm = context.read<DashboardViewModel>();
-        
+
         if (authVm.session != null && dashboardVm.teacherMemberCode.isEmpty) {
           dashboardVm.setTeacherInfo(
             name: authVm.session!.user.fullName,
@@ -39,7 +40,7 @@ class _MainScreenState extends State<MainScreen> {
             memberCode: authVm.session!.user.memberCode,
           );
         }
-        
+
         dashboardVm.loadClasses();
 
         _timer = Timer.periodic(const Duration(seconds: 1), (_) {

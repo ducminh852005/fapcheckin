@@ -2,7 +2,7 @@
 
 # 02 · Luồng điểm danh bằng QR
 
-Mã QR **không phải** là "vé cố định" cho cả buổi học — nó xoay vòng để một tấm ảnh chụp màn hình không thể dùng lại hoặc gửi cho bạn không có mặt. "Gần lớp học" được xác nhận bằng địa chỉ IP mạng, không đụng tới GPS của máy.
+Mã QR tự động xoay mỗi 60 giây trong khi phiên còn mở. "Gần lớp học" được xác nhận bằng địa chỉ IP mạng, không đụng tới GPS của máy.
 
 ## Sequence: Bắt đầu phiên → Quét → Kiểm tra IP → Ghi nhận
 
@@ -15,7 +15,7 @@ sequenceDiagram
     GV->>BE: POST /session/start (teacherIp từ ipify)
     BE->>BE: tạo Session (qrSecret, open)
     BE-->>GV: sessionId
-    GV->>GV: hiện QR (qrToken, xoay 20s)
+    GV->>GV: hiện QR (qrToken, xoay 60s)
 
     SV->>BE: quét QR, GET /checkin?page=checkin
     BE-->>SV: HTML (HtmlService)
@@ -40,6 +40,6 @@ SV mở trang lần đầu (từ QR) vẫn phải đăng nhập Google 1 lần; 
 
 ## Nếu mất mạng giữa lúc gửi /checkin
 
-Trang hiện nút "Thử lại" và thông báo rõ lý do (mất mạng, không phải sai lớp). Vì QR tự xoay mỗi 20 giây, SV chỉ cần quét lại lượt QR mới nếu lượt cũ đã hết hạn — không cần cơ chế hàng đợi phức tạp phía client.
+Trang hiện nút "Thử lại" và thông báo rõ lý do (mất mạng, không phải sai lớp). QR giữ nguyên trong một phút để sinh viên có đủ thời gian quét và đăng nhập Google.
 
 [→ 03 Dữ liệu & cấu trúc Google Sheet](03-du-lieu-google-sheet.md)

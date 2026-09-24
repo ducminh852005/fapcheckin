@@ -224,6 +224,37 @@ var TeacherService = (function() {
       qrToken: qrSecret
     };
   }
+
+  function syncSessionTeacherIp(params) {
+    var sessionId = String(params.sessionId || '').trim();
+    var teacherIp = String(params.teacherIp || '').trim();
+    if (!sessionId || !teacherIp) {
+      throwError('VALIDATION_ERROR', 'Thiếu sessionId hoặc teacherIp.');
+    }
+
+    var teacher = AuthService.requireTeacher(params);
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var session = sessions.filter(function(s) {
+      return String(s.sessionId) === sessionId;
+    })[0];
+    if (!session || session.sessionStatus !== 'open') {
+      throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên điểm danh đang mở.');
+    }
+
+    var classes = SheetDB.getRowsAsObjects('Class_Section');
+    var ownsClass = classes.some(function(c) {
+      return String(c.classCode) === String(session.classCode) &&
+        String(c.teacherMemberCode) === String(teacher.memberCode);
+    });
+    if (!ownsClass) {
+      throwError('FORBIDDEN', 'Bạn không có quyền cập nhật phiên điểm danh này.');
+    }
+
+    SheetDB.updateRow('Attendance_Session', 'sessionId', sessionId, {
+      teacherIp: teacherIp
+    });
+    return { sessionId: sessionId, teacherIp: teacherIp };
+  }
   
   function getRoster(params) {
     var sessionId = params.sessionId;
@@ -251,6 +282,11 @@ var TeacherService = (function() {
     // Kết hợp
     var roster = enrolledStudents.map(function(student) {
       var record = sessionRecords.filter(function(r) { return r.rollNumber === student.rollNumber; })[0] || null;
+      if (record && String(record.networkVerificationResult || '').trim().toLowerCase() === 'mismatch') {
+        // Legacy protection: old versions could persist Present + Mismatch.
+        // Keep the network evidence visible but never report it as attendance.
+        record = Object.assign({}, record, { status: '', checkinTime: '' });
+      }
       return {
         student: student,
         record: record
@@ -276,6 +312,7 @@ var TeacherService = (function() {
       // Cập nhật
       SheetDB.updateRow('Attendance_Record', 'recordId', existingRecord.recordId, {
         status: status,
+        networkVerificationResult: 'Manual',
         syncedToFap: false
       });
     } else {
@@ -316,6 +353,7 @@ var TeacherService = (function() {
           SheetDB.updateRow('Attendance_Record', 'recordId', existingRecord.recordId, {
             status: change.status,
             note: change.reason || '',
+            networkVerificationResult: 'Manual',
             syncedToFap: false
           });
         } else {
@@ -580,6 +618,7 @@ var TeacherService = (function() {
   return {
     getClasses: getClasses,
     startSession: startSession,
+    syncSessionTeacherIp: syncSessionTeacherIp,
     closeSession: closeSession,
     getSessions: getSessions,
     getRoster: getRoster,

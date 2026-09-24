@@ -14,7 +14,7 @@ function backend() {
     Enrollment: [{classCode:'C1',rollNumber:'SE1'},{classCode:'C1',rollNumber:'SE2'},
       {classCode:'C1',rollNumber:'SE1'},{classCode:'C2',rollNumber:'SE2'}],
     Attendance_Session: [{sessionId:'S1',classCode:'C1',sessionDate:'2026-09-19',slotCode:'A1',sessionStatus:'closed',qrSecret:'secret'},
-      {sessionId:'S2',classCode:'C1',sessionDate:'2026-09-20',slotCode:'A1',sessionStatus:'open',qrSecret:'secret2'}],
+      {sessionId:'S2',classCode:'C1',sessionDate:'2026-09-20',slotCode:'A1',sessionStatus:'open',qrSecret:'secret2',teacherIp:'203.0.113.10'}],
     Attendance_Record: [{recordId:'R1',sessionId:'S1',rollNumber:'SE1',status:'Present',checkinTime:'2026-09-19T00:30:00Z'}],
     Slot:[{slotCode:'A1',startTime:'07:00',endTime:'09:00'}],
   };
@@ -45,7 +45,7 @@ function backend() {
     },
     ContentService:{MimeType:{JSON:'application/json'},createTextOutput:body=>({setMimeType:()=>JSON.parse(body)})},
   });
-  for(const name of ['Response','AuthService','TeacherService','StudentService','SyncService','HistoryExcel','AttendanceHistoryService','Router','Code']) {
+  for(const name of ['Response','AuthService','TeacherService','StudentService','SyncService','HistoryExcel','AttendanceHistoryService','ReportService','Router','Code']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname,'..',name+'.gs'),'utf8'),context);
   }
   function call(action,params={}) {return context.doPost({postData:{contents:JSON.stringify({action,sessionToken:'teacher',...params})}});}
@@ -76,7 +76,7 @@ test('all history endpoints enforce authenticated teacher and class ownership',(
   const b=backend();
   assert.equal(b.call('getHistoryClasses',{sessionToken:'fake',teacherMemberCode:'GV1'}).error.code,'UNAUTHORIZED');
   assert.equal(b.call('getHistoryClasses',{sessionToken:'student'}).error.code,'FORBIDDEN');
-  for(const action of ['getHistoryDetail','getAttendanceMatrix','exportAttendanceHistory','startHistorySession']){
+  for(const action of ['getHistoryDetail','getHistorySummary','getAttendanceMatrix','exportAttendanceHistory','startHistorySession']){
     assert.equal(b.call(action,{classCode:'OTHER'}).error.code,'FORBIDDEN');
   }
   assert.equal(b.call('getHistoryDetail',{classCode:'C1',sessionId:'wrong'}).error.code,'SESSION_NOT_FOUND');
@@ -98,10 +98,34 @@ test('validates entire change batch before any writes',()=>{
   params.changes=[{rollNumber:'SE1',status:'invented',note:'',revision:''}];
   assert.equal(b.call('saveAttendanceChanges',params).error.code,'VALIDATION_ERROR');assert.equal(b.writes,0);
 });
-test('matrix uses actual session identities and student status',()=>{
+test('matrix uses actual session identities and per-cell status with revision for editing',()=>{
   const r=backend().call('getAttendanceMatrix',{classCode:'C1'});
   assert.deepEqual(r.data.sessions.map(s=>s.sessionId),['S2','S1']);
-  assert.deepEqual(r.data.students[0].statuses,['Unchecked','Present']);
+  assert.deepEqual(r.data.students[0].cells.map(c=>c.status),['Unchecked','Present']);
+  assert.equal(r.data.students[0].cells[0].revision,'');
+  assert.notEqual(r.data.students[0].cells[1].revision,'');
+});
+test('summary aggregates present/late/absent per student across closed sessions only',()=>{
+  const b=backend();const r=b.call('getHistorySummary',{classCode:'C1'});
+  assert.equal(r.success,true);assert.equal(r.data.selectedSession,undefined);
+  assert.equal(r.data.students.length,2);
+  const se1=r.data.students.find(s=>s.rollNumber==='SE1'),se2=r.data.students.find(s=>s.rollNumber==='SE2');
+  assert.equal(se1.presentCount,1);assert.equal(se1.lateCount,0);assert.equal(se1.absentCount,0);
+  assert.equal(se1.closedSessions,1);assert.equal(se1.totalSessions,2);
+  assert.equal(se2.presentCount,0);assert.equal(se2.absentCount,1);
+  assert.equal(b.call('getHistorySummary',{classCode:'C2'}).data.students[0].closedSessions,0);
+  assert.equal(b.call('getHistorySummary',{classCode:'OTHER'}).error.code,'FORBIDDEN');
+});
+test('report aggregates real closed sessions and warns only enrolled students',()=>{
+  const b=backend();const r=b.call('getReport');
+  assert.equal(r.success,true);
+  assert.equal(r.data.kpis.totalCheckins,1);
+  assert.equal(r.data.kpis.studentCount,3);
+  assert.equal(r.data.kpis.atRiskCount,1);
+  assert.equal(r.data.closedSessionCount,1);
+  assert.deepEqual(r.data.weekly.map(w=>w.label),['W1']);
+  assert.equal(r.data.subjects.length,2);
+  assert.equal(r.data.warnings[0].rollNumber,'SE2');
 });
 test('xlsx export escapes user data and writes inline text rather than formulas',()=>{
   const b=backend();b.tables.Users[1].fullName='=1+1 & <text>';
@@ -112,6 +136,14 @@ test('xlsx export escapes user data and writes inline text rather than formulas'
   assert.match(xml,/=1\+1 &amp; &lt;text&gt;/);assert.ok(!xml.includes('<f>'));
   assert.ok(b.zipParts.some(p=>p.name==='[Content_Types].xml'));
 });
+test('xlsx export without sessionId aggregates whole class history per student',()=>{
+  const b=backend();
+  const r=b.call('exportAttendanceHistory',{classCode:'C1'});
+  assert.equal(r.success,true);assert.equal(r.data.filename,'Attendance_C1.xlsx');
+  const xml=b.zipParts.find(p=>p.name==='xl/worksheets/sheet1.xml').body;
+  assert.match(xml,/SE1/);assert.match(xml,/SE2/);
+  assert.ok(!xml.includes('<f>'));
+});
 test('login stores server session used by history endpoints',()=>{
   const b=backend();const login=b.call('login',{idToken:'verified-by-stub'});
   assert.equal(login.success,true);
@@ -121,7 +153,18 @@ test('login rejects tokens issued for another OAuth client',()=>{
   const b=backend();
   b.context.UrlFetchApp.fetch=()=>({getContentText:()=>JSON.stringify({
     aud:'another-client.apps.googleusercontent.com',email:'teacher@example.test',email_verified:'true'})});
-  assert.equal(b.call('login',{idToken:'wrong-audience'}).error.code,'INVALID_TOKEN');
+  const r=b.call('login',{idToken:'wrong-audience'});
+  assert.equal(r.error.code,'INVALID_AUDIENCE');
+  assert.match(r.error.message,/another-client\.apps\.googleusercontent\.com/);
+});
+test('login accepts tokens issued for the desktop OAuth client',()=>{
+  const b=backend();
+  b.context.UrlFetchApp.fetch=()=>({getContentText:()=>JSON.stringify({
+    aud:'222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com',
+    email:'teacher@example.test',email_verified:'true'})});
+  const r=b.call('login',{idToken:'desktop-id-token'});
+  assert.equal(r.success,true);
+  assert.equal(r.data.user.email,'teacher@example.test');
 });
 test('redirect login consumes its one-time nonce and rejects replay',()=>{
   const b=backend();
@@ -137,6 +180,73 @@ test('OAuth form POST renders the check-in page with authenticated user and QR s
   assert.equal(output.template.oauthResult.success,true);
   assert.equal(output.template.oauthResult.data.user.email,'teacher@example.test');
   assert.match(output.template.googleLoginNonce,/^uuid\d+$/);
+});
+test('student check-in rejects a mismatched network without creating attendance',()=>{
+  const b=backend();
+  const before=b.tables.Attendance_Record.length;
+  const r=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'198.51.100.20'});
+  assert.equal(r.success,false);
+  assert.equal(r.error.code,'IP_MISMATCH');
+  assert.equal(b.tables.Attendance_Record.length,before);
+  assert.equal(b.writes,0);
+});
+test('student check-in marks Present only when the network matches',()=>{
+  const b=backend();
+  const r=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(r.success,true);
+  assert.equal(r.data.status,'Present');
+  assert.equal(r.data.networkVerificationResult,'Match');
+  assert.equal(r.data.ipAddress,'203.0.113.10');
+  assert.equal(b.tables.Attendance_Record.at(-1).status,'Present');
+  assert.equal(b.writes,1);
+});
+test('resuming an open session synchronizes the current teacher network',()=>{
+  const b=backend();
+  b.tables.Attendance_Session[1].teacherIp='198.51.100.99';
+  const synced=b.call('syncSessionTeacherIp',{
+    sessionId:'S2',teacherIp:'203.0.113.10'});
+  assert.equal(synced.success,true);
+  assert.equal(synced.data.teacherIp,'203.0.113.10');
+  assert.equal(b.tables.Attendance_Session[1].teacherIp,'203.0.113.10');
+
+  const checkin=b.call('checkin',{
+    qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(checkin.success,true);
+  assert.equal(checkin.data.networkVerificationResult,'Match');
+});
+test('session network synchronization requires owner and open session',()=>{
+  const b=backend();
+  assert.equal(b.call('syncSessionTeacherIp',{
+    sessionToken:'fake',sessionId:'S2',teacherIp:'203.0.113.10'}).error.code,'UNAUTHORIZED');
+  assert.equal(b.call('syncSessionTeacherIp',{
+    sessionId:'S1',teacherIp:'203.0.113.10'}).error.code,'SESSION_NOT_FOUND');
+});
+test('legacy Present plus Mismatch is unchecked and repaired on a valid retry',()=>{
+  const b=backend();
+  b.tables.Attendance_Record.push({recordId:'legacy-mismatch',sessionId:'S2',rollNumber:'SE1',
+    status:'Present',checkinTime:'2026-09-20T07:00:00Z',networkVerificationResult:'Mismatch',ipAddress:'198.51.100.20'});
+
+  const before=b.call('getRoster',{sessionId:'S2'}).data[0].record;
+  assert.equal(before.status,'');
+  assert.equal(before.checkinTime,'');
+  assert.equal(before.networkVerificationResult,'Mismatch');
+
+  const retry=b.call('checkin',{qrToken:'secret2',rollNumber:'SE1',studentIp:'203.0.113.10'});
+  assert.equal(retry.success,true);
+  assert.equal(retry.data.status,'Present');
+  assert.equal(retry.data.networkVerificationResult,'Match');
+  assert.equal(b.tables.Attendance_Record.length,2);
+  assert.equal(b.tables.Attendance_Record[1].networkVerificationResult,'Match');
+  assert.equal(b.writes,1);
+});
+test('teacher manual override converts a mismatched legacy row to Manual',()=>{
+  const b=backend();
+  b.tables.Attendance_Record.push({recordId:'legacy-manual',sessionId:'S2',rollNumber:'SE1',
+    status:'Present',checkinTime:'2026-09-20T07:00:00Z',networkVerificationResult:'Mismatch'});
+  const r=b.call('manualCheckin',{sessionId:'S2',rollNumber:'SE1',status:'Present'});
+  assert.equal(r.success,true);
+  assert.equal(b.tables.Attendance_Record[1].networkVerificationResult,'Manual');
+  assert.equal(b.call('getRoster',{sessionId:'S2'}).data[0].record.status,'Present');
 });
 test('opening a session requires valid slot and rejects duplicate open sessions',()=>{
   const b=backend();

@@ -11,7 +11,7 @@ class SettingsHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth > 800;
-        
+
         final titleSection = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -19,7 +19,10 @@ class SettingsHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -34,25 +37,32 @@ class SettingsHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Text('/', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                Text(
+                  '/',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   'Phiên bản v3.4.1 Build 2024',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Cài đặt & Cấu hình Hệ thống',
-              style: AppTextStyles.headlineLg.copyWith(
-                letterSpacing: -0.5,
-              ),
+              style: AppTextStyles.headlineLg.copyWith(letterSpacing: -0.5),
             ),
             const SizedBox(height: 4),
             Text(
-              'Quản lý cơ chế tạo mã QR động, chính sách mạng an ninh giảng đường, đồng bộ hóa FAP Edu Portal và thiết lập cảnh báo học vụ tự động.',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+              'Quản lý mã QR động chu kỳ 60 giây, chính sách mạng giảng đường, đồng bộ hóa FAP Edu Portal và cảnh báo học vụ.',
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         );
@@ -106,7 +116,7 @@ class SettingsHeader extends StatelessWidget {
     final bgColor = isPrimary ? AppColors.primaryContainer : AppColors.surface;
     final textColor = isPrimary ? AppColors.onPrimary : AppColors.textPrimary;
     final iconColor = isPrimary ? AppColors.onPrimary : AppColors.textSecondary;
-    
+
     return Material(
       color: bgColor,
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -114,7 +124,10 @@ class SettingsHeader extends StatelessWidget {
         onTap: () {},
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: isPrimary ? AppSpacing.lg : AppSpacing.md, vertical: 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: isPrimary ? AppSpacing.lg : AppSpacing.md,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             boxShadow: const [

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/views/teacher/report/report_colors.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 
 class SubjectComparison extends StatelessWidget {
-  const SubjectComparison({super.key});
+  final ReportData data;
+  const SubjectComparison({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -26,33 +29,45 @@ class SubjectComparison extends StatelessWidget {
         children: [
           Text('Tỷ lệ theo môn học', style: AppTextStyles.headlineSm),
           const SizedBox(height: 2),
-          Text('So sánh mức độ chuyên cần 5 lớp', style: AppTextStyles.caption),
+          Text(
+            'So sánh mức độ chuyên cần theo lớp phụ trách',
+            style: AppTextStyles.caption,
+          ),
           const SizedBox(height: AppSpacing.md),
-          
-          _buildSubjectBar('SWP391 (SE1704)', 94.2, AppColors.primaryContainer),
-          const SizedBox(height: AppSpacing.sm),
-          _buildSubjectBar('PRN211 (SE1712)', 96.8, AppColors.statusPresent),
-          const SizedBox(height: AppSpacing.sm),
-          _buildSubjectBar('PRJ301 (IA1701)', 92.5, AppColors.primaryContainer),
-          const SizedBox(height: AppSpacing.sm),
-          _buildSubjectBar('SWT301 (SE1709)', 95.0, AppColors.primaryContainer),
-          const SizedBox(height: AppSpacing.sm),
-          _buildSubjectBar('MAS291 (AI1702)', 89.4, AppColors.statusAbsent),
-          
+
+          ...data.subjects.expand(
+            (subject) => [
+              _buildSubjectBar(
+                '${subject.subjectName} (${subject.classCode})',
+                subject.attendanceRate * 100,
+                subject.absentRate > .15
+                    ? ReportColors.red
+                    : ReportColors.primary,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ),
+
           const SizedBox(height: AppSpacing.md),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceBright,
+              color: ReportColors.background,
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 16, color: AppColors.statusAbsent),
+                const Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: AppColors.statusAbsent,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'MAS291 có tỷ lệ vắng cao nhất do trùng đợt workshop AI.',
+                    data.subjects.isEmpty
+                        ? 'Chưa có dữ liệu phiên đã kết thúc.'
+                        : 'Tỷ lệ được tính từ các phiên điểm danh đã kết thúc.',
                     style: AppTextStyles.caption,
                   ),
                 ),
@@ -68,14 +83,28 @@ class SubjectComparison extends StatelessWidget {
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: AppTextStyles.code.copyWith(color: AppColors.textPrimary)),
-            Text(
-              '${percentage.toStringAsFixed(1)}%',
-              style: AppTextStyles.code.copyWith(
-                fontWeight: FontWeight.w700,
-                color: color == AppColors.primaryContainer ? AppColors.primary : color,
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.code.copyWith(color: ReportColors.text),
+                softWrap: true,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            SizedBox(
+              width: 52,
+              child: Text(
+                '${percentage.toStringAsFixed(1)}%',
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: AppTextStyles.code.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color == ReportColors.primary
+                      ? ReportColors.primary
+                      : color,
+                ),
               ),
             ),
           ],
@@ -85,7 +114,7 @@ class SubjectComparison extends StatelessWidget {
           height: 8,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
+            color: ReportColors.border,
             borderRadius: BorderRadius.circular(4),
           ),
           child: FractionallySizedBox(

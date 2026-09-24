@@ -239,6 +239,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatsResponse"
 
+  /teacher/report:
+    post:
+      summary: Lấy báo cáo chuyên cần tổng hợp của giảng viên
+      description: Apps Script Action -> `action=getReport`; chỉ tính các phiên đã đóng
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  example: "getReport"
+                sessionToken:
+                  type: string
+      responses:
+        "200":
+          description: OK hoặc lỗi nghiệp vụ trong JSON envelope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
+
   /teacher/sync:
     post:
       summary: Đồng bộ dữ liệu điểm danh sang FAP
@@ -393,6 +418,40 @@ components:
                 type: string
               attendancePercentage:
                 type: number
+        error:
+          $ref: "#/components/schemas/ApiError"
+
+    ReportResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            kpis:
+              type: object
+              properties:
+                attendanceRate: {type: number}
+                totalCheckins: {type: integer}
+                atRiskCount: {type: integer}
+                studentCount: {type: integer}
+                lateRate: {type: number}
+            methods:
+              type: array
+              items: {type: object}
+            weekly:
+              type: array
+              items: {type: object}
+            subjects:
+              type: array
+              items: {type: object}
+            warnings:
+              type: array
+              items: {type: object}
         error:
           $ref: "#/components/schemas/ApiError"
 
