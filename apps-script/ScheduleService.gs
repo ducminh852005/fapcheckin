@@ -32,7 +32,7 @@ var ScheduleService = (function() {
     }
     return raw.map(function(s) {
       var start = time(s.startTime), end = time(s.endTime);
-      return {slotCode:text(s.slotCode), startTime:start, endTime:end, available:!!start && !!end};
+      return {slotCode:text(s.slotCode), startTime:start, endTime:end, available:!!start && !!end && start < end};
     });
   }
   function rows() {

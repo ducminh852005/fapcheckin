@@ -57,6 +57,8 @@ class ApiService {
 
       // Đảm bảo gửi chuỗi JSON thô
       const historyActions = {
+        'scanTimetableImage',
+        'importTimetableAssignments',
         'getScheduleOptions',
         'getClassSchedules',
         'createClassSchedule',

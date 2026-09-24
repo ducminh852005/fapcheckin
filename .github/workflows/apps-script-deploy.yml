@@ -39,7 +39,7 @@ jobs:
           cp -f clasp.json .clasp.json
 
       - name: Validate Apps Script
-        run: node --test apps-script/tests/template.test.cjs apps-script/tests/api.test.cjs apps-script/tests/history.test.cjs
+        run: node --test apps-script/tests/*.test.cjs
 
       - name: Push and Deploy to Apps Script
         working-directory: apps-script
