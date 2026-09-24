@@ -14,9 +14,9 @@ class ReportKpis extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 4;
-        if (constraints.maxWidth < 600) {
+        if (constraints.maxWidth < 700) {
           crossAxisCount = 1;
-        } else if (constraints.maxWidth < 1100) {
+        } else if (constraints.maxWidth < 1200) {
           crossAxisCount = 2;
         }
 
@@ -26,7 +26,7 @@ class ReportKpis extends StatelessWidget {
           mainAxisSpacing: AppSpacing.md,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: constraints.maxWidth > 1100 ? 1.6 : 2.0,
+          childAspectRatio: constraints.maxWidth >= 1200 ? 2.0 : 1.85,
           children: [
             _buildKpiCard(
               title: 'Tỷ lệ chuyên cần TB',
@@ -188,7 +188,7 @@ class ReportKpis extends StatelessWidget {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -227,23 +227,20 @@ class ReportKpis extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: iconBg,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
-                    child: Icon(icon, color: iconColor),
+                    child: Icon(icon, color: iconColor, size: 19),
                   ),
                 ],
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: const BoxDecoration(
               color: ReportColors.background,
               borderRadius: BorderRadius.only(
@@ -251,11 +248,14 @@ class ReportKpis extends StatelessWidget {
                 bottomRight: Radius.circular(AppSpacing.radiusXl),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 bottomLeft,
-                bottomRight ?? const SizedBox.shrink(),
+                ?bottomRight,
                 if (badgeText != null)
                   Container(
                     padding: const EdgeInsets.symmetric(

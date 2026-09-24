@@ -9,7 +9,6 @@ import 'package:fapcheckin/views/teacher/report/components/report_charts.dart';
 import 'package:fapcheckin/views/teacher/report/components/subject_comparison.dart';
 import 'package:fapcheckin/views/teacher/report/components/checkin_modality.dart';
 import 'package:fapcheckin/views/teacher/report/components/warning_table.dart';
-import 'package:fapcheckin/views/teacher/report/components/regulatory_notice.dart';
 
 class ReportBody extends StatelessWidget {
   const ReportBody({super.key});
@@ -29,23 +28,27 @@ class ReportBody extends StatelessWidget {
     final report = vm.report;
     if (report == null) return const SizedBox.shrink();
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
       child: Container(
         color: ReportColors.background,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ReportHeader(generatedAt: report.generatedAt),
-            SizedBox(height: 14),
+            ReportHeader(
+              generatedAt: report.generatedAt,
+              semester: report.semester,
+              classCount: report.classCount,
+            ),
+            const SizedBox(height: 18),
             ReportKpis(data: report),
-            SizedBox(height: 14),
+            const SizedBox(height: 18),
             _ReportMainContent(data: report),
-            SizedBox(height: 14),
-            RegulatoryNotice(),
-            SizedBox(height: 10),
+            const SizedBox(height: 18),
             Center(
               child: Text(
-                'Dữ liệu lấy từ các phiên điểm danh đã kết thúc · Responsive dashboard',
+                'Dữ liệu từ các phiên điểm danh đã kết thúc',
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: ReportColors.muted),
               ),
             ),
           ],
@@ -67,16 +70,21 @@ class _ReportMainContent extends StatelessWidget {
           return Column(
             children: [
               ReportCharts(data: data),
-              SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: SubjectComparison(data: data)),
-                  SizedBox(width: 14),
-                  Expanded(child: CheckinModality(data: data)),
-                ],
-              ),
-              SizedBox(height: 14),
+              const SizedBox(height: 18),
+              if (constraints.maxWidth < 700) ...[
+                SubjectComparison(data: data),
+                const SizedBox(height: 18),
+                CheckinModality(data: data),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: SubjectComparison(data: data)),
+                    const SizedBox(width: 18),
+                    Expanded(child: CheckinModality(data: data)),
+                  ],
+                ),
+              const SizedBox(height: 18),
               WarningTable(data: data),
             ],
           );
@@ -90,19 +98,19 @@ class _ReportMainContent extends StatelessWidget {
               child: Column(
                 children: [
                   ReportCharts(data: data),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: SubjectComparison(data: data)),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 18),
                       Expanded(child: CheckinModality(data: data)),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 18),
             Expanded(flex: 8, child: WarningTable(data: data)),
           ],
         );
