@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../data/models/history_detail.dart';
+import '../../../../data/models/history_summary.dart';
 import '../../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../../data/models/history_student.dart';
 import '../history_actions.dart';
@@ -11,18 +11,15 @@ class KpiDashboard extends StatelessWidget {
   const KpiDashboard({super.key});
   @override
   Widget build(BuildContext context) {
-    final vm = context.read<AttendanceHistoryViewModel>();
-    final detail = context.select<AttendanceHistoryViewModel, HistoryDetail?>(
-      (value) => value.detail,
+    final summary = context
+        .select<AttendanceHistoryViewModel, HistorySummary?>(
+      (value) => value.summary,
     );
     final busy = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.busy,
     );
-    final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.hasChanges,
-    );
-    if (detail == null) return const SizedBox.shrink();
-    final c = detail.classInfo;
+    if (summary == null) return const SizedBox.shrink();
+    final c = summary.classInfo;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -50,7 +47,7 @@ class KpiDashboard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Giảng viên: ${detail.teacherName} · Phòng: ${c.room.isEmpty ? "Chưa cập nhật" : c.room} · ${c.studentCount} sinh viên',
+                      'Giảng viên: ${summary.teacherName} · Phòng: ${c.room.isEmpty ? "Chưa cập nhật" : c.room} · ${c.studentCount} sinh viên',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -64,16 +61,14 @@ class KpiDashboard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: busy || hasChanges || detail.slotCodes.isEmpty
+                    onPressed: busy || summary.slotCodes.isEmpty
                         ? null
                         : () => openHistorySession(context),
                     icon: const Icon(Icons.qr_code_2_outlined, size: 18),
                     label: const Text('Tạo phiên QR'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: busy || hasChanges
-                        ? null
-                        : () => showHistoryMatrix(context),
+                    onPressed: busy ? null : () => showHistoryMatrix(context),
                     icon: const Icon(Icons.grid_on_outlined, size: 18),
                     label: const Text('Ma trận'),
                   ),
@@ -129,129 +124,35 @@ class KpiDashboard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
             ),
-            child: detail.sessions.isEmpty
+            child: c.latestSession == null
                 ? const Text(
                     'Lớp chưa có phiên điểm danh. Danh sách bên dưới lấy từ Enrollment; chưa có kết quả điểm danh.',
                     style: TextStyle(color: AppColors.textSecondary),
                   )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                : Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            size: 16,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Chọn buổi học',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${detail.sessions.length} buổi học',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: AppColors.primary,
                       ),
-                      const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        value: detail.sessions.any(
-                          (s) => s.sessionId == detail.selectedSession?.sessionId,
-                        )
-                            ? detail.selectedSession?.sessionId
-                            : (detail.sessions.isNotEmpty
-                                ? detail.sessions.first.sessionId
-                                : null),
-                        isExpanded: true,
-                        menuMaxHeight: 350,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Buổi gần nhất',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${historyDate(c.latestSession!.sessionDate)} · Ca ${c.latestSession!.slotCode}',
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          fillColor: AppColors.surface,
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: AppColors.primary,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                        items: detail.sessions.map((s) {
-                          final isClosed = s.sessionStatus == "closed";
-                          final isOpen = s.sessionStatus == "open";
-                          final statusText = isClosed
-                              ? "Đã kết thúc"
-                              : isOpen
-                                  ? "Đang mở"
-                                  : s.sessionStatus;
-                          final statusColor = isOpen
-                              ? AppColors.statusPresent
-                              : isClosed
-                                  ? AppColors.textSecondary
-                                  : AppColors.statusLate;
-
-                          return DropdownMenuItem<String>(
-                            value: s.sessionId,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: statusColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    '${historyDate(s.sessionDate)} · Ca ${s.slotCode} · $statusText',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (busy || hasChanges)
-                            ? null
-                            : (newId) {
-                                if (newId != null &&
-                                    newId != detail.selectedSession?.sessionId) {
-                                  vm.selectSession(newId);
-                                }
-                              },
                       ),
                     ],
                   ),

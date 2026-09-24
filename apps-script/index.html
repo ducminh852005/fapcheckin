@@ -283,11 +283,12 @@
       <h1>Đăng nhập Sinh viên</h1>
       <p class="subtitle">Vui lòng đăng nhập bằng email nhà trường (@fpt.edu.vn) để tiếp tục điểm danh.</p>
 
-      <div id="g_id_onload" data-client_id="758587877856-k1v7fh21kjan06cda3v6me2rjtvpaajq.apps.googleusercontent.com"
-        data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false">
+      <div id="g_id_onload" data-client_id="<?= googleClientId ?>"
+        data-context="signin" data-ux_mode="redirect" data-login_uri="<?= googleLoginUri ?>"
+        data-nonce="<?= googleLoginNonce ?>" data-auto_prompt="false">
       </div>
       <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
-        data-text="signin_with" data-size="large" data-logo_alignment="left">
+        data-text="signin_with" data-size="large" data-logo_alignment="left" data-state="<?= token ?>">
       </div>
     </div>
 
@@ -371,9 +372,9 @@
     // Map mã lỗi backend -> { title, message, hint, canRetry, canLogout }
     var ERROR_MAP = {
       IP_MISMATCH: {
-        title: 'Sai mạng Wi-Fi',
-        message: 'Bạn đang không cùng mạng Wi-Fi với phòng học.',
-        hint: 'Vui lòng tắt 4G/VPN, kết nối vào đúng Wi-Fi của trường rồi bấm "Thử lại".',
+        title: 'Không xác minh được mạng',
+        message: 'IP công khai của thiết bị không trùng với IP của phiên điểm danh.',
+        hint: 'Hãy tắt VPN/proxy, kết nối đúng Wi-Fi rồi bấm "Thử lại". Giảng viên có thể cần mở lại màn hình phiên để đồng bộ IP.',
         canRetry: true, canLogout: false
       },
       SESSION_NOT_FOUND: {
@@ -477,10 +478,10 @@
 
     // ============ Luồng ứng dụng ============
     // Nhận token từ Apps Script server template nếu chạy qua Apps Script doGet, hoặc từ URL query nếu chạy web tĩnh
-    var serverToken = "<?= typeof token !== 'undefined' ? token : '' ?>";
-    if (serverToken.indexOf('<?') === 0) {
-      serverToken = ''; // Fallback khi file HTML được mở trực tiếp ngoài môi trường Apps Script
-    }
+    // JSON.stringify keeps the token intact and prevents special characters from
+    // breaking the surrounding JavaScript when Apps Script renders the template.
+    var serverToken = <?!= JSON.stringify(typeof token !== 'undefined' ? token : '').replace(/</g, '\\u003c') ?>;
+    var oauthResult = <?!= JSON.stringify(typeof oauthResult !== 'undefined' ? oauthResult : null).replace(/</g, '\\u003c') ?>;
     var qrToken = serverToken || new URLSearchParams(window.location.search).get('token');
 
     window.onload = function () {
@@ -492,6 +493,17 @@
         document.getElementById('btn-retry').style.display = 'none';
         document.getElementById('btn-logout').style.display = 'none';
         showView('error');
+        return;
+      }
+
+      if (oauthResult) {
+        if (!oauthResult.success) {
+          showErrorByCode(oauthResult.error.code, oauthResult.error.message);
+          return;
+        }
+        localStorage.setItem('fap_session', oauthResult.data.token);
+        localStorage.setItem('fap_user', JSON.stringify(oauthResult.data.user));
+        processCheckin(qrToken, oauthResult.data.user.rollNumber);
         return;
       }
 

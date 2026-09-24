@@ -18,7 +18,8 @@ class _ClassCardState extends State<ClassCard> {
   bool _hovered = false;
 
   ClassSession get s => widget.session;
-  bool get isActive => s.status == SessionStatus.active || s.status == SessionStatus.ready;
+  bool get isActive =>
+      s.status == SessionStatus.active || s.status == SessionStatus.ready;
 
   Color get _bgColor {
     switch (s.status) {
@@ -74,6 +75,33 @@ class _ClassCardState extends State<ClassCard> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (s.isMakeup) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEDE7F6),
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusFull,
+                                ),
+                                border: Border.all(
+                                  color: const Color(0xFFB39DDB),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                'Học bù',
+                                style: AppTextStyles.labelSm.copyWith(
+                                  color: const Color(0xFF6A1B9A),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(width: 6),
                           Text(
                             '•',
@@ -225,8 +253,11 @@ class _MetaChip extends StatelessWidget {
           label,
           style: isCode
               ? AppTextStyles.code.copyWith(
-                  color: codeColor ??
-                      (highlight ? AppColors.primaryDark : AppColors.textPrimary),
+                  color:
+                      codeColor ??
+                      (highlight
+                          ? AppColors.primaryDark
+                          : AppColors.textPrimary),
                   fontWeight: highlight ? FontWeight.w700 : FontWeight.w400,
                 )
               : AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
@@ -257,7 +288,8 @@ class _StatusBadgeState extends State<_StatusBadge>
       duration: const Duration(milliseconds: 1000),
     );
     _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
-    if (widget.status == SessionStatus.active || widget.status == SessionStatus.ready) {
+    if (widget.status == SessionStatus.active ||
+        widget.status == SessionStatus.ready) {
       _ctrl.repeat(reverse: true);
     }
   }
@@ -357,7 +389,7 @@ class _ActionButton extends StatelessWidget {
         onTap: onStart ?? () {},
       );
     }
-    
+
     if (session.status != SessionStatus.ready) {
       return const SizedBox.shrink();
     }
@@ -406,7 +438,9 @@ class _HoverButtonState extends State<_HoverButton> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: p
-                ? (_hovered ? AppColors.primaryDark : AppColors.primaryContainer)
+                ? (_hovered
+                      ? AppColors.primaryDark
+                      : AppColors.primaryContainer)
                 : (_hovered ? AppColors.surfaceMuted : AppColors.surface),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             boxShadow: const [
@@ -466,8 +500,10 @@ class _ActiveSessionFooter extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Mã QR động kích hoạt cách đây 14 phút',
-              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+              'Mã QR động được kích hoạt cách đây 14 phút',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           Text(

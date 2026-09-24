@@ -2,6 +2,7 @@ import '../../core/network/api_result.dart';
 import '../../core/network/api_service.dart';
 import '../models/history_class.dart';
 import '../models/history_detail.dart';
+import '../models/history_summary.dart';
 import '../models/session_model.dart';
 
 class AttendanceHistoryRepository {
@@ -13,6 +14,13 @@ class AttendanceHistoryRepository {
         .map((c) => HistoryClass.fromJson(Map<String, dynamic>.from(c)))
         .toList(),
   );
+  Future<ApiResult<HistorySummary>> getSummary(String classCode) =>
+      _api.postAction(
+        'getHistorySummary',
+        payload: {'classCode': classCode},
+        fromJsonT: (data) =>
+            HistorySummary.fromJson(Map<String, dynamic>.from(data)),
+      );
   Future<ApiResult<HistoryDetail>> getDetail(
     String classCode, {
     String? sessionId,

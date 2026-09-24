@@ -20,6 +20,7 @@ class ClassSectionModel {
   final double averageAttendance;
   final bool isActive;
   final String? activeSessionId;
+  final bool isMakeup;
 
   const ClassSectionModel({
     required this.classCode,
@@ -38,6 +39,7 @@ class ClassSectionModel {
     required this.averageAttendance,
     required this.isActive,
     this.activeSessionId,
+    this.isMakeup = false,
   });
 
   factory ClassSectionModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,7 @@ class ClassSectionModel {
           jsonNumber(json['averageAttendance'])?.toDouble() ?? 0.0,
       isActive: jsonBool(json['isActive']) ?? false,
       activeSessionId: jsonText(json['activeSessionId']),
+      isMakeup: jsonBool(json['isMakeup']) ?? false,
     );
   }
 
@@ -82,6 +85,7 @@ class ClassSectionModel {
     'averageAttendance': averageAttendance,
     'isActive': isActive,
     'activeSessionId': activeSessionId,
+    'isMakeup': isMakeup,
   };
 
   ClassSectionModel copyWith({
@@ -97,6 +101,7 @@ class ClassSectionModel {
     double? averageAttendance,
     bool? isActive,
     String? activeSessionId,
+    bool? isMakeup,
   }) {
     return ClassSectionModel(
       classCode: classCode ?? this.classCode,
@@ -111,6 +116,7 @@ class ClassSectionModel {
       averageAttendance: averageAttendance ?? this.averageAttendance,
       isActive: isActive ?? this.isActive,
       activeSessionId: activeSessionId ?? this.activeSessionId,
+      isMakeup: isMakeup ?? this.isMakeup,
     );
   }
 }

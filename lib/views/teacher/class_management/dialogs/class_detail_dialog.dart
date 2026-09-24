@@ -78,7 +78,14 @@ class _ClassDetailDialogState extends State<ClassDetailDialog> {
 
       if (mounted) {
         setState(() {
-          _realSessions = fetchedSessions;
+          // Sort theo ngày tăng dần (cũ → mới)
+          _realSessions = fetchedSessions
+            ..sort((a, b) {
+              final da = DateTime.tryParse(a.sessionDate) ?? DateTime(0);
+              final db = DateTime.tryParse(b.sessionDate) ?? DateTime(0);
+              if (da != db) return da.compareTo(db);
+              return a.slotCode.compareTo(b.slotCode);
+            });
           _realStudents = fetchedStudents;
           _isLoading = false;
         });
@@ -701,10 +708,18 @@ class _ClassDetailDialogState extends State<ClassDetailDialog> {
     final dt = DateTime.tryParse(rawDate);
     if (dt != null) {
       String pad(int n) => n.toString().padLeft(2, '0');
-      return '${dt.year}-${pad(dt.month)}-${pad(dt.day)}';
+      return '${pad(dt.day)}/${pad(dt.month)}/${dt.year}';
     }
     if (rawDate.contains('T')) {
-      return rawDate.split('T')[0];
+      final date = rawDate.split('T')[0];
+      final parts = date.split('-');
+      if (parts.length == 3) return '${parts[2]}/${parts[1]}/${parts[0]}';
+      return date;
+    }
+    // Nếu format yyyy-MM-dd thì đổi thành dd/MM/yyyy
+    final parts = rawDate.split('-');
+    if (parts.length == 3 && parts[0].length == 4) {
+      return '${parts[2]}/${parts[1]}/${parts[0]}';
     }
     return rawDate;
   }
@@ -725,13 +740,23 @@ class _ClassDetailDialogState extends State<ClassDetailDialog> {
           _buildSessionRow(
             ca: '#${i + 1}',
             dayDate: _formatSessionDate(sess.sessionDate),
-            timeSlot: 'Slot ${sess.slotCode} (07:30 - 09:50)',
+            timeSlot: sess.slotCode.isNotEmpty
+                ? 'Slot ${sess.slotCode}'
+                : (cls.timeLabel.isNotEmpty ? cls.timeLabel : 'Slot ${cls.slotCode}'),
             title: '${cls.subjectCode} — Ca học thực hành',
             subtitle: 'Điểm danh phiên lớp ${cls.classCode}',
             room: cls.room.isNotEmpty ? 'Phòng ${cls.room}' : 'P.111',
             format: 'Physical (Trực tiếp)',
-            statusType: isClosed ? 'synced' : (isOpen ? 'ready' : 'planned'),
-            statusText: isClosed ? 'Đã hoàn thành' : (isOpen ? 'Sẵn sàng mở phiên' : 'Theo kế hoạch'),
+            statusType: isClosed
+                ? 'synced'
+                : (isOpen ? 'ready' : 'planned'),
+            statusText: isClosed
+                ? 'Đã hoàn thành'
+                : (isOpen
+                    ? 'Sẵn sàng mở phiên'
+                    : (sess.sessionStatus == 'planned'
+                        ? 'Lịch kế hoạch'
+                        : 'Theo kế hoạch')),
             tagText: null,
             isHighlighted: false,
           ),

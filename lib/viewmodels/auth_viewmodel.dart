@@ -100,7 +100,22 @@ class AuthViewModel extends ChangeNotifier {
 
     if (result is ApiFailure<AuthSessionModel>) {
       _status = ViewStatus.error;
-      _errorMessage = result.error.message;
+      final error = result.error;
+      final isDesktop =
+          !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux);
+      final looksLikeOldAudienceError =
+          error.code == 'INVALID_TOKEN' &&
+          error.message.toLowerCase().contains('token google');
+      if (isDesktop &&
+          (error.code == 'INVALID_AUDIENCE' || looksLikeOldAudienceError)) {
+        _errorMessage =
+            'Backend Apps Script chưa nhận Desktop OAuth Client ID. '
+            'Hãy deploy phiên bản Apps Script mới nhất rồi đăng nhập lại.';
+      } else {
+        _errorMessage = error.message;
+      }
       notifyListeners();
       return false;
     }

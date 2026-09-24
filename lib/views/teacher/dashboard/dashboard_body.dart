@@ -185,6 +185,7 @@ class _SchedulePanelState extends State<_SchedulePanel> {
       room: model.room,
       studentCount: model.studentCount,
       status: _deriveStatus(timeRange, model.isActive),
+      isMakeup: model.isMakeup,
     );
   }
 

@@ -1,5 +1,23 @@
 // File: Code.gs
 
+var CHECKIN_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec';
+
+function renderCheckinPage_(token, oauthResult) {
+  var nonce = Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('google-login-nonce:' + nonce, '1', 600);
+
+  var template = HtmlService.createTemplateFromFile('index.html');
+  template.token = token || '';
+  template.googleClientId = GOOGLE_WEB_CLIENT_ID;
+  template.googleLoginUri = CHECKIN_WEB_APP_URL;
+  template.googleLoginNonce = nonce;
+  template.oauthResult = oauthResult || null;
+
+  return template.evaluate()
+    .setTitle('FAP Check-in')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 /**
  * Entry point for HTTP GET requests
  */
@@ -7,11 +25,7 @@ function doGet(e) {
   // CORS check and HTML page rendering for student checkin web app
   if (e.parameter && e.parameter.page === 'checkin') {
     try {
-      var template = HtmlService.createTemplateFromFile('index.html');
-      template.token = e.parameter.token || '';
-      return template.evaluate()
-        .setTitle('FAP Check-in')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      return renderCheckinPage_(e.parameter.token || '', null);
     } catch(err) {
       return ContentService.createTextOutput("Check-in Web UI is not deployed yet: " + err.message);
     }
@@ -26,6 +40,33 @@ function doGet(e) {
  * Entry point for HTTP POST requests
  */
 function doPost(e) {
+  // Google Identity Services redirect mode posts the ID token as form data.
+  // This avoids popup origin checks against Apps Script's googleusercontent
+  // sandbox, whose host cannot be registered as a JavaScript OAuth origin.
+  if (e.parameter && e.parameter.credential) {
+    var oauthResult;
+    try {
+      oauthResult = {
+        success: true,
+        data: AuthService.login({
+          idToken: e.parameter.credential,
+          requireLoginNonce: true
+        }),
+        error: null
+      };
+    } catch (oauthError) {
+      oauthResult = {
+        success: false,
+        data: null,
+        error: {
+          code: oauthError.code || 'INVALID_TOKEN',
+          message: oauthError.message || String(oauthError)
+        }
+      };
+    }
+    return renderCheckinPage_(e.parameter.state || '', oauthResult);
+  }
+
   try {
     // Parse the payload (sent as text/plain to avoid CORS preflight)
     var body = {};

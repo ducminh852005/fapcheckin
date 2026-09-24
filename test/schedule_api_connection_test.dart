@@ -84,4 +84,68 @@ void main() {
       expect(error.message, contains('New version'));
     },
   );
+
+  test('native API follows the Apps Script POST redirect with GET', () async {
+    final client = Dio(BaseOptions(baseUrl: 'https://example.test/exec'));
+    final methods = <String>[];
+    client.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (request, handler) {
+          methods.add(request.method);
+          if (request.method == 'POST') {
+            handler.resolve(
+              Response(
+                requestOptions: request,
+                statusCode: 302,
+                data: '',
+                headers: Headers.fromMap({
+                  'location': ['https://result.example.test/response'],
+                }),
+              ),
+            );
+            return;
+          }
+          handler.resolve(
+            Response(
+              requestOptions: request,
+              statusCode: 200,
+              data: jsonEncode({
+                'success': true,
+                'data': {'value': 'redirected'},
+                'error': null,
+              }),
+            ),
+          );
+        },
+      ),
+    );
+
+    final result = await ApiService(client: client)
+        .postAction<Map<String, dynamic>>(
+          'testRedirect',
+          fromJsonT: (data) => data as Map<String, dynamic>,
+        );
+
+    expect(methods, ['POST', 'GET']);
+    expect(
+      (result as ApiSuccess<Map<String, dynamic>>).data['value'],
+      'redirected',
+    );
+  });
+
+  test('empty Apps Script response returns a readable API error', () async {
+    final client = Dio(BaseOptions(baseUrl: 'https://example.test/exec'));
+    client.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (request, handler) => handler.resolve(
+          Response(requestOptions: request, statusCode: 200, data: ''),
+        ),
+      ),
+    );
+
+    final result = await ApiService(client: client).postAction<Object>('test');
+    final error = (result as ApiFailure<Object>).error;
+    expect(error.code, 'EMPTY_RESPONSE');
+    expect(error.message, contains('không trả về dữ liệu'));
+  });
 }

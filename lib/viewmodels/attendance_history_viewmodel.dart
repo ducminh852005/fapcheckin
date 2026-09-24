@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../core/network/api_result.dart';
 import '../data/models/history_class.dart';
 import '../data/models/history_detail.dart';
-import '../data/models/history_student.dart';
+import '../data/models/history_summary.dart';
 import '../data/models/session_model.dart';
 import '../data/repositories/attendance_history_repository.dart';
 
@@ -11,43 +11,37 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
   final AttendanceHistoryRepository repository;
   AttendanceHistoryViewModel(this.repository);
   List<HistoryClass> classes = [];
-  HistoryDetail? detail;
+  HistorySummary? summary;
   String? selectedClassCode;
   String? errorMessage;
-  String searchQuery = '', classQuery = '', statusFilter = 'all';
+  String searchQuery = '', classQuery = '', riskFilter = 'all';
   bool loadingClasses = false,
-      loadingDetail = false,
+      loadingSummary = false,
       saving = false,
       working = false;
-  final Map<String, HistoryStudent> _edits = {};
   List<HistoryClass>? _visibleClassesCache;
-  List<HistoryStudent>? _studentsCache;
-  List<HistoryStudent>? _filteredStudentsCache;
-  Map<String, int>? _statusCountsCache;
+  List<StudentSummary>? _filteredStudentsCache;
+  int _atRiskCount = 0;
   bool _derivedDirty = true;
   int _generation = 0;
   bool _disposed = false;
   String? _accountToken;
-  bool get hasChanges => _edits.isNotEmpty;
-  bool get busy => loadingClasses || loadingDetail || saving || working;
+  bool get busy => loadingClasses || loadingSummary || saving || working;
   List<HistoryClass> get visibleClasses {
     _ensureDerived();
     return _visibleClassesCache!;
   }
 
-  List<HistoryStudent> get students {
-    _ensureDerived();
-    return _studentsCache!;
-  }
+  List<StudentSummary> get students => summary?.students ?? const [];
 
-  List<HistoryStudent> get filteredStudents {
+  List<StudentSummary> get filteredStudents {
     _ensureDerived();
     return _filteredStudentsCache!;
   }
 
-  int count(String status) {
+  int get atRiskCount {
     _ensureDerived();
-    return _statusCountsCache![status] ?? 0;
+    return _atRiskCount;
   }
 
   void _markDerivedDirty() {
@@ -58,9 +52,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     if (!_derivedDirty) return;
     final normalizedClassQuery = classQuery.trim().toLowerCase();
     final normalizedSearchQuery = searchQuery.trim().toLowerCase();
-    final currentStudents = (detail?.students ?? const <HistoryStudent>[])
-        .map((student) => _edits[student.rollNumber] ?? student)
-        .toList(growable: false);
+    final currentStudents = summary?.students ?? const <StudentSummary>[];
 
     _visibleClassesCache = classes
         .where(
@@ -69,30 +61,20 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
           ),
         )
         .toList(growable: false);
-    _studentsCache = currentStudents;
+    _atRiskCount = currentStudents
+        .where((student) => student.absenceRate > .2)
+        .length;
     _filteredStudentsCache = currentStudents
         .where((student) {
-          final matchesStatus =
-              statusFilter == 'all' ||
-              (statusFilter == 'Present'
-                  ? student.status == 'Present' ||
-                        student.status == 'ManualByGV'
-                  : student.status == statusFilter);
+          final matchesRisk =
+              riskFilter == 'all' || student.absenceRate > .2;
           final matchesSearch =
               '${student.rollNumber} ${student.fullName} ${student.email}'
                   .toLowerCase()
                   .contains(normalizedSearchQuery);
-          return matchesStatus && matchesSearch;
+          return matchesRisk && matchesSearch;
         })
         .toList(growable: false);
-    _statusCountsCache = {
-      for (final status in ['Present', 'Late', 'Absent', 'Unchecked'])
-        status: currentStudents.where((student) {
-          return status == 'Present'
-              ? student.status == 'Present' || student.status == 'ManualByGV'
-              : student.status == status;
-        }).length,
-    };
     _derivedDirty = false;
   }
 
@@ -105,13 +87,12 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     _accountToken = token;
     _generation++;
     classes = [];
-    detail = null;
+    summary = null;
     selectedClassCode = null;
-    _edits.clear();
-    loadingClasses = loadingDetail = saving = working = false;
+    loadingClasses = loadingSummary = saving = working = false;
     errorMessage = null;
     searchQuery = classQuery = '';
-    statusFilter = 'all';
+    riskFilter = 'all';
     _markDerivedDirty();
     _notify();
   }
@@ -128,35 +109,15 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     _notify();
   }
 
-  void setStatusFilter(String value) {
-    statusFilter = value;
-    _markDerivedDirty();
-    _notify();
-  }
-
-  void discardChanges() {
-    _edits.clear();
-    _markDerivedDirty();
-    _notify();
-  }
-
-  void edit(HistoryStudent student, String status, String note) {
-    if (busy || detail?.selectedSession == null) return;
-    final original = detail!.students.firstWhere(
-      (s) => s.rollNumber == student.rollNumber,
-    );
-    if (original.status == status && original.note == note) {
-      _edits.remove(student.rollNumber);
-    } else {
-      _edits[student.rollNumber] = original.edit(status: status, note: note);
-    }
+  void setRiskFilter(String value) {
+    riskFilter = value;
     _markDerivedDirty();
     _notify();
   }
 
   Future<void> loadClasses({bool force = false}) async {
-    if (busy || hasChanges) return;
-    if (!force && classes.isNotEmpty && detail != null) return;
+    if (busy) return;
+    if (!force && classes.isNotEmpty && summary != null) return;
     final generation = ++_generation;
     loadingClasses = true;
     errorMessage = null;
@@ -172,7 +133,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
             ? selectedClassCode
             : data.firstOrNull?.classCode;
         if (code == null) {
-          detail = null;
+          summary = null;
           selectedClassCode = null;
           _markDerivedDirty();
         } else {
@@ -185,40 +146,39 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
   }
 
   Future<void> selectClass(String code) async {
-    if (saving || working || hasChanges) return;
+    // Deliberately not gated on loadingSummary/loadingClasses: switching
+    // classes while a previous class's summary is still in flight must be
+    // allowed so the generation check in _loadSummary can discard the
+    // stale response instead of this call being silently dropped.
+    if (saving || working) return;
     selectedClassCode = code;
     searchQuery = '';
-    statusFilter = 'all';
+    riskFilter = 'all';
     _markDerivedDirty();
-    await _loadDetail();
+    await _loadSummary();
   }
 
-  Future<void> selectSession(String id) async {
-    if (busy || hasChanges) return;
-    await _loadDetail(sessionId: id);
-  }
-
-  Future<void> _loadDetail({String? sessionId}) async {
+  Future<void> _loadSummary() async {
     final code = selectedClassCode;
     if (code == null) return;
     final generation = ++_generation;
-    loadingDetail = true;
+    loadingSummary = true;
     errorMessage = null;
     _notify();
-    final result = await repository.getDetail(code, sessionId: sessionId);
+    final result = await repository.getSummary(code);
     if (_disposed || generation != _generation) return;
-    loadingDetail = false;
+    loadingSummary = false;
     switch (result) {
-      case ApiSuccess<HistoryDetail>(:final data):
+      case ApiSuccess<HistorySummary>(:final data):
         _accept(data);
-      case ApiFailure<HistoryDetail>(:final error):
+      case ApiFailure<HistorySummary>(:final error):
         errorMessage = error.message;
     }
     _notify();
   }
 
-  void _accept(HistoryDetail data) {
-    detail = data;
+  void _accept(HistorySummary data) {
+    summary = data;
     _markDerivedDirty();
     classes = classes
         .map(
@@ -228,50 +188,13 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     _markDerivedDirty();
   }
 
-  Future<void> refreshDetail() async {
-    if (busy || hasChanges || selectedClassCode == null) return;
-    await _loadDetail(sessionId: detail?.selectedSession?.sessionId);
-  }
-
-  Future<bool> saveChanges() async {
-    if (busy || !hasChanges || detail?.selectedSession == null) return false;
-    final generation = _generation;
-    saving = true;
-    errorMessage = null;
-    _notify();
-    final result = await repository.save(
-      selectedClassCode!,
-      detail!.selectedSession!.sessionId,
-      _edits.values
-          .map(
-            (s) => <String, dynamic>{
-              'rollNumber': s.rollNumber,
-              'status': s.status,
-              'note': s.note,
-              'revision': s.revision,
-            },
-          )
-          .toList(),
-    );
-    if (_disposed || generation != _generation) return false;
-    saving = false;
-    switch (result) {
-      case ApiSuccess<HistoryDetail>(:final data):
-        _edits.clear();
-        _accept(data);
-        _markDerivedDirty();
-        _notify();
-        return true;
-      case ApiFailure<HistoryDetail>(:final error):
-        errorMessage = error.message;
-        _notify();
-        return false;
-    }
-    return false;
+  Future<void> refreshSummary() async {
+    if (busy || selectedClassCode == null) return;
+    await _loadSummary();
   }
 
   Future<T?> _operation<T>(Future<ApiResult<T>> Function() call) async {
-    if (busy || hasChanges || selectedClassCode == null) return null;
+    if (busy || selectedClassCode == null) return null;
     final generation = _generation;
     working = true;
     errorMessage = null;
@@ -293,12 +216,62 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
 
   Future<AttendanceMatrix?> loadMatrix() =>
       _operation(() => repository.getMatrix(selectedClassCode!));
-  Future<HistoryExport?> export() => _operation(
-    () => repository.export(
-      selectedClassCode!,
-      detail?.selectedSession?.sessionId,
-    ),
-  );
+
+  /// Saves a single (session, student) attendance edit made from the matrix
+  /// dialog, then refreshes both the matrix and the class-wide summary so
+  /// the aggregate table reflects the change.
+  Future<AttendanceMatrix?> saveMatrixCell({
+    required String sessionId,
+    required String rollNumber,
+    required String status,
+    required String note,
+    required String revision,
+  }) async {
+    if (busy || selectedClassCode == null) return null;
+    final classCode = selectedClassCode!;
+    final generation = _generation;
+    saving = true;
+    errorMessage = null;
+    _notify();
+    final result = await repository.save(classCode, sessionId, [
+      {
+        'rollNumber': rollNumber,
+        'status': status,
+        'note': note,
+        'revision': revision,
+      },
+    ]);
+    if (_disposed || generation != _generation) return null;
+    saving = false;
+    switch (result) {
+      case ApiSuccess<HistoryDetail>():
+        // Calling _loadSummary() bumps the shared generation counter, so
+        // the original `generation` captured above is no longer the right
+        // token to gate on; only _disposed matters for these follow-ups.
+        await _loadSummary();
+        if (_disposed) return null;
+        final matrix = await repository.getMatrix(classCode);
+        if (_disposed) return null;
+        _notify();
+        switch (matrix) {
+          case ApiSuccess<AttendanceMatrix>(:final data):
+            return data;
+          case ApiFailure<AttendanceMatrix>(:final error):
+            errorMessage = error.message;
+            _notify();
+            return null;
+        }
+        return null;
+      case ApiFailure<HistoryDetail>(:final error):
+        errorMessage = error.message;
+        _notify();
+        return null;
+    }
+    return null;
+  }
+
+  Future<HistoryExport?> export() =>
+      _operation(() => repository.export(selectedClassCode!, null));
   Future<SessionModel?> startSession(String slot, String ip) =>
       _operation(() => repository.startSession(selectedClassCode!, slot, ip));
 

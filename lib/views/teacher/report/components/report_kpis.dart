@@ -33,9 +33,18 @@ class ReportKpis extends StatelessWidget {
               iconBg: AppColors.statusPresentBg,
               bottomLeft: Row(
                 children: [
-                  const Icon(Icons.trending_up, size: 16, color: AppColors.statusPresent),
+                  const Icon(
+                    Icons.trending_up,
+                    size: 16,
+                    color: AppColors.statusPresent,
+                  ),
                   const SizedBox(width: 4),
-                  Text('+1.4% so với Summer 2023', style: AppTextStyles.labelSm.copyWith(color: AppColors.statusPresent)),
+                  Text(
+                    '+1.4% so với Summer 2023',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.statusPresent,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Tốt',
@@ -50,14 +59,34 @@ class ReportKpis extends StatelessWidget {
               iconBg: AppColors.primaryLight,
               bottomLeft: Row(
                 children: [
-                  Text('QR động: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('96.2%', style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    'QR động: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    '96.2%',
+                    style: AppTextStyles.code.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               bottomRight: Row(
                 children: [
-                  Text('Bù: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('3.8%', style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    'Bù: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    '3.8%',
+                    style: AppTextStyles.code.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -71,9 +100,21 @@ class ReportKpis extends StatelessWidget {
               iconBg: AppColors.statusAbsentBg,
               bottomLeft: Row(
                 children: [
-                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.statusAbsent, shape: BoxShape.circle)),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.statusAbsent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  Text('Cần gửi nhắc nhở gấp', style: AppTextStyles.labelSm.copyWith(color: AppColors.statusAbsent)),
+                  Text(
+                    'Cần gửi nhắc nhở gấp',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.statusAbsent,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Báo động',
@@ -89,8 +130,19 @@ class ReportKpis extends StatelessWidget {
               iconBg: AppColors.statusLateBg,
               bottomLeft: Row(
                 children: [
-                  Text('Thời gian trễ TB: ', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                  Text('11 phút', style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Thời gian trễ TB: ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    '11 phút',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
               badgeText: 'Chấp nhận',
@@ -164,11 +216,8 @@ class ReportKpis extends StatelessWidget {
                             ),
                             if (valueSuffix != null) ...[
                               const SizedBox(width: 4),
-                              Text(
-                                valueSuffix,
-                                style: AppTextStyles.caption,
-                              ),
-                            ]
+                              Text(valueSuffix, style: AppTextStyles.caption),
+                            ],
                           ],
                         ),
                       ],
@@ -188,7 +237,10 @@ class ReportKpis extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 8,
+            ),
             decoration: const BoxDecoration(
               color: AppColors.surfaceBright,
               borderRadius: BorderRadius.only(
@@ -203,10 +255,15 @@ class ReportKpis extends StatelessWidget {
                 if (bottomRight != null) bottomRight,
                 if (badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeBg,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
                     ),
                     child: Text(
                       badgeText,
