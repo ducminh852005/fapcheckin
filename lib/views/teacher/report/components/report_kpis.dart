@@ -200,7 +200,7 @@ class ReportKpis extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 bottomLeft,
-                if (bottomRight != null) bottomRight,
+                bottomRight ?? const SizedBox.shrink(),
                 if (badgeText != null)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
