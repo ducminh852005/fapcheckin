@@ -55,6 +55,18 @@ class TeacherRepository {
     return result;
   }
 
+  Future<ApiResult<String>> syncSessionTeacherIp({
+    required String sessionId,
+    required String teacherIp,
+  }) {
+    return _api.postAction<String>(
+      'syncSessionTeacherIp',
+      payload: {'sessionId': sessionId, 'teacherIp': teacherIp},
+      fromJsonT: (data) =>
+          (data as Map<String, dynamic>)['teacherIp']?.toString() ?? '',
+    );
+  }
+
   // ── closeSession ────────────────────────────────────────────────────────────
 
   Future<ApiResult<CloseSessionResult>> closeSession({

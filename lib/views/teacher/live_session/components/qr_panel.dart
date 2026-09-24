@@ -280,7 +280,7 @@ class _MetaItem extends StatelessWidget {
   }
 }
 
-/// QR code display with circular countdown timer
+/// QR code display with a one-minute rotation countdown.
 class _QrCodeDisplay extends StatelessWidget {
   final LiveSessionViewModel vm;
   const _QrCodeDisplay({required this.vm});
@@ -326,7 +326,7 @@ class _QrCodeDisplay extends StatelessWidget {
               child: const SizedBox.shrink(),
             ),
           ),
-          // QR + Timer column
+          // QR + rotation status
           Column(
             children: [
               // QR Code placeholder
@@ -379,7 +379,7 @@ class _QrCodeDisplay extends StatelessWidget {
                       ),
               ),
               const SizedBox(height: 16),
-              // Circular countdown timer bar
+              // One-minute QR countdown
               if (vm.session != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -400,7 +400,6 @@ class _QrCodeDisplay extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Circular progress
                       SizedBox(
                         width: 36,
                         height: 36,
@@ -438,7 +437,7 @@ class _QrCodeDisplay extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            'Chống gian lận vị trí & chụp màn hình',
+                            'Chu kỳ làm mới 1 phút',
                             style: AppTextStyles.caption.copyWith(
                               fontSize: 11,
                               color: AppColors.textSecondary,
@@ -989,7 +988,6 @@ class _CircularTimerPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2) - 2;
 
-    // Track
     canvas.drawCircle(
       center,
       radius,
@@ -999,7 +997,6 @@ class _CircularTimerPainter extends CustomPainter {
         ..strokeWidth = 3,
     );
 
-    // Progress arc
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,

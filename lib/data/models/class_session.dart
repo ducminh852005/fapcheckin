@@ -9,6 +9,7 @@ class ClassSession {
   final int studentCount;
   final SessionStatus status;
   final int? scannedCount; // Only for active sessions
+  final bool isMakeup; // Indicates this is a makeup/extra class from Class_Schedule
 
   const ClassSession({
     required this.courseCode,
@@ -20,6 +21,7 @@ class ClassSession {
     required this.studentCount,
     required this.status,
     this.scannedCount,
+    this.isMakeup = false,
   });
 }
 

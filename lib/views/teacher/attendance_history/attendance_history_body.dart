@@ -27,9 +27,6 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<AttendanceHistoryViewModel>();
-    final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.hasChanges,
-    );
     final errorMessage = context.select<AttendanceHistoryViewModel, String?>(
       (value) => value.errorMessage,
     );
@@ -42,11 +39,11 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     final hasClasses = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.classes.isNotEmpty,
     );
-    final hasDetail = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.detail != null,
+    final hasSummary = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.summary != null,
     );
-    final loadingDetail = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.loadingDetail,
+    final loadingSummary = context.select<AttendanceHistoryViewModel, bool>(
+      (value) => value.loadingSummary,
     );
 
     return SingleChildScrollView(
@@ -67,9 +64,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
               background: AppColors.statusAbsentBg,
               message: errorMessage,
               action: TextButton(
-                onPressed: busy || hasChanges
-                    ? null
-                    : () => vm.loadClasses(force: true),
+                onPressed: busy ? null : () => vm.loadClasses(force: true),
                 child: const Text('Tải lại'),
               ),
             ),
@@ -90,7 +85,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
             const SizedBox(height: AppSpacing.md),
             const ClassSelector(),
           ],
-          if (hasDetail) ...[
+          if (hasSummary) ...[
             const SizedBox(height: AppSpacing.md),
             Stack(
               children: [
@@ -102,7 +97,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                     HistoryTable(),
                   ],
                 ),
-                if (loadingDetail)
+                if (loadingSummary)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(

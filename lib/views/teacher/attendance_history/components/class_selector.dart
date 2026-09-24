@@ -25,9 +25,6 @@ class ClassSelector extends StatelessWidget {
     final busy = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.busy,
     );
-    final hasChanges = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.hasChanges,
-    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -98,7 +95,7 @@ class ClassSelector extends StatelessWidget {
                 return _ClassCard(
                   classInfo: c,
                   selected: selected,
-                  enabled: !busy && !hasChanges,
+                  enabled: !busy,
                   onTap: () => vm.selectClass(c.classCode),
                 );
               },

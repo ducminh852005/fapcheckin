@@ -39,14 +39,18 @@ class SettingsSidebar extends StatelessWidget {
               const SizedBox(height: 4),
               _buildTabBtn('sync', 'Đồng bộ FAP Edu', Icons.sync),
               const SizedBox(height: 4),
-              _buildTabBtn('alerts', 'Thông báo & Email', Icons.notifications_active),
+              _buildTabBtn(
+                'alerts',
+                'Thông báo & Email',
+                Icons.notifications_active,
+              ),
               const SizedBox(height: 4),
               _buildTabBtn('profile', 'Tài khoản Giảng viên', Icons.badge),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        
+
         // Quick Session Live Status Widget
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -75,30 +79,61 @@ class SettingsSidebar extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.statusPresentBg,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.statusPresent, shape: BoxShape.circle)),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppColors.statusPresent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                         const SizedBox(width: 4),
-                        Text('Trực tiếp', style: AppTextStyles.caption.copyWith(color: AppColors.statusPresent, fontWeight: FontWeight.w600)),
+                        Text(
+                          'Trực tiếp',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.statusPresent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Text('P.302 • Tòa Alpha', style: AppTextStyles.headlineSm.copyWith(color: AppColors.textPrimary)),
+              Text(
+                'P.302 • Tòa Alpha',
+                style: AppTextStyles.headlineSm.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text('Môn: Lập trình Web (PRJ301)', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-              
+              Text(
+                'Môn: Lập trình Web (PRJ301)',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
               const SizedBox(height: AppSpacing.md),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -108,12 +143,27 @@ class SettingsSidebar extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.wifi, size: 16, color: AppColors.textSecondary),
+                        const Icon(
+                          Icons.wifi,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: 4),
-                        Text('AP-ALPHA-302', style: AppTextStyles.code.copyWith(color: AppColors.textSecondary)),
+                        Text(
+                          'AP-ALPHA-302',
+                          style: AppTextStyles.code.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
-                    Text('98.4% On-time', style: AppTextStyles.code.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    Text(
+                      '98.4% On-time',
+                      style: AppTextStyles.code.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -121,7 +171,7 @@ class SettingsSidebar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        
+
         // Hardware Spec Information
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -132,17 +182,28 @@ class SettingsSidebar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.info_outline, size: 20, color: AppColors.textSecondary),
+              const Icon(
+                Icons.info_outline,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Khuyến nghị Giảng đường', style: AppTextStyles.labelSm.copyWith(fontWeight: FontWeight.w600)),
+                    Text(
+                      'Khuyến nghị Giảng đường',
+                      style: AppTextStyles.labelSm.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
-                      'Mã QR 20 giây kết hợp bộ lọc Wi-Fi Alpha giúp loại trừ 99.8% hành vi điểm danh hộ.',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                      'Mã QR 60 giây kết hợp kiểm tra mạng Wi-Fi của lớp học.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -156,7 +217,7 @@ class SettingsSidebar extends StatelessWidget {
 
   Widget _buildTabBtn(String id, String label, IconData icon) {
     final isActive = activeTab == id;
-    
+
     return Material(
       color: isActive ? AppColors.primaryContainer : Colors.transparent,
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -164,7 +225,10 @@ class SettingsSidebar extends StatelessWidget {
         onTap: () => onTabSelect(id),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           ),
@@ -173,18 +237,30 @@ class SettingsSidebar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 20, color: isActive ? AppColors.onPrimary : AppColors.textSecondary),
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: isActive
+                        ? AppColors.onPrimary
+                        : AppColors.textSecondary,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     label,
-                    style: AppTextStyles.labelMd.copyWith(color: isActive ? AppColors.onPrimary : AppColors.textSecondary),
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: isActive
+                          ? AppColors.onPrimary
+                          : AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
               Icon(
                 Icons.chevron_right,
                 size: 16,
-                color: isActive ? AppColors.onPrimary : AppColors.textSecondary.withOpacity(0.4),
+                color: isActive
+                    ? AppColors.onPrimary
+                    : AppColors.textSecondary.withOpacity(0.4),
               ),
             ],
           ),

@@ -87,6 +87,27 @@ var AttendanceHistoryService = (function() {
     var tables = readTables();
     return classes.map(function(cls) { return classDto(cls, loadClass(cls, tables)); });
   }
+  function studentSummary(data, student) {
+    var closed = data.sessions.filter(function(s) { return s.sessionStatus === 'closed'; });
+    var present = 0, late = 0, absent = 0;
+    closed.forEach(function(session) {
+      var status = statusFor(data, session, student);
+      if (status === 'Late') late++;
+      else if (status === 'Absent') absent++;
+      else if (isPresent(status)) present++;
+    });
+    return { rollNumber: student.rollNumber, fullName: student.fullName, email: student.email,
+      presentCount: present, lateCount: late, absentCount: absent,
+      closedSessions: closed.length, totalSessions: data.sessions.length };
+  }
+  function getSummary(params) {
+    var owner = ownedClass(params), data = loadClass(owner.cls);
+    return { classInfo: classDto(owner.cls, data), teacherName: key(owner.teacher.fullName),
+      sessions: data.sessions.map(sessionDto),
+      slots: SheetDB.getRowsAsObjects('Slot').map(function(s) {
+        return { slotCode: key(s.slotCode), startTime: s.startTime, endTime: s.endTime };
+      }), students: data.students.map(function(student) { return studentSummary(data, student); }) };
+  }
   function getDetail(params) {
     var owner = ownedClass(params), data = loadClass(owner.cls);
     var selected = params.sessionId ? data.sessions.filter(function(s) {
@@ -155,17 +176,33 @@ var AttendanceHistoryService = (function() {
     var owner = ownedClass(params), data = loadClass(owner.cls);
     return { sessions: data.sessions.map(sessionDto), students: data.students.map(function(student) {
       return { rollNumber: student.rollNumber, fullName: student.fullName,
-        statuses: data.sessions.map(function(s) { return statusFor(data, s, student); }) };
+        cells: data.sessions.map(function(s) {
+          var record = data.records[key(s.sessionId) + '|' + student.rollNumber];
+          return { sessionId: key(s.sessionId), status: statusFor(data, s, student),
+            checkinTime: record ? record.checkinTime : '', note: record ? key(record.note) : '',
+            revision: record ? JSON.stringify([record.recordId, record.status, key(record.note), key(record.updatedAt), key(record.checkinTime)]) : '' };
+        }) };
     }) };
   }
   function exportHistory(params) {
-    var detail = getDetail(params);
-    var rows = [['Mã lớp', 'Buổi học', 'MSSV', 'Họ và tên', 'Email', 'Trạng thái', 'Thời gian điểm danh', 'Số buổi vắng', 'Số buổi đã kết thúc', 'Ghi chú']];
-    detail.students.forEach(function(s) {
-      rows.push([detail.classInfo.classCode, detail.selectedSession ? key(detail.selectedSession.sessionDate) : '',
-        s.rollNumber, s.fullName, s.email, s.status, key(s.checkinTime), s.absenceCount, s.totalSessions, s.note]);
+    if (params.sessionId) {
+      var detail = getDetail(params);
+      var rows = [['Mã lớp', 'Buổi học', 'MSSV', 'Họ và tên', 'Email', 'Trạng thái', 'Thời gian điểm danh', 'Số buổi vắng', 'Số buổi đã kết thúc', 'Ghi chú']];
+      detail.students.forEach(function(s) {
+        rows.push([detail.classInfo.classCode, detail.selectedSession ? key(detail.selectedSession.sessionDate) : '',
+          s.rollNumber, s.fullName, s.email, s.status, key(s.checkinTime), s.absenceCount, s.totalSessions, s.note]);
+      });
+      return HistoryExcel.create(rows, detail.classInfo.classCode);
+    }
+    var summary = getSummary(params);
+    var rows = [['Mã lớp', 'MSSV', 'Họ và tên', 'Email', 'Số buổi có mặt', 'Số buổi đi trễ', 'Số buổi vắng', 'Số buổi đã kết thúc', 'Tổng số buổi', 'Tỷ lệ có mặt (%)', 'Tỷ lệ vắng (%)']];
+    summary.students.forEach(function(s) {
+      var closed = s.closedSessions;
+      rows.push([summary.classInfo.classCode, s.rollNumber, s.fullName, s.email, s.presentCount, s.lateCount, s.absentCount,
+        s.closedSessions, s.totalSessions, closed ? Math.round((s.presentCount + s.lateCount) / closed * 1000) / 10 : 0,
+        closed ? Math.round(s.absentCount / closed * 1000) / 10 : 0]);
     });
-    return HistoryExcel.create(rows, detail.classInfo.classCode);
+    return HistoryExcel.create(rows, summary.classInfo.classCode);
   }
   function startSession(params) {
     ownedClass(params);
@@ -182,6 +219,6 @@ var AttendanceHistoryService = (function() {
       return TeacherService.startSession(params);
     } finally { lock.releaseLock(); }
   }
-  return { getClasses: getClasses, getDetail: getDetail, saveChanges: saveChanges,
+  return { getClasses: getClasses, getDetail: getDetail, getSummary: getSummary, saveChanges: saveChanges,
     getMatrix: getMatrix, exportHistory: exportHistory, startSession: startSession };
 })();

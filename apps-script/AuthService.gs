@@ -1,5 +1,10 @@
 // File: AuthService.gs
 
+// Shared OAuth Web client for the HTML UI and backend audience validation.
+var GOOGLE_WEB_CLIENT_ID = '222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com';
+var GOOGLE_DESKTOP_CLIENT_ID = '222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com';
+var GOOGLE_ALLOWED_CLIENT_IDS = [GOOGLE_WEB_CLIENT_ID, GOOGLE_DESKTOP_CLIENT_ID];
+
 var AuthService = (function() {
   
   function login(params) {
@@ -7,7 +12,7 @@ var AuthService = (function() {
     if (!idToken) throwError('MISSING_TOKEN', 'Không tìm thấy idToken trong request.');
     
     // Gọi API của Google để verify token thật
-    var verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + idToken;
+    var verifyUrl = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken);
     var email = null;
     try {
       var response = UrlFetchApp.fetch(verifyUrl);
@@ -17,6 +22,31 @@ var AuthService = (function() {
       throwError('INVALID_TOKEN', 'Token đăng nhập Google không hợp lệ hoặc đã hết hạn.');
     }
     
+    if (GOOGLE_ALLOWED_CLIENT_IDS.indexOf(tokenInfo.aud) === -1) {
+      throwError(
+        'INVALID_AUDIENCE',
+        'Token Google không được cấp cho ứng dụng này. Audience nhận được: ' +
+          String(tokenInfo.aud || '(trống)')
+      );
+    }
+
+    if (tokenInfo.email_verified !== true && tokenInfo.email_verified !== 'true') {
+      throwError('INVALID_TOKEN', 'Email Google chưa được xác minh.');
+    }
+
+    if (params.requireLoginNonce) {
+      var nonce = tokenInfo.nonce;
+      var nonceCache = CacheService.getScriptCache();
+      var nonceKey = nonce ? 'google-login-nonce:' + nonce : '';
+      if (!nonceKey || !nonceCache.get(nonceKey)) {
+        throwError(
+          'INVALID_TOKEN',
+          'Yêu cầu đăng nhập Google đã hết hạn hoặc không hợp lệ.'
+        );
+      }
+      nonceCache.remove(nonceKey);
+    }
+
     if (!email) {
       throwError('INVALID_TOKEN', 'Không trích xuất được email từ token.');
     }

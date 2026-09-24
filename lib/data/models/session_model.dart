@@ -41,4 +41,6 @@ class SessionModel {
   };
 
   bool get isOpen => sessionStatus == 'open';
+  bool get isClosed => sessionStatus == 'closed';
+  bool get isPlanned => sessionStatus == 'planned';
 }

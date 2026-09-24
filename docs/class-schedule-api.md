@@ -58,7 +58,7 @@ Các mã lỗi chính: UNAUTHORIZED, FORBIDDEN, VALIDATION_ERROR, SCHEDULE_CONFL
 
 ## Giới hạn được hiển thị trên giao diện
 
-QR tự động/luân phiên 20 giây, email/thông báo và đồng bộ FAP chưa có triển khai thực tế trong backend. Các công tắc tắt và vô hiệu hóa kèm lý do; API từ chối yêu cầu bật chúng. Tạo lịch không gửi email, không đánh dấu đã đồng bộ và không tự mở phiên. Giáo viên mở phiên điểm danh thủ công qua chức năng hiện có khi bắt đầu buổi học.
+QR tự động theo lịch, email/thông báo và đồng bộ FAP chưa có triển khai thực tế trong backend. Khi giảng viên mở phiên, QR được làm mới theo chu kỳ 60 giây. Tạo lịch không gửi email, không đánh dấu đã đồng bộ và không tự mở phiên.
 
 Danh sách **Lịch học đã tạo** ở trang lớp học tải từ API và cập nhật sau khi lưu. Các thẻ dashboard/lớp cũ dùng getClasses không được chuyển thành lịch FAP bởi thay đổi này.
 

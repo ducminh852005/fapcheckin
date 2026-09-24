@@ -11,6 +11,7 @@ Response giữ envelope `{success, data, error}`.
 - `SheetDB.gs` mở đúng `SPREADSHEET_ID` đã cấu hình bằng `openById`, không tự chuyển sang Sheet đang gắn với Apps Script. Tài khoản triển khai phải có quyền truy cập file đó.
 - Danh sách điểm danh trực tiếp dùng `Users.fullName` ghép theo `Enrollment.rollNumber`, không dùng phần tên email làm họ tên.
 - Bảng cảnh báo ở trang Báo cáo dùng `getHistoryClasses` và `getHistoryDetail`; không còn tên/MSSV mẫu. Tỷ lệ vắng tính trên phiên đã đóng; lỗi API được hiển thị, không thay bằng dữ liệu giả. Các KPI và biểu đồ báo cáo khác vẫn là minh họa và được ghi rõ trên trang.
+- Bảng chính của trang Lịch sử điểm danh dùng `getHistorySummary` để hiển thị **tổng hợp cả lớp từ buổi đầu đến nay** (1 dòng/sinh viên: số buổi có mặt/đi trễ/vắng trên các phiên đã đóng), không còn phụ thuộc 1 buổi cụ thể. `getHistoryDetail` (theo 1 buổi, có `revision` để sửa) chỉ còn dùng nội bộ khi sửa 1 ô trong dialog Ma trận.
 - Sau khi thay đổi `SheetDB.gs`, cần triển khai phiên bản Apps Script mới theo các bước dưới đây; sửa file trong repo chưa cập nhật Web App đang chạy.
 
 1. Cập nhật `AuthService.gs`, `SheetDB.gs`, `Router.gs` trong dự án Apps Script hiện tại.
@@ -28,10 +29,11 @@ Mọi action dưới đây yêu cầu `sessionToken` nhận từ `login`. Giản
 | Action | Tham số ngoài action/token | Data trả về |
 |---|---|---|
 | `getHistoryClasses` | Không | Danh sách lớp của giảng viên, sĩ số từ Enrollment, số phiên, tỷ lệ có mặt/đi trễ, số SV vắng >20%, phiên gần nhất |
-| `getHistoryDetail` | `classCode`, `sessionId` tùy chọn | `classInfo`, `teacherName`, `sessions`, `selectedSession`, `slots`, `students` |
-| `saveAttendanceChanges` | `classCode`, `sessionId`, `changes[]` | Chi tiết mới sau khi ghi |
-| `getAttendanceMatrix` | `classCode` | Danh sách `sessions` và `students`; `statuses[]` cùng thứ tự với sessions |
-| `exportAttendanceHistory` | `classCode`, `sessionId` tùy chọn | `filename`, `mimeType`, `base64` của tệp XLSX |
+| `getHistorySummary` | `classCode` | `classInfo`, `teacherName`, `sessions`, `slots`, `students[]` — mỗi sinh viên có `presentCount/lateCount/absentCount/closedSessions/totalSessions` tính trên toàn bộ phiên đã đóng của lớp (dùng cho bảng chính) |
+| `getHistoryDetail` | `classCode`, `sessionId` tùy chọn | `classInfo`, `teacherName`, `sessions`, `selectedSession`, `slots`, `students` (trạng thái theo 1 buổi, có `revision` để sửa) — chỉ dùng nội bộ khi sửa 1 ô trong Ma trận |
+| `saveAttendanceChanges` | `classCode`, `sessionId`, `changes[]` | Chi tiết mới sau khi ghi (theo 1 buổi) |
+| `getAttendanceMatrix` | `classCode` | Danh sách `sessions` và `students`; mỗi sinh viên có `cells[]` (`sessionId, status, note, checkinTime, revision`) cùng thứ tự với sessions — `revision` dùng để sửa trực tiếp trong dialog Ma trận |
+| `exportAttendanceHistory` | `classCode`, `sessionId` tùy chọn | Có `sessionId`: XLSX danh sách 1 buổi (như cũ). Không có `sessionId`: XLSX tổng hợp cả lớp, 1 dòng/sinh viên với số buổi có mặt/trễ/vắng và tỷ lệ — dùng cho nút xuất trên bảng chính |
 | `startHistorySession` | `classCode`, `slotCode`, `teacherIp` | `session`, `qrToken`; kiểm tra ca học, quyền phụ trách và phiên đang mở |
 
 Các API cũ vẫn tồn tại để các trang khác tiếp tục hoạt động. Trang lịch sử không gọi `getAttendanceHistory` cũ.
