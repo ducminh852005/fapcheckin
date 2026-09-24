@@ -22,8 +22,62 @@ class TimetableEntry {
   });
 }
 
+/// Decodes FPT-style slotCode (A1..A6, P1..P6, ...) into the real slot
+/// number and the weekdays (1=Mon..7=Sun) that class meets on.
+///
+/// Confirmed rule (from teacher's note):
+///  - A = ca sáng (AM)  -> slot 1-2
+///  - P = ca chiều (PM) -> slot 3-4
+///  - Digit picks the day-pair:
+///      1,2 -> Thứ 2 & Thứ 5 (Mon, Thu)
+///      3,4 -> Thứ 3 & Thứ 6 (Tue, Fri)
+///      5,6 -> Thứ 4 & Thứ 7 (Wed, Sat)
+///    Odd digit = first slot of the ca, even digit = second slot of the ca.
+///
+/// NOT CONFIRMED: evening ca (slot 5-6). Guessed letter 'E' below as a
+/// placeholder since such classes are rare — update the letter/base slot
+/// once you confirm the real code (e.g. it might not be 'E' at all).
+class SlotCodeInfo {
+  final int slot;
+  final List<int> weekdays;
+  const SlotCodeInfo({required this.slot, required this.weekdays});
+}
+
+class SlotCodeParser {
+  // letter -> base slot number (first slot of that ca)
+  static const _letterBaseSlot = {
+    'A': 1, // ca sáng: slot 1-2 (confirmed)
+    'P': 3, // ca chiều: slot 3-4 (confirmed)
+    'E': 5, // ca tối: slot 5-6 (UNCONFIRMED GUESS — sửa nếu sai)
+  };
+
+  static const _dayPairs = [
+    [1, 4], // thứ 2, thứ 5
+    [2, 5], // thứ 3, thứ 6
+    [3, 6], // thứ 4, thứ 7
+  ];
+
+  static SlotCodeInfo? parse(String rawCode) {
+    if (rawCode.isEmpty) return null;
+    final letter = rawCode[0].toUpperCase();
+    final numStr = rawCode.substring(1);
+    final n = int.tryParse(numStr);
+    if (n == null || n < 1) return null;
+
+    final baseSlot = _letterBaseSlot[letter] ?? 1;
+    final pairIndex = (n - 1) ~/ 2; // 0,1,2
+    final offset = (n - 1) % 2; // 0 or 1
+    if (pairIndex >= _dayPairs.length) return null;
+
+    return SlotCodeInfo(
+      slot: baseSlot + offset,
+      weekdays: _dayPairs[pairIndex],
+    );
+  }
+}
+
 /// Weekly timetable grid: Mon..Sun columns x Slot 1..8 rows.
-/// Cell shows "COURSE_CODE - at ROOM" + time range, or "-" if empty.
+/// Cell shows "COURSE_CODE" + "at ROOM" + time range, or "-" if empty.
 class WeeklyTimetable extends StatelessWidget {
   final DateTime weekStart; // Monday of the displayed week
   final List<TimetableEntry> entries;

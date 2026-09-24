@@ -79,16 +79,14 @@ class _StatsRow extends StatelessWidget {
 }
 
 /// Main layout below the stats row: weekly timetable grid.
-/// "Lịch dạy hôm nay", "Chuyên cần theo tuần" and "Nhật ký hoạt động"
-/// were removed and replaced with WeeklyTimetable below.
+/// "Lịch dạy hôm nay", "Chuyên cần theo tuần" và "Nhật ký hoạt động"
+/// đã bị bỏ, thay bằng WeeklyTimetable.
 ///
-/// LƯU Ý: DashboardViewModel.classes hiện chỉ chứa lịch của HÔM NAY
-/// (từ getClasses API), không có field ngày-trong-tuần và chưa có API
-/// lấy lịch cả tuần. Vì vậy bảng bên dưới chỉ điền được đúng cột "hôm
-/// nay", các ngày khác trong tuần sẽ hiện "-" cho tới khi có API/field
-/// tương ứng.
+/// Mỗi lớp trong vm.classes lặp lại 2 buổi/tuần theo slotCode (A1..A6,
+/// P1..P6,...) — xem SlotCodeParser trong weekly_timetable.dart để biết
+/// quy tắc giải mã. Vì vậy mỗi lớp sẽ tự sinh ra 2 ô trên bảng tuần,
+/// không cần API lấy lịch cả tuần riêng.
 class _MainContent extends StatelessWidget {
-  // Monday of the current week displayed in the grid.
   DateTime get _weekStart {
     final now = DateTime.now();
     return DateTime(
@@ -102,23 +100,44 @@ class _MainContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
-        final todayWeekday = DateTime.now().weekday; // 1 = Mon .. 7 = Sun
+        final entries = <TimetableEntry>[];
 
-        // TODO: vm.classes currently only holds TODAY's classes.
-        // Replace this with your weekly schedule source (e.g. vm.weeklyClasses)
-        // once available, mapping each item's real day-of-week below.
-        final entries = <TimetableEntry>[
-          for (final c in vm.classes)
-            TimetableEntry(
-              dayOfWeek: todayWeekday,
-              slot: int.tryParse(c.slotCode) ?? 1,
-              courseCode: c.classCode,
-              room: c.room,
-              timeRange: (c.startTime != null && c.endTime != null)
-                  ? '${c.startTime}-${c.endTime}'
-                  : c.timeLabel,
-            ),
-        ];
+        for (final c in vm.classes) {
+          final info = SlotCodeParser.parse(c.slotCode);
+          final timeRange = (c.startTime != null && c.endTime != null)
+              ? '${c.startTime}-${c.endTime}'
+              : c.timeLabel;
+
+          if (info != null) {
+            // Lớp học lặp lại 2 buổi/tuần theo slotCode
+            for (final day in info.weekdays) {
+              entries.add(
+                TimetableEntry(
+                  dayOfWeek: day,
+                  slot: info.slot,
+                  courseCode: c.classCode,
+                  room: c.room,
+                  timeRange: timeRange,
+                ),
+              );
+            }
+          } else {
+            // Không giải mã được slotCode -> tạm hiện đúng hôm nay
+            entries.add(
+              TimetableEntry(
+                dayOfWeek: DateTime.now().weekday,
+                slot:
+                    int.tryParse(
+                      c.slotCode.replaceAll(RegExp(r'[^0-9]'), ''),
+                    ) ??
+                    1,
+                courseCode: c.classCode,
+                room: c.room,
+                timeRange: timeRange,
+              ),
+            );
+          }
+        }
 
         return WeeklyTimetable(weekStart: _weekStart, entries: entries);
       },
