@@ -5,7 +5,10 @@ var TimetableImportService = (function() {
   // before OCR starts. A timetable screenshot is normally well below 1 MB.
   var MAX_FILE_BYTES = 10 * 1024 * 1024;
   var CACHE_SECONDS = 600;
-  var OCR_READ_DELAYS_MS = [0, 300, 700, 1200];
+  // A newly converted Google Doc is not always readable immediately. Retry
+  // long enough for Drive OCR to finish instead of reporting a false
+  // authorization error while the document is still being prepared.
+  var OCR_READ_DELAYS_MS = [0, 500, 1000, 2000, 3000, 5000];
   var ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp'];
 
   function text(value) {
@@ -84,11 +87,14 @@ var TimetableImportService = (function() {
     return '';
   }
 
-  function throwOcrError(error) {
+  function throwOcrError(error, stage) {
     var message = errorText(error);
-    console.error('Timetable OCR failed: ' + message);
+    console.error('Timetable OCR failed at ' + stage + ': ' + message);
 
-    if (/authoriz|permission|access denied|insufficient|not enabled|has not been used|is not defined|is not a function/i.test(message)) {
+    // Only the Drive conversion call can reliably prove that the deployment
+    // lacks OCR authorization. Once it returns a document id, transient
+    // permission/not-found errors usually mean that conversion is not ready.
+    if (stage === 'create' && /authoriz|permission|access denied|insufficient|not enabled|has not been used|is not defined|is not a function/i.test(message)) {
       throwError(
         'OCR_NOT_CONFIGURED',
         'Dịch vụ quét thời khóa biểu chưa được cấp quyền Google Drive/Docs. Quản trị viên cần cấp lại quyền OCR rồi thử lại.'
@@ -98,6 +104,12 @@ var TimetableImportService = (function() {
       throwError(
         'OCR_BUSY',
         'Dịch vụ nhận dạng đang quá tải hoặc đã đạt giới hạn tạm thời. Vui lòng thử lại sau ít phút.'
+      );
+    }
+    if (stage === 'read') {
+      throwError(
+        'OCR_PROCESSING_TIMEOUT',
+        'Google OCR đã nhận ảnh nhưng chưa hoàn tất xử lý. Vui lòng thử lại ảnh sau vài giây.'
       );
     }
     throwError(
@@ -182,6 +194,7 @@ var TimetableImportService = (function() {
     var documentId = '';
     var extractedText = '';
     var ocrError = null;
+    var ocrStage = 'create';
     try {
       var resource = {
         name: 'fapcheckin-ocr-' + Utilities.getUuid(),
@@ -191,7 +204,9 @@ var TimetableImportService = (function() {
         ocrLanguage: 'en',
         fields: 'id'
       });
-      documentId = document.id;
+      documentId = document && document.id ? document.id : '';
+      if (!documentId) throw new Error('Drive OCR did not return a document id.');
+      ocrStage = 'read';
       extractedText = readOcrDocument(documentId);
     } catch (error) {
       ocrError = error;
@@ -200,7 +215,7 @@ var TimetableImportService = (function() {
         try { DriveApp.getFileById(documentId).setTrashed(true); } catch (ignored) {}
       }
     }
-    if (ocrError) throwOcrError(ocrError);
+    if (ocrError) throwOcrError(ocrError, ocrStage);
     if (!extractedText) {
       throwError(
         'OCR_EMPTY',

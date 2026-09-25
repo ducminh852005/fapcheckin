@@ -44,7 +44,7 @@ function setup(overrides = {}) {
       getUuid: () => 'scan-1',
       base64Decode: value => Buffer.from(value, 'base64'),
       newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
-      sleep: () => {},
+      sleep: overrides.sleep || (() => {}),
     },
     Drive: overrides.Drive,
     DriveApp: overrides.DriveApp,
@@ -132,6 +132,31 @@ test('reports missing OCR authorization instead of blaming image quality', () =>
     }),
     { code: 'OCR_NOT_CONFIGURED' },
   );
+});
+
+test('does not report missing authorization after Drive accepted the OCR image', () => {
+  let reads = 0;
+  const backend = setup({
+    Drive: { Files: { create: () => ({ id: 'doc-pending' }) } },
+    DocumentApp: {
+      openById: () => {
+        reads++;
+        throw new Error('You do not have permission to access the requested document');
+      },
+    },
+    DriveApp: { getFileById: () => ({ setTrashed: () => {} }) },
+  });
+
+  assert.throws(
+    () => backend.api.scan({
+      sessionToken: 'valid',
+      mimeType: 'image/jpeg',
+      fileName: 'lich_hoc.jpg',
+      imageBase64: 'aW1hZ2U=',
+    }),
+    { code: 'OCR_PROCESSING_TIMEOUT' },
+  );
+  assert.equal(reads, 6);
 });
 
 test('matches available, conflicting and already assigned classes', () => {
