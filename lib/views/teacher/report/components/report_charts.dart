@@ -27,52 +27,59 @@ class ReportCharts extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header & Legend
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final titleMaxWidth = constraints.maxWidth < 680
+                  ? constraints.maxWidth
+                  : constraints.maxWidth * .56;
+
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
                 children: [
-                  Text(
-                    'Xu hướng điểm danh theo tuần',
-                    style: AppTextStyles.headlineSm,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: titleMaxWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Xu hướng điểm danh theo tuần',
+                          style: AppTextStyles.headlineSm,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Tỷ lệ Có mặt, Đi trễ, Vắng mặt theo các tuần có phiên đã kết thúc',
+                          style: AppTextStyles.caption,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tỷ lệ Có mặt, Đi trễ, Vắng mặt theo các tuần có phiên đã kết thúc',
-                    style: AppTextStyles.caption,
+                  Wrap(
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      _buildLegendItem(ReportColors.primary, 'Có mặt'),
+                      _buildLegendItem(ReportColors.orange, 'Đi trễ'),
+                      _buildLegendItem(AppColors.statusAbsent, 'Vắng mặt'),
+                    ],
                   ),
                 ],
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildLegendItem(ReportColors.primary, 'Có mặt'),
-                  const SizedBox(width: AppSpacing.md),
-                  _buildLegendItem(ReportColors.orange, 'Đi trễ'),
-                  const SizedBox(width: AppSpacing.md),
-                  _buildLegendItem(AppColors.statusAbsent, 'Vắng mặt'),
-                ],
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.md),
-
-          // Chart Area
           SizedBox(
             height: 200,
             child: Stack(
               children: [
-                // Grid Lines
                 Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(4, (index) {
                     return Container(height: 1, color: ReportColors.border);
                   }),
                 ),
-                // Bars
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -90,8 +97,6 @@ class ReportCharts extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // X Axis Labels
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(data.weekly.length, (index) {
@@ -113,6 +118,7 @@ class ReportCharts extends StatelessWidget {
 
   Widget _buildLegendItem(Color color, String label) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 12,
@@ -127,6 +133,11 @@ class ReportCharts extends StatelessWidget {
 
   Widget _buildBar(double present, double late, double absent) {
     const double maxHeight = 180.0;
+    final absentHeight = (maxHeight * absent.clamp(0, 1)).toDouble();
+    final lateHeight = (maxHeight * late.clamp(0, 1)).toDouble();
+    final presentHeight = (maxHeight * present.clamp(0, 1)).toDouble();
+    final totalHeight = absentHeight + lateHeight + presentHeight;
+    final scale = totalHeight > maxHeight ? maxHeight / totalHeight : 1.0;
 
     return SizedBox(
       width: 32,
@@ -135,7 +146,7 @@ class ReportCharts extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            height: maxHeight * absent,
+            height: absentHeight * scale,
             decoration: const BoxDecoration(
               color: ReportColors.red,
               borderRadius: BorderRadius.only(
@@ -144,9 +155,9 @@ class ReportCharts extends StatelessWidget {
               ),
             ),
           ),
-          Container(height: maxHeight * late, color: ReportColors.orange),
+          Container(height: lateHeight * scale, color: ReportColors.orange),
           Container(
-            height: maxHeight * present,
+            height: presentHeight * scale,
             decoration: const BoxDecoration(
               color: ReportColors.primary,
               borderRadius: BorderRadius.only(

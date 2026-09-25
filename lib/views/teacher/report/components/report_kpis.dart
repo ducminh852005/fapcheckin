@@ -35,6 +35,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: AppColors.statusPresent,
               iconBg: AppColors.statusPresentBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
                     Icons.trending_up,
@@ -61,6 +62,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: ReportColors.primary,
               iconBg: ReportColors.primaryLight,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Tổng lượt có mặt: ',
@@ -77,6 +79,7 @@ class ReportKpis extends StatelessWidget {
                 ],
               ),
               bottomRight: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Lớp phụ trách: ',
@@ -102,6 +105,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: AppColors.statusAbsent,
               iconBg: AppColors.statusAbsentBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: 6,
@@ -132,6 +136,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: AppColors.statusLate,
               iconBg: AppColors.statusLateBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Tổng số sinh viên: ',

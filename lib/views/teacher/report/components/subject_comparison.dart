@@ -93,12 +93,11 @@ class SubjectComparison extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             SizedBox(
-              width: 52,
+              width: 64,
               child: Text(
                 '${percentage.toStringAsFixed(1)}%',
                 textAlign: TextAlign.right,
                 maxLines: 1,
-                overflow: TextOverflow.visible,
                 style: AppTextStyles.code.copyWith(
                   fontWeight: FontWeight.w700,
                   color: color == ReportColors.primary
@@ -119,7 +118,7 @@ class SubjectComparison extends StatelessWidget {
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: percentage / 100,
+            widthFactor: (percentage / 100).clamp(0, 1).toDouble(),
             child: Container(
               decoration: BoxDecoration(
                 color: color,
