@@ -57,8 +57,8 @@ class Sidebar extends StatelessWidget {
                 onTap: () => vm.navigate('lop-hoc'),
               ),
               _NavItem(
-                icon: Icons.history_outlined,
-                label: 'Lịch sử điểm danh',
+                icon: Icons.menu_book_outlined,
+                label: 'Khóa học',
                 route: 'lich-su-diem-danh',
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lich-su-diem-danh'),

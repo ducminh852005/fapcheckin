@@ -8,6 +8,7 @@ import 'package:fapcheckin/core/services/google_auth_service.dart';
 import 'package:fapcheckin/data/models/auth_session_model.dart';
 import 'package:fapcheckin/data/repositories/auth_repository.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
+import 'package:fapcheckin/data/models/report_model.dart';
 import 'package:fapcheckin/views/teacher/report/components/warning_table.dart';
 
 class ReportApi extends ApiService {
@@ -83,7 +84,7 @@ void main() {
             Provider<ApiService>.value(value: api),
             ChangeNotifierProvider<AuthViewModel>.value(value: auth),
           ],
-          child: const MaterialApp(home: Scaffold(body: WarningTable())),
+          child: MaterialApp(home: Scaffold(body: WarningTable(data: ReportData.fromJson({})))),
         ),
       );
       await tester.pumpAndSettle();
