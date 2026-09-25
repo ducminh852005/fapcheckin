@@ -56,6 +56,15 @@ function setup(overrides = {}) {
   return { api: context.TimetableImportService, tables, cache, get released() { return released; } };
 }
 
+test('manifest enables Drive OCR and declares its required OAuth scopes', () => {
+  const manifest = JSON.parse(fs.readFileSync('apps-script/appsscript.json', 'utf8'));
+  assert.ok(manifest.dependencies.enabledAdvancedServices.some(service =>
+    service.userSymbol === 'Drive' && service.serviceId === 'drive' && service.version === 'v3'
+  ));
+  assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/drive'));
+  assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/documents'));
+});
+
 test('parses class-subject pairs, rooms and timetable dates from noisy OCR', () => {
   const { api } = setup();
   const parsed = api.parseText(`WEEK 07/09 To 13/09
