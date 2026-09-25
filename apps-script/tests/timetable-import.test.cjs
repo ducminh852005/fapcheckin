@@ -168,6 +168,31 @@ test('matches available, conflicting and already assigned classes', () => {
   assert.equal(entries[1].matchedClassCode, 'SWD392_SE1927');
 });
 
+test('matches every class restored from the ten-entry timetable', () => {
+  const backend = setup();
+  backend.tables.Class_Section.splice(0, backend.tables.Class_Section.length,
+    { classCode: 'PRN232_SE1917', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1913', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1917', teacherMemberCode: '' },
+    { classCode: 'SWD392_SE1927', teacherMemberCode: '' },
+    { classCode: 'PRN232_SE1920', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1922', teacherMemberCode: '' },
+    { classCode: 'PRN232_SE1919', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1920', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1928', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1919', teacherMemberCode: '' },
+  );
+  const parsed = backend.api.parseText([
+    'SE1917-PRN232', 'SE1913-PRM393', 'SE1917-PRM393', 'SE1927-SWD392',
+    'SE1920-PRN232', 'SE1922-PRM393', 'SE1919-PRN232', 'SE1920-PRM393',
+    'SE1928-PRM393', 'SE1919-PRM393',
+  ].join('\n'));
+  const entries = backend.api.matchEntries(parsed, { memberCode: 'T1' });
+
+  assert.equal(entries.length, 10);
+  assert.deepEqual(Array.from(entries, entry => entry.status), Array(10).fill('available'));
+});
+
 test('imports only cache-authorized unowned classes and is idempotent', () => {
   const backend = setup();
   backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));

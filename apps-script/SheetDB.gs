@@ -14,6 +14,13 @@ var SheetDB = (function() {
     'startTime', 'endTime', 'period'
   ];
 
+  var REQUIRED_HEADERS = {
+    Class_Section: ['classCode', 'subjectName', 'teacherMemberCode', 'slotCode'],
+    Enrollment: ['rollNumber', 'classCode'],
+    Slot: ['slotCode', 'startTime', 'endTime'],
+    Users: ['memberCode']
+  };
+
   function normalizeCell(field, value) {
     if (TEXT_FIELDS.indexOf(field) !== -1) {
       if (value == null) return '';
@@ -44,8 +51,17 @@ var SheetDB = (function() {
     return value;
   }
 
-  function getHeaders(data) {
-    return data[0].map(function(header) { return String(header).trim(); });
+  function getHeaders(data, sheetName) {
+    var headers = data[0].map(function(header) { return String(header).trim(); });
+    var required = REQUIRED_HEADERS[sheetName] || [];
+    var missing = required.filter(function(header) { return headers.indexOf(header) === -1; });
+    if (missing.length > 0) {
+      throwError(
+        'SHEET_SCHEMA_INVALID',
+        'Bảng ' + sheetName + ' thiếu tiêu đề bắt buộc ở hàng 1: ' + missing.join(', ') + '.'
+      );
+    }
+    return headers;
   }
 
   function subjectCodeFromClassCode(classCode) {
@@ -97,7 +113,7 @@ var SheetDB = (function() {
         : range.getValues();
     if (data.length <= 1) return [];
     
-    var headers = getHeaders(data);
+    var headers = getHeaders(data, sheetName);
     var rows = [];
     for (var i = 1; i < data.length; i++) {
       if (data[i].every(function(value) { return value === '' || value == null; })) continue;
@@ -112,7 +128,7 @@ var SheetDB = (function() {
 
   function insertRow(sheetName, rowObj) {
     var sheet = getSheet(sheetName);
-    var headers = getHeaders(sheet.getDataRange().getValues());
+    var headers = getHeaders(sheet.getDataRange().getValues(), sheetName);
     var newRow = [];
     for (var i = 0; i < headers.length; i++) {
       newRow.push(rowObj[headers[i]] !== undefined ? writeValue(headers[i], rowObj[headers[i]]) : '');
@@ -126,7 +142,7 @@ var SheetDB = (function() {
     var data = sheet.getDataRange().getValues();
     if (data.length <= 1) return false;
     
-    var headers = getHeaders(data);
+    var headers = getHeaders(data, sheetName);
     var idIndex = headers.indexOf(idField);
     if (idIndex === -1) return false;
     
@@ -147,7 +163,7 @@ var SheetDB = (function() {
   // Add optional history columns without changing existing rows or formatting.
   function ensureColumns(sheetName, columns) {
     var sheet = getSheet(sheetName);
-    var headers = getHeaders(sheet.getDataRange().getValues());
+    var headers = getHeaders(sheet.getDataRange().getValues(), sheetName);
     columns.forEach(function(column) {
       if (headers.indexOf(column) === -1) {
         var nextColumn = headers.length + 1;

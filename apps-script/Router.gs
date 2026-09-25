@@ -7,7 +7,7 @@ function dispatch(action, params) {
   var handlers = {
     'getBackendInfo': function() {
       return {
-        revision: '2026-09-25-timetable-ocr-v3',
+        revision: '2026-09-25-timetable-ocr-v4',
         timetableCompositeClassCodes: true,
         stagedOcrErrors: true
       };

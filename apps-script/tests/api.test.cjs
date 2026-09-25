@@ -110,6 +110,15 @@ test('blank rows are skipped; trimmed headers work for reads and writes', () => 
   assert.equal(tables.Users[2][0], '9');
 });
 
+test('missing required sheet headers fail clearly instead of hiding all rows', () => {
+  const { context, tables } = backend();
+  tables.Class_Section[0] = ['', '', '', '', '', '', ''];
+  assert.throws(
+    () => context.SheetDB.getRowsAsObjects('Class_Section'),
+    { code: 'SHEET_SCHEMA_INVALID' },
+  );
+});
+
 test('Class_Section derives subjectCode from its composite classCode', () => {
   const { context, tables } = backend();
   tables.Class_Section[1][0] = 'PRN232_SE1917';
@@ -122,7 +131,7 @@ test('router exposes read APIs and returns structured validation errors', () => 
   const { call } = backend();
   const backendInfo = call('getBackendInfo');
   assert.equal(backendInfo.success, true);
-  assert.equal(backendInfo.data.revision, '2026-09-25-timetable-ocr-v3');
+  assert.equal(backendInfo.data.revision, '2026-09-25-timetable-ocr-v4');
   assert.equal(backendInfo.data.timetableCompositeClassCodes, true);
   for (const action of ['getClasses', 'getSessions', 'getRoster', 'getStats', 'getAttendanceHistory']) {
     assert.equal(call(action).error.code, 'VALIDATION_ERROR');
