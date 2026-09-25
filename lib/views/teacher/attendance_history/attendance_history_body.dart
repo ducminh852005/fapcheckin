@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
-import 'components/header_bar.dart';
 import 'components/class_selector.dart';
 import 'components/kpi_dashboard.dart';
 import 'components/history_table.dart';
+import 'components/sessions_tab.dart';
 
 class AttendanceHistoryBody extends StatefulWidget {
   const AttendanceHistoryBody({super.key});
@@ -15,13 +15,23 @@ class AttendanceHistoryBody extends StatefulWidget {
   State<AttendanceHistoryBody> createState() => _AttendanceHistoryBodyState();
 }
 
-class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
+class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<AttendanceHistoryViewModel>().loadClasses();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,6 +66,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ── Error banner ──
           if (errorMessage != null) ...[
             const SizedBox(height: AppSpacing.md),
             _NoticeBanner(
@@ -69,6 +80,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
               ),
             ),
           ],
+          // ── Loading bar ──
           if (busy) ...[
             const SizedBox(height: AppSpacing.md),
             ClipRRect(
@@ -76,26 +88,69 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
               child: const LinearProgressIndicator(minHeight: 4),
             ),
           ],
+          // ── Empty state ──
           if (!loadingClasses && !hasClasses && errorMessage == null)
             const _EmptyState(
               icon: Icons.class_outlined,
               message: 'Chưa có lớp được phân công cho tài khoản này.',
             ),
+          // ── Class selector ──
           if (hasClasses) ...[
             const SizedBox(height: AppSpacing.md),
             const ClassSelector(),
           ],
+          // ── Tab view ──
           if (hasSummary) ...[
             const SizedBox(height: AppSpacing.md),
+            // Tab bar
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primaryContainer,
+                unselectedLabelColor: AppColors.textSecondary,
+                indicatorColor: AppColors.primaryContainer,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.bar_chart_outlined, size: 18),
+                    text: 'Tổng quan',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.list_alt_outlined, size: 18),
+                    text: 'Buổi học',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Tab content
             Stack(
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    KpiDashboard(),
-                    SizedBox(height: AppSpacing.md),
-                    HistoryTable(),
-                  ],
+                _TabContent(
+                  controller: _tabController,
+                  overviewTab: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      KpiDashboard(),
+                      SizedBox(height: AppSpacing.md),
+                      HistoryTable(),
+                    ],
+                  ),
+                  sessionsTab: const SessionsTab(),
                 ),
                 if (loadingSummary)
                   Positioned.fill(
@@ -115,9 +170,65 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         ],
       ),
     );
-
   }
 }
+
+/// Custom animated tab content that doesn't clip the scrollable body
+class _TabContent extends StatefulWidget {
+  final TabController controller;
+  final Widget overviewTab;
+  final Widget sessionsTab;
+
+  const _TabContent({
+    required this.controller,
+    required this.overviewTab,
+    required this.sessionsTab,
+  });
+
+  @override
+  State<_TabContent> createState() => _TabContentState();
+}
+
+class _TabContentState extends State<_TabContent> {
+  int _activeIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTabChange);
+  }
+
+  void _onTabChange() {
+    if (widget.controller.indexIsChanging) return;
+    setState(() => _activeIndex = widget.controller.index);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTabChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: _activeIndex == 0
+          ? KeyedSubtree(
+              key: const ValueKey('overview'),
+              child: widget.overviewTab,
+            )
+          : KeyedSubtree(
+              key: const ValueKey('sessions'),
+              child: widget.sessionsTab,
+            ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _NoticeBanner extends StatelessWidget {
   const _NoticeBanner({
