@@ -29,7 +29,7 @@ class ReportKpis extends StatelessWidget {
           childAspectRatio: constraints.maxWidth >= 1200 ? 2.0 : 1.85,
           children: [
             _buildKpiCard(
-              title: 'Tỷ lệ chuyên cần TB',
+              title: 'Tỷ lệ điểm danh TB',
               value: '${(data.kpis.attendanceRate * 100).toStringAsFixed(1)}%',
               icon: Icons.check_circle_outline,
               iconColor: AppColors.statusPresent,
