@@ -6,9 +6,9 @@ const vm = require('node:vm');
 function setup(overrides = {}) {
   const tables = {
     Class_Section: [
-      { classCode: 'SE1917', subjectCode: 'PRN232', teacherMemberCode: '' },
-      { classCode: 'SE1927-SWD392', subjectCode: 'SWD392', teacherMemberCode: 'OTHER' },
-      { classCode: 'SE1922', subjectCode: 'PRM393', teacherMemberCode: 'T1' },
+      { classCode: 'PRN232_SE1917', teacherMemberCode: '' },
+      { classCode: 'SWD392_SE1927', teacherMemberCode: 'OTHER' },
+      { classCode: 'PRM393_SE1922', teacherMemberCode: 'T1' },
     ],
   };
   const cache = new Map();
@@ -44,7 +44,7 @@ function setup(overrides = {}) {
       getUuid: () => 'scan-1',
       base64Decode: value => Buffer.from(value, 'base64'),
       newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
-      sleep: () => {},
+      sleep: overrides.sleep || (() => {}),
     },
     Drive: overrides.Drive,
     DriveApp: overrides.DriveApp,
@@ -55,6 +55,15 @@ function setup(overrides = {}) {
   vm.runInContext(fs.readFileSync('apps-script/TimetableImportService.gs', 'utf8'), context);
   return { api: context.TimetableImportService, tables, cache, get released() { return released; } };
 }
+
+test('manifest enables Drive OCR and declares its required OAuth scopes', () => {
+  const manifest = JSON.parse(fs.readFileSync('apps-script/appsscript.json', 'utf8'));
+  assert.ok(manifest.dependencies.enabledAdvancedServices.some(service =>
+    service.userSymbol === 'Drive' && service.serviceId === 'drive' && service.version === 'v3'
+  ));
+  assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/drive'));
+  assert.ok(manifest.oauthScopes.includes('https://www.googleapis.com/auth/documents'));
+});
 
 test('parses class-subject pairs, rooms and timetable dates from noisy OCR', () => {
   const { api } = setup();
@@ -125,24 +134,75 @@ test('reports missing OCR authorization instead of blaming image quality', () =>
   );
 });
 
+test('does not report missing authorization after Drive accepted the OCR image', () => {
+  let reads = 0;
+  const backend = setup({
+    Drive: { Files: { create: () => ({ id: 'doc-pending' }) } },
+    DocumentApp: {
+      openById: () => {
+        reads++;
+        throw new Error('You do not have permission to access the requested document');
+      },
+    },
+    DriveApp: { getFileById: () => ({ setTrashed: () => {} }) },
+  });
+
+  assert.throws(
+    () => backend.api.scan({
+      sessionToken: 'valid',
+      mimeType: 'image/jpeg',
+      fileName: 'lich_hoc.jpg',
+      imageBase64: 'aW1hZ2U=',
+    }),
+    { code: 'OCR_PROCESSING_TIMEOUT' },
+  );
+  assert.equal(reads, 6);
+});
+
 test('matches available, conflicting and already assigned classes', () => {
   const { api } = setup();
   const parsed = api.parseText('SE1917-PRN232 at NVH 602\nSE1927-SWD392 at NVH 611\nSE1922-PRM393 at NVH 604');
   const entries = api.matchEntries(parsed, { memberCode: 'T1' });
   assert.deepEqual(Array.from(entries, entry => entry.status), ['available', 'conflict', 'alreadyAssigned']);
-  assert.equal(entries[1].matchedClassCode, 'SE1927-SWD392');
+  assert.equal(entries[0].matchedClassCode, 'PRN232_SE1917');
+  assert.equal(entries[1].matchedClassCode, 'SWD392_SE1927');
+});
+
+test('matches every class restored from the ten-entry timetable', () => {
+  const backend = setup();
+  backend.tables.Class_Section.splice(0, backend.tables.Class_Section.length,
+    { classCode: 'PRN232_SE1917', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1913', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1917', teacherMemberCode: '' },
+    { classCode: 'SWD392_SE1927', teacherMemberCode: '' },
+    { classCode: 'PRN232_SE1920', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1922', teacherMemberCode: '' },
+    { classCode: 'PRN232_SE1919', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1920', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1928', teacherMemberCode: '' },
+    { classCode: 'PRM393_SE1919', teacherMemberCode: '' },
+  );
+  const parsed = backend.api.parseText([
+    'SE1917-PRN232', 'SE1913-PRM393', 'SE1917-PRM393', 'SE1927-SWD392',
+    'SE1920-PRN232', 'SE1922-PRM393', 'SE1919-PRN232', 'SE1920-PRM393',
+    'SE1928-PRM393', 'SE1919-PRM393',
+  ].join('\n'));
+  const entries = backend.api.matchEntries(parsed, { memberCode: 'T1' });
+
+  assert.equal(entries.length, 10);
+  assert.deepEqual(Array.from(entries, entry => entry.status), Array(10).fill('available'));
 });
 
 test('imports only cache-authorized unowned classes and is idempotent', () => {
   const backend = setup();
-  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
-  const first = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1917'] });
+  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
+  const first = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['PRN232_SE1917'] });
   assert.equal(first.assignedCount, 1);
   assert.equal(backend.tables.Class_Section[0].teacherMemberCode, 'T1');
   assert.equal(backend.released, 1);
 
-  backend.cache.set('timetable-scan:proof-2', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
-  const retry = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof-2', classCodes: ['SE1917'] });
+  backend.cache.set('timetable-scan:proof-2', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
+  const retry = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof-2', classCodes: ['PRN232_SE1917'] });
   assert.equal(retry.alreadyAssignedCount, 1);
 });
 
@@ -152,30 +212,30 @@ test('rejects expired proofs, forged classes and ownership races', () => {
     () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'missing', classCodes: ['SE1917'] }),
     { code: 'SCAN_EXPIRED' },
   );
-  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
+  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
   assert.throws(
-    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1927-SWD392'] }),
+    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SWD392_SE1927'] }),
     { code: 'FORBIDDEN' },
   );
   backend.tables.Class_Section[0].teacherMemberCode = 'OTHER';
   assert.throws(
-    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1917'] }),
+    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['PRN232_SE1917'] }),
     { code: 'ASSIGNMENT_CONFLICT' },
   );
 });
 
 test('validates the entire import before writing any assignment', () => {
   const backend = setup();
-  backend.tables.Class_Section.push({ classCode: 'SE1999', subjectCode: 'PRN999', teacherMemberCode: 'OTHER' });
+  backend.tables.Class_Section.push({ classCode: 'PRN999_SE1999', teacherMemberCode: 'OTHER' });
   backend.cache.set('timetable-scan:batch', JSON.stringify({
     teacherMemberCode: 'T1',
-    classCodes: ['SE1917', 'SE1999'],
+    classCodes: ['PRN232_SE1917', 'PRN999_SE1999'],
   }));
   assert.throws(
     () => backend.api.importAssignments({
       sessionToken: 'valid',
       scanToken: 'batch',
-      classCodes: ['SE1917', 'SE1999'],
+      classCodes: ['PRN232_SE1917', 'PRN999_SE1999'],
     }),
     { code: 'ASSIGNMENT_CONFLICT' },
   );

@@ -2,6 +2,7 @@
 var TimetableOCRService = (function() {
   var ZONE = 'Asia/Ho_Chi_Minh';
   var TEMP_PREFIX = 'fapcheckin-timetable-ocr-';
+  var OCR_READ_DELAYS_MS = [0, 500, 1000, 2000, 3000, 5000];
   var SLOT_COLUMNS = ['slotCode', 'period', 'startTime', 'endTime'];
   var CLASS_COLUMNS = [
     'classCode',
@@ -227,6 +228,20 @@ var TimetableOCRService = (function() {
     return {rawText: normalized, parsedRows: parsedRows, warnings: warnings};
   }
 
+  function createDocFromBlob(blob, params) {
+    return Drive.Files.create(
+      {
+        name: TEMP_PREFIX + new Date().getTime(),
+        mimeType: 'application/vnd.google-apps.document'
+      },
+      blob,
+      {
+        ocrLanguage: text(params.ocrLanguage) || 'vi',
+        fields: 'id'
+      }
+    );
+  }
+
   function createDocFromBase64(params) {
     var base64 = text(params.imageBase64 || params.base64);
     var mimeType = text(params.mimeType) || 'image/jpeg';
@@ -234,21 +249,28 @@ var TimetableOCRService = (function() {
     base64 = base64.replace(/^data:[^;]+;base64,/, '');
     if (!base64) throwError('VALIDATION_ERROR', 'Missing imageBase64.');
     var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
-    return Drive.Files.insert(
-      {title: TEMP_PREFIX + new Date().getTime(), mimeType: MimeType.GOOGLE_DOCS},
-      blob,
-      {ocr: true, ocrLanguage: text(params.ocrLanguage) || 'vi'}
-    );
+    return createDocFromBlob(blob, params);
   }
 
   function createDocFromDriveFile(params) {
     var fileId = text(params.fileId || params.driveFileId);
     if (!fileId) throwError('VALIDATION_ERROR', 'Missing fileId.');
-    return Drive.Files.copy(
-      {title: TEMP_PREFIX + new Date().getTime(), mimeType: MimeType.GOOGLE_DOCS},
-      fileId,
-      {ocr: true, ocrLanguage: text(params.ocrLanguage) || 'vi'}
-    );
+    return createDocFromBlob(DriveApp.getFileById(fileId).getBlob(), params);
+  }
+
+  function readOcrDocument(documentId) {
+    var lastError = null;
+    for (var attempt = 0; attempt < OCR_READ_DELAYS_MS.length; attempt++) {
+      if (OCR_READ_DELAYS_MS[attempt]) Utilities.sleep(OCR_READ_DELAYS_MS[attempt]);
+      try {
+        var value = DocumentApp.openById(documentId).getBody().getText();
+        if (text(value)) return value;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+    return '';
   }
 
   function extractTextWithDriveOCR(params) {
@@ -257,8 +279,8 @@ var TimetableOCRService = (function() {
       docFile = params.fileId || params.driveFileId
         ? createDocFromDriveFile(params)
         : createDocFromBase64(params);
-      Utilities.sleep(1000);
-      return DocumentApp.openById(docFile.id).getBody().getText();
+      if (!docFile || !docFile.id) throw new Error('Drive OCR did not return a document id.');
+      return readOcrDocument(docFile.id);
     } finally {
       if (docFile && docFile.id) {
         try {

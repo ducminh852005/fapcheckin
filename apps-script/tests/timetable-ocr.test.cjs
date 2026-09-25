@@ -18,6 +18,16 @@ function plain(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+test('OCR services share the configured Drive API v3 surface', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'appsscript.json'), 'utf8'));
+  const driveService = manifest.dependencies.enabledAdvancedServices.find(item => item.userSymbol === 'Drive');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'TimetableOCRService.gs'), 'utf8');
+
+  assert.equal(driveService.version, 'v3');
+  assert.match(source, /Drive\.Files\.create\(/);
+  assert.doesNotMatch(source, /Drive\.Files\.(?:insert|copy)\(/);
+});
+
 test('parser extracts class, day, slot, time and room from OCR text', () => {
   const result = service().parseTimetableText(`
     Monday | PRM392 Mobile Programming | Class SE18D01 | Slot A1 | 07:30 - 09:50 | Room BE-301
