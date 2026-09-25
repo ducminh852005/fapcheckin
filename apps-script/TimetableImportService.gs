@@ -109,6 +109,10 @@ var TimetableImportService = (function() {
   function subjectCodeOf(classRow) {
     var direct = normalizedCode(classRow.subjectCode);
     if (direct) return direct;
+    var classCodeParts = text(classRow.classCode).toUpperCase().split(/[^A-Z0-9]+/);
+    for (var i = 0; i < classCodeParts.length; i++) {
+      if (/^[A-Z]{2,5}\d{3}$/.test(classCodeParts[i])) return classCodeParts[i];
+    }
     var fromName = /^([A-Z]{2,5}\d{3})\b/.exec(text(classRow.subjectName).toUpperCase());
     return fromName ? normalizedCode(fromName[1]) : '';
   }
@@ -119,9 +123,11 @@ var TimetableImportService = (function() {
       var matches = classes.filter(function(classRow) {
         var rowClass = normalizedCode(classRow.classCode);
         var wantedClass = normalizedCode(entry.classCode);
+        var wantedSubject = normalizedCode(entry.subjectCode);
         var classMatches = rowClass === wantedClass ||
-          rowClass === wantedClass + normalizedCode(entry.subjectCode);
-        return classMatches && subjectCodeOf(classRow) === normalizedCode(entry.subjectCode);
+          rowClass === wantedClass + wantedSubject ||
+          rowClass === wantedSubject + wantedClass;
+        return classMatches && subjectCodeOf(classRow) === wantedSubject;
       });
       var result = {
         key: entry.key,

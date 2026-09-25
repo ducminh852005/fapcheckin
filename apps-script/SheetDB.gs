@@ -48,6 +48,28 @@ var SheetDB = (function() {
     return data[0].map(function(header) { return String(header).trim(); });
   }
 
+  function subjectCodeFromClassCode(classCode) {
+    var parts = String(classCode == null ? '' : classCode)
+      .toUpperCase()
+      .split(/[^A-Z0-9]+/);
+    for (var i = 0; i < parts.length; i++) {
+      // FAP subject codes use 2-5 letters followed by three digits, while
+      // class groups such as SE1917 contain four digits.
+      if (/^[A-Z]{2,5}\d{3}$/.test(parts[i])) return parts[i];
+    }
+    return '';
+  }
+
+  function enrichRow(sheetName, rowObj) {
+    // The live Class_Section sheet stores composite keys such as
+    // PRN232_SE1917 and does not have a separate subjectCode column. Expose a
+    // derived subjectCode to every service without changing the sheet schema.
+    if (sheetName === 'Class_Section' && !rowObj.subjectCode) {
+      rowObj.subjectCode = subjectCodeFromClassCode(rowObj.classCode);
+    }
+    return rowObj;
+  }
+
   function writeValue(field, value) {
     // Treat a teacher's note as literal text, never as a spreadsheet formula.
     if (field === 'note' && typeof value === 'string' && value.charAt(0) === '=') return "'" + value;
@@ -83,7 +105,7 @@ var SheetDB = (function() {
       for (var j = 0; j < headers.length; j++) {
         if (headers[j]) rowObj[headers[j]] = normalizeCell(headers[j], data[i][j]);
       }
-      rows.push(rowObj);
+      rows.push(enrichRow(sheetName, rowObj));
     }
     return rows;
   }

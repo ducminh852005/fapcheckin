@@ -110,6 +110,14 @@ test('blank rows are skipped; trimmed headers work for reads and writes', () => 
   assert.equal(tables.Users[2][0], '9');
 });
 
+test('Class_Section derives subjectCode from its composite classCode', () => {
+  const { context, tables } = backend();
+  tables.Class_Section[1][0] = 'PRN232_SE1917';
+  const row = context.SheetDB.getRowsAsObjects('Class_Section')[0];
+  assert.equal(row.classCode, 'PRN232_SE1917');
+  assert.equal(row.subjectCode, 'PRN232');
+});
+
 test('router exposes read APIs and returns structured validation errors', () => {
   const { call } = backend();
   for (const action of ['getClasses', 'getSessions', 'getRoster', 'getStats', 'getAttendanceHistory']) {

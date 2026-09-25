@@ -6,9 +6,9 @@ const vm = require('node:vm');
 function setup(overrides = {}) {
   const tables = {
     Class_Section: [
-      { classCode: 'SE1917', subjectCode: 'PRN232', teacherMemberCode: '' },
-      { classCode: 'SE1927-SWD392', subjectCode: 'SWD392', teacherMemberCode: 'OTHER' },
-      { classCode: 'SE1922', subjectCode: 'PRM393', teacherMemberCode: 'T1' },
+      { classCode: 'PRN232_SE1917', teacherMemberCode: '' },
+      { classCode: 'SWD392_SE1927', teacherMemberCode: 'OTHER' },
+      { classCode: 'PRM393_SE1922', teacherMemberCode: 'T1' },
     ],
   };
   const cache = new Map();
@@ -139,19 +139,20 @@ test('matches available, conflicting and already assigned classes', () => {
   const parsed = api.parseText('SE1917-PRN232 at NVH 602\nSE1927-SWD392 at NVH 611\nSE1922-PRM393 at NVH 604');
   const entries = api.matchEntries(parsed, { memberCode: 'T1' });
   assert.deepEqual(Array.from(entries, entry => entry.status), ['available', 'conflict', 'alreadyAssigned']);
-  assert.equal(entries[1].matchedClassCode, 'SE1927-SWD392');
+  assert.equal(entries[0].matchedClassCode, 'PRN232_SE1917');
+  assert.equal(entries[1].matchedClassCode, 'SWD392_SE1927');
 });
 
 test('imports only cache-authorized unowned classes and is idempotent', () => {
   const backend = setup();
-  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
-  const first = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1917'] });
+  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
+  const first = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['PRN232_SE1917'] });
   assert.equal(first.assignedCount, 1);
   assert.equal(backend.tables.Class_Section[0].teacherMemberCode, 'T1');
   assert.equal(backend.released, 1);
 
-  backend.cache.set('timetable-scan:proof-2', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
-  const retry = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof-2', classCodes: ['SE1917'] });
+  backend.cache.set('timetable-scan:proof-2', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
+  const retry = backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof-2', classCodes: ['PRN232_SE1917'] });
   assert.equal(retry.alreadyAssignedCount, 1);
 });
 
@@ -161,30 +162,30 @@ test('rejects expired proofs, forged classes and ownership races', () => {
     () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'missing', classCodes: ['SE1917'] }),
     { code: 'SCAN_EXPIRED' },
   );
-  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['SE1917'] }));
+  backend.cache.set('timetable-scan:proof', JSON.stringify({ teacherMemberCode: 'T1', classCodes: ['PRN232_SE1917'] }));
   assert.throws(
-    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1927-SWD392'] }),
+    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SWD392_SE1927'] }),
     { code: 'FORBIDDEN' },
   );
   backend.tables.Class_Section[0].teacherMemberCode = 'OTHER';
   assert.throws(
-    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['SE1917'] }),
+    () => backend.api.importAssignments({ sessionToken: 'valid', scanToken: 'proof', classCodes: ['PRN232_SE1917'] }),
     { code: 'ASSIGNMENT_CONFLICT' },
   );
 });
 
 test('validates the entire import before writing any assignment', () => {
   const backend = setup();
-  backend.tables.Class_Section.push({ classCode: 'SE1999', subjectCode: 'PRN999', teacherMemberCode: 'OTHER' });
+  backend.tables.Class_Section.push({ classCode: 'PRN999_SE1999', teacherMemberCode: 'OTHER' });
   backend.cache.set('timetable-scan:batch', JSON.stringify({
     teacherMemberCode: 'T1',
-    classCodes: ['SE1917', 'SE1999'],
+    classCodes: ['PRN232_SE1917', 'PRN999_SE1999'],
   }));
   assert.throws(
     () => backend.api.importAssignments({
       sessionToken: 'valid',
       scanToken: 'batch',
-      classCodes: ['SE1917', 'SE1999'],
+      classCodes: ['PRN232_SE1917', 'PRN999_SE1999'],
     }),
     { code: 'ASSIGNMENT_CONFLICT' },
   );
