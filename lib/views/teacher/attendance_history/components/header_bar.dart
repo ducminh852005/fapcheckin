@@ -34,7 +34,7 @@ class HeaderBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lịch sử điểm danh',
+                  'Khóa học',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 22,
