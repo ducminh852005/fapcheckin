@@ -18,6 +18,7 @@ function dispatch(action, params) {
     'exportAttendanceHistory': function(p) { return AttendanceHistoryService.exportHistory(p); },
     'startHistorySession': function(p) { return AttendanceHistoryService.startSession(p); },
     'getReport': function(p) { return ReportService.getReport(p); },
+    'ocrTimetable': function(p) { return TimetableOCRService.ocrTimetable(p); },
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,
@@ -49,7 +50,7 @@ function dispatch(action, params) {
   } catch (err) {
     return jsonResponse({
       success: false,
-      data: null,
+      data: err.data || null,
       error: { code: err.code || 'UNKNOWN_ERROR', message: err.message || err.toString() }
     });
   }
