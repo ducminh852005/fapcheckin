@@ -1,7 +1,11 @@
 // Imports a teacher's FAP timetable screenshot using temporary Google Drive OCR.
 var TimetableImportService = (function() {
-  var MAX_FILE_BYTES = 500 * 1024 * 1024;
+  // The image is sent as base64 inside a JSON request, so accepting hundreds
+  // of megabytes here would exceed the web-app request/runtime limits long
+  // before OCR starts. A timetable screenshot is normally well below 1 MB.
+  var MAX_FILE_BYTES = 10 * 1024 * 1024;
   var CACHE_SECONDS = 600;
+  var OCR_READ_DELAYS_MS = [0, 300, 700, 1200];
   var ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp'];
 
   function text(value) {
@@ -15,14 +19,16 @@ var TimetableImportService = (function() {
   function parseText(ocrText) {
     var source = text(ocrText)
       .toUpperCase()
-      .replace(/[–—−]/g, '-')
-      .replace(/\r/g, '\n');
+      .replace(/[–—−_]/g, '-')
+      .replace(/\r/g, '\n')
+      // Drive OCR occasionally inserts spaces inside identifiers.
+      .replace(/\b([A-Z]{2,4})\s+(\d{3,5})\b/g, '$1$2')
+      .replace(/\b([A-Z]{2,5})\s+(\d{3})\b/g, '$1$2');
     var entries = [];
     var seen = {};
-    // FAP teacher timetables render entries like "SE1917-PRN232 at NVH 602".
-    // Whitespace is intentionally flexible because OCR often moves the room
-    // number onto the next line.
-    var pattern = /\b([A-Z]{2,4}\d{3,5})\s*-\s*([A-Z]{2,5}\d{3})\s+AT\s+[A-Z]{2,6}(?:\s*-)?\s*(\d{3,4}|[A-Z]\d{2,4})?/g;
+    // Match the stable part first. Requiring "at NVH" caused clear images to
+    // be rejected whenever OCR reordered table columns or dropped that label.
+    var pattern = /\b([A-Z]{2,4}\d{3,5})(?:\s*-\s*|\s+)([A-Z]{2,5}\d{3})\b/g;
     var match;
     while ((match = pattern.exec(source)) !== null) {
       var classCode = match[1];
@@ -30,11 +36,16 @@ var TimetableImportService = (function() {
       var key = classCode + '|' + subjectCode;
       if (seen[key]) continue;
       seen[key] = true;
+
+      // Room is optional and is normally close to the code. Limit the lookup
+      // window so a room from the next timetable cell is never attached.
+      var afterCode = source.slice(pattern.lastIndex, pattern.lastIndex + 60);
+      var roomMatch = /^\s+AT\s+[A-Z]{2,8}(?:\s*-)?\s*(\d{3,4}|[A-Z]\d{2,4})\b/.exec(afterCode);
       entries.push({
         key: key,
         classCode: classCode,
         subjectCode: subjectCode,
-        room: match[3] || ''
+        room: roomMatch ? roomMatch[1] : ''
       });
     }
 
@@ -51,6 +62,48 @@ var TimetableImportService = (function() {
       }
     }
     return {entries: entries, detectedDates: dates};
+  }
+
+  function errorText(error) {
+    if (!error) return '';
+    return text(error.message || error.toString());
+  }
+
+  function readOcrDocument(documentId) {
+    var lastError = null;
+    for (var attempt = 0; attempt < OCR_READ_DELAYS_MS.length; attempt++) {
+      if (OCR_READ_DELAYS_MS[attempt]) Utilities.sleep(OCR_READ_DELAYS_MS[attempt]);
+      try {
+        var extracted = text(DocumentApp.openById(documentId).getBody().getText());
+        if (extracted) return extracted;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+    return '';
+  }
+
+  function throwOcrError(error) {
+    var message = errorText(error);
+    console.error('Timetable OCR failed: ' + message);
+
+    if (/authoriz|permission|access denied|insufficient|not enabled|has not been used|is not defined|is not a function/i.test(message)) {
+      throwError(
+        'OCR_NOT_CONFIGURED',
+        'Dịch vụ quét thời khóa biểu chưa được cấp quyền Google Drive/Docs. Quản trị viên cần cấp lại quyền OCR rồi thử lại.'
+      );
+    }
+    if (/quota|rate.?limit|too many|service invoked too many/i.test(message)) {
+      throwError(
+        'OCR_BUSY',
+        'Dịch vụ nhận dạng đang quá tải hoặc đã đạt giới hạn tạm thời. Vui lòng thử lại sau ít phút.'
+      );
+    }
+    throwError(
+      'OCR_UNAVAILABLE',
+      'Google OCR chưa xử lý được ảnh lúc này. Vui lòng thử lại; nếu lỗi tiếp diễn, liên hệ quản trị viên.'
+    );
   }
 
   function subjectCodeOf(classRow) {
@@ -116,11 +169,13 @@ var TimetableImportService = (function() {
       throwError('INVALID_IMAGE', 'Dữ liệu ảnh không hợp lệ.');
     }
     if (bytes.length > MAX_FILE_BYTES) {
-      throwError('IMAGE_TOO_LARGE', 'Ảnh vượt quá 500 MB. Vui lòng chọn ảnh nhỏ hơn rồi thử lại.');
+      throwError('IMAGE_TOO_LARGE', 'Ảnh vượt quá 10 MB. Vui lòng cắt gọn hoặc nén ảnh rồi thử lại.');
     }
 
     var blob = Utilities.newBlob(bytes, mimeType, text(params.fileName) || 'timetable');
     var documentId = '';
+    var extractedText = '';
+    var ocrError = null;
     try {
       var resource = {
         name: 'fapcheckin-ocr-' + Utilities.getUuid(),
@@ -131,14 +186,22 @@ var TimetableImportService = (function() {
         fields: 'id'
       });
       documentId = document.id;
-      return DocumentApp.openById(documentId).getBody().getText();
+      extractedText = readOcrDocument(documentId);
     } catch (error) {
-      throwError('OCR_FAILED', 'Không thể đọc ảnh. Hãy dùng ảnh rõ, chụp thẳng và thấy đầy đủ mã lớp–môn.');
+      ocrError = error;
     } finally {
       if (documentId) {
         try { DriveApp.getFileById(documentId).setTrashed(true); } catch (ignored) {}
       }
     }
+    if (ocrError) throwOcrError(ocrError);
+    if (!extractedText) {
+      throwError(
+        'OCR_EMPTY',
+        'Google OCR không tìm thấy chữ trong ảnh. Hãy bảo đảm ảnh có đầy đủ bảng thời khóa biểu và thử lại.'
+      );
+    }
+    return extractedText;
   }
 
   function scan(params) {
