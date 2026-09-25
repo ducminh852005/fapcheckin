@@ -50,7 +50,7 @@ class ReportHeader extends StatelessWidget {
 
               _buildActionButton(
                 icon: Icons.download_rounded,
-                label: 'Xuất Báo Cáo FAP (.xlsx)',
+                label: 'Xuất Dữ Liệu FAP (.xlsx)',
                 isPrimary: false,
               ),
               _buildActionButton(
@@ -90,7 +90,7 @@ class ReportHeader extends StatelessWidget {
 
   Widget _buildTitle() {
     return Text(
-      'Báo cáo & Thống kê Chuyên cần',
+      'Tổng quan',
       style: AppTextStyles.headlineLg.copyWith(letterSpacing: -0.5),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
