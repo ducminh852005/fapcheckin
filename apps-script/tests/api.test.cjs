@@ -52,7 +52,7 @@ function backend() {
     },
     Utilities: { getUuid: () => 'test-uuid' },
   });
-  for (const file of ['Response', 'SheetDB', 'TeacherService', 'AuthService',
+  for (const file of ['Response', 'SheetDB', 'TimetableOCRService', 'TeacherService', 'AuthService',
     'StudentService', 'SyncService', 'Router', 'Code']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file + '.gs'), 'utf8'), context);
   }
