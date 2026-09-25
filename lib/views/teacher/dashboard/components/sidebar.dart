@@ -42,6 +42,13 @@ class Sidebar extends StatelessWidget {
                 onTap: () => vm.navigate('tong-quan'),
               ),
               _NavItem(
+                icon: Icons.calendar_month_outlined,
+                label: 'Lịch học',
+                route: 'lich-hoc',
+                currentRoute: vm.currentRoute,
+                onTap: () => vm.navigate('lich-hoc'),
+              ),
+              _NavItem(
                 icon: Icons.school_outlined,
                 label: 'Tiết học',
                 route: 'lop-hoc',
@@ -55,13 +62,6 @@ class Sidebar extends StatelessWidget {
                 route: 'lich-su-diem-danh',
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lich-su-diem-danh'),
-              ),
-              _NavItem(
-                icon: Icons.bar_chart_outlined,
-                label: 'Báo cáo',
-                route: 'bao-cao',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('bao-cao'),
               ),
               /*
               _NavItem(

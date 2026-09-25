@@ -36,7 +36,7 @@ class ReportCharts extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Xu hướng chuyên cần theo tuần',
+                    'Xu hướng điểm danh theo tuần',
                     style: AppTextStyles.headlineSm,
                   ),
                   const SizedBox(height: 2),

@@ -30,7 +30,7 @@ class SubjectComparison extends StatelessWidget {
           Text('Tỷ lệ theo môn học', style: AppTextStyles.headlineSm),
           const SizedBox(height: 2),
           Text(
-            'So sánh mức độ chuyên cần theo lớp phụ trách',
+            'So sánh tỷ lệ tham gia theo lớp phụ trách',
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: AppSpacing.md),

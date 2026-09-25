@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
-import 'package:fapcheckin/views/teacher/dashboard/dashboard_body.dart';
+import 'package:fapcheckin/views/teacher/schedule/schedule_body.dart';
 import 'package:fapcheckin/views/teacher/live_session/live_session_body.dart';
 import 'package:fapcheckin/views/teacher/class_management/class_management_body.dart';
 import 'package:fapcheckin/views/teacher/attendance_history/attendance_history_body.dart';
@@ -68,21 +68,22 @@ class _MainScreenState extends State<MainScreen> {
       case 'diem-danh-qr':
         body = const LiveSessionBody();
         break;
+      case 'lich-hoc':
+        body = const ScheduleBody();
+        break;
       case 'lop-hoc':
         body = const ClassManagementBody();
         break;
       case 'lich-su-diem-danh':
         body = const AttendanceHistoryBody();
         break;
-      case 'bao-cao':
-        body = const ReportBody();
-        break;
       case 'cai-dat':
         body = const SettingsBody();
         break;
+      case 'bao-cao':
       case 'tong-quan':
       default:
-        body = const DashboardBody();
+        body = const ReportBody();
         break;
     }
 
