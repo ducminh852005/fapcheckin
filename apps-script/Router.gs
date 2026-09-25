@@ -5,6 +5,13 @@
  */
 function dispatch(action, params) {
   var handlers = {
+    'getBackendInfo': function() {
+      return {
+        revision: '2026-09-25-timetable-ocr-v4',
+        timetableCompositeClassCodes: true,
+        stagedOcrErrors: true
+      };
+    },
     'scanTimetableImage': function(p) { return TimetableImportService.scan(p); },
     'importTimetableAssignments': function(p) { return TimetableImportService.importAssignments(p); },
     'getScheduleOptions': function(p) { return ScheduleService.getOptions(p); },

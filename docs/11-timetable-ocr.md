@@ -10,7 +10,7 @@ The Apps Script project must enable the Advanced Drive service:
 
 - Service: Drive API
 - Identifier: `Drive`
-- Version: `v2`
+- Version: `v3`
 
 `appsscript.json` must include these scopes:
 

@@ -4,15 +4,15 @@
     "enabledAdvancedServices": [
       {
         "userSymbol": "Drive",
-        "version": "v2",
-        "serviceId": "drive"
+        "serviceId": "drive",
+        "version": "v3"
       }
     ]
   },
   "oauthScopes": [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/script.external_request"
   ],
   "exceptionLogging": "STACKDRIVER",

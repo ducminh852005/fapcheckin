@@ -3,13 +3,7 @@
 var CHECKIN_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec';
 
 function authorizeTimetableOCR() {
-  SpreadsheetApp.openById('1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4').getName();
-  DocumentApp.create('Timetable OCR authorization probe').getBody().setText('ready');
-  var probe = DriveApp.getFilesByName('Timetable OCR authorization probe');
-  while (probe.hasNext()) {
-    probe.next().setTrashed(true);
-  }
-  Logger.log('Timetable OCR authorization is ready.');
+  return authorizeTimetableOcr();
 }
 
 function renderCheckinPage_(token, oauthResult) {
