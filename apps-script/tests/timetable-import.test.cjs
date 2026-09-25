@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function setup() {
+function setup(overrides = {}) {
   const tables = {
     Class_Section: [
       { classCode: 'SE1917', subjectCode: 'PRN232', teacherMemberCode: '' },
@@ -40,7 +40,16 @@ function setup() {
     LockService: {
       getScriptLock: () => ({ waitLock: () => {}, releaseLock: () => released++ }),
     },
-    Utilities: { getUuid: () => 'scan-1' },
+    Utilities: {
+      getUuid: () => 'scan-1',
+      base64Decode: value => Buffer.from(value, 'base64'),
+      newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
+      sleep: () => {},
+    },
+    Drive: overrides.Drive,
+    DriveApp: overrides.DriveApp,
+    DocumentApp: overrides.DocumentApp,
+    console,
     throwError: (code, message) => { throw Object.assign(new Error(message), { code }); },
   });
   vm.runInContext(fs.readFileSync('apps-script/TimetableImportService.gs', 'utf8'), context);
@@ -59,6 +68,61 @@ test('parses class-subject pairs, rooms and timetable dates from noisy OCR', () 
     { key: 'SE1927|SWD392', classCode: 'SE1927', subjectCode: 'SWD392', room: '611' },
   ]);
   assert.deepEqual(Array.from(parsed.detectedDates), ['07/09', '13/09']);
+});
+
+test('parses class-subject pairs when OCR drops the location label or inserts spaces', () => {
+  const { api } = setup();
+  const parsed = api.parseText(`SE 1917 - PRN 232\nSE1927_PRM393\nSE1917 PRN232`);
+  assert.deepEqual(JSON.parse(JSON.stringify(parsed.entries)), [
+    { key: 'SE1917|PRN232', classCode: 'SE1917', subjectCode: 'PRN232', room: '' },
+    { key: 'SE1927|PRM393', classCode: 'SE1927', subjectCode: 'PRM393', room: '' },
+  ]);
+});
+
+test('waits for the converted OCR document before parsing it', () => {
+  let reads = 0;
+  let trashed = false;
+  const backend = setup({
+    Drive: { Files: { create: () => ({ id: 'doc-1' }) } },
+    DocumentApp: {
+      openById: () => {
+        reads++;
+        if (reads === 1) throw new Error('Document is not ready yet');
+        return { getBody: () => ({ getText: () => 'SE1917-PRN232 at NVH 602' }) };
+      },
+    },
+    DriveApp: { getFileById: () => ({ setTrashed: () => { trashed = true; } }) },
+  });
+
+  const result = backend.api.scan({
+    sessionToken: 'valid',
+    mimeType: 'image/jpeg',
+    fileName: 'lich_hoc.jpg',
+    imageBase64: 'aW1hZ2U=',
+  });
+
+  assert.equal(reads, 2);
+  assert.equal(trashed, true);
+  assert.equal(result.entries[0].classCode, 'SE1917');
+  assert.equal(result.entries[0].room, '602');
+});
+
+test('reports missing OCR authorization instead of blaming image quality', () => {
+  const backend = setup({
+    Drive: { Files: { create: () => { throw new Error('Authorization is required'); } } },
+    DocumentApp: {},
+    DriveApp: {},
+  });
+
+  assert.throws(
+    () => backend.api.scan({
+      sessionToken: 'valid',
+      mimeType: 'image/jpeg',
+      fileName: 'lich_hoc.jpg',
+      imageBase64: 'aW1hZ2U=',
+    }),
+    { code: 'OCR_NOT_CONFIGURED' },
+  );
 });
 
 test('matches available, conflicting and already assigned classes', () => {
