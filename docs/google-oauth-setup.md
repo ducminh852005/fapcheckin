@@ -24,3 +24,19 @@ their own HTTPS origins.
 
 After changing an OAuth client, allow several minutes for the setting to
 propagate, open a fresh incognito window, and test with a newly generated QR.
+
+## Desktop OAuth client
+
+Windows and Linux builds use the installed-app OAuth flow, so they must be run
+with the Desktop client secret that belongs to
+`222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com`.
+
+Copy `desktop_oauth.example.json` to `desktop_oauth.local.json`, replace the
+placeholder with the real secret from Google Cloud Console, then run:
+
+```powershell
+flutter run -d windows --dart-define-from-file=desktop_oauth.local.json
+```
+
+If the local file still contains the placeholder, Google will reject the token
+exchange with `invalid_client`.

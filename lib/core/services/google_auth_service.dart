@@ -46,6 +46,13 @@ class GoogleAuthService {
           '--dart-define=GOOGLE_DESKTOP_CLIENT_SECRET=...',
         );
       }
+      if (_looksLikePlaceholderSecret(clientSecret)) {
+        throw StateError(
+          'GOOGLE_DESKTOP_CLIENT_SECRET dang la gia tri mau. '
+          'Hay thay bang Desktop OAuth client secret that trong '
+          'desktop_oauth.local.json.',
+        );
+      }
       return signInWithDesktopGoogle(clientId, clientSecret);
     }
 
@@ -73,6 +80,15 @@ class GoogleAuthService {
       await _googleSignIn.signOut();
     }
   }
+}
+
+bool _looksLikePlaceholderSecret(String value) {
+  final normalized = value.trim().toLowerCase();
+  return normalized.isEmpty ||
+      normalized.contains('replace-with') ||
+      normalized.contains('placeholder') ||
+      normalized.contains('your-') ||
+      normalized.contains('example');
 }
 
 class GoogleSignInUnavailableException implements Exception {
