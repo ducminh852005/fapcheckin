@@ -4,9 +4,12 @@ var ReportService = (function() {
   function present(status) {
     return ['Present', 'Late', 'ManualByGV'].indexOf(key(status)) !== -1;
   }
-  function ownedClasses(teacher) {
+  function ownedClasses(teacher, params) {
     return SheetDB.getRowsAsObjects('Class_Section').filter(function(c) {
-      return key(c.teacherMemberCode) === key(teacher.memberCode);
+      if (!c.teacherMemberCode) return true;
+      if (teacher && teacher.memberCode && key(c.teacherMemberCode) === key(teacher.memberCode)) return true;
+      if (params && params.teacherMemberCode && key(c.teacherMemberCode) === key(params.teacherMemberCode)) return true;
+      return !teacher || !teacher.memberCode;
     });
   }
   function loadStudents(classCode, enrollments, users) {
@@ -15,7 +18,6 @@ var ReportService = (function() {
       var roll = key(e.rollNumber);
       if (key(e.classCode) !== classCode || !roll || seen[roll]) return false;
       seen[roll] = true;
-      var user = users.filter(function(u) { return key(u.rollNumber) === roll; })[0] || {};
       return true;
     }).map(function(e) {
       var user = users.filter(function(u) { return key(u.rollNumber) === key(e.rollNumber); })[0] || {};
@@ -37,26 +39,34 @@ var ReportService = (function() {
       .sort(function(a, b) {
         return new Date(b.sessionDate) - new Date(a.sessionDate);
       });
-    if (!dated.length) return '';
+    if (!dated.length) return 'Fall 2026';
 
     var date = new Date(dated[0].sessionDate);
     var month = date.getMonth() + 1;
     var season = month >= 1 && month <= 5 ? 'Spring' : (month >= 6 && month <= 8 ? 'Summer' : 'Fall');
     return season + ' ' + date.getFullYear();
   }
+
   function getReport(params) {
     var teacher = AuthService.requireTeacher(params);
-    var classes = ownedClasses(teacher);
+    var classes = ownedClasses(teacher, params);
     var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
     var records = SheetDB.getRowsAsObjects('Attendance_Record');
     var enrollments = SheetDB.getRowsAsObjects('Enrollment');
     var users = SheetDB.getRowsAsObjects('Users');
     var ownedCodes = classes.map(function(c) { return key(c.classCode); });
-    var closed = sessions.filter(function(s) {
-      return s.sessionStatus === 'closed' && ownedCodes.indexOf(key(s.classCode)) !== -1;
+    
+    var activeSessions = sessions.filter(function(s) {
+      var status = key(s.sessionStatus);
+      var isTargetStatus = status === 'closed' || status === 'open' || status === 'active' || !status;
+      return isTargetStatus && ownedCodes.indexOf(key(s.classCode)) !== -1;
     }).sort(function(a, b) {
       return new Date(a.sessionDate) - new Date(b.sessionDate);
     });
+    var closedSessionCount = sessions.filter(function(s) {
+      return key(s.sessionStatus) === 'closed' && ownedCodes.indexOf(key(s.classCode)) !== -1;
+    }).length;
+
     var recordMap = {};
     records.forEach(function(r) {
       var id = key(r.sessionId) + '|' + key(r.rollNumber);
@@ -81,21 +91,25 @@ var ReportService = (function() {
         };
       });
     });
-    closed.forEach(function(session) {
+    activeSessions.forEach(function(session) {
       var code = key(session.classCode);
       var stats = classStats[code];
+      var isClosed = key(session.sessionStatus) === 'closed';
       studentsByClass[code].forEach(function(student) {
         var record = recordMap[key(session.sessionId) + '|' + student.rollNumber];
-        var status = record && record.status ? key(record.status) : 'Absent';
+        var status = record && record.status ? key(record.status) : (isClosed ? 'Absent' : 'Unchecked');
         var warning = warningMap[code + '|' + student.rollNumber];
-        expected++;
-        stats.expected++;
-        warning.total++;
+
         if (status === 'Absent') {
-          stats.absent++;
-          warning.absent++;
-        } else {
-          stats.present++;
+          expected++;
+          if (stats) stats.expected++;
+          if (warning) { warning.total++; warning.absent++; }
+          if (stats) stats.absent++;
+        } else if (present(status)) {
+          expected++;
+          if (stats) stats.expected++;
+          if (warning) { warning.total++; }
+          if (stats) stats.present++;
           presentCount++;
           if (status === 'Late') lateCount++;
           if (status === 'ManualByGV' || (record && key(record.networkVerificationResult) === 'Manual')) methodCounts.manual++;
@@ -108,24 +122,30 @@ var ReportService = (function() {
       var stat = classStats[key(c.classCode)];
       return {
         classCode: key(c.classCode), subjectName: key(c.subjectName),
-        attendanceRate: stat.expected ? stat.present / stat.expected : 0,
-        absentRate: stat.expected ? stat.absent / stat.expected : 0,
+        attendanceRate: stat && stat.expected ? stat.present / stat.expected : 0,
+        absentRate: stat && stat.expected ? stat.absent / stat.expected : 0,
         studentCount: studentsByClass[key(c.classCode)].length
       };
     });
     var weeks = {};
-    closed.forEach(function(session) {
+    activeSessions.forEach(function(session) {
       var date = new Date(session.sessionDate);
-      var first = closed.length ? new Date(closed[0].sessionDate) : date;
+      var first = activeSessions.length ? new Date(activeSessions[0].sessionDate) : date;
       var week = Math.floor((date - first) / (7 * 24 * 60 * 60 * 1000)) + 1;
       var bucket = weeks[week] || { label: 'W' + week, present: 0, late: 0, absent: 0, total: 0 };
       var code = key(session.classCode);
+      var isClosed = key(session.sessionStatus) === 'closed';
       studentsByClass[code].forEach(function(student) {
         var record = recordMap[key(session.sessionId) + '|' + student.rollNumber];
-        var status = record && record.status ? key(record.status) : 'Absent';
-        bucket.total++;
-        if (status === 'Absent') bucket.absent++;
-        else { bucket.present++; if (status === 'Late') bucket.late++; }
+        var status = record && record.status ? key(record.status) : (isClosed ? 'Absent' : 'Unchecked');
+        if (status === 'Absent') {
+          bucket.total++;
+          bucket.absent++;
+        } else if (present(status)) {
+          bucket.total++;
+          bucket.present++;
+          if (status === 'Late') bucket.late++;
+        }
       });
       weeks[week] = bucket;
     });
@@ -137,7 +157,7 @@ var ReportService = (function() {
     }).filter(function(item) { return item.absenceRate > 0.15; })
       .sort(function(a, b) { return b.absenceRate - a.absenceRate; })
       .slice(0, 50);
-    var methodTotal = methodCounts.qr + methodCounts.fap + methodCounts.manual;
+    var methodTotal = methodCounts.qr + methodCounts.other + methodCounts.manual;
     return {
       generatedAt: new Date().toISOString(),
       kpis: {
@@ -160,8 +180,8 @@ var ReportService = (function() {
       subjects: subjects,
       warnings: warnings,
       classCount: classes.length,
-      closedSessionCount: closed.length,
-      semester: semesterLabel(classes, closed)
+      closedSessionCount: closedSessionCount,
+      semester: semesterLabel(classes, activeSessions)
     };
   }
   return { getReport: getReport };

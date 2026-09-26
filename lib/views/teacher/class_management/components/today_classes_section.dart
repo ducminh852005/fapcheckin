@@ -536,84 +536,123 @@ class _ActiveSessionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Material(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                  elevation: 2,
-                  child: InkWell(
-                    onTap: () {
-                      context
-                          .read<LiveSessionViewModel>()
-                          .startSession(
-                            classSection: classData,
-                            slotCode: '1',
-                            teacherIp: '192.168.1.100',
-                          )
-                          .then((_) {
-                            if (context.mounted) {
-                              context.read<DashboardViewModel>().navigate(
-                                'diem-danh-qr',
-                              );
-                            }
-                          });
-                    },
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: 14,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppColors.onPrimary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Icon(
-                              Icons.qr_code_scanner,
-                              size: 24,
-                              color: AppColors.onPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'VÀO ĐIỂM DANH QR TRỰC TIẾP',
-                                  style: AppTextStyles.headlineSm.copyWith(
-                                    color: AppColors.onPrimary,
-                                    height: 1,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Mở phòng chiếu QR động 60s & theo dõi sinh viên check-in tức thì',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.onPrimaryContainer,
-                                    height: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward,
-                            size: 24,
-                            color: AppColors.onPrimary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _StartDirectSessionButton(classData: classData),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StartDirectSessionButton extends StatefulWidget {
+  final ClassSectionModel classData;
+  const _StartDirectSessionButton({required this.classData});
+
+  @override
+  State<_StartDirectSessionButton> createState() =>
+      _StartDirectSessionButtonState();
+}
+
+class _StartDirectSessionButtonState
+    extends State<_StartDirectSessionButton> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await context.read<LiveSessionViewModel>().startSession(
+        classSection: widget.classData,
+        slotCode: '1',
+        teacherIp: '192.168.1.100',
+      );
+      if (mounted) {
+        context.read<DashboardViewModel>().navigate('diem-danh-qr');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _isLoading ? AppColors.primaryDark : AppColors.primaryContainer,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      elevation: 2,
+      child: InkWell(
+        onTap: _isLoading ? null : _handleTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 14,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.onPrimary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.onPrimary,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.qr_code_scanner,
+                        size: 24,
+                        color: AppColors.onPrimary,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _isLoading
+                          ? 'ĐANG KHỞI TẠO PHIÊN ĐIỂM DANH...'
+                          : 'VÀO ĐIỂM DANH QR TRỰC TIẾP',
+                      style: AppTextStyles.headlineSm.copyWith(
+                        color: AppColors.onPrimary,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isLoading
+                          ? 'Đang kết nối hệ thống & tạo mã QR động...'
+                          : 'Mở phòng chiếu QR động 60s & theo dõi sinh viên check-in tức thì',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.onPrimaryContainer,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isLoading)
+                const Icon(
+                  Icons.arrow_forward,
+                  size: 24,
+                  color: AppColors.onPrimary,
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

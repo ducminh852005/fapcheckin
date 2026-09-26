@@ -291,28 +291,39 @@ class _LiveSessionButton extends StatefulWidget {
 
 class _LiveSessionButtonState extends State<_LiveSessionButton> {
   bool _hovered = false;
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final activeClass = context.read<DashboardViewModel>().classes.firstWhere(
+        (c) => c.isActive,
+        orElse: () => context.read<DashboardViewModel>().classes.first,
+      );
+      await context.read<LiveSessionViewModel>().startSession(
+        classSection: activeClass,
+        slotCode: '1',
+        teacherIp: '192.168.1.100',
+      );
+      if (mounted) {
+        context.read<DashboardViewModel>().navigate('diem-danh-qr');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
+      cursor: _isLoading ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
-          final activeClass = context.read<DashboardViewModel>().classes.firstWhere(
-            (c) => c.isActive,
-            orElse: () => context.read<DashboardViewModel>().classes.first,
-          );
-          context.read<LiveSessionViewModel>().startSession(
-            classSection: activeClass,
-            slotCode: '1',
-            teacherIp: '192.168.1.100',
-          ).then((_) {
-            if (context.mounted) {
-              context.read<DashboardViewModel>().navigate('diem-danh-qr');
-            }
-          });
-        },
+        onTap: _isLoading ? null : _handleTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(
@@ -320,7 +331,9 @@ class _LiveSessionButtonState extends State<_LiveSessionButton> {
             vertical: 10,
           ),
           decoration: BoxDecoration(
-            color: _hovered ? AppColors.primaryDark : AppColors.primaryContainer,
+            color: _isLoading
+                ? AppColors.primaryDark.withOpacity(0.8)
+                : (_hovered ? AppColors.primaryDark : AppColors.primaryContainer),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             boxShadow: const [
               BoxShadow(
@@ -333,21 +346,33 @@ class _LiveSessionButtonState extends State<_LiveSessionButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_isLoading) ...[
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.onPrimary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Text(
-                'Vào phòng điểm danh trực tiếp',
+                _isLoading ? 'Đang mở...' : 'Vào phòng điểm danh trực tiếp',
                 style: AppTextStyles.labelMd.copyWith(
                   color: AppColors.onPrimary,
                 ),
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: EdgeInsets.only(left: _hovered ? 8 : 6),
-                child: const Icon(
-                  Icons.arrow_forward,
-                  size: 18,
-                  color: AppColors.onPrimary,
+              if (!_isLoading)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: EdgeInsets.only(left: _hovered ? 8 : 6),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    size: 18,
+                    color: AppColors.onPrimary,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
