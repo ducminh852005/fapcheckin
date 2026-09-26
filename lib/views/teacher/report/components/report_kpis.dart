@@ -29,12 +29,13 @@ class ReportKpis extends StatelessWidget {
           childAspectRatio: constraints.maxWidth >= 1200 ? 2.0 : 1.85,
           children: [
             _buildKpiCard(
-              title: 'Tỷ lệ chuyên cần TB',
+              title: 'Tỷ lệ điểm danh TB',
               value: '${(data.kpis.attendanceRate * 100).toStringAsFixed(1)}%',
               icon: Icons.check_circle_outline,
               iconColor: AppColors.statusPresent,
               iconBg: AppColors.statusPresentBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
                     Icons.trending_up,
@@ -61,6 +62,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: ReportColors.primary,
               iconBg: ReportColors.primaryLight,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Tổng lượt có mặt: ',
@@ -77,6 +79,7 @@ class ReportKpis extends StatelessWidget {
                 ],
               ),
               bottomRight: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Lớp phụ trách: ',
@@ -102,6 +105,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: AppColors.statusAbsent,
               iconBg: AppColors.statusAbsentBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     width: 6,
@@ -132,6 +136,7 @@ class ReportKpis extends StatelessWidget {
               iconColor: AppColors.statusLate,
               iconBg: AppColors.statusLateBg,
               bottomLeft: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Tổng số sinh viên: ',

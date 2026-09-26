@@ -42,25 +42,26 @@ class Sidebar extends StatelessWidget {
                 onTap: () => vm.navigate('tong-quan'),
               ),
               _NavItem(
+                icon: Icons.calendar_month_outlined,
+                label: 'Lịch học',
+                route: 'lich-hoc',
+                currentRoute: vm.currentRoute,
+                onTap: () => vm.navigate('lich-hoc'),
+              ),
+              _NavItem(
                 icon: Icons.school_outlined,
-                label: 'Lớp học',
+                label: 'Tiết học',
                 route: 'lop-hoc',
+                activeRoutes: const {'diem-danh-qr'},
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lop-hoc'),
               ),
               _NavItem(
-                icon: Icons.history_outlined,
-                label: 'Lịch sử điểm danh',
+                icon: Icons.menu_book_outlined,
+                label: 'Khóa học',
                 route: 'lich-su-diem-danh',
                 currentRoute: vm.currentRoute,
                 onTap: () => vm.navigate('lich-su-diem-danh'),
-              ),
-              _NavItem(
-                icon: Icons.bar_chart_outlined,
-                label: 'Báo cáo',
-                route: 'bao-cao',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('bao-cao'),
               ),
               /*
               _NavItem(
@@ -106,6 +107,7 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String route;
+  final Set<String> activeRoutes;
   final String currentRoute;
   final VoidCallback onTap;
 
@@ -113,11 +115,13 @@ class _NavItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.route,
+    this.activeRoutes = const {},
     required this.currentRoute,
     required this.onTap,
   });
 
-  bool get isActive => currentRoute == route;
+  bool get isActive =>
+      currentRoute == route || activeRoutes.contains(currentRoute);
 
   @override
   Widget build(BuildContext context) {

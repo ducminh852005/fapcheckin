@@ -8,8 +8,10 @@ import 'live_session_viewmodel.dart';
 
 class DashboardViewModel extends ChangeNotifier {
   final TeacherRepository _repository;
+  final DateTime Function() _now;
 
-  DashboardViewModel(this._repository);
+  DashboardViewModel(this._repository, {DateTime Function()? now})
+      : _now = now ?? DateTime.now;
 
   // ── Teacher info (filled after login / from auth state) ─────────────────────
   String _teacherName = '';
@@ -34,7 +36,7 @@ class DashboardViewModel extends ChangeNotifier {
   String campus = 'Hòa Lạc';
 
   String get todayLabel {
-    final now = DateTime.now();
+    final now = _now();
     const days = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
     final dayName = days[now.weekday - 1];
     return '$dayName, ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
@@ -187,7 +189,7 @@ class DashboardViewModel extends ChangeNotifier {
 
       switch (result) {
         case ApiSuccess<List<ClassSectionModel>>(:final data):
-          _classes = data;
+          _classes = _sortClassesByCheckinPriority(data);
           _status = data.isEmpty ? ViewStatus.idle : ViewStatus.success;
         case ApiFailure<List<ClassSectionModel>>(:final error):
           _status = ViewStatus.error;
@@ -244,6 +246,74 @@ class DashboardViewModel extends ChangeNotifier {
       if (hour != null) return hour < 12;
     }
     return false;
+  }
+
+  List<ClassSectionModel> _sortClassesByCheckinPriority(
+    List<ClassSectionModel> classes,
+  ) {
+    final indexed = classes.indexed.toList();
+    final now = _now();
+    indexed.sort((a, b) {
+      final priorityCompare = _checkinPriority(
+        a.$2,
+        now,
+      ).compareTo(_checkinPriority(b.$2, now));
+      if (priorityCompare != 0) return priorityCompare;
+
+      final startCompare = (_startMinute(a.$2) ?? 24 * 60).compareTo(
+        _startMinute(b.$2) ?? 24 * 60,
+      );
+      if (startCompare != 0) return startCompare;
+
+      return a.$1.compareTo(b.$1);
+    });
+    return indexed.map((entry) => entry.$2).toList();
+  }
+
+  int _checkinPriority(ClassSectionModel c, DateTime now) {
+    final startMinute = _startMinute(c);
+    var endMinute = _endMinute(c);
+    if (startMinute != null && endMinute != null && endMinute <= startMinute) {
+      endMinute += 24 * 60;
+    }
+    final nowMinute = now.hour * 60 + now.minute;
+    if (endMinute != null && nowMinute > endMinute) return 2;
+    if (c.isActive) return 0;
+    return 1;
+  }
+
+  int? _startMinute(ClassSectionModel c) {
+    return _firstMinute(c.startTime) ?? _firstMinute(c.timeLabel);
+  }
+
+  int? _endMinute(ClassSectionModel c) {
+    return _firstMinute(c.endTime) ?? _lastMinute(c.timeLabel);
+  }
+
+  int? _firstMinute(String? value) {
+    final matches = _minuteMatches(value);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  int? _lastMinute(String? value) {
+    final matches = _minuteMatches(value);
+    return matches.isEmpty ? null : matches.last;
+  }
+
+  List<int> _minuteMatches(String? value) {
+    if (value == null || value.trim().isEmpty) return const [];
+    return RegExp(r'(\d{1,2}):(\d{2})')
+        .allMatches(value)
+        .map((match) {
+          final hour = int.tryParse(match.group(1)!);
+          final minute = int.tryParse(match.group(2)!);
+          if (hour == null || minute == null || hour > 23 || minute > 59) {
+            return null;
+          }
+          return hour * 60 + minute;
+        })
+        .whereType<int>()
+        .toList();
   }
 }
 

@@ -2,6 +2,10 @@
 
 var CHECKIN_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec';
 
+function authorizeTimetableOCR() {
+  return authorizeTimetableOcr();
+}
+
 function renderCheckinPage_(token, oauthResult) {
   var nonce = Utilities.getUuid().replace(/-/g, '');
   CacheService.getScriptCache().put('google-login-nonce:' + nonce, '1', 600);

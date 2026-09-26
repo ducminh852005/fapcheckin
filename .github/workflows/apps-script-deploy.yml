@@ -40,7 +40,7 @@ jobs:
           cp -f clasp.json .clasp.json
 
       - name: Validate Apps Script
-        run: node --test apps-script/tests/template.test.cjs apps-script/tests/api.test.cjs apps-script/tests/history.test.cjs
+        run: node --test apps-script/tests/*.test.cjs
 
       - name: Verify report action is included
         working-directory: apps-script
@@ -56,3 +56,20 @@ jobs:
           
           # 2. Tạo phiên bản mới và tự động cập nhật URL Web App hiện tại
           clasp deploy -i AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA -d "Auto-deployed via Github Actions"
+
+      - name: Verify live web app revision
+        env:
+          WEB_APP_URL: https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec
+          EXPECTED_REVISION: 2026-09-25-timetable-ocr-v4
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            response="$(curl --fail --silent --show-error --location "$WEB_APP_URL?action=getBackendInfo" || true)"
+            if LIVE_RESPONSE="$response" node -e "const body = JSON.parse(process.env.LIVE_RESPONSE); if (!body.success || body.data.revision !== process.env.EXPECTED_REVISION) process.exit(1)"; then
+              echo "Verified live Apps Script revision: $EXPECTED_REVISION"
+              exit 0
+            fi
+            echo "Live deployment not updated yet (attempt $attempt/6)."
+            sleep 10
+          done
+          echo "The deployment URL is still serving an old Apps Script version."
+          exit 1

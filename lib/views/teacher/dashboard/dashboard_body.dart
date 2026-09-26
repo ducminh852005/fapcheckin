@@ -13,8 +13,6 @@ import 'components/attendance_chart.dart';
 import 'components/class_card.dart';
 import 'components/stat_card.dart';
 
-
-
 class DashboardBody extends StatelessWidget {
   const DashboardBody({super.key});
 
@@ -36,7 +34,6 @@ class DashboardBody extends StatelessWidget {
     );
   }
 }
-
 
 /// 4-column stats row
 class _StatsRow extends StatelessWidget {
@@ -129,41 +126,60 @@ class _SchedulePanelState extends State<_SchedulePanel> {
 
   String _getSlotTimeRange(int slot) {
     switch (slot) {
-      case 1: return '07:30 - 09:50';
-      case 2: return '10:00 - 12:20';
-      case 3: return '12:50 - 15:10';
-      case 4: return '15:20 - 17:40';
-      case 5: return '18:00 - 20:20';
-      case 6: return '20:30 - 22:50';
-      default: return '-- : --';
+      case 1:
+        return '07:30 - 09:50';
+      case 2:
+        return '10:00 - 12:20';
+      case 3:
+        return '12:50 - 15:10';
+      case 4:
+        return '15:20 - 17:40';
+      case 5:
+        return '18:00 - 20:20';
+      case 6:
+        return '20:30 - 22:50';
+      default:
+        return '-- : --';
     }
   }
 
   SessionStatus _deriveStatus(String timeRange, bool isActive) {
-    if (timeRange.contains('--')) return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    if (timeRange.contains('--')) {
+      return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    }
     try {
       final parts = timeRange.split('-');
-      if (parts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
+      if (parts.length != 2) {
+        return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      }
+
       final startParts = parts[0].trim().split(':');
       final endParts = parts[1].trim().split(':');
-      
-      if (startParts.length != 2 || endParts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
+
+      if (startParts.length != 2 || endParts.length != 2) {
+        return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      }
+
       final h1 = int.parse(startParts[0]);
       final m1 = int.parse(startParts[1]);
-      
+
       final h2 = int.parse(endParts[0]);
       final m2 = int.parse(endParts[1]);
-      
+
       final now = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day, h1, m1).subtract(const Duration(minutes: 15));
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        h1,
+        m1,
+      ).subtract(const Duration(minutes: 15));
       final end = DateTime(now.year, now.month, now.day, h2, m2);
-      
+
       if (now.isAfter(end)) return SessionStatus.completed;
       if (isActive) return SessionStatus.active;
       if (now.isBefore(start)) return SessionStatus.notStarted;
-      
+
       return SessionStatus.ready;
     } catch (_) {
       return isActive ? SessionStatus.active : SessionStatus.notStarted;
@@ -173,9 +189,14 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
     final slotNumber = index + 1;
-    final rawRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
-        ? '${model.startTime} - ${model.endTime}'
-        : (model.timeLabel.isNotEmpty ? model.timeLabel : _getSlotTimeRange(slotNumber));
+    final rawRange =
+        (model.startTime != null &&
+                model.endTime != null &&
+                model.startTime!.isNotEmpty)
+            ? '${model.startTime} - ${model.endTime}'
+            : (model.timeLabel.isNotEmpty
+                ? model.timeLabel
+                : _getSlotTimeRange(slotNumber));
     final timeRange = formatTimeLabel(rawRange);
     return ClassSession(
       courseCode: model.classCode,
@@ -200,7 +221,7 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   @override
   Widget build(BuildContext context) {
     final vm = widget.vm;
-    
+
     // Pagination logic
     final totalClasses = vm.classes.length;
     final totalPages = (totalClasses / _itemsPerPage).ceil();
@@ -208,9 +229,10 @@ class _SchedulePanelState extends State<_SchedulePanel> {
       _currentPage = totalPages - 1;
     }
     final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage > totalClasses) 
-        ? totalClasses 
-        : startIndex + _itemsPerPage;
+    final endIndex =
+        (startIndex + _itemsPerPage > totalClasses)
+            ? totalClasses
+            : startIndex + _itemsPerPage;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -300,60 +322,64 @@ class _SchedulePanelState extends State<_SchedulePanel> {
               child: Center(
                 child: Text(
                   'Không có lớp học hôm nay.',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             )
-          else
-            ...[
-              for (int i = startIndex; i < endIndex; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ClassCard(
-                    session: _toClassSession(vm.classes[i], i),
-                    onStart: () async {
-                      final liveVm = context.read<LiveSessionViewModel>();
-                      await liveVm.startSession(
-                        classSection: vm.classes[i],
-                        slotCode: vm.classes[i].slotCode.isNotEmpty
-                            ? vm.classes[i].slotCode
-                            : (i + 1).toString(),
-                        teacherIp: '127.0.0.1', // Mock IP as per docs
-                      );
-                      vm.navigate('diem-danh-qr');
-                    },
-                  ),
+          else ...[
+            for (int i = startIndex; i < endIndex; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: ClassCard(
+                  session: _toClassSession(vm.classes[i], i),
+                  onStart: () async {
+                    final liveVm = context.read<LiveSessionViewModel>();
+                    await liveVm.startSession(
+                      classSection: vm.classes[i],
+                      slotCode:
+                          vm.classes[i].slotCode.isNotEmpty
+                              ? vm.classes[i].slotCode
+                              : (i + 1).toString(),
+                      teacherIp: '127.0.0.1', // Mock IP as per docs
+                    );
+                    vm.navigate('diem-danh-qr');
+                  },
                 ),
-              if (totalPages > 1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: _currentPage > 0
-                            ? () => setState(() => _currentPage--)
-                            : null,
+              ),
+            if (totalPages > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed:
+                          _currentPage > 0
+                              ? () => setState(() => _currentPage--)
+                              : null,
+                      color: AppColors.textSecondary,
+                    ),
+                    Text(
+                      'Trang ${_currentPage + 1} / $totalPages',
+                      style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textSecondary,
                       ),
-                      Text(
-                        'Trang ${_currentPage + 1} / $totalPages',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: _currentPage < totalPages - 1
-                            ? () => setState(() => _currentPage++)
-                            : null,
-                        color: AppColors.textSecondary,
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed:
+                          _currentPage < totalPages - 1
+                              ? () => setState(() => _currentPage++)
+                              : null,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
                 ),
-            ],
+              ),
+          ],
         ],
       ),
     );
@@ -387,7 +413,6 @@ class _ErrorRetry extends StatelessWidget {
     );
   }
 }
-
 
 class _IconButton extends StatefulWidget {
   final IconData icon;

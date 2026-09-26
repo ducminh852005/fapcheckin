@@ -61,7 +61,7 @@ class _HistoryTableState extends State<HistoryTable> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Text(
-                  'Lịch sử điểm danh tổng hợp',
+                  'Tổng hợp điểm danh khóa học',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,

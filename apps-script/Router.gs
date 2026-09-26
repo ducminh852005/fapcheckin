@@ -5,6 +5,15 @@
  */
 function dispatch(action, params) {
   var handlers = {
+    'getBackendInfo': function() {
+      return {
+        revision: '2026-09-25-timetable-ocr-v4',
+        timetableCompositeClassCodes: true,
+        stagedOcrErrors: true
+      };
+    },
+    'scanTimetableImage': function(p) { return TimetableImportService.scan(p); },
+    'importTimetableAssignments': function(p) { return TimetableImportService.importAssignments(p); },
     'getScheduleOptions': function(p) { return ScheduleService.getOptions(p); },
     'getClassSchedules': function(p) { return ScheduleService.list(p); },
     'createClassSchedule': function(p) { return ScheduleService.create(p); },
@@ -16,6 +25,7 @@ function dispatch(action, params) {
     'exportAttendanceHistory': function(p) { return AttendanceHistoryService.exportHistory(p); },
     'startHistorySession': function(p) { return AttendanceHistoryService.startSession(p); },
     'getReport': function(p) { return ReportService.getReport(p); },
+    'ocrTimetable': function(p) { return TimetableOCRService.ocrTimetable(p); },
     'login': AuthService.login,
     'getClasses': TeacherService.getClasses,
     'startSession': TeacherService.startSession,
@@ -47,7 +57,7 @@ function dispatch(action, params) {
   } catch (err) {
     return jsonResponse({
       success: false,
-      data: null,
+      data: err.data || null,
       error: { code: err.code || 'UNKNOWN_ERROR', message: err.message || err.toString() }
     });
   }
