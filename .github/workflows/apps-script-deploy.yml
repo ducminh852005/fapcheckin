@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-      - backend-data
-      - khoa-le
-      - feature/report
+      # - backend-data
+      # - khoa-le
+      # - feature/report
     paths:
       - 'apps-script/**' # Chỉ trigger khi code trong thư mục apps-script thay đổi
   workflow_dispatch: {}

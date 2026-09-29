@@ -86,8 +86,8 @@ var TeacherService = (function() {
          return String(s.slotCode) === slotCode;
        })[0];
 
-       var startTime = (sched && sched.startTime) ? String(sched.startTime) : (slot && slot.startTime ? String(slot.startTime) : '');
-       var endTime = (sched && sched.endTime) ? String(sched.endTime) : (slot && slot.endTime ? String(slot.endTime) : '');
+       var startTime = slot && slot.startTime ? String(slot.startTime) : '';
+       var endTime = slot && slot.endTime ? String(slot.endTime) : '';
        var period = slot && slot.period ? String(slot.period) : '';
 
        var timeLabel = '';
@@ -136,8 +136,11 @@ var TeacherService = (function() {
       var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
       var slotCode = sc.slotCode ? String(sc.slotCode) : '';
       var room = sc.room ? String(sc.room) : (cls.room || '');
-      var startTime = sc.startTime ? String(sc.startTime) : '';
-      var endTime = sc.endTime ? String(sc.endTime) : '';
+      var scSlot = slots.filter(function(s) {
+        return String(s.slotCode) === slotCode;
+      })[0];
+      var startTime = scSlot && scSlot.startTime ? String(scSlot.startTime) : '';
+      var endTime = scSlot && scSlot.endTime ? String(scSlot.endTime) : '';
       var timeLabel = (slotCode && startTime && endTime)
         ? '[Học bù] Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')'
         : ('[Học bù] ' + (slotCode || 'Lịch chưa cập nhật'));
