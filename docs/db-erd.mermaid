@@ -87,7 +87,8 @@ erDiagram
         string slotCode FK
         string sessionStatus "open | closed | expired | cancelled"
         string qrSecret "xoay bang rotateQr"
-        string teacherIp
+        boolean ipCheck "GV tich khi mo phien; mac dinh false = khong kiem tra IP. Phien cu khong co gia tri = true"
+        string teacherIp "chi luu khi ipCheck = true, tat thi rong"
         string scheduleId FK "NEW - nullable, buoi hoc bu/ke hoach dung de mo phien"
     }
 
@@ -97,8 +98,8 @@ erDiagram
         string rollNumber FK
         datetime checkinTime "nullable voi Absent"
         string status "Present | Late | Absent | ManualByGV | Unchecked"
-        string networkVerificationResult "Match | Mismatch | Manual | AutoAbsent"
-        string ipAddress "IP cong khai cua SV"
+        string networkVerificationResult "Match | Skipped (phien khong kiem tra IP) | Mismatch | Manual | AutoAbsent"
+        string ipAddress "IP cong khai cua SV, rong neu phien khong kiem tra IP"
         string note "toi da 2000 ky tu"
         datetime updatedAt
         string updatedBy FK "memberCode GV"

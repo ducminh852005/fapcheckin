@@ -6,7 +6,12 @@ Những gì nên xem lại khi hệ thống vượt quy mô một lớp/khoa th�
 
 ## Khi số lớp/SV tăng
 
-Thay Google Sheet bằng Firestore hoặc PostgreSQL đứng sau cùng một hợp đồng API — vì Repository ở app không đổi, chỉ đổi phần lõi Backend.
+Cơ sở dữ liệu đã là Firestore (không còn là Google Sheet) đứng sau cùng một hợp đồng API, nên app GV và trang SV không đổi. Điểm nghẽn tiếp theo là **Backend Apps Script** (quota `UrlFetchApp`, 6 phút/lần chạy, độ trễ gọi REST — xem [09](09-rui-ro-va-gioi-han.md)). Lộ trình gợi ý:
+
+1. **Port từng action sang Cloud Functions (Node + Admin SDK)**: bật gói Blaze, đặt `functions/` trong `firebase.json`, thay `FirestoreStore.gs` bằng truy cập Admin SDK trực tiếp (nhanh, có giao dịch/batch thật). Đổi `API_BASE_URL` của app GV và `BACKEND_URL` của trang SV sang URL function; có thể chạy song song với Apps Script rồi chuyển dần.
+2. **Firebase Auth** thay cho token phiên tự cấp (dùng sẵn trường `users.authUid`); phân quyền theo vai trò trong `firestore.rules`.
+3. **Roster real-time**: app GV đọc `attendanceRecords` bằng client SDK (listener) thay vì polling; cần nới `firestore.rules` theo `request.auth` + lớp thuộc giảng viên.
+4. Sinh sẵn các buổi học thường (từ `slots.weekdays`) vào `classSchedules` để có tổng số buổi thật thay cho số cố định, và nối `attendanceSessions.scheduleId`.
 
 ## Bản Desktop cho Giảng viên (đúng ý "Desktop hỗ trợ" của đề bài)
 

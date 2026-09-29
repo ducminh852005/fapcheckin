@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "attendanceSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "classCode", "order": "ASCENDING" },
+        { "fieldPath": "sessionStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "classSchedules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "teacherMemberCode", "order": "ASCENDING" },
+        { "fieldPath": "scheduleDate", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

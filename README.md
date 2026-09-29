@@ -1,6 +1,6 @@
 # FAP Check-in
 
-Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. Google Sheet là cơ sở dữ liệu tạm thời trong lúc chờ API chính thức từ FAP.
+Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. Backend là Google Apps Script; dữ liệu nằm trong Cloud Firestore (Google Sheet cũ chỉ còn là nguồn để migrate), trang của sinh viên host trên Firebase Hosting — trong lúc chờ API chính thức từ FAP. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
 
 **Tài liệu kiến trúc đầy đủ:** [docs/README.md](docs/README.md)
 **Pattern code & chuẩn giao tiếp với backend:** [docs/quick-start.md](docs/quick-start.md)
@@ -16,8 +16,10 @@ lib/                # App Flutter cho Giảng viên (MVVM) — xem docs/04, docs
 ├─ viewmodels/      # BaseViewModel + các ViewModel màn hình
 └─ views/
 
-checkin-web/        # Trang web check-in cho Sinh viên (HTML/CSS/JS thuần) — xem docs/04
-apps-script/        # Backend Google Apps Script (BFF + phục vụ checkin-web) — xem docs/01, 03, quick-start §3
+checkin-web/        # Trang web check-in cho Sinh viên (HTML/CSS/JS thuần), host trên Firebase Hosting — xem docs/04, docs/deploy-firebase.md
+apps-script/        # Backend Google Apps Script (API/BFF, lớp dữ liệu SheetDB -> Firestore hoặc Sheet) — xem docs/01, 03, quick-start §3
+scripts/deploy.ps1  # Deploy backend + Hosting + Firestore — xem docs/deploy-firebase.md
+firebase.json, firestore.rules, firestore.indexes.json  # Cấu hình Firebase
 docs/               # Blueprint kiến trúc (00–10) + quick-start pattern
 ```
 

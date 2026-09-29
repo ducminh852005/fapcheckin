@@ -99,6 +99,9 @@ class LiveSessionViewModel extends ChangeNotifier {
   String get sessionId => _session?.sessionId ?? '';
   String get qrToken => _session?.qrToken ?? '';
 
+  /// Whether the open session requires students to be on the teacher's network.
+  bool get ipCheck => _session?.ipCheck ?? false;
+
   String get checkinUrl =>
       qrToken.isEmpty ? '' : '$kCheckinBaseUrl?page=checkin&token=$qrToken';
 
@@ -289,34 +292,56 @@ class LiveSessionViewModel extends ChangeNotifier {
     required String slotCode,
     String? teacherIp,
     bool forceNew = false,
+    bool ipCheck = false,
   }) async {
     _status = ViewStatus.loading;
     _errorMessage = null;
     _classInfo = classSection;
 
-    // Use a real public IP. Placeholder/local addresses must never be stored in
-    // the session because student check-in compares public egress addresses.
-    String realIp = teacherIp ?? '';
-    if (_isPlaceholderIp(realIp)) {
-      realIp = await IpService.getPublicIp(forceRefresh: true);
-    }
-    if (_isPlaceholderIp(realIp)) {
-      _status = ViewStatus.error;
-      _errorMessage =
-          'Không thể xác định IP công khai của mạng giảng viên. '
-          'Hãy kiểm tra Internet/VPN rồi thử lại.';
-      notifyListeners();
-      return;
+    // Will this session check the students' network? A brand new session uses the
+    // teacher's choice; resuming an open one keeps whatever it was opened with.
+    final inMemoryResume = !forceNew &&
+        _session != null &&
+        _session!.classCode == classSection.classCode &&
+        !isClosed;
+    final activeId = classSection.activeSessionId;
+    final backendResume = !forceNew &&
+        !inMemoryResume &&
+        classSection.isActive &&
+        activeId != null &&
+        activeId.isNotEmpty;
+    final checkIp = inMemoryResume
+        ? _session!.ipCheck
+        : backendResume
+            ? (classSection.activeSessionIpCheck ?? false)
+            : ipCheck;
+
+    // With the IP check on, use a real public IP. Placeholder/local addresses
+    // must never be stored in the session because student check-in compares
+    // public egress addresses. With it off the IP is not needed at all.
+    String realIp = '';
+    if (checkIp) {
+      realIp = teacherIp ?? '';
+      if (_isPlaceholderIp(realIp)) {
+        realIp = await IpService.getPublicIp(forceRefresh: true);
+      }
+      if (_isPlaceholderIp(realIp)) {
+        _status = ViewStatus.error;
+        _errorMessage =
+            'Không thể xác định IP công khai của mạng giảng viên. '
+            'Hãy kiểm tra Internet/VPN rồi thử lại, hoặc tắt kiểm tra IP khi mở phiên.';
+        notifyListeners();
+        return;
+      }
     }
     _teacherIp = realIp;
     notifyListeners();
 
     // 1. Check if we already have this session active in memory
-    if (!forceNew &&
-        _session != null &&
-        _session!.classCode == classSection.classCode &&
-        !isClosed) {
-      if (!await _syncSessionTeacherIp(_session!.sessionId, realIp)) return;
+    if (inMemoryResume) {
+      if (checkIp && !await _syncSessionTeacherIp(_session!.sessionId, realIp)) {
+        return;
+      }
       _status = ViewStatus.success;
       _startPolling();
       notifyListeners();
@@ -324,11 +349,7 @@ class LiveSessionViewModel extends ChangeNotifier {
     }
 
     // 2. Check if classSection is active and has an activeSessionId on backend
-    final activeId = classSection.activeSessionId;
-    if (!forceNew &&
-        classSection.isActive &&
-        activeId != null &&
-        activeId.isNotEmpty) {
+    if (backendResume) {
       _session = SessionModel(
         sessionId: activeId,
         classCode: classSection.classCode,
@@ -336,8 +357,9 @@ class LiveSessionViewModel extends ChangeNotifier {
         slotCode: slotCode.isNotEmpty ? slotCode : classSection.slotCode,
         sessionStatus: 'open',
         qrToken: '',
+        ipCheck: checkIp,
       );
-      if (!await _syncSessionTeacherIp(activeId, realIp)) return;
+      if (checkIp && !await _syncSessionTeacherIp(activeId, realIp)) return;
       _status = ViewStatus.success;
       _startPolling();
       await _rotateQr();
@@ -351,6 +373,7 @@ class LiveSessionViewModel extends ChangeNotifier {
         classCode: classSection.classCode,
         slotCode: slotCode,
         teacherIp: realIp,
+        ipCheck: checkIp,
       );
 
       switch (result) {
@@ -498,14 +521,7 @@ class LiveSessionViewModel extends ChangeNotifier {
     final result = await _repository.rotateQr(sessionId: _session!.sessionId);
     switch (result) {
       case ApiSuccess<String>(:final data):
-        _session = SessionModel(
-          sessionId: _session!.sessionId,
-          classCode: _session!.classCode,
-          sessionDate: _session!.sessionDate,
-          slotCode: _session!.slotCode,
-          sessionStatus: _session!.sessionStatus,
-          qrToken: data,
-        );
+        _session = _session!.copyWith(qrToken: data);
         notifyListeners();
       case ApiFailure<String>():
         // Keep the current QR when a background rotation request fails.
@@ -569,14 +585,7 @@ class LiveSessionViewModel extends ChangeNotifier {
       switch (result) {
         case ApiSuccess<CloseSessionResult>():
           if (_session != null) {
-            _session = SessionModel(
-              sessionId: _session!.sessionId,
-              classCode: _session!.classCode,
-              sessionDate: _session!.sessionDate,
-              slotCode: _session!.slotCode,
-              sessionStatus: 'closed',
-              qrToken: _session!.qrToken,
-            );
+            _session = _session!.copyWith(sessionStatus: 'closed');
           }
           // Update all unchecked students in local roster to 'Absent'
           _roster = _roster.map((student) {

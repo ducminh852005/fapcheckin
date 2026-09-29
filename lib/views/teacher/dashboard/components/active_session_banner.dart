@@ -1,3 +1,4 @@
+import 'package:fapcheckin/views/teacher/live_session/dialogs/start_session_dialog.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +6,6 @@ import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
-import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 /// Active session banner shown at the top of dashboard
 class ActiveSessionBanner extends StatelessWidget {
   const ActiveSessionBanner({super.key});
@@ -303,12 +303,12 @@ class _LiveSessionButtonState extends State<_LiveSessionButton> {
             (c) => c.isActive,
             orElse: () => context.read<DashboardViewModel>().classes.first,
           );
-          context.read<LiveSessionViewModel>().startSession(
+          startSessionWithOptions(
+            context,
             classSection: activeClass,
             slotCode: '1',
-            teacherIp: '192.168.1.100',
-          ).then((_) {
-            if (context.mounted) {
+          ).then((started) {
+            if (started && context.mounted) {
               context.read<DashboardViewModel>().navigate('diem-danh-qr');
             }
           });

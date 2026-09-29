@@ -105,7 +105,8 @@ erDiagram
         string slotCode FK
         string sessionStatus "open | closed | expired | cancelled"
         string qrSecret "xoay bang rotateQr"
-        string teacherIp
+        boolean ipCheck "GV tich khi mo phien; mac dinh false = khong kiem tra IP. Phien cu khong co gia tri = true"
+        string teacherIp "chi luu khi ipCheck = true, tat thi rong"
         string scheduleId FK "NEW - nullable, buoi hoc bu/ke hoach dung de mo phien"
     }
 
@@ -115,8 +116,8 @@ erDiagram
         string rollNumber FK
         datetime checkinTime "nullable voi Absent"
         string status "Present | Late | Absent | ManualByGV | Unchecked"
-        string networkVerificationResult "Match | Mismatch | Manual | AutoAbsent"
-        string ipAddress "IP cong khai cua SV"
+        string networkVerificationResult "Match | Skipped (phien khong kiem tra IP) | Mismatch | Manual | AutoAbsent"
+        string ipAddress "IP cong khai cua SV, rong neu phien khong kiem tra IP"
         string note "toi da 2000 ky tu"
         datetime updatedAt
         string updatedBy FK "memberCode GV"
@@ -139,8 +140,10 @@ Backend vẫn gọi các "bảng" bằng tên cũ (`SheetDB.getRowsAsObjects('En
 | `Slot` | `slots` + `timeSlots` | `slotCode` / `timeSlotId` | Khi đọc ghép thành `{slotCode, period, startTime, endTime}` như cũ. **Chỉ đọc**: mọi ghi vào Slot bị bỏ qua. |
 | `Enrollment` | `enrollments` | `{classCode}_{rollNumber}` | Chặn trùng ghi danh. |
 | `Class_Schedule` | `classSchedules` | `scheduleId` | Buổi ngoài lịch (`makeup`, `workshop`, `review`); giờ lấy từ slot, không lưu `startTime/endTime`. |
-| `Attendance_Session` | `attendanceSessions` | `sessionId` | `sessionStatus = open \| closed \| expired \| cancelled`. `teacherIp` và `qrSecret` sinh khi mở phiên. |
+| `Attendance_Session` | `attendanceSessions` | `sessionId` | `sessionStatus = open \| closed \| expired \| cancelled`. `qrSecret` sinh khi mở phiên. `ipCheck` (boolean) = GV có tích "Kiểm tra IP mạng" hay không (mặc định `false`; phiên cũ không có giá trị này được coi là `true`). `teacherIp` chỉ được lưu khi `ipCheck = true`. |
 | `Attendance_Record` | `attendanceRecords` | `{sessionId}_{rollNumber}` | Mỗi SV một bản ghi mỗi phiên; ghi trùng bị Firestore từ chối (`DB_CONFLICT`) → API trả `ALREADY_CHECKED_IN`. Giữ thêm trường `recordId` (UUID) vì service tìm theo nó. |
+
+`networkVerificationResult` của `attendanceRecords`: `Match` (IP khớp), `Skipped` (phiên không kiểm tra IP), `Manual` (GV sửa tay), `AutoAbsent` (vắng tự sinh khi đóng phiên), `Mismatch` (dữ liệu cũ, không còn tạo mới).
 
 Quy ước kiểu dữ liệu: mã/khóa/phòng là **chuỗi** (kể cả `room` số như `303`); `credits`, `studentCount` là số; `syncedToFap` là boolean; ngày `yyyy-MM-dd`; giờ `HH:mm`; thời điểm (`checkinTime`, `createdAt`, `updatedAt`) là chuỗi ISO 8601.
 
@@ -169,8 +172,8 @@ Giờ chỉ lưu ở `timeSlots` (4 dòng): `A-1` 07:00–09:15, `A-2` 09:30–1
 
 ## 5. Luồng dữ liệu chính
 
-- **Mở phiên:** ghi `attendanceSessions` (`open`, `qrSecret`, `teacherIp`), tự đóng phiên `open` cũ của cùng lớp.
-- **SV điểm danh:** tìm phiên theo `qrSecret` + `open`, kiểm tra `enrollments`, so IP, tạo `attendanceRecords/{sessionId}_{rollNumber}`.
+- **Mở phiên:** ghi `attendanceSessions` (`open`, `qrSecret`, `ipCheck`, và `teacherIp` nếu bật kiểm tra IP), tự đóng phiên `open` cũ của cùng lớp.
+- **SV điểm danh:** tìm phiên theo `qrSecret` + `open`, kiểm tra `enrollments`, so IP **chỉ khi `ipCheck = true`** (kết quả `Match`, hoặc `IP_REQUIRED`/`IP_MISMATCH`; tắt thì ghi `Skipped`), tạo `attendanceRecords/{sessionId}_{rollNumber}`.
 - **Đóng phiên:** backend tự sinh bản ghi **Absent** (`networkVerificationResult = AutoAbsent`) cho SV có trong `enrollments` nhưng chưa có bản ghi ở phiên đó.
 - **Sync FAP:** job `syncToFap` đọc các bản ghi `syncedToFap == false`, đẩy lên FAP rồi đặt `true`. Mọi chỉnh sửa tay hoặc điểm danh mới đặt lại `false`. (`syncedToFap` chỉ có ở bản ghi chính thức, không còn là cột "thêm tạm".)
 

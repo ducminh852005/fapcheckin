@@ -39,6 +39,14 @@ FIRESTORE MAPPING (collection <- entity, docId)
   Index gợi ý: attendanceRecords(sessionId), attendanceRecords(syncedToFap),
     attendanceSessions(classCode, sessionStatus), classSchedules(teacherMemberCode, scheduleDate),
     enrollments(classCode), users(email), attendanceSessions(qrSecret, sessionStatus)
+  (Truy vấn chỉ có điều kiện bằng nhau trên nhiều trường KHÔNG cần composite index; chỉ 2 composite ở firestore.indexes.json là bắt buộc.)
   Firestore không enforce FK -> kiểm tra bằng Cloud Functions / security rules.
   Token đăng nhập (CacheService auth:*) và nonce -> thay bằng Firebase Auth (users.authUid).
+
+KIỂM TRA IP TÙY CHỌN THEO PHIÊN
+  attendanceSessions.ipCheck (boolean): GV tích "Kiểm tra IP mạng" khi mở phiên, mặc định false.
+  Phiên cũ không có trường này -> coi là true (giữ hành vi cũ). teacherIp chỉ lưu khi ipCheck = true.
+  attendanceRecords.networkVerificationResult = Skipped khi phiên không kiểm tra IP (Match khi có kiểm tra và khớp).
+  Chế độ Google Sheet: cột ipCheck của tab Attendance_Session được backend tự thêm ở lần mở phiên đầu (ensureColumns).
+  Firestore schemaless -> không cần migrate; Migrate.gs chỉ chép ipCheck nếu tab cũ đã có cột này.
 ```

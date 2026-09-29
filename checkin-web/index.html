@@ -546,36 +546,40 @@
     }
 
     // Hàm thực hiện Checkin
-    function processCheckin(token, rollNumber) {
+    // Gửi không kèm IP trước: phiên không bật kiểm tra IP thì không cần lấy IP.
+    // Nếu backend trả IP_REQUIRED (giảng viên đã bật kiểm tra IP) thì lấy IP công khai rồi gửi lại.
+    function processCheckin(token, rollNumber, studentIp) {
       showView('loading');
-      setLoadingStep('Đang xác định vị trí mạng...');
+      setLoadingStep('Đang gửi thông tin điểm danh...');
 
-      fetchPublicIp()
-        .then(function (studentIp) {
-          setLoadingStep('Đang gửi thông tin điểm danh...');
-
-          callApi(
-            'checkin',
-            { qrToken: token, studentIp: studentIp, rollNumber: rollNumber },
-            function (res) {
-              if (res.success) {
-                var user = JSON.parse(localStorage.getItem('fap_user') || '{}');
-                document.getElementById('info-name').innerText = user.fullName || '—';
-                document.getElementById('info-roll').innerText = user.rollNumber || rollNumber || '—';
-                document.getElementById('info-time').innerText = formatTime(res.data && res.data.checkinTime);
-                showView('success');
-              } else {
-                showErrorByCode(res.error.code, res.error.message);
-              }
-            },
-            function (err) {
-              showErrorByCode('NETWORK_ERROR', 'Lỗi mạng khi điểm danh: ' + (err && err.message ? err.message : err));
-            }
-          );
-        })
-        .catch(function () {
-          showErrorByCode('NETWORK_ERROR', 'Không thể lấy địa chỉ IP. Vui lòng kiểm tra lại kết nối mạng.');
-        });
+      callApi(
+        'checkin',
+        { qrToken: token, studentIp: studentIp || '', rollNumber: rollNumber },
+        function (res) {
+          if (res.success) {
+            var user = JSON.parse(localStorage.getItem('fap_user') || '{}');
+            document.getElementById('info-name').innerText = user.fullName || '—';
+            document.getElementById('info-roll').innerText = user.rollNumber || rollNumber || '—';
+            document.getElementById('info-time').innerText = formatTime(res.data && res.data.checkinTime);
+            showView('success');
+          } else if (res.error && res.error.code === 'IP_REQUIRED' && !studentIp) {
+            setLoadingStep('Phiên này yêu cầu kiểm tra mạng. Đang xác định IP...');
+            fetchPublicIp()
+              .then(function (ip) {
+                if (!ip) throw new Error('empty ip');
+                processCheckin(token, rollNumber, ip);
+              })
+              .catch(function () {
+                showErrorByCode('NETWORK_ERROR', 'Không thể lấy địa chỉ IP. Vui lòng kiểm tra lại kết nối mạng.');
+              });
+          } else {
+            showErrorByCode(res.error.code, res.error.message);
+          }
+        },
+        function (err) {
+          showErrorByCode('NETWORK_ERROR', 'Lỗi mạng khi điểm danh: ' + (err && err.message ? err.message : err));
+        }
+      );
     }
 
     function retryCheckin() {

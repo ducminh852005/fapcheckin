@@ -207,8 +207,12 @@ var AttendanceHistoryService = (function() {
   function startSession(params) {
     ownedClass(params);
     var slots = SheetDB.getRowsAsObjects('Slot');
-    if (!slots.some(function(s) { return key(s.slotCode) === key(params.slotCode); }) || !params.teacherIp) {
-      throwError('VALIDATION_ERROR', 'Chọn ca học hợp lệ và nhập IP mạng giảng viên.');
+    var ipCheck = params.ipCheck === true || String(params.ipCheck).toLowerCase() === 'true';
+    if (!slots.some(function(s) { return key(s.slotCode) === key(params.slotCode); })) {
+      throwError('VALIDATION_ERROR', 'Chọn ca học hợp lệ.');
+    }
+    if (ipCheck && !params.teacherIp) {
+      throwError('VALIDATION_ERROR', 'Nhập IP mạng giảng viên để bật kiểm tra IP.');
     }
     var lock = LockService.getScriptLock(); lock.waitLock(10000);
     try {

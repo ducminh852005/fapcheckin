@@ -1,6 +1,14 @@
 # Google OAuth setup for the check-in Web App
 
-The student check-in page is rendered inside an Apps Script HTML Service iframe.
+> **Firebase Hosting:** the student page is also deployed to Firebase Hosting
+> (`https://<project-id>.web.app`, see `docs/deploy-firebase.md`). That page has a
+> normal origin, so add `https://<project-id>.web.app` to **Authorized JavaScript
+> origins** of the same Web client. The rest of this file describes the older page
+> served by Apps Script (kept as a fallback until the QR code points to Hosting).
+> Before switching the QR, check that `checkin-web/index.html` signs in correctly
+> from the Hosting origin (its `g_id_onload` uses the same client ID).
+
+The student check-in page served by Apps Script is rendered inside an Apps Script HTML Service iframe.
 Its generated `script.googleusercontent.com` sandbox host cannot be registered
 reliably as an OAuth JavaScript origin. The Apps Script UI therefore uses Google
 Identity Services **redirect mode**, not popup mode.

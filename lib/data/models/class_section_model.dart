@@ -20,6 +20,8 @@ class ClassSectionModel {
   final double averageAttendance;
   final bool isActive;
   final String? activeSessionId;
+  /// IP check setting of the session that is currently open for this class (null = none open).
+  final bool? activeSessionIpCheck;
   final bool isMakeup;
 
   const ClassSectionModel({
@@ -39,6 +41,7 @@ class ClassSectionModel {
     required this.averageAttendance,
     required this.isActive,
     this.activeSessionId,
+    this.activeSessionIpCheck,
     this.isMakeup = false,
   });
 
@@ -64,6 +67,7 @@ class ClassSectionModel {
           jsonNumber(json['averageAttendance'])?.toDouble() ?? 0.0,
       isActive: jsonBool(json['isActive']) ?? false,
       activeSessionId: jsonText(json['activeSessionId']),
+      activeSessionIpCheck: jsonBool(json['activeSessionIpCheck']),
       isMakeup: jsonBool(json['isMakeup']) ?? false,
     );
   }
@@ -85,6 +89,7 @@ class ClassSectionModel {
     'averageAttendance': averageAttendance,
     'isActive': isActive,
     'activeSessionId': activeSessionId,
+    'activeSessionIpCheck': activeSessionIpCheck,
     'isMakeup': isMakeup,
   };
 
