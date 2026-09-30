@@ -246,6 +246,20 @@ function buildMigrationPlan() {
     if (!sessionIds[r.fields.sessionId]) warnings.push('Attendance_Record ' + r.id + ': phiên không có trong Attendance_Session.');
   });
 
+  // Firestore rejects a batch that writes the same document twice, so every
+  // collection keeps one document per id (the last sheet row wins).
+  Object.keys(plan).forEach(function(name) {
+    var byId = {}, order = [];
+    plan[name].forEach(function(doc) {
+      if (byId[doc.id]) {
+        warnings.push(name + ': id trùng "' + doc.id + '", giữ dòng ' + doc.fields._row + ' (bỏ dòng ' + byId[doc.id].fields._row + ').');
+      } else {
+        order.push(doc.id);
+      }
+      byId[doc.id] = doc;
+    });
+    plan[name] = order.map(function(id) { return byId[id]; });
+  });
   if (droppedLegacySlots) warnings.push('Đã bỏ slotCode P7-P9 (không còn tồn tại) ở ' + droppedLegacySlots + ' dòng.');
   return { plan: plan, warnings: warnings };
 }

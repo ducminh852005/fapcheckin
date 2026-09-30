@@ -363,6 +363,24 @@ test('migration drops the retired P7-P9 slots from classes and sessions', () => 
   assert.equal(t.docs.get('classSections/PRN232_SE1917').fields.slotCode.stringValue, 'A1');
 });
 
+test('migration keeps one document per id so a batch never writes the same document twice', () => {
+  const tables = sheetTables();
+  tables.Class_Section.push(['PRN232_SE1917', 'End Application With .NET', 3, 700, 40, 'KhoaLTA', 'A2']);
+  tables.Attendance_Session.push(['S1', 'PRN232_SE1917', '2026-09-22', 'A2', 'open', 'sec9', '127.0.0.1']);
+  const t = setup({ backend: 'sheet', tables });
+  const dry = t.context.migrateSheetsToFirestoreDryRun();
+  const c = JSON.parse(JSON.stringify(dry.collections));
+  assert.equal(c.classSections, 2);
+  assert.equal(c.attendanceSessions, 2);
+  const text = dry.warnings.join('\n');
+  assert.match(text, /classSections: id trùng "PRN232_SE1917"/);
+  assert.match(text, /attendanceSessions: id trùng "S1"/);
+
+  t.context.seedSlots();
+  t.context.migrateSheetsToFirestore();
+  assert.equal(t.docs.get('classSections/PRN232_SE1917').fields.room.stringValue, '700');
+});
+
 test('migration normalises data, is idempotent and verifyMigration passes', () => {
   const t = setup({ backend: 'sheet', tables: sheetTables() });
   t.context.seedSlots();
