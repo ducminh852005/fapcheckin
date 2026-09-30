@@ -120,6 +120,13 @@ function buildMigrationPlan() {
       warnings.push(where + ': slotCode "' + slotCode + '" không thuộc A1..A6/P1..P6.');
     }
   }
+  // The evening slots P7-P9 no longer exist (docs/db-erd-notes.md); leave the
+  // slot empty instead of copying a code that matches no slot.
+  var droppedLegacySlots = 0;
+  function dropLegacySlot(slotCode) {
+    if (/^P[7-9]$/.test(slotCode || '')) { droppedLegacySlots++; return ''; }
+    return slotCode;
+  }
 
   // Users -----------------------------------------------------------------
   var userSeen = {};
@@ -141,7 +148,7 @@ function buildMigrationPlan() {
     if (!classCode) return;
     var subjectCode = migText(row.subjectCode) || SheetsStore.subjectCodeFromClassCode(classCode);
     if (!subjectCode) warnings.push('Class_Section ' + classCode + ': không suy ra được subjectCode.');
-    var slotCode = migText(row.slotCode);
+    var slotCode = dropLegacySlot(migText(row.slotCode));
     checkSlot('Class_Section ' + classCode, slotCode);
     var doc = {
       classCode: classCode,
@@ -197,6 +204,7 @@ function buildMigrationPlan() {
     var sessionId = migText(row.sessionId);
     if (!sessionId) return;
     var doc = migTextColumns(row, ['sessionId', 'classCode', 'slotCode', 'sessionStatus', 'qrSecret', 'teacherIp']);
+    doc.slotCode = dropLegacySlot(doc.slotCode);
     doc.sessionDate = migDateOnly(row.sessionDate);
     // Sessions from before the option existed have no value and keep IP checking on.
     if (row.ipCheck !== undefined && row.ipCheck !== '') doc.ipCheck = migBool(row.ipCheck);
@@ -238,6 +246,7 @@ function buildMigrationPlan() {
     if (!sessionIds[r.fields.sessionId]) warnings.push('Attendance_Record ' + r.id + ': phiên không có trong Attendance_Session.');
   });
 
+  if (droppedLegacySlots) warnings.push('Đã bỏ slotCode P7-P9 (không còn tồn tại) ở ' + droppedLegacySlots + ' dòng.');
   return { plan: plan, warnings: warnings };
 }
 
