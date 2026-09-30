@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const PROJECT = 'fapcheckin-30e86';
+const PROJECT = 'fapcheckin-3bn2di';
 const DOCS = `projects/${PROJECT}/databases/(default)/documents`;
 const BASE = `https://firestore.googleapis.com/v1/${DOCS}`;
 

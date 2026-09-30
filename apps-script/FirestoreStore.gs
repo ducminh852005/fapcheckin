@@ -10,7 +10,7 @@
 // count against the Firebase project instead of Apps Script's hidden project.
 
 var FirestoreStore = (function() {
-  var DEFAULT_PROJECT_ID = 'fapcheckin-30e86';
+  var DEFAULT_PROJECT_ID = 'fapcheckin-3bn2di';
   var PAGE_SIZE = 300;
   var RETRY_STATUS = [429, 500, 502, 503, 504];
   var MAX_ATTEMPTS = 3;
