@@ -57,3 +57,8 @@ docs/assets/*
 .firebase/
 firebase-debug.log*
 firestore-debug.log
+
+# GCP service account keys
+*-[0-9a-f]*.json.key
+fapcheckin-*-[0-9a-f]*.json
+*service-account*.json
