@@ -481,12 +481,18 @@ class _SessionInfoGrid extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: _InfoTile(
-                icon: Icons.wifi_lock_outlined,
-                label: 'IP Wi-Fi FPT Giảng viên',
-                value: vm.teacherIp,
-                showVerified: true,
-              ),
+              child: vm.ipCheck
+                  ? _InfoTile(
+                      icon: Icons.wifi_lock_outlined,
+                      label: 'IP Wi-Fi FPT Giảng viên',
+                      value: vm.teacherIp,
+                      showVerified: true,
+                    )
+                  : const _InfoTile(
+                      icon: Icons.wifi_off_outlined,
+                      label: 'Kiểm tra IP mạng',
+                      value: 'Tắt',
+                    ),
             ),
           ],
         ),

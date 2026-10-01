@@ -272,8 +272,10 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
 
   Future<HistoryExport?> export() =>
       _operation(() => repository.export(selectedClassCode!, null));
-  Future<SessionModel?> startSession(String slot, String ip) =>
-      _operation(() => repository.startSession(selectedClassCode!, slot, ip));
+  Future<SessionModel?> startSession(String slot, String ip, {bool ipCheck = false}) =>
+      _operation(
+        () => repository.startSession(selectedClassCode!, slot, ip, ipCheck: ipCheck),
+      );
 
   @override
   void dispose() {

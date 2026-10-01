@@ -131,7 +131,8 @@ test('router exposes read APIs and returns structured validation errors', () => 
   const { call } = backend();
   const backendInfo = call('getBackendInfo');
   assert.equal(backendInfo.success, true);
-  assert.equal(backendInfo.data.revision, '2026-09-25-timetable-ocr-v4');
+  assert.equal(backendInfo.data.revision, '2026-09-29-firestore-store-v1');
+  assert.equal(backendInfo.data.dbBackend, 'sheet');
   assert.equal(backendInfo.data.timetableCompositeClassCodes, true);
   for (const action of ['getClasses', 'getSessions', 'getRoster', 'getStats', 'getAttendanceHistory']) {
     assert.equal(call(action).error.code, 'VALIDATION_ERROR');

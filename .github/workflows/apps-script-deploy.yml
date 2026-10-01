@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-      - backend-data
-      - khoa-le
-      - feature/report
+      # - backend-data
+      # - khoa-le
+      # - feature/report
     paths:
       - 'apps-script/**' # Chỉ trigger khi code trong thư mục apps-script thay đổi
   workflow_dispatch: {}
@@ -60,7 +60,7 @@ jobs:
       - name: Verify live web app revision
         env:
           WEB_APP_URL: https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec
-          EXPECTED_REVISION: 2026-09-25-timetable-ocr-v4
+          EXPECTED_REVISION: 2026-09-29-firestore-store-v1
         run: |
           for attempt in 1 2 3 4 5 6; do
             response="$(curl --fail --silent --show-error --location "$WEB_APP_URL?action=getBackendInfo" || true)"
