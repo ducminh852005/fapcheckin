@@ -467,6 +467,7 @@ Future<void> openHistorySession(BuildContext context) async {
     return;
   }
   var slot = summary.slotCodes.first;
+  var ipCheck = false;
   final ip = TextEditingController();
   final accepted = await showDialog<bool>(
     context: context,
@@ -492,13 +493,25 @@ Future<void> openHistorySession(BuildContext context) async {
                   if (s != null) setState(() => slot = s);
                 },
               ),
-              TextField(
-                controller: ip,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  labelText: 'IP công khai của mạng giảng viên',
+              CheckboxListTile(
+                key: const Key('ip-check-toggle'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: ipCheck,
+                onChanged: (value) => setState(() => ipCheck = value ?? false),
+                title: const Text('Kiểm tra IP mạng (tùy chọn)'),
+                subtitle: const Text(
+                  'Bật: sinh viên phải cùng mạng với giảng viên. Mặc định tắt.',
                 ),
               ),
+              if (ipCheck)
+                TextField(
+                  controller: ip,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'IP công khai của mạng giảng viên',
+                  ),
+                ),
             ],
           ),
         ),
@@ -508,7 +521,7 @@ Future<void> openHistorySession(BuildContext context) async {
             child: const Text('Hủy'),
           ),
           FilledButton(
-            onPressed: ip.text.trim().isEmpty
+            onPressed: ipCheck && ip.text.trim().isEmpty
                 ? null
                 : () => Navigator.pop(context, true),
             child: const Text('Mở phiên'),
@@ -520,7 +533,7 @@ Future<void> openHistorySession(BuildContext context) async {
   final address = ip.text.trim();
   Future<void>.delayed(const Duration(milliseconds: 400), ip.dispose);
   if (accepted != true || !context.mounted) return;
-  final session = await vm.startSession(slot, address);
+  final session = await vm.startSession(slot, address, ipCheck: ipCheck);
   if (session == null || !context.mounted) return;
   final c = summary.classInfo;
   live.adoptSession(

@@ -9,7 +9,7 @@ Popup tạo lịch lấy dữ liệu thật, không thêm lớp hoặc Enrollmen
 3. Deploy → Manage deployments → Edit → New version → Deploy. Giữ deployment hiện tại để URL `/exec` không thay đổi.
 4. Chạy lại Flutter, đăng nhập tài khoản giảng viên và mở **Lớp học → Tạo lịch học mới**.
 
-Backend tự tạo tab `Class_Schedule` khi lưu lịch đầu tiên. Không chạy lại seed, không thay đổi lớp/enrollment có sẵn. Source chưa được triển khai lên Apps Script bởi công cụ trong phiên làm việc này.
+Backend tự tạo tab `Class_Schedule` khi lưu lịch đầu tiên (chế độ Google Sheet); ở chế độ Firestore lịch nằm trong collection `classSchedules`, không cần tạo trước ([03](03-du-lieu-firestore.md)). Không chạy lại seed, không thay đổi lớp/enrollment có sẵn. Source chưa được triển khai lên Apps Script bởi công cụ trong phiên làm việc này.
 
 ### Lỗi đã xác nhận trên deployment hiện tại
 
@@ -48,9 +48,9 @@ POST JSON dưới dạng `text/plain;charset=utf-8`, sử dụng cùng URL và e
 }
 ```
 
-`lessonType`: `makeup`, `workshop`, `review`. Phòng phải tồn tại trong Class_Section. Sĩ số đếm rollNumber không trùng trong Enrollment. Slot lấy từ tab Slot, dùng giờ 24h; giờ kết thúc phải sau giờ bắt đầu. Ca có dữ liệu sai bị vô hiệu hóa, không tự suy đoán AM/PM. Ngày/giờ học theo Asia/Ho_Chi_Minh; ô giờ kiểu Date cũng chuẩn hóa theo múi giờ này, nên cấu hình múi giờ bảng tính cùng Việt Nam và kiểm tra Slot nếu bảng đang dùng múi giờ khác.
+`lessonType`: `makeup`, `workshop`, `review`. Phòng phải tồn tại trong Class_Section. Sĩ số đếm rollNumber không trùng trong Enrollment. Slot lấy từ slot cố định A1..A6/P1..P6 (bảng `Slot`; ở Firestore là `slots` + `timeSlots`, xem [03 §3](03-du-lieu-firestore.md#3-quy-tắc-lịch-slot-ap)), dùng giờ 24h; giờ kết thúc phải sau giờ bắt đầu. Ca có dữ liệu sai bị vô hiệu hóa, không tự suy đoán AM/PM. Buổi học bù dùng lại các slot này vào ngày bất kỳ (không có slot tối). Ngày/giờ học theo Asia/Ho_Chi_Minh; ô giờ kiểu Date cũng chuẩn hóa theo múi giờ này, nên cấu hình múi giờ bảng tính cùng Việt Nam và kiểm tra Slot nếu bảng đang dùng múi giờ khác.
 
-Response tạo lịch là bản ghi gồm `scheduleId`, dữ liệu request, `teacherMemberCode`, `startTime`, `endTime`, `status: scheduled`, `createdAt`. Không trả QR secret hoặc thông tin lịch của giáo viên khác.
+Response tạo lịch là bản ghi gồm `scheduleId`, dữ liệu request, `teacherMemberCode`, `status: scheduled`, `createdAt`. Giờ bắt đầu/kết thúc **không còn được lưu** trong bản ghi lịch: lấy từ slot (`slotCode`) khi cần. Không trả QR secret hoặc thông tin lịch của giáo viên khác.
 
 Backend khóa ghi, kiểm tra quyền sở hữu, ngày/ca chưa bắt đầu, ghi chú tối đa 2000 ký tự và trùng khoảng giờ (kể cả khác mã ca) của giảng viên/lớp/phòng trong Class_Schedule và Attendance_Session. Chỉ kiểm tra lịch đã có trong ứng dụng; không biết lịch trên FAP bên ngoài. Cùng requestId + nội dung trả bản ghi cũ; đổi nội dung với requestId cũ báo CONFLICT. Sau lỗi mạng, popup khóa nội dung và cho gửi lại cùng request để tránh ghi trùng.
 

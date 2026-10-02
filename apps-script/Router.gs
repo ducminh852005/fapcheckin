@@ -7,7 +7,8 @@ function dispatch(action, params) {
   var handlers = {
     'getBackendInfo': function() {
       return {
-        revision: '2026-09-25-timetable-ocr-v4',
+        revision: '2026-09-29-firestore-store-v1',
+        dbBackend: SheetDB.backend(),
         timetableCompositeClassCodes: true,
         stagedOcrErrors: true
       };

@@ -1,3 +1,4 @@
+import 'package:fapcheckin/views/teacher/live_session/dialogs/start_session_dialog.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -542,20 +543,17 @@ class _ActiveSessionCard extends StatelessWidget {
                   elevation: 2,
                   child: InkWell(
                     onTap: () {
-                      context
-                          .read<LiveSessionViewModel>()
-                          .startSession(
-                            classSection: classData,
-                            slotCode: '1',
-                            teacherIp: '192.168.1.100',
-                          )
-                          .then((_) {
-                            if (context.mounted) {
-                              context.read<DashboardViewModel>().navigate(
-                                'diem-danh-qr',
-                              );
-                            }
-                          });
+                      startSessionWithOptions(
+                        context,
+                        classSection: classData,
+                        slotCode: '1',
+                      ).then((started) {
+                        if (started && context.mounted) {
+                          context.read<DashboardViewModel>().navigate(
+                            'diem-danh-qr',
+                          );
+                        }
+                      });
                     },
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     child: Padding(

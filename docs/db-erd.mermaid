@@ -1,0 +1,107 @@
+erDiagram
+    USERS ||--o{ CLASS_SECTION : "teaches (teacherMemberCode)"
+    SUBJECT ||--o{ CLASS_SECTION : "subjectCode"
+    SLOT ||--o{ CLASS_SECTION : "default slot"
+    TIME_SLOT ||--|{ SLOT : "time block"
+    SLOT ||--|{ SLOT_WEEKDAY : "meets on (2 days)"
+    CLASS_SECTION ||--o{ ENROLLMENT : "has"
+    USERS ||--o{ ENROLLMENT : "SV enrolls (rollNumber)"
+    CLASS_SECTION ||--o{ CLASS_SCHEDULE : "planned lessons"
+    USERS ||--o{ CLASS_SCHEDULE : "GV requests"
+    SLOT ||--o{ CLASS_SCHEDULE : "scheduled at"
+    CLASS_SECTION ||--o{ ATTENDANCE_SESSION : "has"
+    SLOT ||--o{ ATTENDANCE_SESSION : "held at"
+    CLASS_SCHEDULE |o--o{ ATTENDANCE_SESSION : "opened from (nullable)"
+    ATTENDANCE_SESSION ||--o{ ATTENDANCE_RECORD : "logs"
+    USERS ||--o{ ATTENDANCE_RECORD : "SV makes (rollNumber)"
+    USERS |o--o{ ATTENDANCE_RECORD : "updatedBy (GV)"
+
+    USERS {
+        string memberCode PK
+        string fullName
+        string role "GV | SV"
+        string rollNumber UK "chi SV; join key voi Enrollment/Record"
+        string email UK "dung de login Google"
+        string authUid UK "NEW - Firebase Auth uid, gan lan dang nhap dau"
+    }
+
+    SUBJECT {
+        string subjectCode PK "PRN232, PRM393, SWD392 (truoc day tach tu classCode)"
+        string subjectName
+        float credits
+    }
+
+    TIME_SLOT {
+        string timeSlotId PK "A-1, A-2, P-1, P-2 (4 dong)"
+        string period "Morning | Afternoon"
+        int slotInPeriod "1 | 2"
+        int daySlotNo "A-1:1, A-2:2, P-1:3, P-2:4 - so slot hien thi trong ngay"
+        string startTime "HH:mm - A-1 07:00, A-2 09:30, P-1 12:30, P-2 15:00"
+        string endTime "HH:mm - 09:15, 11:45, 14:45, 17:15"
+    }
+
+    SLOT {
+        string slotCode PK "A1..A6, P1..P6 (12 dong); le = slotInPeriod 1, chan = 2"
+        string timeSlotId FK "A1,A3,A5 -> A-1; A2,A4,A6 -> A-2; P1,P3,P5 -> P-1; P2,P4,P6 -> P-2"
+    }
+
+    SLOT_WEEKDAY {
+        string slotCode PK, FK
+        int dayOfWeek PK "2..7 = thu 2..thu 7; A1/A2/P1/P2 -> 2,5; A3/A4/P3/P4 -> 3,6; A5/A6/P5/P6 -> 4,7 (24 dong)"
+    }
+
+    CLASS_SECTION {
+        string classCode PK "vd PRN232_SE1917"
+        string subjectCode FK
+        string room
+        int studentCount "denormalized tu Enrollment"
+        string teacherMemberCode FK "nullable - OCR import gan sau"
+        string slotCode FK "slot mac dinh cua lop"
+    }
+
+    ENROLLMENT {
+        string rollNumber PK, FK
+        string classCode PK, FK
+        date enrollmentDate "nullable"
+    }
+
+    CLASS_SCHEDULE {
+        string scheduleId PK
+        string requestId UK "unique theo GV - chong tao trung khi retry"
+        string teacherMemberCode FK "denormalized tu CLASS_SECTION, giu de query theo GV"
+        string classCode FK
+        date scheduleDate "ngay bat ky, khong bi rang buoc boi SLOT_WEEKDAY"
+        string slotCode FK "gio lay tu SLOT -> TIME_SLOT"
+        string room
+        string lessonType "makeup | workshop | review - chi buoi ngoai lich, buoi thuong khong ghi vao bang nay"
+        string teachingMethod "onCampus"
+        string note "toi da 2000 ky tu"
+        string status "scheduled | cancelled"
+        datetime createdAt
+    }
+
+    ATTENDANCE_SESSION {
+        string sessionId PK
+        string classCode FK
+        date sessionDate
+        string slotCode FK
+        string sessionStatus "open | closed | expired | cancelled"
+        string qrSecret "xoay bang rotateQr"
+        boolean ipCheck "GV tich khi mo phien; mac dinh false = khong kiem tra IP. Phien cu khong co gia tri = true"
+        string teacherIp "chi luu khi ipCheck = true, tat thi rong"
+        string scheduleId FK "NEW - nullable, buoi hoc bu/ke hoach dung de mo phien"
+    }
+
+    ATTENDANCE_RECORD {
+        string recordId PK "Firestore docId = sessionId_rollNumber"
+        string sessionId FK
+        string rollNumber FK
+        datetime checkinTime "nullable voi Absent"
+        string status "Present | Late | Absent | ManualByGV | Unchecked"
+        string networkVerificationResult "Match | Skipped (phien khong kiem tra IP) | Mismatch | Manual | AutoAbsent"
+        string ipAddress "IP cong khai cua SV, rong neu phien khong kiem tra IP"
+        string note "toi da 2000 ky tu"
+        datetime updatedAt
+        string updatedBy FK "memberCode GV"
+        boolean syncedToFap "default false"
+    }

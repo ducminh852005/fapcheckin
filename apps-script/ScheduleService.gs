@@ -1,8 +1,9 @@
 // Future teaching plans are separate from attendance sessions (which open now).
 var ScheduleService = (function() {
   var TABLE = 'Class_Schedule';
+  // Lesson times are not stored here: they come from the Slot table via slotCode.
   var COLUMNS = ['scheduleId','requestId','teacherMemberCode','classCode','scheduleDate','slotCode',
-    'startTime','endTime','room','lessonType','teachingMethod','note','status','createdAt'];
+    'room','lessonType','teachingMethod','note','status','createdAt'];
   var TYPES = ['makeup','workshop','review'];
   var ZONE = 'Asia/Ho_Chi_Minh';
   function text(v) { return v == null ? '' : String(v).trim(); }
@@ -44,12 +45,16 @@ var ScheduleService = (function() {
     var result = {};
     COLUMNS.forEach(function(k) { result[k] = text(r[k]); });
     result.scheduleDate = date(r.scheduleDate);
-    result.startTime = time(r.startTime); result.endTime = time(r.endTime);
     return result;
   }
+  function slotOf(allSlots, slotCode) {
+    return allSlots.filter(function(s) { return s.slotCode === text(slotCode); })[0];
+  }
   function listFor(teacher) {
+    var allSlots = slots();
+    function startOf(r) { var s = slotOf(allSlots, r.slotCode); return s ? s.startTime : ''; }
     return rows().filter(function(r) { return text(r.teacherMemberCode) === text(teacher.memberCode); })
-      .map(dto).sort(function(a,b) { return (a.scheduleDate+a.startTime).localeCompare(b.scheduleDate+b.startTime); });
+      .map(dto).sort(function(a,b) { return (a.scheduleDate+startOf(a)).localeCompare(b.scheduleDate+startOf(b)); });
   }
   function getOptions(p) {
     var teacher = AuthService.requireTeacher(p), classes = SheetDB.getRowsAsObjects('Class_Section');
@@ -71,7 +76,9 @@ var ScheduleService = (function() {
       if (!cls) throwError('FORBIDDEN','Lớp không thuộc giảng viên đang đăng nhập.');
       if (!/^[a-zA-Z0-9_-]{8,100}$/.test(text(p.requestId))) throwError('VALIDATION_ERROR','requestId không hợp lệ.');
       if (p.autoQR || p.sendEmail || p.syncFap) throwError('NOT_SUPPORTED','QR tự động, email và đồng bộ FAP chưa được tích hợp.');
-      var slot = slots().filter(function(s) { return s.slotCode === text(p.slotCode) && s.available; })[0];
+      var allSlots = slots();
+      var slot = slotOf(allSlots, p.slotCode);
+      if (slot && !slot.available) slot = null;
       if (!slot) throwError('VALIDATION_ERROR','Ca học không hợp lệ. Kiểm tra giờ bắt đầu/kết thúc trong tab Slot (24 giờ).');
       var day = text(p.scheduleDate), parsed = new Date(day+'T00:00:00Z');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || isNaN(parsed.getTime()) || parsed.toISOString().slice(0,10) !== day)
@@ -92,21 +99,21 @@ var ScheduleService = (function() {
       if (new Date(day+'T'+slot.startTime+':00+07:00').getTime() <= Date.now()) throwError('VALIDATION_ERROR','Chọn ca học chưa bắt đầu.');
       function overlaps(start,end) { return !start || !end || (start < slot.endTime && end > slot.startTime); }
       var conflict = existing.some(function(r) {
-        return r.status !== 'cancelled' && date(r.scheduleDate) === day && overlaps(time(r.startTime),time(r.endTime)) &&
+        if (r.status === 'cancelled' || date(r.scheduleDate) !== day) return false;
+        var planned = slotOf(allSlots, r.slotCode);
+        return overlaps(planned && planned.startTime,planned && planned.endTime) &&
           (text(r.teacherMemberCode) === input.teacherMemberCode || text(r.classCode) === input.classCode || text(r.room) === room);
       });
-      var allSlots = slots();
       conflict = conflict || SheetDB.getRowsAsObjects('Attendance_Session').some(function(s) {
         if (date(s.sessionDate) !== day || s.sessionStatus === 'cancelled') return false;
         var c = classes.filter(function(c) { return text(c.classCode) === text(s.classCode); })[0];
         if (!c) return false;
-        var other = allSlots.filter(function(x) { return x.slotCode === text(s.slotCode); })[0];
+        var other = slotOf(allSlots, s.slotCode);
         return overlaps(other && other.startTime,other && other.endTime) &&
           (text(c.teacherMemberCode) === input.teacherMemberCode || text(c.classCode) === input.classCode || text(c.room) === room);
       });
       if (conflict) throwError('SCHEDULE_CONFLICT','Giảng viên, lớp hoặc phòng đã có lịch trong khoảng thời gian này.');
       input.scheduleId = Utilities.getUuid(); input.requestId = p.requestId;
-      input.startTime = slot.startTime; input.endTime = slot.endTime;
       input.status = 'scheduled'; input.createdAt = new Date().toISOString();
       SheetDB.ensureSheet(TABLE,COLUMNS);
       SheetDB.insertRow(TABLE,input);

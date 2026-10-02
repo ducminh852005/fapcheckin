@@ -41,14 +41,17 @@ class TeacherRepository {
   Future<ApiResult<SessionModel>> startSession({
     required String classCode,
     required String slotCode,
-    required String teacherIp,
+    String teacherIp = '',
+    bool ipCheck = false,
   }) async {
     final result = await _api.postAction<SessionModel>(
       'startSession',
       payload: {
         'classCode': classCode,
         'slotCode': slotCode,
-        'teacherIp': teacherIp,
+        'ipCheck': ipCheck,
+        // The teacher's public IP is only sent (and stored) when the check is on.
+        if (ipCheck) 'teacherIp': teacherIp,
       },
       fromJsonT: (data) => SessionModel.fromJson(data as Map<String, dynamic>),
     );

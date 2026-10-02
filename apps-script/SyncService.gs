@@ -3,7 +3,8 @@
 var SyncService = (function() {
   
   function syncToFap(params) {
-    var records = SheetDB.getRowsAsObjects('Attendance_Record');
+    // Read hint for Firestore: only rows not yet synced (booleans there); the sheet ignores it.
+    var records = SheetDB.getRowsAsObjects('Attendance_Record', { syncedToFap: false });
     var classCode = params ? params.classCode : null;
 
     var unsynced = records.filter(function(r) { 

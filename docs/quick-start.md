@@ -39,8 +39,8 @@ Mọi request (đọc lẫn ghi) đều mang một field `action` để backend 
 |---|---|---|
 | `login` | POST | Đăng nhập, đổi idToken Google lấy session token |
 | `getClasses` | GET | GV lấy danh sách lớp mình dạy |
-| `startSession` | POST | GV mở phiên điểm danh (sinh `qrSecret`, ghi `teacherIp`) |
-| `checkin` | POST | SV gửi điểm danh (kèm `qrToken`, `studentIp`) |
+| `startSession` | POST | GV mở phiên điểm danh (sinh `qrSecret`; `ipCheck` = bật kiểm tra IP, mặc định `false`; `teacherIp` chỉ cần và chỉ được ghi khi `ipCheck = true`) |
+| `checkin` | POST | SV gửi điểm danh (kèm `qrToken`; `studentIp` chỉ bắt buộc khi phiên bật kiểm tra IP) |
 | `manualCheckin` | POST | GV điểm danh tay dự phòng |
 | `getRoster` | GET | GV xem danh sách đã điểm danh (real-time) |
 | `getStats` | GET | GV xem % chuyên cần |
@@ -80,7 +80,8 @@ Mọi `action` trả về **cùng một envelope**, dù thành công hay lỗi �
 | `DOMAIN_NOT_ALLOWED` | Email đăng nhập không đúng domain trường |
 | `UNKNOWN_ACTION` | `action` không khớp handler nào ở backend |
 | `SESSION_NOT_FOUND` | `sessionId`/`qrToken` không tồn tại hoặc đã hết hạn |
-| `IP_MISMATCH` | `studentIp != teacherIp` |
+| `IP_REQUIRED` | Phiên bật kiểm tra IP nhưng request không có `studentIp` (client lấy IP rồi gửi lại) |
+| `IP_MISMATCH` | Phiên bật kiểm tra IP và `studentIp != teacherIp` |
 | `ALREADY_CHECKED_IN` | SV đã điểm danh phiên này rồi |
 | `NOT_ENROLLED` | SV không thuộc lớp của phiên |
 | `VALIDATION_ERROR` | Thiếu field bắt buộc trong request |
