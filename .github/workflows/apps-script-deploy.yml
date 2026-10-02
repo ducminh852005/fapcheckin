@@ -3,7 +3,7 @@ name: Deploy Apps Script
 on:
   push:
     branches:
-      - main
+      # - main
       # - backend-data
       # - khoa-le
       # - feature/report
