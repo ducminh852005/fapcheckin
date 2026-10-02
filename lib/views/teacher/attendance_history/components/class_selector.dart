@@ -5,26 +5,40 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/history_class.dart';
 import '../../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../../data/models/history_student.dart';
+import 'class_details_dialog.dart';
 
-class ClassSelector extends StatelessWidget {
+class ClassSelector extends StatefulWidget {
   const ClassSelector({super.key});
+
+  @override
+  State<ClassSelector> createState() => _ClassSelectorState();
+}
+
+class _ClassSelectorState extends State<ClassSelector> {
+  String _statusFilter = 'all';
+
   @override
   Widget build(BuildContext context) {
     final vm = context.read<AttendanceHistoryViewModel>();
-    final visibleClasses = context
+    final allVisibleClasses = context
         .select<AttendanceHistoryViewModel, List<HistoryClass>>(
           (value) => value.visibleClasses,
         );
+    
+    // Apply local status filter
+    final visibleClasses = allVisibleClasses.where((c) {
+      if (_statusFilter == 'active') return c.completedSessions < c.totalSessions;
+      if (_statusFilter == 'completed') return c.completedSessions >= c.totalSessions;
+      return true;
+    }).toList();
+
     final classCount = context.select<AttendanceHistoryViewModel, int>(
       (value) => value.classes.length,
     );
-    final selectedClassCode = context
-        .select<AttendanceHistoryViewModel, String?>(
-          (value) => value.selectedClassCode,
-        );
     final busy = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.busy,
     );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,17 +71,45 @@ class ClassSelector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: 380,
-          child: TextField(
-            onChanged: vm.setClassSearch,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Tìm mã lớp hoặc môn học',
+        Row(
+          children: [
+            SizedBox(
+              width: 380,
+              child: TextField(
+                onChanged: vm.setClassSearch,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Tìm mã lớp hoặc môn học',
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _statusFilter,
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
+                    DropdownMenuItem(value: 'active', child: Text('Đang học')),
+                    DropdownMenuItem(value: 'completed', child: Text('Đã xong')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _statusFilter = val);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         if (visibleClasses.isEmpty)
           Container(
             width: double.infinity,
@@ -83,23 +125,22 @@ class ClassSelector extends StatelessWidget {
             ),
           )
         else
-          SizedBox(
-            height: 218,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: visibleClasses.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final c = visibleClasses[index];
-                final selected = selectedClassCode == c.classCode;
-                return _ClassCard(
-                  classInfo: c,
-                  selected: selected,
-                  enabled: !busy,
-                  onTap: () => vm.selectClass(c.classCode),
-                );
-              },
-            ),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: visibleClasses.map((c) {
+              return _ClassCard(
+                classInfo: c,
+                enabled: !busy,
+                onTap: () {
+                  vm.selectClass(c.classCode);
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ClassDetailsDialog(),
+                  );
+                },
+              );
+            }).toList(),
           ),
       ],
     );
@@ -109,13 +150,11 @@ class ClassSelector extends StatelessWidget {
 class _ClassCard extends StatelessWidget {
   const _ClassCard({
     required this.classInfo,
-    required this.selected,
     required this.enabled,
     required this.onTap,
   });
 
   final HistoryClass classInfo;
-  final bool selected;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -123,8 +162,9 @@ class _ClassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 292,
+      height: 180,
       child: Material(
-        color: selected ? AppColors.primaryLight : AppColors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: enabled ? onTap : null,
@@ -134,8 +174,8 @@ class _ClassCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? AppColors.primary : AppColors.border,
-                width: selected ? 1.4 : 1,
+                color: AppColors.border,
+                width: 1,
               ),
             ),
             child: Column(
@@ -153,12 +193,6 @@ class _ClassCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (selected)
-                      const Icon(
-                        Icons.check_circle,
-                        color: AppColors.primary,
-                        size: 18,
-                      ),
                   ],
                 ),
                 const SizedBox(height: 6),
