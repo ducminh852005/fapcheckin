@@ -8,7 +8,7 @@
 
 var SheetsStore = (function() {
   // Thay thế ID này bằng ID của Google Sheet thực tế của bạn
-  var SPREADSHEET_ID = '1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4'; 
+  var SPREADSHEET_ID = '1KlAR1-EQSrVsS0NzsNznh355PgpbLFj1QZlqykOWH9I'; 
 
   // Sheets auto-detects numeric cells (e.g. room 303 or a numeric memberCode).
   // Keep API text fields and join keys consistent across all sheets.

@@ -34,7 +34,7 @@ function backend() {
     SpreadsheetApp: {
       getActiveSpreadsheet: () => { throw new Error('Must not read the bound demo spreadsheet'); },
       openById: id => {
-        assert.equal(id, '1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4');
+        assert.equal(id, '1KlAR1-EQSrVsS0NzsNznh355PgpbLFj1QZlqykOWH9I');
         return ({
         getSheetByName: name => tables[name] && ({
           getDataRange: () => ({ getValues: () => tables[name] }),

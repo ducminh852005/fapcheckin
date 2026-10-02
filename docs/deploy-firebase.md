@@ -214,10 +214,10 @@ Mặc định backend vẫn đọc/ghi Google Sheet (`DB_BACKEND=sheet`). Các b
 
 ### 10.1 Điều kiện
 
-- Firestore `(default)` đã tạo trong project (đã có ở `fapcheckin-30e86`, Native mode).
+- Firestore `(default)` đã tạo trong project (đã có ở `fapcheckin-3bn2di`, Native mode).
 - Tài khoản **chủ script** (người deploy Web App, `executeAs USER_DEPLOYING`) có vai trò **Cloud Datastore User** (hoặc Owner/Editor) trên project Firebase.
 - Đã deploy code mới: `./scripts/deploy.ps1 -Only backend` (kèm `-ProjectId` nếu cần deploy Firebase). Manifest `appsscript.json` thêm scope `https://www.googleapis.com/auth/datastore`.
-- Script Property tùy chọn `FIREBASE_PROJECT_ID` (mặc định `fapcheckin-30e86`). `DB_BACKEND` chưa đặt = `sheet`.
+- Script Property tùy chọn `FIREBASE_PROJECT_ID` (mặc định `fapcheckin-3bn2di`). `DB_BACKEND` chưa đặt = `sheet`.
 
 > **Quan trọng:** thêm scope mới nghĩa là chủ script phải **cấp quyền lại** (bước 1 bên dưới) ngay sau khi deploy. Trước khi cấp quyền, Web App có thể báo lỗi ủy quyền dù vẫn ở chế độ `sheet`. Làm bước 1 ngay sau khi `clasp deploy`, rồi mở `<BackendUrl>?action=getBackendInfo` kiểm tra `success: true`.
 
