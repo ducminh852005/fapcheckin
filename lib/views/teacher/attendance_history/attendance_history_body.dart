@@ -5,9 +5,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
 import 'components/class_selector.dart';
-import 'components/kpi_dashboard.dart';
-import 'components/history_table.dart';
-import 'components/sessions_tab.dart';
 
 class AttendanceHistoryBody extends StatefulWidget {
   const AttendanceHistoryBody({super.key});
@@ -15,23 +12,13 @@ class AttendanceHistoryBody extends StatefulWidget {
   State<AttendanceHistoryBody> createState() => _AttendanceHistoryBodyState();
 }
 
-class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<AttendanceHistoryViewModel>().loadClasses();
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
@@ -48,12 +35,6 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody>
     );
     final hasClasses = context.select<AttendanceHistoryViewModel, bool>(
       (value) => value.classes.isNotEmpty,
-    );
-    final hasSummary = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.summary != null,
-    );
-    final loadingSummary = context.select<AttendanceHistoryViewModel, bool>(
-      (value) => value.loadingSummary,
     );
 
     return SingleChildScrollView(
@@ -99,129 +80,8 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody>
             const SizedBox(height: AppSpacing.md),
             const ClassSelector(),
           ],
-          // ── Tab view ──
-          if (hasSummary) ...[
-            const SizedBox(height: AppSpacing.md),
-            // Tab bar
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: AppColors.primaryContainer,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.primaryContainer,
-                indicatorSize: TabBarIndicatorSize.label,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.bar_chart_outlined, size: 18),
-                    text: 'Tổng quan',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.list_alt_outlined, size: 18),
-                    text: 'Buổi học',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            // Tab content
-            Stack(
-              children: [
-                _TabContent(
-                  controller: _tabController,
-                  overviewTab: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      KpiDashboard(),
-                      SizedBox(height: AppSpacing.md),
-                      HistoryTable(),
-                    ],
-                  ),
-                  sessionsTab: const SessionsTab(),
-                ),
-                if (loadingSummary)
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.72),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2.5),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
-    );
-  }
-}
-
-/// Custom animated tab content that doesn't clip the scrollable body
-class _TabContent extends StatefulWidget {
-  final TabController controller;
-  final Widget overviewTab;
-  final Widget sessionsTab;
-
-  const _TabContent({
-    required this.controller,
-    required this.overviewTab,
-    required this.sessionsTab,
-  });
-
-  @override
-  State<_TabContent> createState() => _TabContentState();
-}
-
-class _TabContentState extends State<_TabContent> {
-  int _activeIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onTabChange);
-  }
-
-  void _onTabChange() {
-    if (widget.controller.indexIsChanging) return;
-    setState(() => _activeIndex = widget.controller.index);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTabChange);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: _activeIndex == 0
-          ? KeyedSubtree(
-              key: const ValueKey('overview'),
-              child: widget.overviewTab,
-            )
-          : KeyedSubtree(
-              key: const ValueKey('sessions'),
-              child: widget.sessionsTab,
-            ),
     );
   }
 }

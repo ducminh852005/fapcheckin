@@ -1,3 +1,4 @@
+import 'package:fapcheckin/views/teacher/live_session/dialogs/start_session_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
@@ -298,15 +299,14 @@ class _SchedulePanelState extends State<_SchedulePanel> {
                   child: ClassCard(
                     session: _toClassSession(vm.classes[i], i),
                     onStart: () async {
-                      final liveVm = context.read<LiveSessionViewModel>();
-                      await liveVm.startSession(
+                      final started = await startSessionWithOptions(
+                        context,
                         classSection: vm.classes[i],
                         slotCode: vm.classes[i].slotCode.isNotEmpty
                             ? vm.classes[i].slotCode
                             : (i + 1).toString(),
-                        teacherIp: '127.0.0.1', // Mock IP as per docs
                       );
-                      vm.navigate('diem-danh-qr');
+                      if (started) vm.navigate('diem-danh-qr');
                     },
                   ),
                 ),

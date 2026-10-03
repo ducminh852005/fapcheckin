@@ -69,13 +69,15 @@ class AttendanceHistoryRepository {
   Future<ApiResult<SessionModel>> startSession(
     String classCode,
     String slotCode,
-    String teacherIp,
-  ) => _api.postAction(
+    String teacherIp, {
+    bool ipCheck = false,
+  }) => _api.postAction(
     'startHistorySession',
     payload: {
       'classCode': classCode,
       'slotCode': slotCode,
-      'teacherIp': teacherIp,
+      'ipCheck': ipCheck,
+      if (ipCheck) 'teacherIp': teacherIp,
     },
     fromJsonT: (data) => SessionModel.fromJson(Map<String, dynamic>.from(data)),
   );

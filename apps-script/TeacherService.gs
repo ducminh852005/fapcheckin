@@ -1,7 +1,19 @@
 // File: TeacherService.gs
 
 var TeacherService = (function() {
-  
+
+  // IP check is optional per session (default off). Sessions created before the
+  // option existed have no `ipCheck` value and keep the original behaviour (on).
+  function ipCheckEnabled(session) {
+    var value = session ? session.ipCheck : undefined;
+    if (value === undefined || value === null || value === '') return true;
+    return value === true || String(value).toUpperCase() === 'TRUE';
+  }
+
+  function wantsIpCheck(params) {
+    return params.ipCheck === true || String(params.ipCheck).toLowerCase() === 'true';
+  }
+
   function getClasses(params) {
     var teacherMemberCode = params.teacherMemberCode;
     if (!teacherMemberCode) throwError('VALIDATION_ERROR', 'Thiếu teacherMemberCode.');
@@ -86,8 +98,8 @@ var TeacherService = (function() {
          return String(s.slotCode) === slotCode;
        })[0];
 
-       var startTime = (sched && sched.startTime) ? String(sched.startTime) : (slot && slot.startTime ? String(slot.startTime) : '');
-       var endTime = (sched && sched.endTime) ? String(sched.endTime) : (slot && slot.endTime ? String(slot.endTime) : '');
+       var startTime = slot && slot.startTime ? String(slot.startTime) : '';
+       var endTime = slot && slot.endTime ? String(slot.endTime) : '';
        var period = slot && slot.period ? String(slot.period) : '';
 
        var timeLabel = '';
@@ -117,7 +129,8 @@ var TeacherService = (function() {
          totalSessions: 30, // Mock 30 sessions per class
          averageAttendance: avgAttendance,
          isActive: activeSession !== null,
-         activeSessionId: activeSession ? activeSession.sessionId : null
+         activeSessionId: activeSession ? activeSession.sessionId : null,
+         activeSessionIpCheck: activeSession ? ipCheckEnabled(activeSession) : null
        };
     });
 
@@ -136,8 +149,11 @@ var TeacherService = (function() {
       var subjectCode = cls.subjectCode || (sName ? sName.split(' ')[0] : 'UNK');
       var slotCode = sc.slotCode ? String(sc.slotCode) : '';
       var room = sc.room ? String(sc.room) : (cls.room || '');
-      var startTime = sc.startTime ? String(sc.startTime) : '';
-      var endTime = sc.endTime ? String(sc.endTime) : '';
+      var scSlot = slots.filter(function(s) {
+        return String(s.slotCode) === slotCode;
+      })[0];
+      var startTime = scSlot && scSlot.startTime ? String(scSlot.startTime) : '';
+      var endTime = scSlot && scSlot.endTime ? String(scSlot.endTime) : '';
       var timeLabel = (slotCode && startTime && endTime)
         ? '[Học bù] Slot ' + slotCode + ' (' + startTime + ' - ' + endTime + ')'
         : ('[Học bù] ' + (slotCode || 'Lịch chưa cập nhật'));
@@ -165,6 +181,7 @@ var TeacherService = (function() {
         averageAttendance: 0,
         isActive: activeSession !== null,
         activeSessionId: activeSession ? activeSession.sessionId : null,
+        activeSessionIpCheck: activeSession ? ipCheckEnabled(activeSession) : null,
         isMakeup: true
       });
     });
@@ -175,11 +192,13 @@ var TeacherService = (function() {
   function startSession(params) {
     var classCode = params.classCode;
     var slotCode = params.slotCode;
-    var teacherIp = params.teacherIp;
+    var ipCheck = wantsIpCheck(params);
+    // The teacher's public IP only matters when the network check is on.
+    var teacherIp = ipCheck ? String(params.teacherIp || '').trim() : '';
 
     if (!slotCode && classCode) {
       try {
-        var clsList = SheetDB.getRowsAsObjects('Class_Section');
+        var clsList = SheetDB.getRowsAsObjects('Class_Section', { classCode: String(classCode) });
         var matchedCls = clsList.filter(function(c) {
           return String(c.classCode) === String(classCode);
         })[0];
@@ -189,10 +208,11 @@ var TeacherService = (function() {
       } catch (e) {}
     }
     
-    if (!classCode || !slotCode || !teacherIp) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu mở phiên.');
+    if (!classCode || !slotCode) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu mở phiên.');
+    if (ipCheck && !teacherIp) throwError('VALIDATION_ERROR', 'Thiếu IP mạng giảng viên để bật kiểm tra IP.');
     
     // Auto-close any existing open session for this class before starting a new one
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { classCode: String(classCode), sessionStatus: 'open' });
     for (var i = 0; i < sessions.length; i++) {
       if (sessions[i].classCode === classCode && sessions[i].sessionStatus === 'open') {
         SheetDB.updateRow('Attendance_Session', 'sessionId', sessions[i].sessionId, {
@@ -214,9 +234,11 @@ var TeacherService = (function() {
       slotCode: slotCode,
       sessionStatus: 'open',
       qrSecret: qrSecret,
-      teacherIp: teacherIp
+      teacherIp: teacherIp,
+      ipCheck: ipCheck
     };
-    
+
+    SheetDB.ensureColumns('Attendance_Session', ['ipCheck']);
     SheetDB.insertRow('Attendance_Session', newSession);
     
     return {
@@ -233,7 +255,7 @@ var TeacherService = (function() {
     }
 
     var teacher = AuthService.requireTeacher(params);
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { sessionId: sessionId });
     var session = sessions.filter(function(s) {
       return String(s.sessionId) === sessionId;
     })[0];
@@ -261,12 +283,12 @@ var TeacherService = (function() {
     if (!sessionId) throwError('VALIDATION_ERROR', 'Thiếu sessionId.');
     
     // Lấy session
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { sessionId: String(sessionId) });
     var session = sessions.filter(function(s) { return s.sessionId === sessionId; })[0];
     if (!session) throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên.');
-    
+
     // Lấy Enrollment
-    var enrollments = SheetDB.getRowsAsObjects('Enrollment');
+    var enrollments = SheetDB.getRowsAsObjects('Enrollment', { classCode: String(session.classCode) });
     var classEnrollments = enrollments.filter(function(e) { return e.classCode === session.classCode; });
     
     // Lấy danh sách SV tương ứng
@@ -276,7 +298,7 @@ var TeacherService = (function() {
     }).filter(function(u) { return !!u; }); // Bỏ qua null
     
     // Lấy bản ghi điểm danh
-    var records = SheetDB.getRowsAsObjects('Attendance_Record');
+    var records = SheetDB.getRowsAsObjects('Attendance_Record', { sessionId: String(sessionId) });
     var sessionRecords = records.filter(function(r) { return r.sessionId === sessionId; });
     
     // Kết hợp
@@ -303,9 +325,11 @@ var TeacherService = (function() {
     
     if (!sessionId || !rollNumber || !status) throwError('VALIDATION_ERROR', 'Thiếu dữ liệu.');
     
-    var records = SheetDB.getRowsAsObjects('Attendance_Record');
-    var existingRecord = records.filter(function(r) { 
-      return r.sessionId === sessionId && r.rollNumber === rollNumber; 
+    var records = SheetDB.getRowsAsObjects('Attendance_Record', {
+      sessionId: String(sessionId), rollNumber: String(rollNumber)
+    });
+    var existingRecord = records.filter(function(r) {
+      return r.sessionId === sessionId && r.rollNumber === rollNumber;
     })[0];
     
     if (existingRecord) {
@@ -339,7 +363,7 @@ var TeacherService = (function() {
     var lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
-      var records = SheetDB.getRowsAsObjects('Attendance_Record');
+      var records = SheetDB.getRowsAsObjects('Attendance_Record', { sessionId: String(sessionId) });
       var existingSessionRecords = records.filter(function(r) { return r.sessionId === sessionId; });
       
       var teacherMemberCode = 'GV';
@@ -379,12 +403,12 @@ var TeacherService = (function() {
     var classCode = params.classCode;
     if (!classCode) throwError('VALIDATION_ERROR', 'Thiếu classCode.');
     
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session').filter(function(s) {
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { classCode: String(classCode) }).filter(function(s) {
       return s.classCode === classCode;
     });
     var sessionIds = sessions.map(function(s) { return s.sessionId; });
-    
-    var enrollments = SheetDB.getRowsAsObjects('Enrollment').filter(function(e) {
+
+    var enrollments = SheetDB.getRowsAsObjects('Enrollment', { classCode: String(classCode) }).filter(function(e) {
       return e.classCode === classCode;
     });
     
@@ -416,7 +440,7 @@ var TeacherService = (function() {
     var sessionId = params.sessionId;
     if (!sessionId) throwError('VALIDATION_ERROR', 'Thiếu sessionId.');
 
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { sessionId: String(sessionId) });
     var session = sessions.filter(function(s) { return s.sessionId === sessionId; })[0];
     if (!session) throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên.');
 
@@ -426,11 +450,11 @@ var TeacherService = (function() {
     });
 
     // Tự động sinh bản ghi Absent cho sinh viên chưa điểm danh
-    var enrollments = SheetDB.getRowsAsObjects('Enrollment').filter(function(e) {
+    var enrollments = SheetDB.getRowsAsObjects('Enrollment', { classCode: String(session.classCode) }).filter(function(e) {
       return e.classCode === session.classCode;
     });
 
-    var existingRecords = SheetDB.getRowsAsObjects('Attendance_Record').filter(function(r) {
+    var existingRecords = SheetDB.getRowsAsObjects('Attendance_Record', { sessionId: String(sessionId) }).filter(function(r) {
       return r.sessionId === sessionId;
     });
 
@@ -480,7 +504,7 @@ var TeacherService = (function() {
     }
 
     // 1. Lấy danh sách phiên điểm danh thực tế
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session').filter(function(s) {
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { classCode: String(classCode) }).filter(function(s) {
       return String(s.classCode) === String(classCode);
     }).map(function(s) {
       return {
@@ -489,6 +513,7 @@ var TeacherService = (function() {
         sessionDate: fmtD(s.sessionDate),
         slotCode: s.slotCode || '',
         sessionStatus: s.sessionStatus,
+        ipCheck: ipCheckEnabled(s),
         qrToken: s.qrSecret || ''
       };
     });
@@ -540,7 +565,7 @@ var TeacherService = (function() {
     var sessionId = params.sessionId;
     if (!classCode) throwError('VALIDATION_ERROR', 'Thiếu classCode.');
 
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session').filter(function(s) {
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { classCode: String(classCode) }).filter(function(s) {
       return s.classCode === classCode;
     });
 
@@ -561,7 +586,7 @@ var TeacherService = (function() {
       return r.sessionId === sessionId;
     });
 
-    var enrollments = SheetDB.getRowsAsObjects('Enrollment').filter(function(e) {
+    var enrollments = SheetDB.getRowsAsObjects('Enrollment', { classCode: String(classCode) }).filter(function(e) {
       return e.classCode === classCode;
     });
 
@@ -604,7 +629,7 @@ var TeacherService = (function() {
     var sessionId = params.sessionId;
     if (!sessionId) throwError('VALIDATION_ERROR', 'Thiếu sessionId.');
 
-    var sessions = SheetDB.getRowsAsObjects('Attendance_Session');
+    var sessions = SheetDB.getRowsAsObjects('Attendance_Session', { sessionId: String(sessionId) });
     var session = sessions.filter(function(s) { return s.sessionId === sessionId; })[0];
     if (!session) throwError('SESSION_NOT_FOUND', 'Không tìm thấy phiên.');
     if (session.sessionStatus !== 'open') throwError('SESSION_NOT_FOUND', 'Phiên đã đóng, không thể làm mới QR.');

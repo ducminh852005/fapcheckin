@@ -6,12 +6,15 @@ Chỉ app của giảng viên theo MVVM — trang web của sinh viên đơn gi�
 
 ## 04.1 — App Giảng viên: Flutter, MVVM
 
-Bốn lớp tách biệt rõ trách nhiệm; ViewModel **không biết** Sheet hay Apps Script tồn tại — nó chỉ biết Repository.
+Bốn lớp tách biệt rõ trách nhiệm; ViewModel **không biết** Firestore, Sheet hay Apps Script tồn tại — nó chỉ biết Repository.
 
 ```mermaid
 flowchart LR
     View <--> ViewModel <--> Repository <--> DataSource[Data Source<br/>Apps Script API]
+    DataSource --> DB[(Firestore)]
 ```
+
+App GV chỉ gọi API của Apps Script; việc CSDL phía sau là Firestore hay Google Sheet không ảnh hưởng app ([01](01-kien-truc-tong-the.md)). App GV là app Flutter cài trên máy giảng viên, **không** deploy lên Firebase Hosting.
 
 ### Stack — thư viện chính (app GV)
 
@@ -21,7 +24,7 @@ flowchart LR
 | Gọi API | `dio` | Interceptor tự đính kèm token phiên vào mỗi request tới BE. |
 | Đăng nhập | `google_sign_in` | SSO bằng tài khoản Google của trường. |
 | Sinh QR | `qr_flutter` | Vẽ QR từ URL chứa `qrToken`, làm mới mỗi 60 giây. |
-| Lấy IP công khai | `http` (gọi ipify) | Lấy `teacherIp` lúc mở phiên để Backend đối chiếu với SV — không dùng `geolocator`/GPS. |
+| Lấy IP công khai | `http` (gọi ipify) | **Chỉ khi GV tích "Kiểm tra IP mạng"** lúc mở phiên (mặc định không tích): lấy `teacherIp` để Backend đối chiếu với SV — không dùng `geolocator`/GPS. |
 | Token an toàn | `flutter_secure_storage` | Lưu session token của GV, tách khỏi cache thường. |
 | Biểu đồ | `fl_chart` | % chuyên cần theo môn, xem trong app GV. |
 | Điều hướng | `go_router` | Điều hướng giữa các màn của GV sau đăng nhập. |
@@ -40,7 +43,7 @@ lib/
 │  │  ├─ api_service.dart       // Dio client + interceptor token
 │  │  ├─ auth_service.dart      // google_sign_in, quản lý session
 │  │  ├─ qr_service.dart        // timer 60 giây và mã hoá URL vào QR
-│  │  └─ ip_service.dart        // gọi ipify lấy teacherIp
+│  │  └─ ip_service.dart        // gọi ipify lấy teacherIp (chỉ khi bật kiểm tra IP)
 │  └─ utils/
 ├─ data/
 │  ├─ models/
@@ -69,23 +72,25 @@ lib/
 
 ## 04.2 — Trang Web Điểm danh: Sinh viên
 
-Không cần MVVM cho một trang chỉ làm đúng một việc. Toàn bộ là HTML/CSS/JS thuần, được chính Backend (Apps Script) phục vụ nên không tốn thêm chi phí hosting hay deploy riêng.
+Không cần MVVM cho một trang chỉ làm đúng một việc. Toàn bộ là HTML/CSS/JS thuần trong một file, **host trên Firebase Hosting** (gốc `/`, link dạng `https://<project>.web.app/?token=<qrToken>`) và gọi API của Backend Apps Script qua `BACKEND_URL`.
 
 ```
-apps-script/
-├─ Code.gs
-├─ index.html      // Toàn bộ logic giao diện Web, CSS, và JS được gộp gọn trong file này
-└─ ... 
+checkin-web/
+└─ index.html      // Toàn bộ giao diện, CSS và JS của trang SV
 
-// Phục vụ bởi Backend: doGet(e) trả HtmlService khi có ?page=checkin&token=...
-// (thay thế cho việc host một static site riêng ở thư mục checkin-web cũ)
+scripts/deploy.ps1 // gom checkin-web/ → build/firebase-hosting, điền BACKEND_URL, firebase deploy
+firebase.json      // cấu hình Hosting (mọi đường dẫn → index.html, no-cache)
 ```
+
+Deploy: `./scripts/deploy.ps1 -ProjectId <id> -Only hosting` — xem [deploy-firebase.md](deploy-firebase.md). Script điền `BACKEND_URL` vào bản copy khi deploy, source `checkin-web/index.html` giữ nguyên `var BACKEND_URL = '';`.
+
+> **Đường lui:** nhánh `doGet(e)` cũ (`?page=checkin`, render `apps-script/index.html` bằng `HtmlService`) vẫn còn trong backend. QR hiện vẫn trỏ về đó cho tới khi chuyển sang Hosting ([deploy-firebase.md §6](deploy-firebase.md#6-chuyển-qr-của-sinh-viên-sang-hosting-chưa-làm)). Trang chạy trong iframe sandbox của Apps Script phải đăng nhập Google bằng chế độ redirect; trang trên Hosting có origin riêng nên phải được thêm vào OAuth ([google-oauth-setup.md](google-oauth-setup.md)).
 
 | Thành phần | Vai trò |
 |---|---|
 | Google Identity Services (GIS) | Nút "Đăng nhập bằng Google" trên web, giới hạn theo domain trường — tương đương `google_sign_in` bên app. |
-| Fetch API | Gọi `/checkin` tới Backend, không cần thư viện ngoài. |
-| ipify (hoặc tương đương) | Trang tự lấy IP công khai của SV để gửi kèm — không xin quyền định vị. |
+| Fetch API | Gọi `checkin` tới Backend (`BACKEND_URL`), body `text/plain` để tránh preflight CORS; không cần thư viện ngoài. |
+| ipify (hoặc tương đương) | Trang chỉ lấy IP công khai của SV khi phiên bật kiểm tra IP (backend trả `IP_REQUIRED`) — không xin quyền định vị. |
 | localStorage | Lưu session token của trình duyệt để lần quét sau tự nhận diện, không cần đăng nhập lại. |
 
 [→ 05 Xác thực & phân quyền](05-xac-thuc-va-phan-quyen.md)

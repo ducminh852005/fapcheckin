@@ -52,3 +52,13 @@ app.*.map.json
 .widget_preview/
 
 docs/assets/*
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log
+
+# GCP service account keys
+*-[0-9a-f]*.json.key
+fapcheckin-*-[0-9a-f]*.json
+*service-account*.json

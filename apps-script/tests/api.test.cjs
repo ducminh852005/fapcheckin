@@ -34,7 +34,7 @@ function backend() {
     SpreadsheetApp: {
       getActiveSpreadsheet: () => { throw new Error('Must not read the bound demo spreadsheet'); },
       openById: id => {
-        assert.equal(id, '1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4');
+        assert.equal(id, '1KlAR1-EQSrVsS0NzsNznh355PgpbLFj1QZlqykOWH9I');
         return ({
         getSheetByName: name => tables[name] && ({
           getDataRange: () => ({ getValues: () => tables[name] }),
@@ -131,7 +131,8 @@ test('router exposes read APIs and returns structured validation errors', () => 
   const { call } = backend();
   const backendInfo = call('getBackendInfo');
   assert.equal(backendInfo.success, true);
-  assert.equal(backendInfo.data.revision, '2026-09-25-timetable-ocr-v4');
+  assert.equal(backendInfo.data.revision, '2026-09-29-firestore-store-v1');
+  assert.equal(backendInfo.data.dbBackend, 'sheet');
   assert.equal(backendInfo.data.timetableCompositeClassCodes, true);
   for (const action of ['getClasses', 'getSessions', 'getRoster', 'getStats', 'getAttendanceHistory']) {
     assert.equal(call(action).error.code, 'VALIDATION_ERROR');

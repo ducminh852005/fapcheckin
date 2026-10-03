@@ -1,8 +1,14 @@
 // File: SheetDB.gs
+//
+// `SheetDB` is the only data-access API used by the services. It is a facade
+// over two stores, selected by the DB_BACKEND script property:
+//   'sheet'     (default) SheetsStore in this file, backed by a Google Sheet
+//   'firestore' FirestoreStore (FirestoreStore.gs), backed by Cloud Firestore
+// Switch with setDbBackend() in Migrate.gs; see docs/deploy-firebase.md.
 
-var SheetDB = (function() {
+var SheetsStore = (function() {
   // Thay thế ID này bằng ID của Google Sheet thực tế của bạn
-  var SPREADSHEET_ID = '1X342Hzd9_lwQeAwUZi80r1Zcs7_qyFZNDglUTw9y1l4'; 
+  var SPREADSHEET_ID = '1KlAR1-EQSrVsS0NzsNznh355PgpbLFj1QZlqykOWH9I'; 
 
   // Sheets auto-detects numeric cells (e.g. room 303 or a numeric memberCode).
   // Keep API text fields and join keys consistent across all sheets.
@@ -174,15 +180,77 @@ var SheetDB = (function() {
     });
   }
 
+  // Raw cell values (Date objects, numbers) for the one-off Firestore migration.
+  // Each row carries its 1-based sheet row number in `_rowNumber`.
+  function getRawRows(sheetName) {
+    var data = getSheet(sheetName).getDataRange().getValues();
+    if (data.length <= 1) return [];
+    var headers = getHeaders(data, sheetName);
+    var rows = [];
+    for (var i = 1; i < data.length; i++) {
+      if (data[i].every(function(value) { return value === '' || value == null; })) continue;
+      var rowObj = { _rowNumber: i + 1 };
+      for (var j = 0; j < headers.length; j++) {
+        if (headers[j]) rowObj[headers[j]] = data[i][j];
+      }
+      rows.push(rowObj);
+    }
+    return rows;
+  }
+
   return {
+    // The optional second argument (a {field: value} filter hint) is only used
+    // by FirestoreStore to reduce reads; a sheet always returns every row.
     ensureSheet: function(name, columns) {
       var ss = getSpreadsheet();
       if (!ss.getSheetByName(name)) ss.insertSheet(name).appendRow(columns);
       else ensureColumns(name, columns);
     },
-    getRowsAsObjects: getRowsAsObjects,
+    getRowsAsObjects: function(sheetName) { return getRowsAsObjects(sheetName); },
     insertRow: insertRow,
     updateRow: updateRow,
-    ensureColumns: ensureColumns
+    ensureColumns: ensureColumns,
+    // Helpers shared with FirestoreStore / Migrate.gs
+    getRawRows: getRawRows,
+    normalizeCell: normalizeCell,
+    subjectCodeFromClassCode: subjectCodeFromClassCode,
+    TEXT_FIELDS: TEXT_FIELDS
+  };
+})();
+
+var SheetDB = (function() {
+  var cachedBackend = null;
+
+  function backend() {
+    if (cachedBackend) return cachedBackend;
+    var value = 'sheet';
+    try {
+      if (typeof PropertiesService !== 'undefined') {
+        var stored = PropertiesService.getScriptProperties().getProperty('DB_BACKEND');
+        if (stored === 'firestore') value = 'firestore';
+      }
+    } catch (e) {
+      // Unreadable properties must never take the API down: stay on the sheet.
+    }
+    cachedBackend = value;
+    return value;
+  }
+
+  // Resolved on every call (not at load time): Apps Script does not guarantee
+  // the order in which the project's files are evaluated.
+  function store() {
+    return backend() === 'firestore' ? FirestoreStore : SheetsStore;
+  }
+
+  return {
+    backend: backend,
+    resetBackendCache: function() { cachedBackend = null; },
+    ensureSheet: function(name, columns) { return store().ensureSheet(name, columns); },
+    getRowsAsObjects: function(name, hint) { return store().getRowsAsObjects(name, hint); },
+    insertRow: function(name, rowObj) { return store().insertRow(name, rowObj); },
+    updateRow: function(name, idField, idValue, updateObj) {
+      return store().updateRow(name, idField, idValue, updateObj);
+    },
+    ensureColumns: function(name, columns) { return store().ensureColumns(name, columns); }
   };
 })();

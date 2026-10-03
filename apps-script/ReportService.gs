@@ -113,7 +113,7 @@ var ReportService = (function() {
           presentCount++;
           if (status === 'Late') lateCount++;
           if (status === 'ManualByGV' || (record && key(record.networkVerificationResult) === 'Manual')) methodCounts.manual++;
-          else if (record && key(record.networkVerificationResult) === 'Match') methodCounts.qr++;
+          else if (record && ['Match', 'Skipped'].indexOf(key(record.networkVerificationResult)) !== -1) methodCounts.qr++;
           else methodCounts.other++;
         }
       });
