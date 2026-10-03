@@ -75,18 +75,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Image.asset(
-                'assets/images/Logo_FPT_Education-Photoroom.png',
-                height: 48,
-              ),
-              Row(
-                children: const [],
-              ),
-            ],
-          ),
+          const SizedBox(height: 16),
           Expanded(
             child: Center(
               child: ConstrainedBox(
