@@ -19,7 +19,7 @@ class SettingsHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                     vertical: 2,
                   ),
@@ -36,14 +36,14 @@ class SettingsHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs),
                 Text(
                   '/',
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.textTertiary,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
+                SizedBox(width: AppSpacing.xs),
                 Text(
                   'Phiên bản v3.4.1 Build 2024',
                   style: AppTextStyles.caption.copyWith(
@@ -52,12 +52,12 @@ class SettingsHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
+            SizedBox(height: AppSpacing.xs),
             Text(
               'Cài đặt & Cấu hình Hệ thống',
               style: AppTextStyles.headlineLg.copyWith(letterSpacing: -0.5),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               'Quản lý mã QR động chu kỳ 60 giây, chính sách mạng giảng đường, đồng bộ hóa FAP Edu Portal và cảnh báo học vụ.',
               style: AppTextStyles.bodySm.copyWith(
@@ -75,7 +75,7 @@ class SettingsHeader extends StatelessWidget {
               label: 'Khôi phục mặc định',
               isPrimary: false,
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             _buildBtn(
               icon: Icons.save,
               label: 'Lưu tất cả thay đổi',
@@ -90,7 +90,7 @@ class SettingsHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(child: titleSection),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               actionSection,
             ],
           );
@@ -99,7 +99,7 @@ class SettingsHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               titleSection,
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               actionSection,
             ],
           );
@@ -130,7 +130,7 @@ class SettingsHeader extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A000000),
                 blurRadius: 2,
@@ -142,7 +142,7 @@ class SettingsHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 18, color: iconColor),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
                 label,
                 style: AppTextStyles.labelMd.copyWith(color: textColor),

@@ -13,7 +13,7 @@ class TimetableEntry {
   final String room;
   final String timeRange; // e.g. "7:00-9:15"
 
-  const TimetableEntry({
+  TimetableEntry({
     required this.dayOfWeek,
     required this.slot,
     required this.courseCode,
@@ -40,7 +40,7 @@ class TimetableEntry {
 class SlotCodeInfo {
   final int slot;
   final List<int> weekdays;
-  const SlotCodeInfo({required this.slot, required this.weekdays});
+  SlotCodeInfo({required this.slot, required this.weekdays});
 }
 
 class SlotCodeParser {
@@ -102,11 +102,11 @@ class WeeklyTimetable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A142433),
             blurRadius: 4,
@@ -114,38 +114,112 @@ class WeeklyTimetable extends StatelessWidget {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Table(
-          border: TableBorder.all(color: AppColors.surfaceMuted, width: 1),
-          defaultColumnWidth: const FixedColumnWidth(150),
-          columnWidths: const {0: FixedColumnWidth(70)},
-          children: [
-            // Header: day labels + dates
-            TableRow(
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withOpacity(0.15),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fixed Left Column
+          SizedBox(
+            width: 70,
+            child: Table(
+              border: TableBorder(
+                top: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                left: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                bottom: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                right: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                horizontalInside: BorderSide(
+                  color: AppColors.surfaceMuted,
+                  width: 1,
+                ),
               ),
+              columnWidths: const {0: FlexColumnWidth(1)},
               children: [
-                const SizedBox(),
-                for (int i = 0; i < 7; i++)
-                  _HeaderCell(
-                    label: _dayLabels[i],
-                    date: weekStart.add(Duration(days: i)),
+                // Header
+                TableRow(
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer.withValues(alpha: 0.15),
+                  ),
+                  children: [
+                    SizedBox(
+                      height: 60,
+                      child: Center(
+                        child: Text(
+                          'SLOT',
+                          style: AppTextStyles.bodySm.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // Slots
+                for (int slot = 1; slot <= slotCount; slot++)
+                  TableRow(
+                    children: [
+                      SizedBox(
+                        height: 110,
+                        child: Center(child: _SlotLabelCell(slot: slot)),
+                      ),
+                    ],
                   ),
               ],
             ),
-            // Slot rows
-            for (int slot = 1; slot <= slotCount; slot++)
-              TableRow(
+          ),
+          // Scrollable Right Columns
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Table(
+                border: TableBorder(
+                  top: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                  bottom: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                  right: BorderSide(color: AppColors.surfaceMuted, width: 1),
+                  horizontalInside: BorderSide(
+                    color: AppColors.surfaceMuted,
+                    width: 1,
+                  ),
+                  verticalInside: BorderSide(
+                    color: AppColors.surfaceMuted,
+                    width: 1,
+                  ),
+                ),
+                defaultColumnWidth: FixedColumnWidth(135),
                 children: [
-                  _SlotLabelCell(slot: slot),
-                  for (int day = 1; day <= 7; day++)
-                    _ClassCell(entry: _entryFor(day, slot)),
+                  // Header
+                  TableRow(
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer.withValues(alpha: 0.15),
+                    ),
+                    children: [
+                      for (int i = 0; i < 7; i++)
+                        SizedBox(
+                          height: 60,
+                          child: Center(
+                            child: _HeaderCell(
+                              label: _dayLabels[i],
+                              date: weekStart.add(Duration(days: i)),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  // Slots
+                  for (int slot = 1; slot <= slotCount; slot++)
+                    TableRow(
+                      children: [
+                        for (int day = 1; day <= 7; day++)
+                          SizedBox(
+                            height: 110,
+                            child: _ClassCell(entry: _entryFor(day, slot)),
+                          ),
+                      ],
+                    ),
                 ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -159,7 +233,7 @@ class _HeaderCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       child: Column(
         children: [
           Text(
@@ -185,7 +259,7 @@ class _SlotLabelCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(8),
       child: Text(
         'Slot $slot',
         style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w600),
@@ -201,10 +275,10 @@ class _ClassCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entry == null) {
-      return const Padding(padding: EdgeInsets.all(8), child: Text('-'));
+      return Padding(padding: EdgeInsets.all(8), child: Text('-'));
     }
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(8),
       child: SizedBox(
         width: 134, // matches defaultColumnWidth(150) minus padding
         child: Column(

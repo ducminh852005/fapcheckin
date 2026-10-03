@@ -8,6 +8,7 @@ import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'package:fapcheckin/views/teacher/class_management/dialogs/import_timetable_dialog.dart';
 import 'package:fapcheckin/views/teacher/dashboard/components/weekly_timetable.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
 class ScheduleBody extends StatefulWidget {
   const ScheduleBody({super.key});
@@ -36,13 +37,13 @@ class _ScheduleBodyState extends State<ScheduleBody> {
 
   void _prevWeek() {
     setState(() {
-      _weekStart = _weekStart.subtract(const Duration(days: 7));
+      _weekStart = _weekStart.subtract(Duration(days: 7));
     });
   }
 
   void _nextWeek() {
     setState(() {
-      _weekStart = _weekStart.add(const Duration(days: 7));
+      _weekStart = _weekStart.add(Duration(days: 7));
     });
   }
 
@@ -50,7 +51,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
     final result = await showDialog<TimetableImportResult>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const ImportTimetableDialog(),
+      builder: (context) => ImportTimetableDialog(),
     );
     if (!context.mounted || result == null) return;
 
@@ -63,43 +64,49 @@ class _ScheduleBodyState extends State<ScheduleBody> {
       message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
       icon: Icons.check_circle_outline,
       accentColor: AppColors.statusPresent,
-      duration: const Duration(seconds: 4),
+      duration: Duration(seconds: 4),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final weekEnd = _weekStart.add(const Duration(days: 6));
+    final weekEnd = _weekStart.add(Duration(days: 6));
     final weekRangeText =
         '${_weekStart.day.toString().padLeft(2, '0')}/${_weekStart.month.toString().padLeft(2, '0')} - '
         '${weekEnd.day.toString().padLeft(2, '0')}/${weekEnd.month.toString().padLeft(2, '0')}/${weekEnd.year}';
 
     return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Top action bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.md,
               children: [
                 // Week navigation
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
                   children: [
                     IconButton.outlined(
-                      icon: const Icon(Icons.chevron_left, size: 20),
+                      icon: Icon(Icons.chevron_left, size: 20),
                       tooltip: 'Tuần trước',
                       onPressed: _prevWeek,
                       style: IconButton.styleFrom(
-                        side: const BorderSide(color: AppColors.surfaceContainerHigh),
+                        side: BorderSide(color: AppColors.surfaceContainerHigh),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.xs),
                     OutlinedButton(
                       onPressed: () {
                         setState(() {
@@ -107,13 +114,15 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                         });
                       },
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.surfaceContainerHigh),
-                        padding: const EdgeInsets.symmetric(
+                        side: BorderSide(color: AppColors.surfaceContainerHigh),
+                        padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
                           vertical: 10,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                         ),
                       ),
                       child: Text(
@@ -123,19 +132,20 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.xs),
                     IconButton.outlined(
-                      icon: const Icon(Icons.chevron_right, size: 20),
+                      icon: Icon(Icons.chevron_right, size: 20),
                       tooltip: 'Tuần sau',
                       onPressed: _nextWeek,
                       style: IconButton.styleFrom(
-                        side: const BorderSide(color: AppColors.surfaceContainerHigh),
+                        side: BorderSide(color: AppColors.surfaceContainerHigh),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(width: AppSpacing.sm),
                     Text(
                       'Tuần: $weekRangeText',
                       style: AppTextStyles.headlineSm.copyWith(
@@ -146,29 +156,33 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                   ],
                 ),
                 // Scan timetable button
-                ElevatedButton.icon(
-                  onPressed: () => _scanTimetable(context),
-                  icon: const Icon(Icons.document_scanner_outlined, size: 18),
-                  label: const Text('Quét thời khóa biểu'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.onPrimary,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
+                Tooltip(
+                  message: 'Quét thời khóa biểu',
+                  child: Material(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    child: InkWell(
+                      onTap: () => _scanTimetable(context),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    ),
-                    textStyle: AppTextStyles.labelMd.copyWith(
-                      fontWeight: FontWeight.w600,
+                      child: Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.document_scanner_outlined,
+                          size: 20,
+                          color: AppColors.onPrimary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
 
             // Timetable Table
             Consumer<DashboardViewModel>(
@@ -210,10 +224,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                   }
                 }
 
-                return WeeklyTimetable(
-                  weekStart: _weekStart,
-                  entries: entries,
-                );
+                return WeeklyTimetable(weekStart: _weekStart, entries: entries);
               },
             ),
           ],

@@ -19,11 +19,11 @@ class SettingsSidebar extends StatelessWidget {
       children: [
         // Tab Navigation Side Panel
         Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+          padding: EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A000000),
                 blurRadius: 2,
@@ -34,30 +34,30 @@ class SettingsSidebar extends StatelessWidget {
           child: Column(
             children: [
               _buildTabBtn('qr', 'Quy tắc & Mã QR', Icons.qr_code_scanner),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               _buildTabBtn('security', 'Bảo mật & Giảng đường', Icons.security),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               _buildTabBtn('sync', 'Đồng bộ FAP Edu', Icons.sync),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               _buildTabBtn(
                 'alerts',
                 'Thông báo & Email',
                 Icons.notifications_active,
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               _buildTabBtn('profile', 'Tài khoản Giảng viên', Icons.badge),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
 
         // Quick Session Live Status Widget
         Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A000000),
                 blurRadius: 2,
@@ -79,10 +79,7 @@ class SettingsSidebar extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.statusPresentBg,
                       borderRadius: BorderRadius.circular(
@@ -95,12 +92,12 @@ class SettingsSidebar extends StatelessWidget {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.statusPresent,
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'Trực tiếp',
                           style: AppTextStyles.caption.copyWith(
@@ -113,14 +110,14 @@ class SettingsSidebar extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
               Text(
                 'P.302 • Tòa Alpha',
                 style: AppTextStyles.headlineSm.copyWith(
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(
                 'Môn: Lập trình Web (PRJ301)',
                 style: AppTextStyles.caption.copyWith(
@@ -128,9 +125,9 @@ class SettingsSidebar extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               Container(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
                   vertical: AppSpacing.sm,
                 ),
@@ -143,12 +140,12 @@ class SettingsSidebar extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.wifi,
                           size: 16,
                           color: AppColors.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'AP-ALPHA-302',
                           style: AppTextStyles.code.copyWith(
@@ -170,11 +167,11 @@ class SettingsSidebar extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
 
         // Hardware Spec Information
         Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -182,12 +179,12 @@ class SettingsSidebar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.info_outline,
                 size: 20,
                 color: AppColors.textSecondary,
               ),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +195,7 @@ class SettingsSidebar extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       'Mã QR 60 giây kết hợp kiểm tra mạng Wi-Fi của tiết học.',
                       style: AppTextStyles.caption.copyWith(
@@ -225,7 +222,7 @@ class SettingsSidebar extends StatelessWidget {
         onTap: () => onTabSelect(id),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 12,
           ),
@@ -244,7 +241,7 @@ class SettingsSidebar extends StatelessWidget {
                         ? AppColors.onPrimary
                         : AppColors.textSecondary,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: AppSpacing.sm),
                   Text(
                     label,
                     style: AppTextStyles.labelMd.copyWith(
@@ -260,7 +257,7 @@ class SettingsSidebar extends StatelessWidget {
                 size: 16,
                 color: isActive
                     ? AppColors.onPrimary
-                    : AppColors.textSecondary.withOpacity(0.4),
+                    : AppColors.textSecondary.withValues(alpha: 0.4),
               ),
             ],
           ),

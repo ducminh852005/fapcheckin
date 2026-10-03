@@ -48,7 +48,11 @@ class TimetableScanResult {
     return TimetableScanResult(
       scanToken: json['scanToken']?.toString() ?? '',
       entries: ((json['entries'] as List?) ?? const [])
-          .map((entry) => TimetableScanEntry.fromJson(Map<String, dynamic>.from(entry as Map)))
+          .map(
+            (entry) => TimetableScanEntry.fromJson(
+              Map<String, dynamic>.from(entry as Map),
+            ),
+          )
           .toList(),
       detectedDates: ((json['detectedDates'] as List?) ?? const [])
           .map((date) => date.toString())
@@ -71,7 +75,8 @@ class TimetableImportResult {
   factory TimetableImportResult.fromJson(Map<String, dynamic> json) {
     return TimetableImportResult(
       assignedCount: (json['assignedCount'] as num?)?.toInt() ?? 0,
-      alreadyAssignedCount: (json['alreadyAssignedCount'] as num?)?.toInt() ?? 0,
+      alreadyAssignedCount:
+          (json['alreadyAssignedCount'] as num?)?.toInt() ?? 0,
       classCodes: ((json['classCodes'] as List?) ?? const [])
           .map((code) => code.toString())
           .toList(),

@@ -6,6 +6,10 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
 import 'components/class_selector.dart';
 
+import 'components/class_details_view.dart';
+
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
+
 class AttendanceHistoryBody extends StatefulWidget {
   const AttendanceHistoryBody({super.key});
   @override
@@ -37,51 +41,63 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       (value) => value.classes.isNotEmpty,
     );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.xl,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Error banner ──
-          if (errorMessage != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            _NoticeBanner(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Error banner ──
+        if (errorMessage != null) ...[
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.pagePadding,
+              vertical: AppSpacing.md,
+            ),
+            child: _NoticeBanner(
               icon: Icons.error_outline,
               color: AppColors.statusAbsent,
               background: AppColors.statusAbsentBg,
               message: errorMessage,
               action: TextButton(
                 onPressed: busy ? null : () => vm.loadClasses(force: true),
-                child: const Text('Tải lại'),
+                child: Text('Tải lại'),
               ),
             ),
-          ],
-          // ── Loading bar ──
-          if (busy) ...[
-            const SizedBox(height: AppSpacing.md),
-            ClipRRect(
+          ),
+        ],
+        // ── Loading bar ──
+        if (busy) ...[
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.pagePadding),
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: const LinearProgressIndicator(minHeight: 4),
+              child: LinearProgressIndicator(minHeight: 4),
             ),
-          ],
-          // ── Empty state ──
-          if (!loadingClasses && !hasClasses && errorMessage == null)
-            const _EmptyState(
+          ),
+        ],
+        // ── Empty state ──
+        if (!loadingClasses && !hasClasses && errorMessage == null)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.pagePadding),
+            child: const _EmptyState(
               icon: Icons.class_outlined,
               message: 'Chưa có lớp được phân công cho tài khoản này.',
             ),
-          // ── Class selector ──
-          if (hasClasses) ...[
-            const SizedBox(height: AppSpacing.md),
-            const ClassSelector(),
-          ],
-        ],
-      ),
+          ),
+        // ── Class selector / Details ──
+        if (hasClasses)
+          Expanded(
+            child: vm.selectedClassCode != null
+                ? ClassDetailsView()
+                : SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      context.pagePadding,
+                      AppSpacing.md,
+                      context.pagePadding,
+                      AppSpacing.xl,
+                    ),
+                    child: ClassSelector(),
+                  ),
+          ),
+      ],
     );
   }
 }
@@ -108,7 +124,7 @@ class _NoticeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      padding: EdgeInsets.fromLTRB(14, 10, 10, 10),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
@@ -117,7 +133,7 @@ class _NoticeBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Text(message, style: TextStyle(color: color, fontSize: 13)),
           ),
@@ -138,8 +154,8 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: AppSpacing.md),
-      padding: const EdgeInsets.all(28),
+      margin: EdgeInsets.only(top: AppSpacing.md),
+      padding: EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -148,10 +164,10 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         children: [
           Icon(icon, size: 34, color: AppColors.textTertiary),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
             message,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],

@@ -3,10 +3,7 @@ class SyncResult {
   final int syncedCount;
   final String message;
 
-  const SyncResult({
-    required this.syncedCount,
-    required this.message,
-  });
+  const SyncResult({required this.syncedCount, required this.message});
 
   factory SyncResult.fromJson(Map<String, dynamic> json) {
     return SyncResult(
@@ -16,7 +13,7 @@ class SyncResult {
   }
 
   Map<String, dynamic> toJson() => {
-        'syncedCount': syncedCount,
-        'message': message,
-      };
+    'syncedCount': syncedCount,
+    'message': message,
+  };
 }

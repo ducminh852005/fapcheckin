@@ -35,5 +35,6 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | 09 | [Rủi ro & giới hạn cần lưu ý](09-rui-ro-va-gioi-han.md) |
 | 10 | [Định hướng mở rộng](10-dinh-huong-mo-rong.md) |
 | — | [Quick Start — Pattern & chuẩn API Response](quick-start.md) |
+| — | [Quick Start Mobile — chạy & build app GV trên Android/iOS](quick-start-mobile.md) |
 | — | [Hướng dẫn deploy lên Firebase & chuyển DB sang Firestore](deploy-firebase.md) |
 | — | [ERD (Mermaid)](db-erd.mermaid) · [ghi chú ERD & ánh xạ Firestore](db-erd-notes.md) |

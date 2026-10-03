@@ -9,12 +9,12 @@ class GoogleAuthService {
   bool _isInitialized = false;
 
   GoogleAuthService({GoogleSignIn? googleSignIn})
-      : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+    : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   Stream<GoogleSignInAuthenticationEvent> get authenticationEvents =>
       isDesktopGoogleAuthSupported
-          ? const Stream<GoogleSignInAuthenticationEvent>.empty()
-          : _googleSignIn.authenticationEvents;
+      ? const Stream<GoogleSignInAuthenticationEvent>.empty()
+      : _googleSignIn.authenticationEvents;
 
   Future<void> initialize() => _ensureInitialized();
 
@@ -26,8 +26,7 @@ class GoogleAuthService {
     }
     await _googleSignIn.initialize(
       clientId: AuthConfig.resolvedGoogleClientId,
-      serverClientId:
-          kIsWeb ? null : AuthConfig.resolvedGoogleServerClientId,
+      serverClientId: kIsWeb ? null : AuthConfig.resolvedGoogleServerClientId,
       hostedDomain: AuthConfig.resolvedGoogleHostedDomain,
     );
     _isInitialized = true;

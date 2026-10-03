@@ -84,7 +84,9 @@ void main() {
             Provider<ApiService>.value(value: api),
             ChangeNotifierProvider<AuthViewModel>.value(value: auth),
           ],
-          child: MaterialApp(home: Scaffold(body: WarningTable(data: ReportData.fromJson({})))),
+          child: MaterialApp(
+            home: Scaffold(body: WarningTable(data: ReportData.fromJson({}))),
+          ),
         ),
       );
       await tester.pumpAndSettle();

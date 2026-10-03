@@ -26,8 +26,8 @@ class CloseSessionResult {
   }
 
   Map<String, dynamic> toJson() => {
-        'sessionId': sessionId,
-        'sessionStatus': sessionStatus,
-        'autoAbsentCount': autoAbsentCount,
-      };
+    'sessionId': sessionId,
+    'sessionStatus': sessionStatus,
+    'autoAbsentCount': autoAbsentCount,
+  };
 }

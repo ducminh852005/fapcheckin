@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/app/app_router.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/views/auth/widgets/google_web_sign_in_button.dart';
@@ -26,13 +27,8 @@ class LoginScreen extends StatelessWidget {
 
           return Row(
             children: [
-              Expanded(
-                child: _AuthFormColumn(),
-              ),
-              if (isDesktop)
-                const Expanded(
-                  child: _HeroVisualColumn(),
-                ),
+              Expanded(child: _AuthFormColumn()),
+              if (isDesktop) Expanded(child: _HeroVisualColumn()),
             ],
           );
         },
@@ -55,8 +51,9 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
     super.initState();
     final authViewModel = context.read<AuthViewModel>();
     unawaited(authViewModel.initializeGoogleSignIn());
-    _googleSubscription =
-        authViewModel.googleAuthenticationEvents.listen(_handleGoogleEvent);
+    _googleSubscription = authViewModel.googleAuthenticationEvents.listen(
+      _handleGoogleEvent,
+    );
   }
 
   @override
@@ -70,9 +67,30 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
     final authViewModel = context.watch<AuthViewModel>();
     final isGoogleLoading = authViewModel.isLoading || _isHandlingGoogle;
 
+    final mobile = context.isMobile;
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: IntrinsicHeight(
+            child: _buildContent(context, mobile, isGoogleLoading),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    bool mobile,
+    bool isGoogleLoading,
+  ) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? 20 : 24,
+        vertical: mobile ? 20 : 32,
+      ),
       child: Column(
         children: [
           Row(
@@ -82,15 +100,13 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                 'assets/images/Logo_FPT_Education-Photoroom.png',
                 height: 48,
               ),
-              Row(
-                children: const [],
-              ),
+              Row(children: []),
             ],
           ),
           Expanded(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
+                constraints: BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -99,14 +115,14 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                       'Hệ thống điểm danh FAP',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.headlineLg.copyWith(
-                        fontSize: 32,
+                        fontSize: mobile ? 26 : 32,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
                         letterSpacing: 0,
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Text(
                       'Dành cho Cán bộ, Giảng viên & Sinh viên Đại học FPT. Vui lòng sử dụng tài khoản nội bộ để tiếp tục.',
                       textAlign: TextAlign.center,
@@ -115,7 +131,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                     if (kIsWeb)
                       buildGoogleWebSignInButton(isLoading: isGoogleLoading)
                     else
@@ -130,7 +146,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                         onTap: isGoogleLoading ? null : _loginWithGoogle,
                       ),
 
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _SsoButton(
                       label: '\u0110\u0103ng nh\u1eadp v\u1edbi FE Edu SSO',
                       svgContent: '''<svg viewBox="0 0 24 24">
@@ -139,15 +155,15 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                       onTap: _showUnsupportedLogin,
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      padding: EdgeInsets.symmetric(vertical: 28),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          const Divider(color: Color(0xFFE2E8F0)),
+                          Divider(color: Color(0xFFE2E8F0)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: EdgeInsets.symmetric(horizontal: 12),
                             color: Colors.white,
-                            child: const Text(
+                            child: Text(
                               'HO\u1eb6C',
                               style: TextStyle(
                                 fontSize: 12,
@@ -162,7 +178,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                     ),
                     SizedBox(
                       width: double.infinity,
-                      height: 40,
+                      height: mobile ? 48 : 40,
                       child: ElevatedButton(
                         onPressed: _showUnsupportedLogin,
                         style: ElevatedButton.styleFrom(
@@ -173,7 +189,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                             borderRadius: BorderRadius.circular(99),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           '\u0110\u0103ng nh\u1eadp v\u1edbi email & m\u1eadt kh\u1ea9u',
                           style: TextStyle(
                             fontSize: 14,
@@ -187,7 +203,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 24),
             child: Text.rich(
               TextSpan(
@@ -223,8 +239,9 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
     if (_isHandlingGoogle) return;
 
     setState(() => _isHandlingGoogle = true);
-    final success =
-        await context.read<AuthViewModel>().loginWithGoogleAccount(event.user);
+    final success = await context.read<AuthViewModel>().loginWithGoogleAccount(
+      event.user,
+    );
     if (!mounted) return;
     setState(() => _isHandlingGoogle = false);
 
@@ -254,26 +271,26 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
     final authSession = context.read<AuthViewModel>().session;
     if (authSession != null) {
       context.read<DashboardViewModel>().setTeacherInfo(
-            name: authSession.user.displayName,
-            email: authSession.user.email,
-            memberCode: authSession.user.memberCode,
-          );
+        name: authSession.user.displayName,
+        email: authSession.user.email,
+        memberCode: authSession.user.memberCode,
+      );
     }
 
     context.go(AppRoutes.teacher);
   }
 
   void _showAuthError() {
-    final message = context.read<AuthViewModel>().errorMessage ??
+    final message =
+        context.read<AuthViewModel>().errorMessage ??
         'Kh\u00f4ng th\u1ec3 \u0111\u0103ng nh\u1eadp b\u1eb1ng Google.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showUnsupportedLogin() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
           'Ch\u1ee9c n\u0103ng n\u00e0y ch\u01b0a \u0111\u01b0\u1ee3c k\u1ebft n\u1ed1i.',
         ),
@@ -309,27 +326,23 @@ class _SsoButtonState extends State<_SsoButton> {
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(99),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: Duration(milliseconds: 150),
           width: double.infinity,
-          height: 40,
+          height: context.isMobile ? 48 : 40,
           decoration: BoxDecoration(
             color: _isHovered
                 ? AppColors.primaryLight.withValues(alpha: 0.3)
                 : Colors.white,
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
-              color: _isHovered ? AppColors.primary : const Color(0xFFCBD5E1),
+              color: _isHovered ? AppColors.primary : Color(0xFFCBD5E1),
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.string(
-                widget.svgContent,
-                width: 20,
-                height: 20,
-              ),
-              const SizedBox(width: 12),
+              SvgPicture.string(widget.svgContent, width: 20, height: 20),
+              SizedBox(width: 12),
               Flexible(
                 child: Text(
                   widget.label,
@@ -338,9 +351,7 @@ class _SsoButtonState extends State<_SsoButton> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: _isHovered
-                        ? AppColors.primary
-                        : const Color(0xFF334155),
+                    color: _isHovered ? AppColors.primary : Color(0xFF334155),
                   ),
                 ),
               ),
@@ -358,16 +369,13 @@ class _HeroVisualColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF0F172A),
+      color: Color(0xFF0F172A),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/fpt_hcm_campus.jpg',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/fpt_hcm_campus.jpg', fit: BoxFit.cover),
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
@@ -379,7 +387,7 @@ class _HeroVisualColumn extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 32,
             right: 32,
             bottom: 32,

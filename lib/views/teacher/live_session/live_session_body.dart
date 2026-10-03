@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
+
 import 'components/qr_panel.dart';
 import 'components/checkin_panel.dart';
 
@@ -16,9 +18,8 @@ class LiveSessionBody extends StatelessWidget {
     final isNarrow = MediaQuery.sizeOf(context).width < 1220;
 
     return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -28,7 +29,7 @@ class LiveSessionBody extends StatelessWidget {
                 onPressed: () {
                   context.read<DashboardViewModel>().navigate('lop-hoc');
                 },
-                icon: const Icon(Icons.arrow_back, size: 20),
+                icon: Icon(Icons.arrow_back, size: 20),
                 label: Text(
                   'Quay lại Quản lý Tiết học',
                   style: AppTextStyles.labelMd.copyWith(
@@ -38,30 +39,24 @@ class LiveSessionBody extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   backgroundColor: AppColors.surface,
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    side: const BorderSide(
-                      color: AppColors.surfaceContainerHigh,
-                    ),
+                    side: BorderSide(color: AppColors.surfaceContainerHigh),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
             if (isNarrow)
-              const Column(
-                children: [
-                  QrPanel(),
-                  SizedBox(height: 16),
-                  CheckinPanel(),
-                ],
+              Column(
+                children: [QrPanel(), SizedBox(height: 16), CheckinPanel()],
               )
             else
-              const Row(
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(flex: 4, child: QrPanel(minHeight: 820)),
@@ -84,28 +79,33 @@ class ToastNotification extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<LiveSessionViewModel>(
       builder: (context, vm, _) {
-        if (!vm.showToast || vm.toastData == null) return const SizedBox.shrink();
+        if (!vm.showToast || vm.toastData == null) {
+          return SizedBox.shrink();
+        }
         final toast = vm.toastData!;
 
+        final isMobile = context.isMobile;
         return Positioned(
-          top: 20,
-          right: 20,
+          top: isMobile ? 8 : 20,
+          right: isMobile ? 12 : 20,
+          left: isMobile ? 12 : null,
           child: Material(
             color: Colors.transparent,
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 440),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              constraints: BoxConstraints(maxWidth: 440),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: toast.accentColor == AppColors.statusPresent
                     ? AppColors.statusPresentBg
-                    : (toast.accentColor == AppColors.error || toast.accentColor == AppColors.statusAbsent
-                        ? AppColors.statusAbsentBg
-                        : AppColors.surface),
+                    : (toast.accentColor == AppColors.error ||
+                              toast.accentColor == AppColors.statusAbsent
+                          ? AppColors.statusAbsentBg
+                          : AppColors.surface),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                 border: Border(
                   left: BorderSide(color: toast.accentColor, width: 4),
                 ),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
                     color: Color(0x1A142433),
                     blurRadius: 12,
@@ -124,7 +124,7 @@ class ToastNotification extends StatelessWidget {
                     ),
                     child: Icon(toast.icon, size: 20, color: toast.accentColor),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,7 +137,7 @@ class ToastNotification extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(
                           toast.message,
                           style: AppTextStyles.caption.copyWith(
@@ -147,12 +147,16 @@ class ToastNotification extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => vm.dismissToast(),
-                    child: const Padding(
+                    child: Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(Icons.close, size: 18, color: AppColors.textTertiary),
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: AppColors.textTertiary,
+                      ),
                     ),
                   ),
                 ],

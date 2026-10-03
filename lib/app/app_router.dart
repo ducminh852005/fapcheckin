@@ -27,7 +27,7 @@ GoRouter createAppRouter(AuthViewModel authViewModel) {
     routes: [
       GoRoute(
         path: '/',
-        redirect: (_, __) =>
+        redirect: (_, _) =>
             authViewModel.isAuthenticated ? AppRoutes.teacher : AppRoutes.login,
       ),
       GoRoute(
