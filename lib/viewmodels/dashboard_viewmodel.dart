@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/models/activity_log.dart';
 import '../data/models/class_section_model.dart';
 import '../data/models/sync_result_model.dart';
@@ -11,11 +12,12 @@ class DashboardViewModel extends ChangeNotifier {
   final DateTime Function() _now;
 
   DashboardViewModel(this._repository, {DateTime Function()? now})
-      : _now = now ?? DateTime.now;
+    : _now = now ?? DateTime.now;
 
   // ── Teacher info (filled after login / from auth state) ─────────────────────
   String _teacherName = '';
-  String get teacherName => _teacherName.isNotEmpty ? _teacherName : 'Giảng viên';
+  String get teacherName =>
+      _teacherName.isNotEmpty ? _teacherName : 'Giảng viên';
 
   String _teacherEmail = '';
   String get teacherEmail => _teacherEmail;
@@ -37,7 +39,15 @@ class DashboardViewModel extends ChangeNotifier {
 
   String get todayLabel {
     final now = _now();
-    const days = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
+    const days = [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ Nhật',
+    ];
     final dayName = days[now.weekday - 1];
     return '$dayName, ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
   }
@@ -80,13 +90,12 @@ class DashboardViewModel extends ChangeNotifier {
 
   // Derived stats from classes list
   int get totalClassesToday => _classes.length;
-  int get morningClasses =>
-      _classes.where((c) => _isMorning(c)).length;
+  int get morningClasses => _classes.where((c) => _isMorning(c)).length;
   int get afternoonClasses => totalClassesToday - morningClasses;
 
   // These come from LiveSessionViewModel in reality, but kept here for the
   // dashboard summary card
-  int _completedSessions = 0;
+  final int _completedSessions = 0;
   int get completedSessions => _completedSessions;
   int get totalSessions => totalClassesToday;
   double get sessionProgress =>
@@ -95,8 +104,7 @@ class DashboardViewModel extends ChangeNotifier {
   // Present students (aggregate from roster — updated when session loads)
   int _presentStudents = 0;
   int get presentStudents => _presentStudents;
-  int get totalStudents =>
-      _classes.fold(0, (sum, c) => sum + c.studentCount);
+  int get totalStudents => _classes.fold(0, (sum, c) => sum + c.studentCount);
   double get presentRate =>
       totalStudents == 0 ? 0 : presentStudents / totalStudents;
   double get avgAttendance => 0.0; // requires historical data not in MVP
@@ -162,13 +170,13 @@ class DashboardViewModel extends ChangeNotifier {
   // ── Activity logs (static for now — no dedicated API endpoint in MVP) ───────
 
   List<ActivityLog> get activityLogs => const [
-        ActivityLog(
-          title: 'Hệ thống sẵn sàng',
-          description: 'Kết nối API thành công. Sẵn sàng bắt đầu điểm danh.',
-          timeLabel: 'Vừa xong',
-          type: ActivityType.sessionStart,
-        ),
-      ];
+    ActivityLog(
+      title: 'Hệ thống sẵn sàng',
+      description: 'Kết nối API thành công. Sẵn sàng bắt đầu điểm danh.',
+      timeLabel: 'Vừa xong',
+      type: ActivityType.sessionStart,
+    ),
+  ];
 
   // ── Class sessions (for legacy ClassSession model used by DashboardBody) ────
 
@@ -207,7 +215,10 @@ class DashboardViewModel extends ChangeNotifier {
   void markClassInactive(String classCode) {
     for (int i = 0; i < _classes.length; i++) {
       if (_classes[i].classCode == classCode) {
-        _classes[i] = _classes[i].copyWith(isActive: false, activeSessionId: null);
+        _classes[i] = _classes[i].copyWith(
+          isActive: false,
+          activeSessionId: null,
+        );
       }
     }
     notifyListeners();
@@ -220,7 +231,6 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────────
-
 
   String _currentRoute = 'tong-quan';
   String get currentRoute => _currentRoute;

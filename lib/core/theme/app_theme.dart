@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../constants/app_colors.dart';
 
 class AppTheme {
@@ -8,10 +9,7 @@ class AppTheme {
   static ThemeData get light {
     final textTheme = GoogleFonts.interTextTheme(
       const TextTheme(
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: AppColors.onSurface,
-        ),
+        bodyMedium: TextStyle(fontSize: 14, color: AppColors.onSurface),
       ),
     );
 
@@ -55,9 +53,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.surfaceContainerHigh,

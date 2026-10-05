@@ -9,7 +9,8 @@ class ClassSession {
   final int studentCount;
   final SessionStatus status;
   final int? scannedCount; // Only for active sessions
-  final bool isMakeup; // Indicates this is a makeup/extra class from Class_Schedule
+  final bool
+  isMakeup; // Indicates this is a makeup/extra class from Class_Schedule
 
   const ClassSession({
     required this.courseCode,
@@ -26,8 +27,8 @@ class ClassSession {
 }
 
 enum SessionStatus {
-  active,    // Phiên đang mở
-  ready,     // Sẵn sàng (tới giờ nhưng chưa mở)
+  active, // Phiên đang mở
+  ready, // Sẵn sàng (tới giờ nhưng chưa mở)
   notStarted, // Chưa bắt đầu
-  completed,  // Đã hoàn thành
+  completed, // Đã hoàn thành
 }

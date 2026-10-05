@@ -16,8 +16,8 @@ class ActivityLog {
 }
 
 enum ActivityType {
-  qrScan,    // QR scan event
+  qrScan, // QR scan event
   cloudSync, // FAP cloud sync
   sessionStart, // Session started
-  manualEntry,  // Manual attendance
+  manualEntry, // Manual attendance
 }

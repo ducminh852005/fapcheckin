@@ -18,11 +18,11 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -43,26 +43,38 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
                   color: AppColors.statusLateBg,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 ),
-                child: const Icon(Icons.forward_to_inbox, color: AppColors.statusLate, size: 24),
+                child: Icon(
+                  Icons.forward_to_inbox,
+                  color: AppColors.statusLate,
+                  size: 24,
+                ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Cảnh báo Học vụ & Âm thanh Thông báo', style: AppTextStyles.headlineMd),
-                    const SizedBox(height: 2),
-                    Text('Kênh nhắc nhở tự động cho sinh viên có nguy cơ vượt quá 20% vắng', style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      'Cảnh báo Học vụ & Âm thanh Thông báo',
+                      style: AppTextStyles.headlineMd,
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Kênh nhắc nhở tự động cho sinh viên có nguy cơ vượt quá 20% vắng',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          
+          SizedBox(height: AppSpacing.lg),
+
           // 15% Absenteeism Warning
           Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: AppColors.surfaceBright,
               borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -75,68 +87,109 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
                     Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(color: AppColors.statusAbsentBg, shape: BoxShape.circle),
-                      child: const Icon(Icons.warning, size: 18, color: AppColors.statusAbsent),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusAbsentBg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.warning,
+                        size: 18,
+                        color: AppColors.statusAbsent,
+                      ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Tự động gửi email cảnh báo khi vắng chạm ngưỡng 15%', style: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 2),
-                          Text('Gửi thông báo tới email sinh viên (@fpt.edu.vn) và phụ huynh (nếu đăng ký) trước khi bị cấm thi (20%).', style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                          Text(
+                            'Tự động gửi email cảnh báo khi vắng chạm ngưỡng 15%',
+                            style: AppTextStyles.labelMd.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Gửi thông báo tới email sinh viên (@fpt.edu.vn) và phụ huynh (nếu đăng ký) trước khi bị cấm thi (20%).',
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(width: AppSpacing.md),
                     Switch(
                       value: _emailAlert,
                       onChanged: (v) => setState(() => _emailAlert = v),
-                      activeColor: AppColors.onPrimary,
+                      activeThumbColor: AppColors.onPrimary,
                       activeTrackColor: AppColors.primaryContainer,
                       inactiveThumbColor: AppColors.surface,
                       inactiveTrackColor: AppColors.surfaceMuted,
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: AppSpacing.md),
                 // Template Preview
                 Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 2,
+                        offset: Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('MẪU EMAIL CẢNH BÁO CHUẨN', style: AppTextStyles.labelSm.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          Text(
+                            'MẪU EMAIL CẢNH BÁO CHUẨN',
+                            style: AppTextStyles.labelSm.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           InkWell(
                             onTap: () {},
                             child: Row(
                               children: [
-                                const Icon(Icons.edit, size: 16, color: AppColors.primary),
-                                const SizedBox(width: 4),
-                                Text('Sửa Template', style: AppTextStyles.labelSm.copyWith(color: AppColors.primary)),
+                                Icon(
+                                  Icons.edit,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Sửa Template',
+                                  style: AppTextStyles.labelSm.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.xs),
+                      SizedBox(height: AppSpacing.xs),
                       Container(
-                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        padding: EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           '[FPT Academic Portal] Cảnh báo nghỉ học môn {SUBJECT_CODE}: Sinh viên {STUDENT_NAME} ({ROLL_NUMBER}) đã vắng {ABSENT_COUNT}/{TOTAL_SLOTS} buổi ({ABSENT_PERCENTAGE}%). Nguy cơ cấm thi nếu tiếp tục vắng!',
-                          style: AppTextStyles.code.copyWith(fontSize: 12, height: 1.5),
+                          style: AppTextStyles.code.copyWith(
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
                         ),
                       ),
                     ],
@@ -145,8 +198,8 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          
+          SizedBox(height: AppSpacing.md),
+
           // Audio and Flash Feedback
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +207,7 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
               // Audio
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceBright,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -162,27 +215,65 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Âm thanh khi Check-in thành công', style: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text('Phát âm thanh xác thực qua loa máy tính giảng viên để nhận biết học sinh đã ghi nhận.', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Âm thanh khi Check-in thành công',
+                        style: AppTextStyles.labelMd.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Phát âm thanh xác thực qua loa máy tính giảng viên để nhận biết học sinh đã ghi nhận.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.md),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                          boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))],
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusLg,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x0A000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _audioSound,
                             isExpanded: true,
-                            icon: const Icon(Icons.expand_more, size: 20, color: AppColors.textSecondary),
-                            items: const [
-                              DropdownMenuItem(value: 'soft-beep', child: Text('Âm bíp nhẹ (Soft Beep) - Khuyên dùng')),
-                              DropdownMenuItem(value: 'chime', child: Text('Tiếng chuông ngân (Chime)')),
-                              DropdownMenuItem(value: 'bell', child: Text('Chuông nhỏ (Bell)')),
-                              DropdownMenuItem(value: 'mute', child: Text('Tắt âm thanh (Im lặng hoàn toàn)')),
+                            icon: Icon(
+                              Icons.expand_more,
+                              size: 20,
+                              color: AppColors.textSecondary,
+                            ),
+                            items: [
+                              DropdownMenuItem(
+                                value: 'soft-beep',
+                                child: Text(
+                                  'Âm bíp nhẹ (Soft Beep) - Khuyên dùng',
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'chime',
+                                child: Text('Tiếng chuông ngân (Chime)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'bell',
+                                child: Text('Chuông nhỏ (Bell)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'mute',
+                                child: Text('Tắt âm thanh (Im lặng hoàn toàn)'),
+                              ),
                             ],
                             onChanged: (v) => setState(() => _audioSound = v!),
                           ),
@@ -192,11 +283,11 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               // Flash Avatar
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceBright,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -204,25 +295,47 @@ class _SettingsSectionAlertsState extends State<SettingsSectionAlerts> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Hiệu ứng thẻ ảnh sinh viên', style: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text('Hiện pop-up khuôn mặt sinh viên trong 1.5 giây khi quét mã thành công.', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Hiệu ứng thẻ ảnh sinh viên',
+                        style: AppTextStyles.labelMd.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Hiện pop-up khuôn mặt sinh viên trong 1.5 giây khi quét mã thành công.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.md),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                          boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 1))],
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusLg,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x0A000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Bật Flash Avatar'),
+                            Text('Bật Flash Avatar'),
                             Switch(
                               value: _flashAvatar,
-                              onChanged: (v) => setState(() => _flashAvatar = v),
-                              activeColor: AppColors.onPrimary,
+                              onChanged: (v) =>
+                                  setState(() => _flashAvatar = v),
+                              activeThumbColor: AppColors.onPrimary,
                               activeTrackColor: AppColors.primaryContainer,
                               inactiveThumbColor: AppColors.surface,
                               inactiveTrackColor: AppColors.surfaceMuted,

@@ -9,11 +9,11 @@ class SettingsFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.9),
+        color: AppColors.surface.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x1A000000), // shadow-lg
             blurRadius: 15,
@@ -21,16 +21,28 @@ class SettingsFooter extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.md,
+        runSpacing: AppSpacing.sm,
         children: [
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, size: 18, color: AppColors.statusPresent),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Tất cả các thay đổi sẽ tự động áp dụng ngay vào buổi học tiếp theo.',
-                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+              Icon(
+                Icons.check_circle,
+                size: 18,
+                color: AppColors.statusPresent,
+              ),
+              SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(
+                  'Tất cả các thay đổi sẽ tự động áp dụng ngay vào buổi học tiếp theo.',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -38,7 +50,7 @@ class SettingsFooter extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildBtn(label: 'Hủy bỏ', isPrimary: false),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               _buildBtn(
                 label: 'Lưu tất cả thay đổi',
                 isPrimary: true,
@@ -63,10 +75,13 @@ class SettingsFooter extends StatelessWidget {
         onTap: () {},
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: isPrimary ? AppSpacing.lg : AppSpacing.md, vertical: 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: isPrimary ? AppSpacing.lg : AppSpacing.md,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A000000),
                 blurRadius: 2,
@@ -78,12 +93,22 @@ class SettingsFooter extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 18, color: isPrimary ? AppColors.onPrimary : AppColors.textSecondary),
-                const SizedBox(width: 6),
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isPrimary
+                      ? AppColors.onPrimary
+                      : AppColors.textSecondary,
+                ),
+                SizedBox(width: 6),
               ],
               Text(
                 label,
-                style: AppTextStyles.labelMd.copyWith(color: isPrimary ? AppColors.onPrimary : AppColors.textPrimary),
+                style: AppTextStyles.labelMd.copyWith(
+                  color: isPrimary
+                      ? AppColors.onPrimary
+                      : AppColors.textPrimary,
+                ),
               ),
             ],
           ),

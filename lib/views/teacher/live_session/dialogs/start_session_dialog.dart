@@ -19,6 +19,7 @@ Future<bool?> showStartSessionDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Mở phiên điểm danh',
@@ -37,15 +38,15 @@ Future<bool?> showStartSessionDialog(
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               CheckboxListTile(
-                key: const Key('ip-check-toggle'),
+                key: Key('ip-check-toggle'),
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: ipCheck,
                 onChanged: (value) => setState(() => ipCheck = value ?? false),
-                title: const Text('Kiểm tra IP mạng (tùy chọn)'),
-                subtitle: const Text(
+                title: Text('Kiểm tra IP mạng (tùy chọn)'),
+                subtitle: Text(
                   'Bật: sinh viên phải dùng cùng mạng Wi-Fi (cùng IP công khai) '
                   'với giảng viên mới điểm danh được. '
                   'Tắt: sinh viên quét QR ở bất kỳ mạng nào.',
@@ -57,11 +58,11 @@ Future<bool?> showStartSessionDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text('Hủy'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, ipCheck),
-            child: const Text('Mở phiên'),
+            child: Text('Mở phiên'),
           ),
         ],
       ),
@@ -81,7 +82,8 @@ Future<bool> startSessionWithOptions(
 }) async {
   final liveVm = context.read<LiveSessionViewModel>();
   final resuming =
-      classSection.isActive && (classSection.activeSessionId?.isNotEmpty ?? false);
+      classSection.isActive &&
+      (classSection.activeSessionId?.isNotEmpty ?? false);
 
   var ipCheck = false;
   if (!resuming) {

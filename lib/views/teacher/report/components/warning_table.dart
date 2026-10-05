@@ -48,7 +48,7 @@ class _WarningTableState extends State<WarningTable> {
         final compact = constraints.maxWidth < 680;
 
         return Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -57,9 +57,9 @@ class _WarningTableState extends State<WarningTable> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               _buildActionBar(),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               if (widget.data.warnings.isEmpty)
                 _buildEmptyState()
               else if (compact)
@@ -67,7 +67,7 @@ class _WarningTableState extends State<WarningTable> {
               else
                 _buildTable(),
               if (widget.data.warnings.length > _pageSize) ...[
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 _buildPagination(),
               ],
             ],
@@ -85,12 +85,15 @@ class _WarningTableState extends State<WarningTable> {
       runSpacing: AppSpacing.xs,
       children: [
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
+          constraints: BoxConstraints(maxWidth: 360),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Cảnh báo vắng quá quy định', style: AppTextStyles.headlineSm),
-              const SizedBox(height: 2),
+              Text(
+                'Cảnh báo vắng quá quy định',
+                style: AppTextStyles.headlineSm,
+              ),
+              SizedBox(height: 2),
               Text(
                 'Sinh viên có tỷ lệ vắng trên 15% trong các phiên đã kết thúc',
                 style: AppTextStyles.caption,
@@ -100,8 +103,8 @@ class _WarningTableState extends State<WarningTable> {
         ),
         TextButton.icon(
           onPressed: () {},
-          icon: const Icon(Icons.filter_list, size: 16),
-          label: const Text('Lọc nâng cao'),
+          icon: Icon(Icons.filter_list, size: 16),
+          label: Text('Lọc nâng cao'),
           style: TextButton.styleFrom(
             foregroundColor: ReportColors.primary,
             textStyle: AppTextStyles.labelSm,
@@ -113,7 +116,7 @@ class _WarningTableState extends State<WarningTable> {
 
   Widget _buildActionBar() {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.xs),
+      padding: EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
         color: ReportColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -132,7 +135,7 @@ class _WarningTableState extends State<WarningTable> {
             onTap: _syncing ? null : _syncToFap,
             child: _syncing
                 ? Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
                       vertical: 8,
                     ),
@@ -140,7 +143,7 @@ class _WarningTableState extends State<WarningTable> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
@@ -174,9 +177,10 @@ class _WarningTableState extends State<WarningTable> {
     if (!mounted) return;
 
     final msg = switch (result) {
-      ApiSuccess<SyncResult>() => result.data.message.isNotEmpty
-          ? result.data.message
-          : 'Đồng bộ thành công ${result.data.syncedCount} bản ghi.',
+      ApiSuccess<SyncResult>() =>
+        result.data.message.isNotEmpty
+            ? result.data.message
+            : 'Đồng bộ thành công ${result.data.syncedCount} bản ghi.',
       ApiFailure<SyncResult>() => 'Lỗi: ${result.error.message}',
       _ => 'Đồng bộ hoàn tất.',
     };
@@ -195,7 +199,7 @@ class _WarningTableState extends State<WarningTable> {
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: ReportColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -209,7 +213,7 @@ class _WarningTableState extends State<WarningTable> {
       children: _visibleWarnings
           .map(
             (warning) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: EdgeInsets.only(bottom: AppSpacing.sm),
               child: _WarningCard(warning: warning),
             ),
           )
@@ -221,9 +225,9 @@ class _WarningTableState extends State<WarningTable> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 640),
+        constraints: BoxConstraints(minWidth: 640),
         child: Table(
-          columnWidths: const {
+          columnWidths: {
             0: FlexColumnWidth(3),
             1: FlexColumnWidth(1.35),
             2: FlexColumnWidth(1),
@@ -232,7 +236,7 @@ class _WarningTableState extends State<WarningTable> {
           },
           children: [
             TableRow(
-              decoration: const BoxDecoration(color: ReportColors.background),
+              decoration: BoxDecoration(color: ReportColors.background),
               children: [
                 _headerCell('Sinh viên'),
                 _headerCell('Lớp'),
@@ -276,7 +280,7 @@ class _WarningTableState extends State<WarningTable> {
                       ),
                     ),
                   ),
-                  _dataCell(const SizedBox.shrink()),
+                  _dataCell(SizedBox.shrink()),
                 ],
               ),
             ),
@@ -311,7 +315,7 @@ class _WarningTableState extends State<WarningTable> {
               onPressed: _currentPage == 0
                   ? null
                   : () => setState(() => _currentPage--),
-              icon: const Icon(Icons.chevron_left, size: 20),
+              icon: Icon(Icons.chevron_left, size: 20),
               visualDensity: VisualDensity.compact,
             ),
             Text(
@@ -326,7 +330,7 @@ class _WarningTableState extends State<WarningTable> {
               onPressed: _currentPage >= _pageCount - 1
                   ? null
                   : () => setState(() => _currentPage++),
-              icon: const Icon(Icons.chevron_right, size: 20),
+              icon: Icon(Icons.chevron_right, size: 20),
               visualDensity: VisualDensity.compact,
             ),
           ],
@@ -337,7 +341,7 @@ class _WarningTableState extends State<WarningTable> {
 
   Widget _headerCell(String label) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Text(
         label,
         style: AppTextStyles.labelSm.copyWith(
@@ -350,7 +354,7 @@ class _WarningTableState extends State<WarningTable> {
 
   Widget _dataCell(Widget child) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: child,
     );
   }
@@ -363,11 +367,8 @@ class _WarningTableState extends State<WarningTable> {
     Color? iconColor,
   }) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 260),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 8,
-      ),
+      constraints: BoxConstraints(maxWidth: 260),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(6),
@@ -376,7 +377,7 @@ class _WarningTableState extends State<WarningTable> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: iconColor ?? fgColor),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
@@ -403,7 +404,7 @@ class _WarningCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: ReportColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -427,12 +428,12 @@ class _WarningCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(warning.rollNumber, style: AppTextStyles.caption),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Text(
                 '${warning.absent}/${warning.total}',
                 style: AppTextStyles.labelSm.copyWith(
@@ -442,7 +443,7 @@ class _WarningCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
+          SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
@@ -470,7 +471,7 @@ class _MetaPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusFull),

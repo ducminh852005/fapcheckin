@@ -66,8 +66,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
         .length;
     _filteredStudentsCache = currentStudents
         .where((student) {
-          final matchesRisk =
-              riskFilter == 'all' || student.absenceRate > .2;
+          final matchesRisk = riskFilter == 'all' || student.absenceRate > .2;
           final matchesSearch =
               '${student.rollNumber} ${student.fullName} ${student.email}'
                   .toLowerCase()
@@ -156,6 +155,14 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     riskFilter = 'all';
     _markDerivedDirty();
     await _loadSummary();
+  }
+
+  void clearSelectedClass() {
+    if (saving || working) return;
+    selectedClassCode = null;
+    summary = null;
+    _markDerivedDirty();
+    _notify();
   }
 
   Future<void> _loadSummary() async {
@@ -272,10 +279,14 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
 
   Future<HistoryExport?> export() =>
       _operation(() => repository.export(selectedClassCode!, null));
-  Future<SessionModel?> startSession(String slot, String ip, {bool ipCheck = false}) =>
-      _operation(
-        () => repository.startSession(selectedClassCode!, slot, ip, ipCheck: ipCheck),
-      );
+  Future<SessionModel?> startSession(
+    String slot,
+    String ip, {
+    bool ipCheck = false,
+  }) => _operation(
+    () =>
+        repository.startSession(selectedClassCode!, slot, ip, ipCheck: ipCheck),
+  );
 
   @override
   void dispose() {

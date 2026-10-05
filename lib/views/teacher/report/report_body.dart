@@ -9,6 +9,7 @@ import 'package:fapcheckin/views/teacher/report/components/report_charts.dart';
 import 'package:fapcheckin/views/teacher/report/components/subject_comparison.dart';
 import 'package:fapcheckin/views/teacher/report/components/checkin_modality.dart';
 import 'package:fapcheckin/views/teacher/report/components/warning_table.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
 class ReportBody extends StatefulWidget {
   const ReportBody({super.key});
@@ -32,7 +33,7 @@ class _ReportBodyState extends State<ReportBody> {
   Widget build(BuildContext context) {
     final vm = context.watch<ReportViewModel>();
     if (vm.loading && vm.report == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
     if (vm.errorMessage != null && vm.report == null) {
       return Center(
@@ -50,9 +51,14 @@ class _ReportBodyState extends State<ReportBody> {
       );
     }
     final report = vm.report;
-    if (report == null) return const SizedBox.shrink();
+    if (report == null) return SizedBox.shrink();
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+      padding: EdgeInsets.fromLTRB(
+        context.pagePadding,
+        context.isMobile ? 12 : 20,
+        context.pagePadding,
+        28,
+      ),
       child: Container(
         color: ReportColors.background,
         child: Column(
@@ -63,11 +69,11 @@ class _ReportBodyState extends State<ReportBody> {
               semester: report.semester,
               classCount: report.classCount,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             ReportKpis(data: report),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             _ReportMainContent(data: report),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Center(
               child: Text(
                 'Dữ liệu từ các phiên điểm danh đang mở và đã hoàn thành',
@@ -94,21 +100,21 @@ class _ReportMainContent extends StatelessWidget {
           return Column(
             children: [
               ReportCharts(data: data),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               if (constraints.maxWidth < 700) ...[
                 SubjectComparison(data: data),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 CheckinModality(data: data),
               ] else
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: SubjectComparison(data: data)),
-                    const SizedBox(width: 18),
+                    SizedBox(width: 18),
                     Expanded(child: CheckinModality(data: data)),
                   ],
                 ),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               WarningTable(data: data),
             ],
           );
@@ -122,19 +128,19 @@ class _ReportMainContent extends StatelessWidget {
               child: Column(
                 children: [
                   ReportCharts(data: data),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: SubjectComparison(data: data)),
-                      const SizedBox(width: 18),
+                      SizedBox(width: 18),
                       Expanded(child: CheckinModality(data: data)),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 18),
+            SizedBox(width: 18),
             Expanded(flex: 8, child: WarningTable(data: data)),
           ],
         );

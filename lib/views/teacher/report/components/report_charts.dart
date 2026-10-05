@@ -4,6 +4,7 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/views/teacher/report/report_colors.dart';
 import 'package:fapcheckin/data/models/report_model.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
 class ReportCharts extends StatelessWidget {
   final ReportData data;
@@ -12,11 +13,11 @@ class ReportCharts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(context.isMobile ? 16 : AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -48,7 +49,7 @@ class ReportCharts extends StatelessWidget {
                           'Xu hướng điểm danh theo tuần',
                           style: AppTextStyles.headlineSm,
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: 2),
                         Text(
                           'Tỷ lệ Có mặt, Đi trễ, Vắng mặt theo các tuần có phiên đã kết thúc',
                           style: AppTextStyles.caption,
@@ -69,7 +70,7 @@ class ReportCharts extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           SizedBox(
             height: 200,
             child: Stack(
@@ -96,7 +97,7 @@ class ReportCharts extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(data.weekly.length, (index) {
@@ -125,7 +126,7 @@ class ReportCharts extends StatelessWidget {
           height: 12,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Text(label, style: AppTextStyles.caption),
       ],
     );
@@ -147,7 +148,7 @@ class ReportCharts extends StatelessWidget {
         children: [
           Container(
             height: absentHeight * scale,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: ReportColors.red,
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(3),
@@ -158,7 +159,7 @@ class ReportCharts extends StatelessWidget {
           Container(height: lateHeight * scale, color: ReportColors.orange),
           Container(
             height: presentHeight * scale,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: ReportColors.primary,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(3),

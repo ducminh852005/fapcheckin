@@ -18,11 +18,11 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -47,13 +47,13 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.qr_code_2,
                       color: AppColors.primary,
                       size: 24,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: AppSpacing.sm),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -61,7 +61,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                         'Cấu hình Mã QR Động',
                         style: AppTextStyles.headlineMd,
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         'Mã QR tự động làm mới mỗi 60 giây trong phiên điểm danh',
                         style: AppTextStyles.bodySm.copyWith(
@@ -73,10 +73,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -90,7 +87,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
 
           // Radio Groups
           Row(
@@ -99,7 +96,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
               // Refresh Interval
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -116,24 +113,24 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.timer_outlined,
                             size: 18,
                             color: AppColors.textTertiary,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Token tự động thay đổi sau mỗi một phút.',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        padding: EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(
@@ -153,11 +150,11 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               // Display Size
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -174,21 +171,21 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.tv,
                             size: 18,
                             color: AppColors.textTertiary,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Độ tương phản và kích cỡ khung hình QR cho hội trường & tiết học.',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
@@ -201,7 +198,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                                   setState(() => _displaySize = v!),
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.xs),
+                          SizedBox(width: AppSpacing.xs),
                           Expanded(
                             child: _buildRadioOption<String>(
                               value: 'large',
@@ -220,26 +217,24 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
           _buildToggleItem(
             icon: Icons.phonelink_lock,
             iconColor: AppColors.statusAbsent,
             iconBg: AppColors.statusAbsentBg,
             title: 'Chặn ảnh chụp màn hình (Time-based Token OTP)',
-            desc:
-                'Mã QR được thay đổi sau 60 giây để hạn chế việc dùng lại ảnh chụp màn hình.',
+            desc: 'Mã QR được thay đổi sau 60 giây để hạn chế việc dùng lại ảnh chụp màn hình.',
             value: _antiScreenshot,
             onChanged: (v) => setState(() => _antiScreenshot = v),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: AppSpacing.sm),
           _buildToggleItem(
             icon: Icons.hourglass_top,
             iconColor: AppColors.primary,
             iconBg: AppColors.primaryLight,
             title: 'Hiển thị đồng hồ đếm ngược trực tiếp trên máy chiếu',
-            desc:
-                'Hiển thị vòng tròn đếm ngược để sinh viên biết thời gian còn lại trước khi đổi mã QR.',
+            desc: 'Hiển thị vòng tròn đếm ngược để sinh viên biết thời gian còn lại trước khi đổi mã QR.',
             value: _showCountdown,
             onChanged: (v) => setState(() => _showCountdown = v),
           ),
@@ -260,11 +255,11 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
       onTap: () => onChanged(value),
       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryContainer : AppColors.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: Color(0x0A000000),
               blurRadius: 2,
@@ -285,7 +280,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
               desc,
               style: AppTextStyles.caption.copyWith(
                 color: isSelected
-                    ? AppColors.onPrimary.withOpacity(0.8)
+                    ? AppColors.onPrimary.withValues(alpha: 0.8)
                     : AppColors.textSecondary,
               ),
             ),
@@ -305,7 +300,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceBright,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -319,7 +314,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
             decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
             child: Icon(icon, size: 18, color: iconColor),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +325,7 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   desc,
                   style: AppTextStyles.bodySm.copyWith(
@@ -340,11 +335,11 @@ class _SettingsSectionQrState extends State<SettingsSectionQr> {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.onPrimary,
+            activeThumbColor: AppColors.onPrimary,
             activeTrackColor: AppColors.primaryContainer,
             inactiveThumbColor: AppColors.surface,
             inactiveTrackColor: AppColors.surfaceMuted,

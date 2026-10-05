@@ -23,11 +23,11 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -52,21 +52,33 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
                       color: AppColors.statusManualBg,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                     ),
-                    child: const Icon(Icons.cloud_sync, color: AppColors.statusManual, size: 24),
+                    child: Icon(
+                      Icons.cloud_sync,
+                      color: AppColors.statusManual,
+                      size: 24,
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: AppSpacing.sm),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Đồng bộ Cổng Đào tạo FAP', style: AppTextStyles.headlineMd),
-                      const SizedBox(height: 2),
-                      Text('Tích hợp và ghi điểm danh trực tiếp vào cơ sở dữ liệu học vụ tập trung', style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                      Text(
+                        'Đồng bộ Cổng Đào tạo FAP',
+                        style: AppTextStyles.headlineMd,
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Tích hợp và ghi điểm danh trực tiếp vào cơ sở dữ liệu học vụ tập trung',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.statusPresentBg,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -74,15 +86,28 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.statusPresent, shape: BoxShape.circle)),
-                    const SizedBox(width: 4),
-                    Text('API FPT Academic Cloud v2.4 (Ping: 18ms)', style: AppTextStyles.labelSm.copyWith(color: AppColors.statusPresent, fontWeight: FontWeight.w600)),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppColors.statusPresent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'API FPT Academic Cloud v2.4 (Ping: 18ms)',
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: AppColors.statusPresent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
           // Manual Sync Button
           ElevatedButton.icon(
@@ -117,49 +142,79 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
                         backgroundColor: result is ApiSuccess<SyncResult>
                             ? AppColors.statusPresent
                             : AppColors.statusAbsent,
-                        duration: const Duration(seconds: 3),
+                        duration: Duration(seconds: 3),
                       ),
                     );
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.statusManual,
               foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 44),
+              minimumSize: Size(double.infinity, 44),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               ),
             ),
             icon: _syncing
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : const Icon(Icons.cloud_upload_outlined, size: 18),
-            label: Text(_syncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay lên FAP',
-                style: AppTextStyles.labelMd.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                : Icon(Icons.cloud_upload_outlined, size: 18),
+            label: Text(
+              _syncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay lên FAP',
+              style: AppTextStyles.labelMd.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          if (_lastSyncMessage != null) ...
-            [
-              const SizedBox(height: 8),
-              Text(_lastSyncMessage!,
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-            ],
+          if (_lastSyncMessage != null) ...[
+            SizedBox(height: 8),
+            Text(
+              _lastSyncMessage!,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
 
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
 
           // Sync Details Grid
           Row(
             children: [
-              Expanded(child: _buildDetailCard('Cơ sở (Campus)', 'FPT Hòa Lạc (HL)', 'DB Node: HL-PRD-01')),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _buildDetailCard('Kỳ học Hiện tại', 'Fall 2024 (FA24)', 'Tuần đào tạo: 08 / 10')),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _buildDetailCard('Lần đồng bộ cuối', '10 phút trước', '14:45:12 - OK', isHighlight: true)),
+              Expanded(
+                child: _buildDetailCard(
+                  'Cơ sở (Campus)',
+                  'FPT Hòa Lạc (HL)',
+                  'DB Node: HL-PRD-01',
+                ),
+              ),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildDetailCard(
+                  'Kỳ học Hiện tại',
+                  'Fall 2024 (FA24)',
+                  'Tuần đào tạo: 08 / 10',
+                ),
+              ),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildDetailCard(
+                  'Lần đồng bộ cuối',
+                  '10 phút trước',
+                  '14:45:12 - OK',
+                  isHighlight: true,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          
+          SizedBox(height: AppSpacing.md),
+
           // Toggles
           _buildToggleItem(
             icon: Icons.publish,
@@ -170,7 +225,7 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
             value: _autoPush,
             onChanged: (v) => setState(() => _autoPush = v),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: AppSpacing.sm),
           _buildToggleItem(
             icon: Icons.approval,
             iconColor: AppColors.secondary,
@@ -185,9 +240,14 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
     );
   }
 
-  Widget _buildDetailCard(String title, String mainText, String subText, {bool isHighlight = false}) {
+  Widget _buildDetailCard(
+    String title,
+    String mainText,
+    String subText, {
+    bool isHighlight = false,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceBright,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -195,11 +255,26 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(mainText, style: AppTextStyles.headlineSm.copyWith(color: isHighlight ? AppColors.statusPresent : AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          Text(subText, style: AppTextStyles.code.copyWith(color: AppColors.textTertiary)),
+          Text(
+            title,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            mainText,
+            style: AppTextStyles.headlineSm.copyWith(
+              color: isHighlight
+                  ? AppColors.statusPresent
+                  : AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            subText,
+            style: AppTextStyles.code.copyWith(color: AppColors.textTertiary),
+          ),
         ],
       ),
     );
@@ -215,7 +290,7 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceBright,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -229,22 +304,32 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
             decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
             child: Icon(icon, size: 18, color: iconColor),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(desc, style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary)),
+                Text(
+                  title,
+                  style: AppTextStyles.labelMd.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.onPrimary,
+            activeThumbColor: AppColors.onPrimary,
             activeTrackColor: AppColors.primaryContainer,
             inactiveThumbColor: AppColors.surface,
             inactiveTrackColor: AppColors.surfaceMuted,

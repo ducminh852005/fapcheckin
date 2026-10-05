@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -41,14 +42,24 @@ Future<void> showHistoryMatrix(BuildContext context) async {
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (dialogContext, setState) => AlertDialog(
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: dialogContext.isMobile ? 12 : 40,
+          vertical: 24,
+        ),
+        contentPadding: EdgeInsets.fromLTRB(
+          dialogContext.isMobile ? 12 : 24,
+          20,
+          dialogContext.isMobile ? 12 : 24,
+          0,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           'Ma trận điểm danh các buổi học',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         content: SizedBox(
           width: 1000,
-          height: 500,
+          height: (dialogContext.screenHeight * 0.65).clamp(240.0, 500.0),
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.surfaceContainerLow,
@@ -56,7 +67,7 @@ Future<void> showHistoryMatrix(BuildContext context) async {
               border: Border.all(color: AppColors.border),
             ),
             child: matrix.sessions.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'Chưa có phiên điểm danh.',
                       style: TextStyle(color: AppColors.textSecondary),
@@ -66,14 +77,14 @@ Future<void> showHistoryMatrix(BuildContext context) async {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
-                        headingRowColor: const WidgetStatePropertyAll(
+                        headingRowColor: WidgetStatePropertyAll(
                           AppColors.surfaceContainerHigh,
                         ),
                         dataRowMinHeight: 54,
                         dataRowMaxHeight: 66,
                         columnSpacing: 24,
                         columns: [
-                          const DataColumn(
+                          DataColumn(
                             label: Text(
                               'MSSV',
                               style: TextStyle(
@@ -82,7 +93,7 @@ Future<void> showHistoryMatrix(BuildContext context) async {
                               ),
                             ),
                           ),
-                          const DataColumn(
+                          DataColumn(
                             label: Text(
                               'Họ tên',
                               style: TextStyle(
@@ -95,7 +106,7 @@ Future<void> showHistoryMatrix(BuildContext context) async {
                             (s) => DataColumn(
                               label: Text(
                                 '${historyDate(s.sessionDate)}\nCa ${s.slotCode}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -111,7 +122,7 @@ Future<void> showHistoryMatrix(BuildContext context) async {
                                   DataCell(
                                     Text(
                                       s.rollNumber,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -138,7 +149,9 @@ Future<void> showHistoryMatrix(BuildContext context) async {
                                                   revision: cell.revision,
                                                 );
                                                 if (updated != null) {
-                                                  setState(() => matrix = updated);
+                                                  setState(
+                                                    () => matrix = updated,
+                                                  );
                                                 }
                                               },
                                         child: _StatusBadge(cell.status),
@@ -157,7 +170,7 @@ Future<void> showHistoryMatrix(BuildContext context) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Đóng'),
+            child: Text('Đóng'),
           ),
         ],
       ),
@@ -187,8 +200,8 @@ Future<AttendanceMatrix?> _editCell(
   final teacherName = vm.summary?.teacherName.isNotEmpty == true
       ? vm.summary!.teacherName
       : (dashVm.teacherName.isNotEmpty
-          ? dashVm.teacherName
-          : 'GV. ThS Lê Trần Anh Khoa');
+            ? dashVm.teacherName
+            : 'GV. ThS Lê Trần Anh Khoa');
 
   final saved = await showDialog<bool>(
     context: context,
@@ -196,231 +209,270 @@ Future<AttendanceMatrix?> _editCell(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         width: 520,
-        padding: const EdgeInsets.all(28),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '$rollNumber · $fullName',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                          height: 1.25,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      splashRadius: 20,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  sessionLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Row(
-                  children: [
-                    Text(
-                      'TRẠNG THÁI ĐIỂM DANH',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF475569),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      ' *',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFEF4444),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedStatus,
-                  icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B)),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
-                  ),
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC2410C), width: 1.5),
-                    ),
-                  ),
-                  items: attendanceStatusLabels.entries
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) setState(() => selectedStatus = value);
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'GHI CHÚ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF475569),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      'Tùy chọn',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: noteController,
-                  maxLines: 4,
-                  maxLength: 2000,
-                  buildCounter: (
-                    context, {
-                    required currentLength,
-                    required isFocused,
-                    maxLength,
-                  }) => null,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
-                  decoration: InputDecoration(
-                    hintText: 'Ghi chú',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                    contentPadding: const EdgeInsets.all(16),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFC2410C), width: 1.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                  ),
-                  child: Row(
+        padding: EdgeInsets.all(dialogContext.isMobile ? 20 : 28),
+        child: SingleChildScrollView(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
+                      Expanded(
+                        child: Text(
+                          '$rollNumber · $fullName',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            height: 1.25,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                            children: [
-                              const TextSpan(text: 'Người thực hiện: '),
-                              TextSpan(
-                                text: teacherName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
-                                ),
-                              ),
-                            ],
-                          ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        icon: Icon(
+                          Icons.close,
+                          color: Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    sessionLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Text(
+                        'TRẠNG THÁI ĐIỂM DANH',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF475569),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        ' *',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFEF4444),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFFC2410C),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                      child: const Text('Hủy'),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedStatus,
+                    icon: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Color(0xFF64748B),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFC2410C),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                      child: const Text('Áp dụng'),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
                     ),
-                  ],
-                ),
-              ],
-            );
-          },
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Color(0xFFC2410C),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    items: attendanceStatusLabels.entries
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e.key,
+                            child: Text(e.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => selectedStatus = value);
+                    },
+                  ),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'GHI CHÚ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF475569),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'Tùy chọn',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    maxLength: 2000,
+                    buildCounter: (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
+                    style: TextStyle(fontSize: 14, color: Color(0xFF0F172A)),
+                    decoration: InputDecoration(
+                      hintText: 'Ghi chú',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 14,
+                      ),
+                      contentPadding: EdgeInsets.all(16),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Color(0xFFC2410C),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(0xFFF1F5F9)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                              children: [
+                                TextSpan(text: 'Người thực hiện: '),
+                                TextSpan(
+                                  text: teacherName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Color(0xFFC2410C),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: Text('Hủy'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Color(0xFFC2410C),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: Text('Áp dụng'),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     ),
@@ -447,7 +499,7 @@ Future<AttendanceMatrix?> _editCell(
       );
     }
   }
-  Future<void>.delayed(const Duration(milliseconds: 400), noteController.dispose);
+  Future<void>.delayed(Duration(milliseconds: 400), noteController.dispose);
   return updated;
 }
 
@@ -458,7 +510,7 @@ Future<void> openHistorySession(BuildContext context) async {
   final live = context.read<LiveSessionViewModel>();
   if (live.session?.isOpen == true) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
           'Bạn đang có phiên điểm danh mở. Hãy kết thúc phiên trước.',
         ),
@@ -473,10 +525,11 @@ Future<void> openHistorySession(BuildContext context) async {
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Mở phiên ${summary.classInfo.classCode}',
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
         content: SizedBox(
           width: 420,
@@ -485,7 +538,7 @@ Future<void> openHistorySession(BuildContext context) async {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: slot,
-                decoration: const InputDecoration(labelText: 'Ca học'),
+                decoration: InputDecoration(labelText: 'Ca học'),
                 items: summary.slotCodes
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),
@@ -494,13 +547,13 @@ Future<void> openHistorySession(BuildContext context) async {
                 },
               ),
               CheckboxListTile(
-                key: const Key('ip-check-toggle'),
+                key: Key('ip-check-toggle'),
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: ipCheck,
                 onChanged: (value) => setState(() => ipCheck = value ?? false),
-                title: const Text('Kiểm tra IP mạng (tùy chọn)'),
-                subtitle: const Text(
+                title: Text('Kiểm tra IP mạng (tùy chọn)'),
+                subtitle: Text(
                   'Bật: sinh viên phải cùng mạng với giảng viên. Mặc định tắt.',
                 ),
               ),
@@ -508,7 +561,7 @@ Future<void> openHistorySession(BuildContext context) async {
                 TextField(
                   controller: ip,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'IP công khai của mạng giảng viên',
                   ),
                 ),
@@ -518,20 +571,20 @@ Future<void> openHistorySession(BuildContext context) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: Text('Hủy'),
           ),
           FilledButton(
             onPressed: ipCheck && ip.text.trim().isEmpty
                 ? null
                 : () => Navigator.pop(context, true),
-            child: const Text('Mở phiên'),
+            child: Text('Mở phiên'),
           ),
         ],
       ),
     ),
   );
   final address = ip.text.trim();
-  Future<void>.delayed(const Duration(milliseconds: 400), ip.dispose);
+  Future<void>.delayed(Duration(milliseconds: 400), ip.dispose);
   if (accepted != true || !context.mounted) return;
   final session = await vm.startSession(slot, address, ipCheck: ipCheck);
   if (session == null || !context.mounted) return;
@@ -584,7 +637,7 @@ class _StatusBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: colors.background,
         borderRadius: BorderRadius.circular(18),

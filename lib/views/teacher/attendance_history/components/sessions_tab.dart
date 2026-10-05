@@ -7,6 +7,7 @@ import '../../../../data/models/session_model.dart';
 import '../../../../data/models/history_student.dart';
 import '../../../../viewmodels/attendance_history_viewmodel.dart';
 import 'session_detail_dialog.dart';
+import '../../../../core/responsive/breakpoints.dart';
 
 class SessionsTab extends StatelessWidget {
   const SessionsTab({super.key});
@@ -20,7 +21,7 @@ class SessionsTab extends StatelessWidget {
       (vm) => vm.loadingSummary,
     );
 
-    if (summary == null) return const SizedBox.shrink();
+    if (summary == null) return SizedBox.shrink();
 
     final sessions = summary.sessions;
 
@@ -35,10 +36,10 @@ class SessionsTab extends StatelessWidget {
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -63,17 +64,14 @@ class SessionsTab extends StatelessWidget {
                 ),
                 if (sessions.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '${sessions.length} buổi',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.primaryDark,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -83,16 +81,16 @@ class SessionsTab extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: AppColors.border),
 
           // Loading overlay or content
           if (loadingSummary)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(40),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
             )
           else if (sessions.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 32, 20, 40),
               child: Center(
                 child: Column(
@@ -114,14 +112,17 @@ class SessionsTab extends StatelessWidget {
           else
             ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics: NeverScrollableScrollPhysics(),
               itemCount: sessions.length,
               separatorBuilder: (context, idx) =>
-                  const Divider(height: 1, color: AppColors.border),
+                  Divider(height: 1, color: AppColors.border),
               itemBuilder: (context, index) {
                 // Show sessions in reverse order (newest first)
                 final session = sessions[sessions.length - 1 - index];
-                return _SessionRow(session: session, index: sessions.length - index);
+                return _SessionRow(
+                  session: session,
+                  index: sessions.length - index,
+                );
               },
             ),
         ],
@@ -201,11 +202,14 @@ class _SessionRowState extends State<_SessionRow> {
       child: GestureDetector(
         onTap: _openDetail,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: Duration(milliseconds: 150),
           color: _hovering
               ? AppColors.primaryLight.withValues(alpha: 0.3)
               : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: context.isMobile ? 12 : 20,
+            vertical: 14,
+          ),
           child: Row(
             children: [
               // Session index badge
@@ -219,14 +223,14 @@ class _SessionRowState extends State<_SessionRow> {
                 alignment: Alignment.center,
                 child: Text(
                   '${widget.index}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.primaryDark,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
 
               // Date & slot info
               Expanded(
@@ -235,38 +239,39 @@ class _SessionRowState extends State<_SessionRow> {
                   children: [
                     Text(
                       'Buổi ${widget.index} — $dateStr',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.schedule_outlined,
                           size: 13,
                           color: AppColors.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'Ca ${widget.session.slotCode}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
                           ),
                         ),
-                        if (widget.session.sessionId.isNotEmpty) ...[
-                          const SizedBox(width: 10),
-                          const Text(
+                        if (widget.session.sessionId.isNotEmpty &&
+                            !context.isMobile) ...[
+                          SizedBox(width: 10),
+                          Text(
                             '·',
                             style: TextStyle(color: AppColors.textTertiary),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           Text(
                             'ID: ${widget.session.sessionId.length > 8 ? widget.session.sessionId.substring(0, 8) : widget.session.sessionId}…',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppColors.textTertiary,
                               fontSize: 11,
                               fontFamily: 'monospace',
@@ -281,7 +286,7 @@ class _SessionRowState extends State<_SessionRow> {
 
               // Status badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _statusBg,
                   borderRadius: BorderRadius.circular(20),
@@ -298,7 +303,7 @@ class _SessionRowState extends State<_SessionRow> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
 
               // Arrow
               Icon(

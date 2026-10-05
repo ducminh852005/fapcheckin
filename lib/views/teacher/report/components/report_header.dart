@@ -19,7 +19,7 @@ class ReportHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -45,7 +45,7 @@ class ReportHeader extends StatelessWidget {
                 width: 1,
                 height: 24,
                 color: ReportColors.border,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
+                margin: EdgeInsets.symmetric(horizontal: 4),
               ),
 
               _buildActionButton(
@@ -66,7 +66,7 @@ class ReportHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTitle(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: constraints.maxWidth,
@@ -79,7 +79,7 @@ class ReportHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(child: _buildTitle()),
-                    const SizedBox(width: AppSpacing.md),
+                    SizedBox(width: AppSpacing.md),
                     Flexible(child: controls),
                   ],
                 );
@@ -99,10 +99,7 @@ class ReportHeader extends StatelessWidget {
 
   Widget _buildDropdown(String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 8,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
       decoration: BoxDecoration(
         color: ReportColors.background,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
@@ -111,8 +108,8 @@ class ReportHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(value, style: AppTextStyles.labelMd),
-          const SizedBox(width: 8),
-          const Icon(Icons.expand_more, size: 18, color: ReportColors.muted),
+          SizedBox(width: 8),
+          Icon(Icons.expand_more, size: 18, color: ReportColors.muted),
         ],
       ),
     );
@@ -124,34 +121,23 @@ class ReportHeader extends StatelessWidget {
     required bool isPrimary,
   }) {
     final bgColor = isPrimary ? AppColors.primaryContainer : Colors.white;
-    final textColor = isPrimary ? Colors.white : ReportColors.text;
     final iconColor = isPrimary ? Colors.white : ReportColors.primary;
 
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      child: InkWell(
-        onTap: () {},
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: bgColor,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: isPrimary ? null : Border.all(color: ReportColors.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: iconColor),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppTextStyles.labelMd.copyWith(color: textColor),
-              ),
-            ],
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: Container(
+            padding: EdgeInsets.all(8), // Tối ưu thành hình vuông
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: isPrimary ? null : Border.all(color: ReportColors.border),
+            ),
+            child: Icon(icon, size: 20, color: iconColor),
           ),
         ),
       ),
