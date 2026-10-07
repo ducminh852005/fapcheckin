@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Shared debug keystore (debug only) so SHA-1 is identical for all devs
+!app/debug.keystore
