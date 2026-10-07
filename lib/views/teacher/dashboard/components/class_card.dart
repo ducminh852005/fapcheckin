@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
@@ -7,7 +9,7 @@ import 'package:fapcheckin/data/models/class_session.dart';
 
 class ClassCard extends StatefulWidget {
   final ClassSession session;
-  final VoidCallback? onStart;
+  final FutureOr<void> Function()? onStart;
 
   const ClassCard({super.key, required this.session, this.onStart});
 
@@ -398,7 +400,7 @@ class _StatusBadgeState extends State<_StatusBadge>
 
 class _ActionButton extends StatelessWidget {
   final ClassSession session;
-  final VoidCallback? onStart;
+  final FutureOr<void> Function()? onStart;
   const _ActionButton({required this.session, this.onStart});
 
   @override
@@ -408,7 +410,7 @@ class _ActionButton extends StatelessWidget {
         icon: Icons.visibility_outlined,
         label: 'Xem phiên',
         primary: true,
-        onTap: onStart ?? () {},
+        onTap: onStart,
       );
     }
 
@@ -420,7 +422,7 @@ class _ActionButton extends StatelessWidget {
       icon: Icons.play_arrow,
       label: 'Mở điểm danh',
       primary: true,
-      onTap: onStart ?? () {},
+      onTap: onStart,
     );
   }
 }
@@ -430,14 +432,15 @@ class _HoverButton extends StatefulWidget {
   final Color? iconColor;
   final String label;
   final bool primary;
-  final VoidCallback onTap;
+  final FutureOr<void> Function()? onTap;
 
   const _HoverButton({
     required this.icon,
+    this.iconColor,
     required this.label,
     required this.primary,
-    required this.onTap,
-  }) : iconColor = null;
+    this.onTap,
+  });
 
   @override
   State<_HoverButton> createState() => _HoverButtonState();
@@ -445,6 +448,19 @@ class _HoverButton extends StatefulWidget {
 
 class _HoverButtonState extends State<_HoverButton> {
   bool _hovered = false;
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading || widget.onTap == null) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.onTap!();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -454,21 +470,26 @@ class _HoverButtonState extends State<_HoverButton> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
+        cursor: _isLoading || widget.onTap == null
+            ? SystemMouseCursors.forbidden
+            : SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: widget.onTap,
+          onTap: _isLoading || widget.onTap == null ? null : _handleTap,
           child: AnimatedContainer(
-            duration: Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 200),
             padding: context.isMobile
-                ? EdgeInsets.symmetric(horizontal: 14, vertical: 10)
-                : EdgeInsets.all(8), // Icon only
+                ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+                : const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: p
-                  ? (_hovered
-                        ? AppColors.primaryDark
-                        : AppColors.primaryContainer)
+                  ? (_isLoading
+                        ? AppColors.primaryDark.withValues(alpha: 0.8)
+                        : (_hovered
+                              ? AppColors.primaryDark
+                              : AppColors.primaryContainer))
                   : (_hovered ? AppColors.surfaceMuted : AppColors.surface),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A142433),
                   blurRadius: 3,
@@ -480,16 +501,10 @@ class _HoverButtonState extends State<_HoverButton> {
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        widget.icon,
-                        size: 20,
-                        color: p
-                            ? AppColors.onPrimary
-                            : (widget.iconColor ?? AppColors.textPrimary),
-                      ),
-                      SizedBox(width: 6),
+                      _buildIcon(p),
+                      const SizedBox(width: 6),
                       Text(
-                        widget.label,
+                        _isLoading ? '\u0110ang m\u1edf...' : widget.label,
                         style: AppTextStyles.labelMd.copyWith(
                           color: p
                               ? AppColors.onPrimary
@@ -499,16 +514,33 @@ class _HoverButtonState extends State<_HoverButton> {
                       ),
                     ],
                   )
-                : Icon(
-                    widget.icon,
-                    size: 20,
-                    color: p
-                        ? AppColors.onPrimary
-                        : (widget.iconColor ?? AppColors.textPrimary),
-                  ),
+                : _buildIcon(p),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildIcon(bool primary) {
+    if (_isLoading) {
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            primary ? AppColors.onPrimary : AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    return Icon(
+      widget.icon,
+      size: 20,
+      color: primary
+          ? AppColors.onPrimary
+          : (widget.iconColor ?? AppColors.textPrimary),
     );
   }
 }

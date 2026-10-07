@@ -11,20 +11,44 @@ import 'package:fapcheckin/views/teacher/report/components/checkin_modality.dart
 import 'package:fapcheckin/views/teacher/report/components/warning_table.dart';
 import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
-class ReportBody extends StatelessWidget {
+class ReportBody extends StatefulWidget {
   const ReportBody({super.key});
+
+  @override
+  State<ReportBody> createState() => _ReportBodyState();
+}
+
+class _ReportBodyState extends State<ReportBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReportViewModel>().load(force: true);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ReportViewModel>();
-    if (!vm.loading && vm.report == null && vm.errorMessage == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => vm.load());
-    }
     if (vm.loading && vm.report == null) {
       return Center(child: CircularProgressIndicator());
     }
     if (vm.errorMessage != null && vm.report == null) {
-      return Center(child: Text(vm.errorMessage!));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(vm.errorMessage!),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => vm.load(force: true),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      );
     }
     final report = vm.report;
     if (report == null) return SizedBox.shrink();
@@ -52,7 +76,7 @@ class ReportBody extends StatelessWidget {
             SizedBox(height: 18),
             Center(
               child: Text(
-                'Dữ liệu từ các phiên điểm danh đã kết thúc',
+                'Dữ liệu từ các phiên điểm danh đang mở và đã hoàn thành',
                 style: Theme.of(context).textTheme.bodySmall
                     ?.copyWith(color: ReportColors.muted),
               ),
