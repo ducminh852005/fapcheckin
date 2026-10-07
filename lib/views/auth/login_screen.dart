@@ -72,9 +72,7 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
       builder: (context, box) => SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: box.maxHeight),
-          child: IntrinsicHeight(
-            child: _buildContent(context, mobile, isGoogleLoading),
-          ),
+          child: _buildContent(context, mobile, isGoogleLoading),
         ),
       ),
     );
@@ -92,12 +90,12 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
         vertical: mobile ? 20 : 32,
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 400),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -193,7 +191,6 @@ class _AuthFormColumnState extends State<_AuthFormColumn> {
                 ),
               ),
             ),
-          ),
           Padding(
             padding: EdgeInsets.only(top: 24),
             child: Text.rich(
