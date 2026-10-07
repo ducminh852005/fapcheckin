@@ -66,40 +66,32 @@ Kiểm tra nhanh mà không cần thiết bị: `flutter run -d chrome` rồi th
 
 ## 4. Đăng nhập Google trên Android
 
-Đăng nhập chỉ chạy được sau khi cấu hình OAuth. Làm một lần cho mỗi máy dev:
+Project đã lưu một debug keystore dùng chung tại `android/app/debug.keystore` và buộc bản debug dùng file này. Vì vậy mọi máy clone/pull repo đều ký APK bằng cùng chứng chỉ, không cần sửa `clientId` hay đăng ký SHA-1 riêng.
 
-1. Lấy SHA-1 của debug keystore trên máy bạn:
-   ```bash
-   keytool -list -v -keystore ~/.android/debug.keystore \
-     -alias androiddebugkey -storepass android -keypass android
-   ```
-   Trên Windows `~` là `C:\Users\<tên>`. Mỗi máy dev có SHA-1 riêng.
-2. Vào Google Cloud Console → project của app → **APIs & Services → Credentials → Create credentials → OAuth client ID** → loại **Android**:
+OAuth chỉ cần được cấu hình một lần cho cả nhóm:
+
+1. Vào Google Cloud Console → project của app → **APIs & Services → Credentials → Create credentials → OAuth client ID** → loại **Android**:
    - Package name: `com.example.fapcheckin`
-   - SHA-1: giá trị ở bước 1.
-   Mỗi SHA-1 một client Android; nhóm có nhiều dev thì tạo nhiều client hoặc dùng chung một debug keystore.
-3. **OAuth consent screen**: nếu app đang ở chế độ Testing, thêm email của bạn vào **Test users**.
-4. Chờ vài phút cho Google áp dụng, rồi bấm "Tiếp tục với Google" trong app.
+   - SHA-1: `C6:60:DC:35:F9:FF:7C:2E:66:DD:D1:8D:66:AD:92:D9:27:CF:A9:E4`
+2. **OAuth consent screen**: nếu app đang ở chế độ Testing, thêm email của từng thành viên vào **Test users**.
+3. Chờ vài phút cho Google áp dụng, rồi chạy `flutter run` và bấm "Tiếp tục với Google" trong app.
+
+`GOOGLE_CLIENT_ID` và `GOOGLE_SERVER_CLIENT_ID` vẫn là Web OAuth client dùng chung. Không thay chúng bằng Android OAuth client ID trên từng máy.
 
 ### SHA-1 của máy là gì và vì sao mỗi máy khác nhau
 
-- **SHA-1 là vân tay (fingerprint) của chứng chỉ dùng để ký APK.** Khi bạn chạy `flutter run`, Gradle ký bản debug bằng file `~/.android/debug.keystore`. File này **tự sinh ra trên từng máy** ở lần build Android đầu tiên, với khóa ngẫu nhiên, nên SHA-1 của mỗi máy dev khác nhau. Dev A và dev B dùng cùng mã nguồn nhưng có hai SHA-1 khác nhau.
+- **SHA-1 là vân tay (fingerprint) của chứng chỉ dùng để ký APK.** Project này cấu hình Gradle ký bản debug bằng `android/app/debug.keystore`, không dùng `~/.android/debug.keystore` riêng của từng máy. Vì vậy mọi thành viên có cùng SHA-1.
 - **Google dùng cặp (package name + SHA-1) để kiểm tra app nào được phép đăng nhập.** OAuth client loại Android chỉ chấp nhận APK có đúng package `com.example.fapcheckin` và được ký bằng chứng chỉ có SHA-1 đã khai báo. Nếu SHA-1 của APK không nằm trong client nào, Google trả `DEVELOPER_ERROR` / `clientConfigurationError` dù mọi thứ khác đều đúng.
 - **SHA-1 không phải bí mật.** Nó chỉ là dấu vân tay công khai nên có thể dán vào chat, issue hay doc. Bí mật là file keystore và mật khẩu của nó.
 - **Có thể lấy SHA-1 bằng một trong hai cách:**
-  - `keytool` như ở bước 1 ở trên (dòng `SHA1:` trong kết quả).
+  - `keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android` (dòng `SHA1:` trong kết quả).
   - `cd android && ./gradlew signingReport`, xem mục `Variant: debug`. Cách này in đúng SHA-1 mà Gradle dùng để ký, tiện khi project cấu hình `signingConfigs` riêng.
 
-**Nhóm nhiều dev nên làm thế nào.** Chọn một trong hai:
-
-| Cách | Làm gì | Ưu / nhược |
-|---|---|---|
-| Mỗi dev một client (khuyến nghị) | Mỗi người lấy SHA-1 của máy mình và tạo thêm một OAuth client Android, cùng package name, khác SHA-1. | Không chia sẻ khóa. Phải có quyền tạo client trong project Google Cloud, và mỗi dev mới cần thêm một client. |
-| Dùng chung một debug keystore | Một người gửi file `debug.keystore` cho cả nhóm (qua kênh riêng), mọi người chép vào `~/.android/`. Khi đó cả nhóm có cùng một SHA-1, chỉ cần một client. | Đơn giản hơn. Chỉ dùng cho debug; **không** commit file này lên git. |
+**Nhóm nhiều dev:** chỉ cần pull file `android/app/debug.keystore` đã được track trong repo. Đây là khóa dành riêng cho môi trường debug, không được dùng làm khóa phát hành.
 
 **Các trường hợp SHA-1 đổi, cần khai báo lại:**
-- Máy mới, cài lại hệ điều hành, hoặc xóa `~/.android/debug.keystore` (Gradle sinh khóa mới nên SHA-1 đổi).
-- Chạy trong CI (mỗi runner có debug keystore riêng nếu không được cấu hình).
+- Thay hoặc xóa `android/app/debug.keystore` trong repo.
+- Chạy trong CI nhưng không checkout hoặc không dùng được shared debug keystore.
 - Build **release**: ký bằng keystore release, có SHA-1 khác hẳn debug. Phải thêm SHA-1 này vào một client Android.
 - Phát hành qua Google Play: Google ký lại app bằng khóa của Play App Signing, SHA-1 lấy ở Play Console → App integrity. Cũng phải khai báo.
 
