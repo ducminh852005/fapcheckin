@@ -124,9 +124,7 @@ class FakeHistoryRepository extends AttendanceHistoryRepository {
   @override
   Future<ApiResult<HistorySummary>> getSummary(String classCode) =>
       pending[classCode]?.future ??
-      Future.value(
-        ApiSuccess(summary(classCode, hasSessions: !emptySessions)),
-      );
+      Future.value(ApiSuccess(summary(classCode, hasSessions: !emptySessions)));
   @override
   Future<ApiResult<HistoryDetail>> save(
     String classCode,
@@ -138,6 +136,7 @@ class FakeHistoryRepository extends AttendanceHistoryRepository {
         ? ApiFailure(ApiError(code: 'CONFLICT', message: 'Changed'))
         : ApiSuccess(saveResult(classCode));
   }
+
   @override
   Future<ApiResult<AttendanceMatrix>> getMatrix(String classCode) async =>
       ApiSuccess(
@@ -252,36 +251,33 @@ void main() {
     expect(vm.students.first.absenceRate, 0);
     expect(vm.students.first.closedSessions, 0);
   });
-  test(
-    'saving a matrix cell refreshes both the summary and the matrix; a failed save leaves them untouched',
-    () async {
-      final repo = FakeHistoryRepository();
-      final vm = AttendanceHistoryViewModel(repo);
-      addTearDown(vm.dispose);
-      await vm.loadClasses();
-      repo.fail = true;
-      final failed = await vm.saveMatrixCell(
-        sessionId: 'S1',
-        rollNumber: 'SE2',
-        status: 'ManualByGV',
-        note: 'Verified in class',
-        revision: 'r2',
-      );
-      expect(failed, isNull);
-      expect(vm.errorMessage, 'Changed');
-      repo.fail = false;
-      final matrix = await vm.saveMatrixCell(
-        sessionId: 'S1',
-        rollNumber: 'SE2',
-        status: 'ManualByGV',
-        note: 'Verified in class',
-        revision: 'r2',
-      );
-      expect(matrix, isNotNull);
-      expect(repo.savedChanges!.single['revision'], 'r2');
-      expect(repo.savedChanges!.single['note'], 'Verified in class');
-    },
-  );
+  test('saving a matrix cell refreshes both the summary and the matrix; a failed save leaves them untouched', () async {
+    final repo = FakeHistoryRepository();
+    final vm = AttendanceHistoryViewModel(repo);
+    addTearDown(vm.dispose);
+    await vm.loadClasses();
+    repo.fail = true;
+    final failed = await vm.saveMatrixCell(
+      sessionId: 'S1',
+      rollNumber: 'SE2',
+      status: 'ManualByGV',
+      note: 'Verified in class',
+      revision: 'r2',
+    );
+    expect(failed, isNull);
+    expect(vm.errorMessage, 'Changed');
+    repo.fail = false;
+    final matrix = await vm.saveMatrixCell(
+      sessionId: 'S1',
+      rollNumber: 'SE2',
+      status: 'ManualByGV',
+      note: 'Verified in class',
+      revision: 'r2',
+    );
+    expect(matrix, isNotNull);
+    expect(repo.savedChanges!.single['revision'], 'r2');
+    expect(repo.savedChanges!.single['note'], 'Verified in class');
+  });
   testWidgets(
     'history screen displays server roster and no-session state without overflow',
     (tester) async {

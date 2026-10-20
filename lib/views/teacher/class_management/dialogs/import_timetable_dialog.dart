@@ -8,6 +8,8 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/network/api_result.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/responsive/breakpoints.dart';
+import '../../../../core/responsive/responsive_dialog.dart';
 import '../../../../data/models/timetable_scan_model.dart';
 import '../../../../data/repositories/timetable_repository.dart';
 
@@ -55,7 +57,7 @@ class _ImportTimetableDialogState extends State<ImportTimetableDialog> {
   Future<void> _pickAndScan() async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
       allowMultiple: false,
       withData: true,
     );
@@ -113,8 +115,11 @@ class _ImportTimetableDialogState extends State<ImportTimetableDialog> {
 
   Future<void> _import() async {
     final scan = _scan;
-    if (scan == null || _selectedClassCodes.isEmpty || _step == _Step.importing)
+    if (scan == null ||
+        _selectedClassCodes.isEmpty ||
+        _step == _Step.importing) {
       return;
+    }
     setState(() {
       _step = _Step.importing;
       _error = null;
@@ -169,80 +174,80 @@ class _ImportTimetableDialogState extends State<ImportTimetableDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 860, maxHeight: 780),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Header ────────────────────────────────────────────────────────
-            _DialogHeader(
-              isBusy: _isBusy,
-              step: _step,
-              onClose: () => Navigator.pop(context),
+    return ResponsiveDialogFrame(
+      maxWidth: 860,
+      maxHeight: 780,
+      radius: 20,
+      backgroundColor:
+          Theme.of(context).dialogTheme.backgroundColor ??
+          Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Header ────────────────────────────────────────────────────────
+          _DialogHeader(
+            isBusy: _isBusy,
+            step: _step,
+            onClose: () => Navigator.pop(context),
+          ),
+
+          Divider(height: 1),
+
+          // ── Body ──────────────────────────────────────────────────────────
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: 250),
+              child: switch (_step) {
+                _Step.pick => _PickStep(
+                  key: ValueKey('pick'),
+                  fileName: _fileName,
+                  error: _error,
+                  onPickPressed: _pickAndScan,
+                ),
+                _Step.scanning => _ScanningStep(
+                  key: ValueKey('scanning'),
+                  previewBytes: _previewBytes,
+                  fileName: _fileName,
+                ),
+                _Step.review => _ReviewStep(
+                  key: ValueKey('review'),
+                  scan: _scan!,
+                  selectedClassCodes: _selectedClassCodes,
+                  previewBytes: _previewBytes,
+                  error: _error,
+                  onToggle: (code, selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedClassCodes.add(code);
+                      } else {
+                        _selectedClassCodes.remove(code);
+                      }
+                    });
+                  },
+                  statusColor: _statusColor,
+                  statusIcon: _statusIcon,
+                  statusLabel: _statusLabel,
+                ),
+                _Step.importing => _ImportingStep(
+                  key: ValueKey('importing'),
+                  count: _selectedClassCodes.length,
+                ),
+              },
             ),
+          ),
 
-            const Divider(height: 1),
+          Divider(height: 1),
 
-            // ── Body ──────────────────────────────────────────────────────────
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: switch (_step) {
-                  _Step.pick => _PickStep(
-                    key: const ValueKey('pick'),
-                    fileName: _fileName,
-                    error: _error,
-                    onPickPressed: _pickAndScan,
-                  ),
-                  _Step.scanning => _ScanningStep(
-                    key: const ValueKey('scanning'),
-                    previewBytes: _previewBytes,
-                    fileName: _fileName,
-                  ),
-                  _Step.review => _ReviewStep(
-                    key: const ValueKey('review'),
-                    scan: _scan!,
-                    selectedClassCodes: _selectedClassCodes,
-                    previewBytes: _previewBytes,
-                    error: _error,
-                    onToggle: (code, selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedClassCodes.add(code);
-                        } else {
-                          _selectedClassCodes.remove(code);
-                        }
-                      });
-                    },
-                    statusColor: _statusColor,
-                    statusIcon: _statusIcon,
-                    statusLabel: _statusLabel,
-                  ),
-                  _Step.importing => _ImportingStep(
-                    key: const ValueKey('importing'),
-                    count: _selectedClassCodes.length,
-                  ),
-                },
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            // ── Footer ────────────────────────────────────────────────────────
-            _DialogFooter(
-              step: _step,
-              selectedCount: _selectedClassCodes.length,
-              isBusy: _isBusy,
-              onCancel: _isBusy ? null : () => Navigator.pop(context),
-              onPick: _isBusy ? null : _pickAndScan,
-              onImport:
-                  (_selectedClassCodes.isEmpty || _isBusy) ? null : _import,
-            ),
-          ],
-        ),
+          // ── Footer ────────────────────────────────────────────────────────
+          _DialogFooter(
+            step: _step,
+            selectedCount: _selectedClassCodes.length,
+            isBusy: _isBusy,
+            onCancel: _isBusy ? null : () => Navigator.pop(context),
+            onPick: _isBusy ? null : _pickAndScan,
+            onImport: (_selectedClassCodes.isEmpty || _isBusy) ? null : _import,
+          ),
+        ],
       ),
     );
   }
@@ -263,7 +268,8 @@ class _DialogHeader extends StatelessWidget {
 
   String get _subtitle {
     return switch (step) {
-      _Step.pick => 'Chụp ảnh thời khóa biểu → hệ thống tự tìm lớp và thêm giáo viên.',
+      _Step.pick =>
+        'Chụp ảnh thời khóa biểu → hệ thống tự tìm lớp và thêm giáo viên.',
       _Step.scanning => 'Đang gửi ảnh lên Google OCR để nhận diện mã lớp...',
       _Step.review => 'Chọn lớp muốn thêm rồi nhấn Xác nhận thêm.',
       _Step.importing => 'Đang cập nhật phân công lớp...',
@@ -273,7 +279,12 @@ class _DialogHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        context.isMobile ? 16 : 24,
+        context.isMobile ? 12 : 20,
+        8,
+        context.isMobile ? 12 : 20,
+      ),
       child: Row(
         children: [
           Container(
@@ -283,13 +294,13 @@ class _DialogHeader extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.document_scanner_outlined,
               color: AppColors.primary,
               size: 22,
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +309,7 @@ class _DialogHeader extends StatelessWidget {
                   'Quét thời khóa biểu',
                   style: AppTextStyles.headlineMd.copyWith(fontSize: 18),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   _subtitle,
                   style: AppTextStyles.bodySm.copyWith(
@@ -308,10 +319,10 @@ class _DialogHeader extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           IconButton(
             onPressed: isBusy ? null : onClose,
-            icon: const Icon(Icons.close),
+            icon: Icon(Icons.close),
             tooltip: 'Đóng',
           ),
         ],
@@ -340,39 +351,39 @@ class _DialogFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+      padding: EdgeInsets.fromLTRB(
+        context.isMobile ? 16 : 24,
+        14,
+        context.isMobile ? 16 : 24,
+        16,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          TextButton(
-            onPressed: onCancel,
-            child: const Text('Hủy'),
-          ),
-          const SizedBox(width: 8),
+          TextButton(onPressed: onCancel, child: Text('Hủy')),
           if (step == _Step.pick) ...[
             FilledButton.icon(
               onPressed: onPick,
-              icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Chọn ảnh để quét'),
+              icon: Icon(Icons.upload_file, size: 18),
+              label: Text('Chọn ảnh để quét'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
           ],
           if (step == _Step.review) ...[
             OutlinedButton.icon(
               onPressed: onPick,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Quét ảnh khác'),
+              icon: Icon(Icons.refresh, size: 18),
+              label: Text('Quét ảnh khác'),
             ),
-            const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: onImport,
-              icon: const Icon(Icons.person_add_alt_1, size: 18),
+              icon: Icon(Icons.person_add_alt_1, size: 18),
               label: Text(
                 selectedCount == 0
                     ? 'Chưa chọn lớp nào'
@@ -380,10 +391,7 @@ class _DialogFooter extends StatelessWidget {
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
             ),
           ],
@@ -410,7 +418,7 @@ class _PickStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.isMobile ? 16 : 24),
       child: Column(
         children: [
           // Drop zone / upload area
@@ -420,7 +428,7 @@ class _PickStep extends StatelessWidget {
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(16),
@@ -440,38 +448,38 @@ class _PickStep extends StatelessWidget {
                           color: AppColors.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.photo_camera_back_outlined,
                           size: 36,
                           color: AppColors.primary,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Text(
                         'Nhấp để chọn ảnh thời khóa biểu',
                         style: AppTextStyles.headlineSm.copyWith(fontSize: 15),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Text(
                         'Hỗ trợ JPG, PNG, GIF, BMP · Tối đa 10 MB',
                         style: AppTextStyles.bodySm.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       // Tips
                       _TipRow(
                         icon: Icons.check_circle_outline,
                         color: AppColors.statusPresent,
                         text: 'Chụp thẳng màn hình, đủ sáng, không bị lóa',
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       _TipRow(
                         icon: Icons.check_circle_outline,
                         color: AppColors.statusPresent,
                         text: 'Mã lớp phải rõ, ví dụ: SE1917-PRN232',
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       _TipRow(
                         icon: Icons.check_circle_outline,
                         color: AppColors.statusPresent,
@@ -485,7 +493,7 @@ class _PickStep extends StatelessWidget {
           ),
 
           if (error != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _ErrorBanner(message: error!),
           ],
         ],
@@ -495,11 +503,7 @@ class _PickStep extends StatelessWidget {
 }
 
 class _TipRow extends StatelessWidget {
-  const _TipRow({
-    required this.icon,
-    required this.color,
-    required this.text,
-  });
+  const _TipRow({required this.icon, required this.color, required this.text});
 
   final IconData icon;
   final Color color;
@@ -507,16 +511,23 @@ class _TipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -535,82 +546,90 @@ class _ScanningStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: image preview
-          if (previewBytes != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.memory(
-                previewBytes!,
-                width: 300,
-                fit: BoxFit.cover,
-              ),
+    final mobile = context.isMobile;
+    final preview = previewBytes == null
+        ? null
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              previewBytes!,
+              width: mobile ? double.infinity : 300,
+              height: mobile ? 160 : null,
+              fit: BoxFit.cover,
             ),
-          const SizedBox(width: 24),
-
-          // Right: status
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+          );
+    final status = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+        SizedBox(height: 20),
+        Text(
+          'Đang nhận diện thời khóa biểu…',
+          style: AppTextStyles.headlineSm.copyWith(fontSize: 16),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Hệ thống đang dùng Google OCR để đọc mã lớp và mã môn học từ ảnh của bạn. '
+          'Quá trình này thường mất 10–20 giây.',
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+        ),
+        if (fileName != null) ...[
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(strokeWidth: 3),
+                Icon(
+                  Icons.image_outlined,
+                  size: 16,
+                  color: AppColors.textSecondary,
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  'Đang nhận diện thời khóa biểu…',
-                  style: AppTextStyles.headlineSm.copyWith(fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Hệ thống đang dùng Google OCR để đọc mã lớp và mã môn học từ ảnh của bạn. '
-                  'Quá trình này thường mất 10–20 giây.',
-                  style: AppTextStyles.bodySm.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                if (fileName != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.image_outlined,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          fileName!,
-                          style: AppTextStyles.caption.copyWith(
-                            fontFamily: 'JetBrains Mono',
-                          ),
-                        ),
-                      ],
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    fileName!,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.copyWith(
+                      fontFamily: 'JetBrains Mono',
                     ),
                   ),
-                ],
-                const SizedBox(height: 16),
-                const LinearProgressIndicator(),
+                ),
               ],
             ),
           ),
+        ],
+        SizedBox(height: 16),
+        LinearProgressIndicator(),
+      ],
+    );
+
+    if (mobile) {
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [?preview, SizedBox(height: 20), status],
+        ),
+      );
+    }
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ?preview,
+          SizedBox(width: 24),
+          Expanded(child: status),
         ],
       ),
     );
@@ -641,8 +660,7 @@ class _ReviewStep extends StatelessWidget {
   final IconData Function(TimetableScanEntry) statusIcon;
   final String Function(TimetableScanEntry) statusLabel;
 
-  int get _availableCount =>
-      scan.entries.where((e) => e.canImport).length;
+  int get _availableCount => scan.entries.where((e) => e.canImport).length;
 
   int get _selectedCount => selectedClassCodes.length;
 
@@ -650,25 +668,24 @@ class _ReviewStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = scan.entries;
     final availableEntries = entries.where((e) => e.canImport).toList();
-    final otherEntries =
-        entries.where((e) => !e.canImport).toList();
+    final otherEntries = entries.where((e) => !e.canImport).toList();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+      padding: EdgeInsets.fromLTRB(0, 0, 0, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Left panel: image preview ──────────────────────────────────────
-          if (previewBytes != null)
+          if (previewBytes != null && !context.isMobile)
             Container(
               width: 240,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Color(0xFF111827),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                 ),
               ),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -679,17 +696,14 @@ class _ReviewStep extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.memory(
-                        previewBytes!,
-                        fit: BoxFit.contain,
-                      ),
+                      child: Image.memory(previewBytes!, fit: BoxFit.contain),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   // Detected dates
                   if (scan.detectedDates.isNotEmpty) ...[
                     Text(
@@ -699,14 +713,14 @@ class _ReviewStep extends StatelessWidget {
                         fontSize: 10,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Wrap(
                       spacing: 4,
                       runSpacing: 4,
                       children: scan.detectedDates
                           .map(
                             (d) => Container(
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
                               ),
@@ -716,7 +730,7 @@ class _ReviewStep extends StatelessWidget {
                               ),
                               child: Text(
                                 d,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.white70,
                                   fontFamily: 'JetBrains Mono',
@@ -746,24 +760,21 @@ class _ReviewStep extends StatelessWidget {
                 // Summary bar
                 Container(
                   color: AppColors.surfaceContainerLow,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  child: Row(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
                       _SummaryChip(
                         label: 'Tìm thấy ${entries.length} mục',
                         icon: Icons.search,
                         color: AppColors.primary,
                       ),
-                      const SizedBox(width: 8),
                       _SummaryChip(
                         label: '$_availableCount sẵn sàng',
                         icon: Icons.add_circle_outline_rounded,
                         color: AppColors.statusPresent,
                       ),
-                      const SizedBox(width: 8),
                       _SummaryChip(
                         label: '$_selectedCount đã chọn',
                         icon: Icons.check_box_outlined,
@@ -775,39 +786,35 @@ class _ReviewStep extends StatelessWidget {
 
                 if (error != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: _ErrorBanner(message: error!),
                   ),
 
                 // Entry list
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.symmetric(vertical: 8),
                     children: [
                       if (availableEntries.isNotEmpty) ...[
                         _SectionLabel(
-                          label:
-                              'Lớp có thể thêm (${availableEntries.length})',
+                          label: 'Lớp có thể thêm (${availableEntries.length})',
                         ),
                         ...availableEntries.map(
                           (entry) => _EntryTile(
                             entry: entry,
-                            isSelected:
-                                selectedClassCodes.contains(
-                                  entry.matchedClassCode,
-                                ),
+                            isSelected: selectedClassCodes.contains(
+                              entry.matchedClassCode,
+                            ),
                             statusColor: statusColor(entry),
                             statusIcon: statusIcon(entry),
                             statusLabel: statusLabel(entry),
-                            onToggle: (val) => onToggle(
-                              entry.matchedClassCode!,
-                              val ?? false,
-                            ),
+                            onToggle: (val) =>
+                                onToggle(entry.matchedClassCode!, val ?? false),
                           ),
                         ),
                       ],
                       if (otherEntries.isNotEmpty) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _SectionLabel(
                           label: 'Không thể thêm (${otherEntries.length})',
                         ),
@@ -848,7 +855,7 @@ class _SummaryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
@@ -858,7 +865,7 @@ class _SummaryChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 13, color: color),
-          const SizedBox(width: 5),
+          SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
@@ -881,10 +888,10 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           color: AppColors.textTertiary,
@@ -921,11 +928,9 @@ class _EntryTile extends StatelessWidget {
           ? AppColors.statusPresent.withValues(alpha: 0.04)
           : Colors.transparent,
       child: InkWell(
-        onTap: canSelect
-            ? () => onToggle?.call(!isSelected)
-            : null,
+        onTap: canSelect ? () => onToggle?.call(!isSelected) : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               // Checkbox (only for selectable)
@@ -938,7 +943,7 @@ class _EntryTile extends StatelessWidget {
                         activeColor: AppColors.statusPresent,
                         visualDensity: VisualDensity.compact,
                       )
-                    : const SizedBox(),
+                    : SizedBox(),
               ),
 
               // Status icon
@@ -951,7 +956,7 @@ class _EntryTile extends StatelessWidget {
                 ),
                 child: Icon(statusIcon, size: 18, color: statusColor),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
 
               // Info
               Expanded(
@@ -967,9 +972,9 @@ class _EntryTile extends StatelessWidget {
                           ),
                         ),
                         if (entry.room.isNotEmpty) ...[
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: 6,
                               vertical: 1,
                             ),
@@ -979,7 +984,7 @@ class _EntryTile extends StatelessWidget {
                             ),
                             child: Text(
                               'Phòng ${entry.room}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontFamily: 'JetBrains Mono',
                                 color: AppColors.textSecondary,
@@ -989,7 +994,7 @@ class _EntryTile extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       entry.message,
                       style: AppTextStyles.caption.copyWith(
@@ -1002,16 +1007,11 @@ class _EntryTile extends StatelessWidget {
 
               // Status badge
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: statusColor.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   statusLabel,
@@ -1040,22 +1040,22 @@ class _ImportingStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(48),
+      padding: EdgeInsets.all(48),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 56,
             height: 56,
             child: CircularProgressIndicator(strokeWidth: 4),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Text(
             'Đang thêm giáo viên vào $count lớp…',
             style: AppTextStyles.headlineSm.copyWith(fontSize: 16),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Vui lòng không đóng cửa sổ này.',
             style: AppTextStyles.bodySm.copyWith(
@@ -1078,7 +1078,7 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
@@ -1086,12 +1086,12 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.error, size: 18),
-          const SizedBox(width: 10),
+          Icon(Icons.error_outline, color: AppColors.error, size: 18),
+          SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: AppColors.error, fontSize: 13),
+              style: TextStyle(color: AppColors.error, fontSize: 13),
             ),
           ),
         ],

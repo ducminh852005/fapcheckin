@@ -22,11 +22,11 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A142433),
             blurRadius: 4,
@@ -40,12 +40,17 @@ class StatCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: AppTextStyles.labelMd.copyWith(
-                  color: AppColors.textSecondary,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
+              SizedBox(width: 8),
               Container(
                 width: 36,
                 height: 36,
@@ -57,12 +62,9 @@ class StatCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           valueWidget,
-          if (bottomWidget != null) ...[
-            const SizedBox(height: 8),
-            bottomWidget!,
-          ],
+          if (bottomWidget != null) ...[SizedBox(height: 8), bottomWidget!],
         ],
       ),
     );
@@ -98,23 +100,25 @@ class TodayScheduleStatCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            'tiết học',
-            style: AppTextStyles.bodySm.copyWith(
-              fontWeight: FontWeight.w500,
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'tiết học',
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
         ],
       ),
       bottomWidget: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 8,
           children: [
             Text(
               '$morningClasses ca sáng',
@@ -159,13 +163,16 @@ class SessionProgressStatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          Text(
-            '$completed / $total',
-            style: AppTextStyles.headlineLg.copyWith(
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              '$completed / $total',
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.headlineLg.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             'phiên',
             style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w500),
@@ -180,14 +187,12 @@ class SessionProgressStatCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: AppColors.surfaceContainerHigh,
-                valueColor: const AlwaysStoppedAnimation(
-                  AppColors.primaryContainer,
-                ),
+                valueColor: AlwaysStoppedAnimation(AppColors.primaryContainer),
                 minHeight: 8,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             '${(progress * 100).round()}%',
             style: AppTextStyles.codeSm.copyWith(
@@ -230,17 +235,20 @@ class PresentStudentsStatCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            '/ $total SV',
-            style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w500),
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              '/ $total SV',
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
       bottomWidget: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: AppColors.statusPresentBg,
               borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -252,10 +260,15 @@ class PresentStudentsStatCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            'Đạt chỉ tiêu buổi học',
-            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Đạt chỉ tiêu buổi học',
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
@@ -278,8 +291,10 @@ class AvgAttendanceStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double delta = rate - prevRate;
     final bool positive = delta >= 0;
-    final String deltaStr = '${positive ? '+' : ''}${(delta * 100).toStringAsFixed(1)}%';
-    final String rateStr = '${(rate * 100).toStringAsFixed(1).replaceAll('.', ',')}%';
+    final String deltaStr =
+        '${positive ? '+' : ''}${(delta * 100).toStringAsFixed(1)}%';
+    final String rateStr =
+        '${(rate * 100).toStringAsFixed(1).replaceAll('.', ',')}%';
     final String prevStr = '${(prevRate * 100).toStringAsFixed(1)}%';
 
     return StatCard(
@@ -296,22 +311,29 @@ class AvgAttendanceStatCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 8),
-          Row(
-            children: [
-              Icon(
-                positive ? Icons.north_east : Icons.south_east,
-                size: 16,
-                color: positive ? AppColors.statusPresent : AppColors.statusAbsent,
-              ),
-              Text(
-                deltaStr,
-                style: AppTextStyles.labelSm.copyWith(
-                  color: positive ? AppColors.statusPresent : AppColors.statusAbsent,
-                  fontWeight: FontWeight.w600,
+          SizedBox(width: 8),
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  positive ? Icons.north_east : Icons.south_east,
+                  size: 16,
+                  color: positive
+                      ? AppColors.statusPresent
+                      : AppColors.statusAbsent,
                 ),
-              ),
-            ],
+                Text(
+                  deltaStr,
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: positive
+                        ? AppColors.statusPresent
+                        : AppColors.statusAbsent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

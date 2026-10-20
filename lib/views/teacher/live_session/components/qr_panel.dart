@@ -6,11 +6,12 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:flutter/services.dart';
 
-const String kCheckinBaseUrl =
+String kCheckinBaseUrl =
     'https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec';
 
 /// Left column: class info + QR code + session controls
@@ -25,14 +26,14 @@ class QrPanel extends StatelessWidget {
       builder: (context, vm, _) {
         return Container(
           width: double.infinity,
-          constraints: minHeight == null
+          constraints: minHeight == null || context.isMobile
               ? null
               : BoxConstraints(minHeight: minHeight!),
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A142433),
                 blurRadius: 4,
@@ -44,11 +45,11 @@ class QrPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _ClassInfoHeader(vm: vm),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               _QrCodeDisplay(vm: vm),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               _SessionInfoGrid(vm: vm),
-              const SizedBox(height: AppSpacing.md),
+              SizedBox(height: AppSpacing.md),
               _ControlButtons(),
             ],
           ),
@@ -80,11 +81,11 @@ class _ClassInfoHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _ActiveBadge(),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           '${vm.courseCode} — ${vm.courseName}',
           style: AppTextStyles.headlineMd.copyWith(
@@ -94,10 +95,10 @@ class _ClassInfoHeader extends StatelessWidget {
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         // Meta chips row
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -150,7 +151,7 @@ class _ActiveBadgeState extends State<_ActiveBadge>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _anim = Tween<double>(begin: 0.4, end: 1.0).animate(_ctrl);
   }
@@ -168,11 +169,11 @@ class _ActiveBadgeState extends State<_ActiveBadge>
 
     if (isClosed) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.statusAbsentBg,
           borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: Color(0x0A142433),
               blurRadius: 2,
@@ -186,12 +187,12 @@ class _ActiveBadgeState extends State<_ActiveBadge>
             Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.statusAbsent,
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               'Phiên đã đóng',
               style: AppTextStyles.labelSm.copyWith(
@@ -205,11 +206,11 @@ class _ActiveBadgeState extends State<_ActiveBadge>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.statusPresentBg,
         borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A142433),
             blurRadius: 2,
@@ -222,19 +223,19 @@ class _ActiveBadgeState extends State<_ActiveBadge>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, __) => Opacity(
+            builder: (_, _) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.statusPresent,
                   shape: BoxShape.circle,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             'Phiên đang mở',
             style: AppTextStyles.labelSm.copyWith(
@@ -267,7 +268,7 @@ class _MetaItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 16, color: iconColor ?? AppColors.textSecondary),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           label,
           style: AppTextStyles.labelSm.copyWith(
@@ -287,171 +288,188 @@ class _QrCodeDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final outerPad = context.isMobile ? 12.0 : 20.0;
+        final width = constraints.maxWidth < 360 ? constraints.maxWidth : 360.0;
+        // outer padding + inner (12) padding on both sides
+        final qrSize = (width - 2 * outerPad - 24).clamp(140.0, 220.0);
+        return _buildQr(context, outerPad, qrSize);
+      },
+    );
+  }
+
+  Widget _buildQr(BuildContext context, double outerPad, double qrSize) {
     return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 360),
-        padding: const EdgeInsets.all(20),
+        constraints: BoxConstraints(maxWidth: 360),
+        padding: EdgeInsets.all(outerPad),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(color: Color(0x05142433), blurRadius: 8, spreadRadius: 2),
           ],
         ),
         child: Stack(
           alignment: Alignment.center,
           children: [
-          // Background blurs
-          Positioned(
-            top: -48,
-            right: -48,
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-              child: const SizedBox.shrink(),
-            ),
-          ),
-          Positioned(
-            bottom: -48,
-            left: -48,
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: AppColors.secondaryFixed.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-              child: const SizedBox.shrink(),
-            ),
-          ),
-          // QR + rotation status
-          Column(
-            children: [
-              // QR Code placeholder
-              Container(
-                padding: const EdgeInsets.all(12),
+            // Background blurs
+            Positioned(
+              top: -48,
+              right: -48,
+              child: Container(
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x12142433),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  color: AppColors.primaryLight.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
                 ),
-                child: vm.session == null
-                    ? SizedBox(
-                        width: 220,
-                        height: 220,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              size: 48,
-                              color: AppColors.textTertiary,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Phiên đã kết thúc',
-                              style: AppTextStyles.labelMd.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : vm.qrToken.isEmpty
-                    ? const SizedBox(
-                        width: 220,
-                        height: 220,
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : QrImageView(
-                        data: vm.checkinUrl,
-                        version: QrVersions.auto,
-                        size: 220.0,
-                        backgroundColor: Colors.white,
-                      ),
+                child: SizedBox.shrink(),
               ),
-              const SizedBox(height: 16),
-              // One-minute QR countdown
-              if (vm.session != null)
+            ),
+            Positioned(
+              bottom: -48,
+              left: -48,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: SizedBox.shrink(),
+              ),
+            ),
+            // QR + rotation status
+            Column(
+              children: [
+                // QR Code placeholder
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                    boxShadow: const [
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x0A142433),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
+                        color: Color(0x12142433),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CustomPaint(
-                              size: const Size(36, 36),
-                              painter: _CircularTimerPainter(
-                                progress: vm.qrProgress,
-                                trackColor: AppColors.surfaceMuted,
-                                progressColor: AppColors.primaryContainer,
+                  child: vm.session == null
+                      ? SizedBox(
+                          width: qrSize,
+                          height: qrSize,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 48,
+                                color: AppColors.textTertiary,
                               ),
-                            ),
-                            Text(
-                              '${vm.qrRefreshSeconds}s',
-                              style: AppTextStyles.codeSm.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 10,
+                              SizedBox(height: 16),
+                              Text(
+                                'Phiên đã kết thúc',
+                                style: AppTextStyles.labelMd.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        )
+                      : vm.qrToken.isEmpty
+                      ? SizedBox(
+                          width: qrSize,
+                          height: qrSize,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : QrImageView(
+                          data: vm.checkinUrl,
+                          version: QrVersions.auto,
+                          size: qrSize,
+                          backgroundColor: Colors.white,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
-                            style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            'Chu kỳ làm mới 1 phút',
-                            style: AppTextStyles.caption.copyWith(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
-            ],
-          ),
+                SizedBox(height: 16),
+                // One-minute QR countdown
+                if (vm.session != null)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x0A142433),
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CustomPaint(
+                                size: Size(36, 36),
+                                painter: _CircularTimerPainter(
+                                  progress: vm.qrProgress,
+                                  trackColor: AppColors.surfaceMuted,
+                                  progressColor: AppColors.primaryContainer,
+                                ),
+                              ),
+                              Text(
+                                '${vm.qrRefreshSeconds}s',
+                                style: AppTextStyles.codeSm.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Đổi mã bảo mật: ${vm.qrRefreshSeconds}s / ${LiveSessionViewModel.qrCycleDuration}s',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.labelSm.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Chu kỳ làm mới 1 phút',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -466,37 +484,45 @@ class _SessionInfoGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final timeTile = _InfoTile(
+      icon: Icons.timer_outlined,
+      label: 'Thời gian phiên còn lại',
+      value: vm.sessionTimeDisplay,
+      valueSuffix: 'phút',
+      valueColor: AppColors.primaryDark,
+    );
+    final ipTile = vm.ipCheck
+        ? _InfoTile(
+            icon: Icons.wifi_lock_outlined,
+            label: 'IP Wi-Fi FPT Giảng viên',
+            value: vm.teacherIp,
+            showVerified: true,
+          )
+        : const _InfoTile(
+            icon: Icons.wifi_off_outlined,
+            label: 'Kiểm tra IP mạng',
+            value: 'Tắt',
+          );
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _InfoTile(
-                icon: Icons.timer_outlined,
-                label: 'Thời gian phiên còn lại',
-                value: vm.sessionTimeDisplay,
-                valueSuffix: 'phút',
-                valueColor: AppColors.primaryDark,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: vm.ipCheck
-                  ? _InfoTile(
-                      icon: Icons.wifi_lock_outlined,
-                      label: 'IP Wi-Fi FPT Giảng viên',
-                      value: vm.teacherIp,
-                      showVerified: true,
-                    )
-                  : const _InfoTile(
-                      icon: Icons.wifi_off_outlined,
-                      label: 'Kiểm tra IP mạng',
-                      value: 'Tắt',
-                    ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        if (context.isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              timeTile,
+              SizedBox(height: AppSpacing.sm),
+              ipTile,
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: timeTile),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(child: ipTile),
+            ],
+          ),
+        SizedBox(height: AppSpacing.sm),
         _WebSocketBar(),
       ],
     );
@@ -523,7 +549,7 @@ class _InfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
@@ -534,7 +560,7 @@ class _InfoTile extends StatelessWidget {
           Row(
             children: [
               Icon(icon, size: 15, color: AppColors.textTertiary),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Expanded(
                 child: Text(
                   label,
@@ -547,25 +573,29 @@ class _InfoTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Row(
             children: [
-              Text(
-                value,
-                style: valueSuffix != null
-                    ? AppTextStyles.code.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: valueColor ?? AppColors.textPrimary,
-                        letterSpacing: -0.5,
-                      )
-                    : AppTextStyles.labelMd.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: valueSuffix != null
+                      ? AppTextStyles.code.copyWith(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: valueColor ?? AppColors.textPrimary,
+                          letterSpacing: -0.5,
+                        )
+                      : AppTextStyles.labelMd.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                ),
               ),
               if (valueSuffix != null) ...[
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
                   valueSuffix!,
                   style: AppTextStyles.caption.copyWith(
@@ -575,12 +605,8 @@ class _InfoTile extends StatelessWidget {
                 ),
               ],
               if (showVerified) ...[
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.verified,
-                  size: 16,
-                  color: AppColors.statusPresent,
-                ),
+                SizedBox(width: 6),
+                Icon(Icons.verified, size: 16, color: AppColors.statusPresent),
               ],
             ],
           ),
@@ -605,7 +631,7 @@ class _WebSocketBarState extends State<_WebSocketBar>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     _anim = Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl);
   }
@@ -619,11 +645,11 @@ class _WebSocketBarState extends State<_WebSocketBar>
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A142433),
             blurRadius: 2,
@@ -635,19 +661,19 @@ class _WebSocketBarState extends State<_WebSocketBar>
         children: [
           AnimatedBuilder(
             animation: _anim,
-            builder: (_, __) => Opacity(
+            builder: (_, _) => Opacity(
               opacity: _anim.value,
               child: Container(
                 width: 10,
                 height: 10,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.statusPresent,
                   shape: BoxShape.circle,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               'Kết nối WebSocket ổn định (24ms)',
@@ -658,7 +684,7 @@ class _WebSocketBarState extends State<_WebSocketBar>
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: AppColors.surfaceMuted,
               borderRadius: BorderRadius.circular(4),
@@ -682,40 +708,42 @@ class _ControlButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<LiveSessionViewModel>();
+    final refreshBtn = _ControlBtn(
+      icon: Icons.sync,
+      iconColor: AppColors.primary,
+      label: 'Làm mới QR ngay',
+      onTap: vm.isClosed ? () {} : () => vm.refreshQrNow(),
+    );
+    final copyBtn = _ControlBtn(
+      icon: Icons.content_copy_outlined,
+      iconColor: AppColors.textSecondary,
+      label: 'Sao chép URL dự phòng',
+      onTap: () async {
+        if (vm.checkinUrl.isEmpty) return;
+        await Clipboard.setData(ClipboardData(text: vm.checkinUrl));
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Đã sao chép URL điểm danh.')));
+        }
+      },
+    );
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _ControlBtn(
-                icon: Icons.sync,
-                iconColor: AppColors.primary,
-                label: 'Làm mới QR ngay',
-                onTap: vm.isClosed ? () {} : () => vm.refreshQrNow(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _ControlBtn(
-                icon: Icons.content_copy_outlined,
-                iconColor: AppColors.textSecondary,
-                label: 'Sao chép URL dự phòng',
-                onTap: () async {
-                  if (vm.checkinUrl.isEmpty) return;
-                  await Clipboard.setData(ClipboardData(text: vm.checkinUrl));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép URL điểm danh.'),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        if (context.isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [refreshBtn, SizedBox(height: 8), copyBtn],
+          )
+        else
+          Row(
+            children: [
+              Expanded(child: refreshBtn),
+              SizedBox(width: 8),
+              Expanded(child: copyBtn),
+            ],
+          ),
+        SizedBox(height: 8),
         _EndSessionButton(),
       ],
     );
@@ -750,14 +778,17 @@ class _ControlBtnState extends State<_ControlBtn> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: context.isMobile ? 14 : 10,
+          ),
           decoration: BoxDecoration(
             color: _hovered
                 ? AppColors.surfaceContainerHigh
                 : AppColors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A142433),
                 blurRadius: 2,
@@ -769,7 +800,7 @@ class _ControlBtnState extends State<_ControlBtn> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(widget.icon, size: 18, color: widget.iconColor),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Flexible(
                 child: Text(
                   widget.label,
@@ -813,14 +844,14 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Kết thúc phiên điểm danh?'),
-                    content: const Text(
+                    title: Text('Kết thúc phiên điểm danh?'),
+                    content: Text(
                       'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Hủy'),
+                        child: Text('Hủy'),
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -828,7 +859,7 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('Kết thúc phiên'),
+                        child: Text('Kết thúc phiên'),
                       ),
                     ],
                   ),
@@ -858,9 +889,9 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
                 }
               },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: Duration(milliseconds: 200),
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: context.isMobile ? 14 : 10),
           decoration: BoxDecoration(
             color: isClosed
                 ? AppColors.surfaceMuted
@@ -868,7 +899,7 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
                       ? AppColors.statusAbsent
                       : AppColors.statusAbsentBg),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: Color(0x0A142433),
                 blurRadius: 2,
@@ -888,16 +919,22 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
                     ? AppColors.textSecondary
                     : (_hovered ? AppColors.onError : AppColors.statusAbsent),
               ),
-              const SizedBox(width: 8),
-              Text(
-                isClosed
-                    ? 'Phiên điểm danh đã kết thúc'
-                    : 'Kết thúc phiên điểm danh',
-                style: AppTextStyles.labelMd.copyWith(
-                  color: isClosed
-                      ? AppColors.textSecondary
-                      : (_hovered ? AppColors.onError : AppColors.statusAbsent),
-                  fontWeight: FontWeight.w600,
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  isClosed
+                      ? 'Phiên điểm danh đã kết thúc'
+                      : 'Kết thúc phiên điểm danh',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: isClosed
+                        ? AppColors.textSecondary
+                        : (_hovered
+                              ? AppColors.onError
+                              : AppColors.statusAbsent),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -912,8 +949,8 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
 class _QrCodePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final dark = Paint()..color = const Color(0xFF142433);
-    final teal = Paint()..color = const Color(0xFF0C7489);
+    final dark = Paint()..color = Color(0xFF142433);
+    final teal = Paint()..color = Color(0xFF0C7489);
     final white = Paint()..color = Colors.white;
     final scale = size.width / 160;
 
@@ -947,8 +984,9 @@ class _QrCodePainter extends CustomPainter {
         // Skip target zones
         if ((col < 7 && row < 7) ||
             (col >= 14 && row < 7) ||
-            (col < 7 && row >= 14))
+            (col < 7 && row >= 14)) {
           continue;
+        }
         // Skip center
         if (col >= 8 && col <= 12 && row >= 8 && row <= 12) continue;
         if (rng.nextDouble() < 0.4) {
@@ -960,7 +998,7 @@ class _QrCodePainter extends CustomPainter {
     // Center circle
     final centerPaint = Paint()..color = Colors.white;
     canvas.drawCircle(Offset(80 * scale, 80 * scale), 14 * scale, centerPaint);
-    final tealPaint = Paint()..color = const Color(0xFF0C7489);
+    final tealPaint = Paint()..color = Color(0xFF0C7489);
     canvas.drawCircle(Offset(80 * scale, 80 * scale), 11 * scale, tealPaint);
     // Checkmark
     final checkPaint = Paint()

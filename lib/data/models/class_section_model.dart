@@ -20,6 +20,7 @@ class ClassSectionModel {
   final double averageAttendance;
   final bool isActive;
   final String? activeSessionId;
+
   /// IP check setting of the session that is currently open for this class (null = none open).
   final bool? activeSessionIpCheck;
   final bool isMakeup;
@@ -60,7 +61,10 @@ class ClassSectionModel {
       startTime: start != null ? formatTimeLabel(start) : null,
       endTime: end != null ? formatTimeLabel(end) : null,
       period: jsonText(json['period']),
-      timeLabel: formatTimeLabel(rawLabel ?? (start != null && end != null ? '$start - $end' : 'Chưa rõ')),
+      timeLabel: formatTimeLabel(
+        rawLabel ??
+            (start != null && end != null ? '$start - $end' : 'Chưa rõ'),
+      ),
       completedSessions: jsonNumber(json['completedSessions'])?.toInt() ?? 0,
       totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 30,
       averageAttendance:

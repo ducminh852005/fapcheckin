@@ -6,6 +6,7 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/views/teacher/report/report_colors.dart';
 import 'package:fapcheckin/data/models/report_model.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
 class CheckinModality extends StatelessWidget {
   final ReportData data;
@@ -14,11 +15,11 @@ class CheckinModality extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(context.isMobile ? 16 : AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -30,9 +31,9 @@ class CheckinModality extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Phương thức điểm danh', style: AppTextStyles.headlineSm),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text('Phân bổ kênh ghi nhận điểm danh', style: AppTextStyles.caption),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
           // Donut Chart
           Center(
@@ -43,7 +44,7 @@ class CheckinModality extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   CustomPaint(
-                    size: const Size(144, 144),
+                    size: Size(144, 144),
                     painter: _DonutChartPainter(
                       qrRate: _rate('qr'),
                       otherRate: _rate('other'),
@@ -71,12 +72,12 @@ class CheckinModality extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
           // Legend
           ...data.methods.map(
             (method) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: EdgeInsets.only(bottom: 8),
               child: _buildLegendRow(
                 method.label,
                 '${(method.rate * 100).toStringAsFixed(1)}%',
@@ -112,7 +113,7 @@ class CheckinModality extends StatelessWidget {
                 height: 10,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
@@ -126,7 +127,7 @@ class CheckinModality extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
+        SizedBox(width: AppSpacing.sm),
         Text(
           value,
           style: AppTextStyles.code.copyWith(fontWeight: FontWeight.w700),

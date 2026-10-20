@@ -3,10 +3,22 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
+import 'package:fapcheckin/views/teacher/dashboard/components/nav_destinations.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 
 class TopBar extends StatelessWidget {
-  const TopBar({super.key});
+  final bool isDesktop;
+  final String currentRoute;
+
+  const TopBar({super.key, this.isDesktop = true, this.currentRoute = ''});
+
+  String get _title {
+    for (final d in kNavDestinations) {
+      if (d.isActive(currentRoute)) return d.label;
+    }
+    return 'FAP Check-in';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +26,7 @@ class TopBar extends StatelessWidget {
       builder: (context, vm, _) {
         return Container(
           height: AppSpacing.topBarHeight,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Color(0xF5FFFFFF), // surface/95
             boxShadow: [
               BoxShadow(
@@ -24,10 +36,31 @@ class TopBar extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: context.pagePadding),
           child: Row(
             children: [
-              const Spacer(),
+              if (!isDesktop) ...[
+                _TopBarIconButton(
+                  icon: context.isMobile
+                      ? Icons.account_circle_outlined
+                      : Icons.menu,
+                  onTap: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                ),
+                SizedBox(width: AppSpacing.sm),
+              ],
+              if (context.isMobile)
+                Expanded(
+                  child: Text(
+                    _title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headlineSm,
+                  ),
+                )
+              else
+                Spacer(),
               // Right: notifications + profile + window controls
               Row(
                 children: [
@@ -45,7 +78,7 @@ class TopBar extends StatelessWidget {
                         child: Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.error,
                             shape: BoxShape.circle,
                           ),
@@ -59,54 +92,6 @@ class TopBar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _PulsingDot extends StatefulWidget {
-  final Color color;
-  const _PulsingDot({required this.color});
-
-  @override
-  State<_PulsingDot> createState() => _PulsingDotState();
-}
-
-class _PulsingDotState extends State<_PulsingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (_, __) => Opacity(
-        opacity: _animation.value,
-        child: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: widget.color,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -126,8 +111,8 @@ class _TopBarIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 20, color: AppColors.textSecondary),
+          padding: EdgeInsets.all(10),
+          child: Icon(icon, size: 22, color: AppColors.textSecondary),
         ),
       ),
     );

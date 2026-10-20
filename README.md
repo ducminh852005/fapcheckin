@@ -4,6 +4,7 @@
 
 **Tài liệu kiến trúc đầy đủ:** [docs/README.md](docs/README.md)
 **Pattern code & chuẩn giao tiếp với backend:** [docs/quick-start.md](docs/quick-start.md)
+**Chạy & build app trên mobile:** [docs/quick-start-mobile.md](docs/quick-start-mobile.md)
 
 ## Cấu trúc repo
 

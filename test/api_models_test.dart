@@ -119,25 +119,30 @@ void main() {
     },
   );
 
-  test('dashboard prioritizes active, upcoming, then completed classes', () async {
-    final dashboard = DashboardViewModel(
-      SortFixtureRepository(),
-      now: () => DateTime(2026, 9, 24, 12),
-    );
-    addTearDown(dashboard.dispose);
-    dashboard.setTeacherInfo(
-      name: 'Teacher',
-      email: 'teacher@example.test',
-      memberCode: '7',
-    );
+  test(
+    'dashboard prioritizes active, upcoming, then completed classes',
+    () async {
+      final dashboard = DashboardViewModel(
+        SortFixtureRepository(),
+        now: () => DateTime(2026, 9, 24, 12),
+      );
+      addTearDown(dashboard.dispose);
+      dashboard.setTeacherInfo(
+        name: 'Teacher',
+        email: 'teacher@example.test',
+        memberCode: '7',
+      );
 
-    await dashboard.loadClasses();
+      await dashboard.loadClasses();
 
-    expect(
-      dashboard.classes.map((c) => c.classCode),
-      ['ACTIVE', 'OVERNIGHT', 'NEXT', 'DONE'],
-    );
-  });
+      expect(dashboard.classes.map((c) => c.classCode), [
+        'ACTIVE',
+        'OVERNIGHT',
+        'NEXT',
+        'DONE',
+      ]);
+    },
+  );
 
   test('session and roster accept numeric IDs and slot numbers', () {
     final session = SessionModel.fromJson({

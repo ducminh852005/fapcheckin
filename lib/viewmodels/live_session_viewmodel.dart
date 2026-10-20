@@ -300,12 +300,14 @@ class LiveSessionViewModel extends ChangeNotifier {
 
     // Will this session check the students' network? A brand new session uses the
     // teacher's choice; resuming an open one keeps whatever it was opened with.
-    final inMemoryResume = !forceNew &&
+    final inMemoryResume =
+        !forceNew &&
         _session != null &&
         _session!.classCode == classSection.classCode &&
         !isClosed;
     final activeId = classSection.activeSessionId;
-    final backendResume = !forceNew &&
+    final backendResume =
+        !forceNew &&
         !inMemoryResume &&
         classSection.isActive &&
         activeId != null &&
@@ -313,8 +315,8 @@ class LiveSessionViewModel extends ChangeNotifier {
     final checkIp = inMemoryResume
         ? _session!.ipCheck
         : backendResume
-            ? (classSection.activeSessionIpCheck ?? false)
-            : ipCheck;
+        ? (classSection.activeSessionIpCheck ?? false)
+        : ipCheck;
 
     // With the IP check on, use a real public IP. Placeholder/local addresses
     // must never be stored in the session because student check-in compares
@@ -339,7 +341,8 @@ class LiveSessionViewModel extends ChangeNotifier {
 
     // 1. Check if we already have this session active in memory
     if (inMemoryResume) {
-      if (checkIp && !await _syncSessionTeacherIp(_session!.sessionId, realIp)) {
+      if (checkIp &&
+          !await _syncSessionTeacherIp(_session!.sessionId, realIp)) {
         return;
       }
       _status = ViewStatus.success;

@@ -25,7 +25,7 @@ class ReportKpis extends StatelessWidget {
           crossAxisSpacing: AppSpacing.md,
           mainAxisSpacing: AppSpacing.md,
           shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+          physics: NeverScrollableScrollPhysics(),
           childAspectRatio: constraints.maxWidth >= 1200 ? 2.0 : 1.85,
           children: [
             _buildKpiCard(
@@ -37,12 +37,12 @@ class ReportKpis extends StatelessWidget {
               bottomLeft: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.trending_up,
                     size: 16,
                     color: AppColors.statusPresent,
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     '${data.closedSessionCount} phiên đã kết thúc',
                     style: AppTextStyles.labelSm.copyWith(
@@ -110,12 +110,12 @@ class ReportKpis extends StatelessWidget {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.statusAbsent,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     'Theo dữ liệu phiên đã đóng',
                     style: AppTextStyles.labelSm.copyWith(
@@ -181,7 +181,7 @@ class ReportKpis extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -193,7 +193,7 @@ class ReportKpis extends StatelessWidget {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -211,7 +211,7 @@ class ReportKpis extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
@@ -223,7 +223,7 @@ class ReportKpis extends StatelessWidget {
                               ),
                             ),
                             if (valueSuffix != null) ...[
-                              const SizedBox(width: 4),
+                              SizedBox(width: 4),
                               Text(valueSuffix, style: AppTextStyles.caption),
                             ],
                           ],
@@ -245,8 +245,8 @@ class ReportKpis extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
               color: ReportColors.background,
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(AppSpacing.radiusXl),
@@ -263,10 +263,7 @@ class ReportKpis extends StatelessWidget {
                 ?bottomRight,
                 if (badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: badgeBg,
                       borderRadius: BorderRadius.circular(

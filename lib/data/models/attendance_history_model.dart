@@ -1,6 +1,5 @@
 import 'history_student.dart';
 
-
 /// Response payload for getAttendanceHistory API
 class AttendanceHistoryResult {
   final String sessionId;
@@ -22,17 +21,19 @@ class AttendanceHistoryResult {
       classCode: json['classCode'] as String? ?? '',
       totalSessions: (json['totalSessions'] as num?)?.toInt() ?? 0,
       students: list
-          .map((e) => AttendanceStudentRecord.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => AttendanceStudentRecord.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'sessionId': sessionId,
-        'classCode': classCode,
-        'totalSessions': totalSessions,
-        'students': students.map((s) => s.toJson()).toList(),
-      };
+    'sessionId': sessionId,
+    'classCode': classCode,
+    'totalSessions': totalSessions,
+    'students': students.map((s) => s.toJson()).toList(),
+  };
 }
 
 /// A student's attendance record in a specific session
@@ -67,23 +68,24 @@ class AttendanceStudentRecord {
       email: json['email'] as String? ?? '',
       checkinTime: json['checkinTime'] as String? ?? '',
       status: json['status'] as String? ?? 'Absent',
-      networkVerificationResult: json['networkVerificationResult'] as String? ?? '',
+      networkVerificationResult:
+          json['networkVerificationResult'] as String? ?? '',
       absenceCount: (json['absenceCount'] as num?)?.toInt() ?? 0,
       totalSessions: (json['totalSessions'] as num?)?.toInt() ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'rollNumber': rollNumber,
-        'memberCode': memberCode,
-        'fullName': fullName,
-        'email': email,
-        'checkinTime': checkinTime,
-        'status': status,
-        'networkVerificationResult': networkVerificationResult,
-        'absenceCount': absenceCount,
-        'totalSessions': totalSessions,
-      };
+    'rollNumber': rollNumber,
+    'memberCode': memberCode,
+    'fullName': fullName,
+    'email': email,
+    'checkinTime': checkinTime,
+    'status': status,
+    'networkVerificationResult': networkVerificationResult,
+    'absenceCount': absenceCount,
+    'totalSessions': totalSessions,
+  };
 
   /// Convert to UI HistoryStudent
   HistoryStudent toHistoryStudent(int index) {
@@ -114,4 +116,3 @@ class AttendanceStudentRecord {
     );
   }
 }
-

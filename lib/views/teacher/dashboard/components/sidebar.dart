@@ -7,17 +7,21 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
+import 'package:fapcheckin/views/teacher/dashboard/components/nav_destinations.dart';
 
 class Sidebar extends StatelessWidget {
-  const Sidebar({super.key});
+  /// Fixed width on desktop; pass `double.infinity` to fill a Drawer.
+  final double width;
+
+  const Sidebar({super.key, this.width = AppSpacing.sidebarWidth});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
         return Container(
-          width: AppSpacing.sidebarWidth,
-          decoration: const BoxDecoration(
+          width: width,
+          decoration: BoxDecoration(
             color: AppColors.surface,
             boxShadow: [
               BoxShadow(
@@ -31,48 +35,37 @@ class Sidebar extends StatelessWidget {
             children: [
               // Logo header
               _SidebarHeader(),
-              const Divider(height: 1, color: AppColors.surfaceVariant),
+              Divider(height: 1, color: AppColors.surfaceVariant),
               // Nav items
-              const SizedBox(height: AppSpacing.sm),
-              _NavItem(
-                icon: Icons.dashboard_outlined,
-                label: 'Tổng quan',
-                route: 'tong-quan',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('tong-quan'),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      SizedBox(height: AppSpacing.sm),
+                      for (final d in kNavDestinations)
+                        _NavItem(
+                          icon: d.isActive(vm.currentRoute)
+                              ? d.selectedIcon
+                              : d.icon,
+                          label: d.label,
+                          route: d.route,
+                          activeRoutes: d.activeRoutes,
+                          currentRoute: vm.currentRoute,
+                          onTap: () => vm.navigate(d.route),
+                        ),
+                      /*
+                      _NavItem(
+                        icon: Icons.settings_outlined,
+                        label: 'Cài đặt',
+                        route: 'cai-dat',
+                        currentRoute: vm.currentRoute,
+                        onTap: () => vm.navigate('cai-dat'),
+                      ),
+                      */
+                    ],
+                  ),
+                ),
               ),
-              _NavItem(
-                icon: Icons.calendar_month_outlined,
-                label: 'Lịch học',
-                route: 'lich-hoc',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('lich-hoc'),
-              ),
-              _NavItem(
-                icon: Icons.school_outlined,
-                label: 'Tiết học',
-                route: 'lop-hoc',
-                activeRoutes: const {'diem-danh-qr'},
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('lop-hoc'),
-              ),
-              _NavItem(
-                icon: Icons.menu_book_outlined,
-                label: 'Khóa học',
-                route: 'lich-su-diem-danh',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('lich-su-diem-danh'),
-              ),
-              /*
-              _NavItem(
-                icon: Icons.settings_outlined,
-                label: 'Cài đặt',
-                route: 'cai-dat',
-                currentRoute: vm.currentRoute,
-                onTap: () => vm.navigate('cai-dat'),
-              ),
-              */
-              const Spacer(),
               // User profile card
               _UserCard(vm: vm),
             ],
@@ -88,7 +81,7 @@ class _SidebarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: AppSpacing.topBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       color: AppColors.surface,
       child: Row(
         children: [
@@ -126,19 +119,21 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          onTap: onTap,
+          onTap: () {
+            onTap();
+            if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+              Navigator.of(context).pop(); // Close drawer
+            }
+          },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(
+            duration: Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
               vertical: 10,
             ),
@@ -148,9 +143,11 @@ class _NavItem extends StatelessWidget {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppColors.primaryContainer.withOpacity(0.3),
+                        color: AppColors.primaryContainer.withValues(
+                          alpha: 0.3,
+                        ),
                         blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        offset: Offset(0, 2),
                       ),
                     ]
                   : null,
@@ -160,13 +157,17 @@ class _NavItem extends StatelessWidget {
                 Icon(
                   icon,
                   size: 20,
-                  color: isActive ? AppColors.onPrimary : AppColors.textSecondary,
+                  color: isActive
+                      ? AppColors.onPrimary
+                      : AppColors.textSecondary,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   label,
                   style: AppTextStyles.labelMd.copyWith(
-                    color: isActive ? AppColors.onPrimary : AppColors.textSecondary,
+                    color: isActive
+                        ? AppColors.onPrimary
+                        : AppColors.textSecondary,
                     fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   ),
                 ),
@@ -187,12 +188,12 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      margin: EdgeInsets.all(AppSpacing.sm),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0F142433),
             blurRadius: 3,
@@ -221,7 +222,7 @@ class _UserCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,14 +250,16 @@ class _UserCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.surfaceContainerHigh),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.surfaceContainerHigh),
+          SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 4,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.secondaryContainer,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -272,7 +275,7 @@ class _UserCard extends StatelessWidget {
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   foregroundColor: AppColors.error,
@@ -280,12 +283,10 @@ class _UserCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                 ),
-                icon: const Icon(Icons.logout, size: 16),
+                icon: Icon(Icons.logout, size: 16),
                 label: Text(
                   'Đăng xuất',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.error,
-                  ),
+                  style: AppTextStyles.caption.copyWith(color: AppColors.error),
                 ),
                 onPressed: () async {
                   context.read<DashboardViewModel>().clearTeacherInfo();

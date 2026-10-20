@@ -4,15 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin/core/constants/app_colors.dart';
 import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 import 'package:fapcheckin/data/models/class_section_model.dart';
 import 'package:fapcheckin/data/models/class_session.dart';
 import 'package:fapcheckin/core/network/json_values.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+
 import '../dashboard/components/class_card.dart';
 import '../dashboard/components/stat_card.dart';
-
-
 
 class ClassManagementBody extends StatelessWidget {
   const ClassManagementBody({super.key});
@@ -20,14 +20,13 @@ class ClassManagementBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StatsRow(),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
             _MainContent(),
           ],
         ),
@@ -36,44 +35,88 @@ class ClassManagementBody extends StatelessWidget {
   }
 }
 
-
 /// 4-column stats row
 class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
-        return Row(
-          children: [
-            Expanded(
-              child: TodayScheduleStatCard(
-                totalClasses: vm.totalClassesToday,
-                morningClasses: vm.morningClasses,
-                afternoonClasses: vm.afternoonClasses,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: SessionProgressStatCard(
-                completed: vm.completedSessions,
-                total: vm.totalSessions,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: PresentStudentsStatCard(
-                present: vm.presentStudents,
-                total: vm.totalStudents,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: AvgAttendanceStatCard(
-                rate: vm.avgAttendance,
-                prevRate: vm.prevWeekAttendance,
-              ),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 800) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      child: TodayScheduleStatCard(
+                        totalClasses: vm.totalClassesToday,
+                        morningClasses: vm.morningClasses,
+                        afternoonClasses: vm.afternoonClasses,
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    SizedBox(
+                      width: 240,
+                      child: SessionProgressStatCard(
+                        completed: vm.completedSessions,
+                        total: vm.totalSessions,
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    SizedBox(
+                      width: 240,
+                      child: PresentStudentsStatCard(
+                        present: vm.presentStudents,
+                        total: vm.totalStudents,
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    SizedBox(
+                      width: 240,
+                      child: AvgAttendanceStatCard(
+                        rate: vm.avgAttendance,
+                        prevRate: vm.prevWeekAttendance,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return Row(
+              children: [
+                Expanded(
+                  child: TodayScheduleStatCard(
+                    totalClasses: vm.totalClassesToday,
+                    morningClasses: vm.morningClasses,
+                    afternoonClasses: vm.afternoonClasses,
+                  ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: SessionProgressStatCard(
+                    completed: vm.completedSessions,
+                    total: vm.totalSessions,
+                  ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: PresentStudentsStatCard(
+                    present: vm.presentStudents,
+                    total: vm.totalStudents,
+                  ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: AvgAttendanceStatCard(
+                    rate: vm.avgAttendance,
+                    prevRate: vm.prevWeekAttendance,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -107,33 +150,46 @@ class _SchedulePanelState extends State<_SchedulePanel> {
 
   String _getSlotTimeRange(int slot) {
     switch (slot) {
-      case 1: return '07:30 - 09:50';
-      case 2: return '10:00 - 12:20';
-      case 3: return '12:50 - 15:10';
-      case 4: return '15:20 - 17:40';
-      case 5: return '18:00 - 20:20';
-      case 6: return '20:30 - 22:50';
-      default: return '-- : --';
+      case 1:
+        return '07:30 - 09:50';
+      case 2:
+        return '10:00 - 12:20';
+      case 3:
+        return '12:50 - 15:10';
+      case 4:
+        return '15:20 - 17:40';
+      case 5:
+        return '18:00 - 20:20';
+      case 6:
+        return '20:30 - 22:50';
+      default:
+        return '-- : --';
     }
   }
 
   SessionStatus _deriveStatus(String timeRange, bool isActive) {
-    if (timeRange.contains('--')) return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    if (timeRange.contains('--')) {
+      return isActive ? SessionStatus.active : SessionStatus.notStarted;
+    }
     try {
       final parts = timeRange.split('-');
-      if (parts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
+      if (parts.length != 2) {
+        return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      }
+
       final startParts = parts[0].trim().split(':');
       final endParts = parts[1].trim().split(':');
-      
-      if (startParts.length != 2 || endParts.length != 2) return isActive ? SessionStatus.active : SessionStatus.notStarted;
-      
+
+      if (startParts.length != 2 || endParts.length != 2) {
+        return isActive ? SessionStatus.active : SessionStatus.notStarted;
+      }
+
       final h1 = int.parse(startParts[0]);
       final m1 = int.parse(startParts[1]);
-      
+
       final h2 = int.parse(endParts[0]);
       final m2 = int.parse(endParts[1]);
-      
+
       final now = DateTime.now();
       final start = DateTime(
         now.year,
@@ -141,16 +197,16 @@ class _SchedulePanelState extends State<_SchedulePanel> {
         now.day,
         h1,
         m1,
-      ).subtract(const Duration(minutes: 15));
+      ).subtract(Duration(minutes: 15));
       var end = DateTime(now.year, now.month, now.day, h2, m2);
       if (end.hour * 60 + end.minute <= h1 * 60 + m1) {
-        end = end.add(const Duration(days: 1));
+        end = end.add(Duration(days: 1));
       }
-      
+
       if (now.isAfter(end)) return SessionStatus.completed;
       if (isActive) return SessionStatus.active;
       if (now.isBefore(start)) return SessionStatus.notStarted;
-      
+
       return SessionStatus.ready;
     } catch (_) {
       return isActive ? SessionStatus.active : SessionStatus.notStarted;
@@ -160,9 +216,14 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   /// Convert ClassSectionModel to the legacy ClassSession expected by ClassCard
   ClassSession _toClassSession(ClassSectionModel model, int index) {
     final slotNumber = index + 1;
-    final rawRange = (model.startTime != null && model.endTime != null && model.startTime!.isNotEmpty)
+    final rawRange =
+        (model.startTime != null &&
+            model.endTime != null &&
+            model.startTime!.isNotEmpty)
         ? '${model.startTime} - ${model.endTime}'
-        : (model.timeLabel.isNotEmpty ? model.timeLabel : _getSlotTimeRange(slotNumber));
+        : (model.timeLabel.isNotEmpty
+              ? model.timeLabel
+              : _getSlotTimeRange(slotNumber));
     final timeRange = formatTimeLabel(rawRange);
     return ClassSession(
       courseCode: model.classCode,
@@ -187,7 +248,7 @@ class _SchedulePanelState extends State<_SchedulePanel> {
   @override
   Widget build(BuildContext context) {
     final vm = widget.vm;
-    
+
     // Pagination logic
     final totalClasses = vm.classes.length;
     final totalPages = (totalClasses / _itemsPerPage).ceil();
@@ -195,16 +256,16 @@ class _SchedulePanelState extends State<_SchedulePanel> {
       _currentPage = totalPages - 1;
     }
     final startIndex = _currentPage * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage > totalClasses) 
-        ? totalClasses 
+    final endIndex = (startIndex + _itemsPerPage > totalClasses)
+        ? totalClasses
         : startIndex + _itemsPerPage;
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A142433),
             blurRadius: 4,
@@ -226,16 +287,20 @@ class _SchedulePanelState extends State<_SchedulePanel> {
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Lịch dạy hôm nay',
-                style: AppTextStyles.headlineMd.copyWith(
-                  color: AppColors.textPrimary,
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Lịch dạy hôm nay',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.headlineMd.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -247,7 +312,7 @@ class _SchedulePanelState extends State<_SchedulePanel> {
                   ),
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               _IconButton(
                 icon: Icons.refresh,
                 tooltip: 'Làm mới lịch',
@@ -256,7 +321,7 @@ class _SchedulePanelState extends State<_SchedulePanel> {
                   vm.loadClasses();
                 },
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               _IconButton(
                 icon: Icons.filter_list,
                 tooltip: 'Bộ lọc',
@@ -264,10 +329,10 @@ class _SchedulePanelState extends State<_SchedulePanel> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           // Body: loading / error / empty / class cards
           if (vm.isLoading)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: CircularProgressIndicator(),
@@ -283,63 +348,64 @@ class _SchedulePanelState extends State<_SchedulePanel> {
             )
           else if (vm.classes.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: Center(
                 child: Text(
                   'Không có tiết học hôm nay.',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             )
-          else
-            ...[
-              for (int i = startIndex; i < endIndex; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ClassCard(
-                    session: _toClassSession(vm.classes[i], i),
-                    onStart: () async {
-                      final started = await startSessionWithOptions(
-                        context,
-                        classSection: vm.classes[i],
-                        slotCode: vm.classes[i].slotCode.isNotEmpty
-                            ? vm.classes[i].slotCode
-                            : (i + 1).toString(),
-                      );
-                      if (started) vm.navigate('diem-danh-qr');
-                    },
-                  ),
+          else ...[
+            for (int i = startIndex; i < endIndex; i++)
+              Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: ClassCard(
+                  session: _toClassSession(vm.classes[i], i),
+                  onStart: () async {
+                    final started = await startSessionWithOptions(
+                      context,
+                      classSection: vm.classes[i],
+                      slotCode: vm.classes[i].slotCode.isNotEmpty
+                          ? vm.classes[i].slotCode
+                          : (i + 1).toString(),
+                    );
+                    if (started) vm.navigate('diem-danh-qr');
+                  },
                 ),
-              if (totalPages > 1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: _currentPage > 0
-                            ? () => setState(() => _currentPage--)
-                            : null,
+              ),
+            if (totalPages > 1)
+              Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.chevron_left),
+                      onPressed: _currentPage > 0
+                          ? () => setState(() => _currentPage--)
+                          : null,
+                      color: AppColors.textSecondary,
+                    ),
+                    Text(
+                      'Trang ${_currentPage + 1} / $totalPages',
+                      style: AppTextStyles.bodySm.copyWith(
                         color: AppColors.textSecondary,
                       ),
-                      Text(
-                        'Trang ${_currentPage + 1} / $totalPages',
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: _currentPage < totalPages - 1
-                            ? () => setState(() => _currentPage++)
-                            : null,
-                        color: AppColors.textSecondary,
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.chevron_right),
+                      onPressed: _currentPage < totalPages - 1
+                          ? () => setState(() => _currentPage++)
+                          : null,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
                 ),
-            ],
+              ),
+          ],
         ],
       ),
     );
@@ -354,7 +420,7 @@ class _ErrorRetry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       child: Column(
         children: [
           Text(
@@ -362,18 +428,17 @@ class _ErrorRetry extends StatelessWidget {
             style: AppTextStyles.bodySm.copyWith(color: AppColors.statusAbsent),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           TextButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Thử lại'),
+            icon: Icon(Icons.refresh, size: 16),
+            label: Text('Thử lại'),
           ),
         ],
       ),
     );
   }
 }
-
 
 class _IconButton extends StatefulWidget {
   final IconData icon;
@@ -403,21 +468,16 @@ class _IconButtonState extends State<_IconButton> {
         child: GestureDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.all(6),
+            duration: Duration(milliseconds: 150),
+            padding: EdgeInsets.all(context.isMobile ? 10 : 6),
             decoration: BoxDecoration(
               color: _hovered ? AppColors.surfaceMuted : Colors.transparent,
               borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-            child: Icon(
-              widget.icon,
-              size: 18,
-              color: AppColors.textSecondary,
-            ),
+            child: Icon(widget.icon, size: 18, color: AppColors.textSecondary),
           ),
         ),
       ),
     );
   }
 }
-

@@ -36,7 +36,10 @@ String formatTimeLabel(dynamic value) {
 
   String text = raw.trim();
 
-  final is1899Date = text.contains('GMT') || text.contains('Indochina') || text.contains('1899');
+  final is1899Date =
+      text.contains('GMT') ||
+      text.contains('Indochina') ||
+      text.contains('1899');
   final timeMatches = RegExp(r'(\d{1,2}):(\d{2})(?::\d{2})?').allMatches(text);
 
   String norm(Match m) {
@@ -73,7 +76,9 @@ String formatTimeLabel(dynamic value) {
 
   // Remove trailing GMT / timezone strings if present
   text = text.replaceAll(RegExp(r'\s*GMT\+?\d*.*'), '').trim();
-  text = text.replaceAll(RegExp(r'\(.*Time.*\)', caseSensitive: false), '').trim();
+  text = text
+      .replaceAll(RegExp(r'\(.*Time.*\)', caseSensitive: false), '')
+      .trim();
 
   return text;
 }

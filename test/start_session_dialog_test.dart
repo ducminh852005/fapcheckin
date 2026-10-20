@@ -47,7 +47,9 @@ void main() {
       done = true;
     });
 
-    final box = tester.widget<CheckboxListTile>(find.byKey(const Key('ip-check-toggle')));
+    final box = tester.widget<CheckboxListTile>(
+      find.byKey(const Key('ip-check-toggle')),
+    );
     expect(box.value, isFalse);
 
     await tester.tap(find.text('Mở phiên'));
@@ -63,7 +65,9 @@ void main() {
     await tester.tap(find.byKey(const Key('ip-check-toggle')));
     await tester.pump();
     expect(
-      tester.widget<CheckboxListTile>(find.byKey(const Key('ip-check-toggle'))).value,
+      tester
+          .widget<CheckboxListTile>(find.byKey(const Key('ip-check-toggle')))
+          .value,
       isTrue,
     );
 
@@ -72,7 +76,9 @@ void main() {
     expect(result, isTrue);
   });
 
-  testWidgets('cancelling returns null so no session is opened', (tester) async {
+  testWidgets('cancelling returns null so no session is opened', (
+    tester,
+  ) async {
     bool? result = true;
     var done = false;
     await _open(tester, (value) {
@@ -94,7 +100,10 @@ void main() {
       }).ipCheck,
       isTrue,
     );
-    expect(SessionModel.fromJson({'sessionId': 's1', 'ipCheck': 'FALSE'}).ipCheck, isFalse);
+    expect(
+      SessionModel.fromJson({'sessionId': 's1', 'ipCheck': 'FALSE'}).ipCheck,
+      isFalse,
+    );
     expect(SessionModel.fromJson({'sessionId': 's1'}).ipCheck, isFalse);
     expect(
       SessionModel.fromJson({'sessionId': 's1', 'ipCheck': true})

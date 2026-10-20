@@ -22,9 +22,8 @@ class TimetableRepository {
         'mimeType': mimeType,
         'imageBase64': base64Encode(bytes),
       },
-      fromJsonT: (data) => TimetableScanResult.fromJson(
-        Map<String, dynamic>.from(data as Map),
-      ),
+      fromJsonT: (data) =>
+          TimetableScanResult.fromJson(Map<String, dynamic>.from(data as Map)),
     );
   }
 

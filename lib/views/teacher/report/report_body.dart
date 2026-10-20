@@ -9,26 +9,56 @@ import 'package:fapcheckin/views/teacher/report/components/report_charts.dart';
 import 'package:fapcheckin/views/teacher/report/components/subject_comparison.dart';
 import 'package:fapcheckin/views/teacher/report/components/checkin_modality.dart';
 import 'package:fapcheckin/views/teacher/report/components/warning_table.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
-class ReportBody extends StatelessWidget {
+class ReportBody extends StatefulWidget {
   const ReportBody({super.key});
+
+  @override
+  State<ReportBody> createState() => _ReportBodyState();
+}
+
+class _ReportBodyState extends State<ReportBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReportViewModel>().load(force: true);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ReportViewModel>();
-    if (!vm.loading && vm.report == null && vm.errorMessage == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => vm.load());
-    }
     if (vm.loading && vm.report == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
     if (vm.errorMessage != null && vm.report == null) {
-      return Center(child: Text(vm.errorMessage!));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(vm.errorMessage!),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => vm.load(force: true),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      );
     }
     final report = vm.report;
-    if (report == null) return const SizedBox.shrink();
+    if (report == null) return SizedBox.shrink();
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+      padding: EdgeInsets.fromLTRB(
+        context.pagePadding,
+        context.isMobile ? 12 : 20,
+        context.pagePadding,
+        28,
+      ),
       child: Container(
         color: ReportColors.background,
         child: Column(
@@ -39,14 +69,14 @@ class ReportBody extends StatelessWidget {
               semester: report.semester,
               classCount: report.classCount,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             ReportKpis(data: report),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             _ReportMainContent(data: report),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             Center(
               child: Text(
-                'Dữ liệu từ các phiên điểm danh đã kết thúc',
+                'Dữ liệu từ các phiên điểm danh đang mở và đã hoàn thành',
                 style: Theme.of(context).textTheme.bodySmall
                     ?.copyWith(color: ReportColors.muted),
               ),
@@ -70,21 +100,21 @@ class _ReportMainContent extends StatelessWidget {
           return Column(
             children: [
               ReportCharts(data: data),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               if (constraints.maxWidth < 700) ...[
                 SubjectComparison(data: data),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 CheckinModality(data: data),
               ] else
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: SubjectComparison(data: data)),
-                    const SizedBox(width: 18),
+                    SizedBox(width: 18),
                     Expanded(child: CheckinModality(data: data)),
                   ],
                 ),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               WarningTable(data: data),
             ],
           );
@@ -98,19 +128,19 @@ class _ReportMainContent extends StatelessWidget {
               child: Column(
                 children: [
                   ReportCharts(data: data),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: SubjectComparison(data: data)),
-                      const SizedBox(width: 18),
+                      SizedBox(width: 18),
                       Expanded(child: CheckinModality(data: data)),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 18),
+            SizedBox(width: 18),
             Expanded(flex: 8, child: WarningTable(data: data)),
           ],
         );

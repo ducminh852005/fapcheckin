@@ -54,13 +54,13 @@ class _HistoryTableState extends State<HistoryTable> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Wrap(
               spacing: 16,
               runSpacing: 12,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text(
+                Text(
                   'Tổng hợp điểm danh khóa học',
                   style: TextStyle(
                     color: AppColors.textPrimary,
@@ -72,9 +72,9 @@ class _HistoryTableState extends State<HistoryTable> {
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: AppColors.border),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -89,7 +89,7 @@ class _HistoryTableState extends State<HistoryTable> {
                       setState(() => _currentPage = 0);
                       vm.setSearch(val);
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       prefixIcon: Icon(Icons.search, size: 20),
                       hintText: 'Tìm MSSV, họ tên, email',
                       isDense: true,
@@ -112,7 +112,7 @@ class _HistoryTableState extends State<HistoryTable> {
             ),
           ),
           if (filteredStudents.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 24, 20, 36),
               child: Center(
                 child: Text(
@@ -124,25 +124,28 @@ class _HistoryTableState extends State<HistoryTable> {
           else
             LayoutBuilder(
               builder: (context, constraints) {
-                final tableWidth = constraints.maxWidth < 860 ? 860.0 : constraints.maxWidth;
+                final tableWidth = constraints.maxWidth < 860
+                    ? 860.0
+                    : constraints.maxWidth;
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
                     width: tableWidth,
                     child: Table(
-                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                      columnWidths: const {
-                        0: FixedColumnWidth(60),   // STT
-                        1: FixedColumnWidth(110),  // MSSV
-                        2: FlexColumnWidth(2.8),   // HỌ VÀ TÊN
-                        3: FixedColumnWidth(110),  // CÓ MẶT
-                        4: FixedColumnWidth(100),  // ĐI TRỄ
-                        5: FixedColumnWidth(140),  // VẮNG
-                        6: FixedColumnWidth(140),  // TỔNG BUỔI
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      columnWidths: {
+                        0: FixedColumnWidth(60), // STT
+                        1: FixedColumnWidth(110), // MSSV
+                        2: FlexColumnWidth(2.8), // HỌ VÀ TÊN
+                        3: FixedColumnWidth(110), // CÓ MẶT
+                        4: FixedColumnWidth(100), // ĐI TRỄ
+                        5: FixedColumnWidth(140), // VẮNG
+                        6: FixedColumnWidth(140), // TỔNG BUỔI
                       },
                       children: [
                         TableRow(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.surfaceContainerLow,
                           ),
                           children: [
@@ -163,21 +166,28 @@ class _HistoryTableState extends State<HistoryTable> {
                             decoration: BoxDecoration(
                               color: isEven
                                   ? Colors.transparent
-                                  : AppColors.surfaceContainerLowest.withValues(alpha: 0.5),
+                                  : AppColors.surfaceContainerLowest.withValues(
+                                      alpha: 0.5,
+                                    ),
                               border: Border(
                                 bottom: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.6),
+                                  color: AppColors.border.withValues(
+                                    alpha: 0.6,
+                                  ),
                                   width: 0.6,
                                 ),
                               ),
                             ),
                             children: [
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   '$idx'.padLeft(2, '0'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -185,10 +195,13 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   s.rollNumber,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                     color: AppColors.textPrimary,
@@ -196,45 +209,55 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 10,
+                                ),
                                 child: Row(
                                   children: [
                                     Container(
                                       width: 32,
                                       height: 32,
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         color: AppColors.primaryLight,
                                         shape: BoxShape.circle,
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
-                                        _getInitials(s.fullName.isEmpty ? s.rollNumber : s.fullName),
-                                        style: const TextStyle(
+                                        _getInitials(
+                                          s.fullName.isEmpty
+                                              ? s.rollNumber
+                                              : s.fullName,
+                                        ),
+                                        style: TextStyle(
                                           color: AppColors.primaryDark,
                                           fontWeight: FontWeight.w700,
                                           fontSize: 11,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            s.fullName.isEmpty ? s.rollNumber : s.fullName,
+                                            s.fullName.isEmpty
+                                                ? s.rollNumber
+                                                : s.fullName,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 13,
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
+                                          SizedBox(height: 2),
                                           Text(
                                             s.email,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               color: AppColors.textSecondary,
                                               fontSize: 11,
                                             ),
@@ -246,11 +269,14 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   '${s.presentCount}',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                     color: AppColors.statusPresent,
@@ -258,11 +284,14 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   '${s.lateCount}',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                     color: AppColors.statusLate,
@@ -270,7 +299,10 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   '${s.absentCount}/${s.closedSessions} (${(s.absenceRate * 100).toStringAsFixed(0)}%)',
                                   textAlign: TextAlign.center,
@@ -284,11 +316,14 @@ class _HistoryTableState extends State<HistoryTable> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 14,
+                                ),
                                 child: Text(
                                   '${s.closedSessions}/${s.totalSessions}',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -305,9 +340,9 @@ class _HistoryTableState extends State<HistoryTable> {
               },
             ),
           if (totalPages > 1) ...[
-            const Divider(height: 1, color: AppColors.border),
+            Divider(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -315,25 +350,25 @@ class _HistoryTableState extends State<HistoryTable> {
                     onPressed: _currentPage > 0
                         ? () => setState(() => _currentPage--)
                         : null,
-                    icon: const Icon(Icons.chevron_left),
+                    icon: Icon(Icons.chevron_left),
                     tooltip: 'Trang trước',
                     color: AppColors.primaryContainer,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Trang ${_currentPage + 1} / $totalPages',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   IconButton(
                     onPressed: _currentPage < totalPages - 1
                         ? () => setState(() => _currentPage++)
                         : null,
-                    icon: const Icon(Icons.chevron_right),
+                    icon: Icon(Icons.chevron_right),
                     tooltip: 'Trang tiếp',
                     color: AppColors.primaryContainer,
                   ),
@@ -348,11 +383,11 @@ class _HistoryTableState extends State<HistoryTable> {
 
   static Widget _headerCell(String label, {bool center = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
       child: Text(
         label,
         textAlign: center ? TextAlign.center : TextAlign.start,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.textSecondary,
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -368,7 +403,8 @@ class _HistoryTableState extends State<HistoryTable> {
     if (parts.length == 1) {
       return parts[0].substring(0, parts[0].length.clamp(0, 2)).toUpperCase();
     }
-    return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (parts[parts.length - 2][0] + parts[parts.length - 1][0])
+        .toUpperCase();
   }
 }
 
@@ -380,14 +416,14 @@ class _StudentCount extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: AppColors.primaryLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         '$count sinh viên',
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.primaryDark,
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -418,7 +454,7 @@ class _RiskFilter extends StatelessWidget {
       onChanged: (risk) {
         if (risk != null) onChanged(risk);
       },
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Lọc',
         prefixIcon: Icon(Icons.filter_list),
         isDense: true,
@@ -426,11 +462,17 @@ class _RiskFilter extends StatelessWidget {
       items: [
         DropdownMenuItem(
           value: 'all',
-          child: Text('Tất cả ($studentsCount)', overflow: TextOverflow.ellipsis),
+          child: Text(
+            'Tất cả ($studentsCount)',
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         DropdownMenuItem(
           value: 'atRisk',
-          child: Text('Vắng >20% ($atRiskCount)', overflow: TextOverflow.ellipsis),
+          child: Text(
+            'Vắng >20% ($atRiskCount)',
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

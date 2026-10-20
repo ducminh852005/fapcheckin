@@ -4,6 +4,7 @@ import 'package:fapcheckin/core/constants/app_spacing.dart';
 import 'package:fapcheckin/core/constants/app_text_styles.dart';
 import 'package:fapcheckin/views/teacher/report/report_colors.dart';
 import 'package:fapcheckin/data/models/report_model.dart';
+import 'package:fapcheckin/core/responsive/breakpoints.dart';
 
 class SubjectComparison extends StatelessWidget {
   final ReportData data;
@@ -12,11 +13,11 @@ class SubjectComparison extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(context.isMobile ? 16 : AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 2,
@@ -28,12 +29,12 @@ class SubjectComparison extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Tỷ lệ theo môn học', style: AppTextStyles.headlineSm),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             'So sánh tỷ lệ tham gia theo lớp phụ trách',
             style: AppTextStyles.caption,
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
 
           ...data.subjects.expand(
             (subject) => [
@@ -44,25 +45,25 @@ class SubjectComparison extends StatelessWidget {
                     ? ReportColors.red
                     : ReportColors.primary,
               ),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: AppSpacing.sm),
             ],
           ),
 
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: ReportColors.background,
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.info_outline,
                   size: 16,
                   color: AppColors.statusAbsent,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     data.subjects.isEmpty
@@ -91,7 +92,7 @@ class SubjectComparison extends StatelessWidget {
                 softWrap: true,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            SizedBox(width: AppSpacing.sm),
             SizedBox(
               width: 64,
               child: Text(
@@ -108,7 +109,7 @@ class SubjectComparison extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Container(
           height: 8,
           width: double.infinity,

@@ -5,10 +5,15 @@ class ApiResponse<T> {
 
   ApiResponse({required this.success, this.data, this.error});
 
-  factory ApiResponse.fromJson(Map<String, dynamic> json, {T Function(dynamic)? fromJsonT}) {
+  factory ApiResponse.fromJson(
+    Map<String, dynamic> json, {
+    T Function(dynamic)? fromJsonT,
+  }) {
     return ApiResponse(
       success: json['success'] ?? false,
-      data: (json['data'] != null && fromJsonT != null) ? fromJsonT(json['data']) : json['data'],
+      data: (json['data'] != null && fromJsonT != null)
+          ? fromJsonT(json['data'])
+          : json['data'],
       error: json['error'] != null ? ApiError.fromJson(json['error']) : null,
     );
   }

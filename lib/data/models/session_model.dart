@@ -37,7 +37,11 @@ class SessionModel {
     );
   }
 
-  SessionModel copyWith({String? sessionStatus, String? qrToken, bool? ipCheck}) {
+  SessionModel copyWith({
+    String? sessionStatus,
+    String? qrToken,
+    bool? ipCheck,
+  }) {
     return SessionModel(
       sessionId: sessionId,
       classCode: classCode,
