@@ -141,8 +141,20 @@ Mọi workflow **chỉ chạy khi push lên `main`** (không chạy trên PR hay
 | Workflow | Kích hoạt | Việc làm |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | push `main` (bỏ qua thay đổi chỉ có `docs/`/`*.md`) | Rules + Functions + e2e trên Emulator (cache Emulator và npm), kiểm tra JSON cấu hình và cú pháp `web/checkin/app.js`; `flutter analyze`/`test` cho `packages/core` và `mobile` (job `mobile` còn `continue-on-error` vì 2 test lỗi sẵn có — [quick-start-mobile §7](quick-start-mobile.md#7-kiểm-tra)) |
-| [`deploy.yml`](../.github/workflows/deploy.yml) | `workflow_run`: ngay khi `CI` của push `main` kết thúc **thành công** | `firebase deploy` các thành phần cấu hình; environment `production` |
+| [`deploy.yml`](../.github/workflows/deploy.yml) | `workflow_run`: ngay khi `CI` của push `main` kết thúc **thành công** | Job `preview`: deploy trang SV lên preview channel `main-<sha7>` (hết hạn 2 ngày) rồi **smoke test**. Job `deploy` (cần `preview` xanh; environment `production`): `firebase deploy` bản live rồi smoke test lại |
 | [`mobile-build.yml`](../.github/workflows/mobile-build.yml) | push `main` đụng `mobile/**`, `packages/core/**` | Build APK debug, đưa lên artifact (14 ngày). Không phát hành lên Play |
+
+### Smoke test sau deploy
+
+[`firebase/scripts/smoke-test.mjs`](../firebase/scripts/smoke-test.mjs) chỉ gọi HTTP công khai, chạy được trên preview lẫn live (`node firebase/scripts/smoke-test.mjs <baseUrl> [projectId]`):
+
+1. Trang SV trả 200, nạp `app.js`, không còn tham chiếu Apps Script / `BACKEND_URL`.
+2. `app.js` tải được và ghi `attendance_records`.
+3. `/__/firebase/init.json` trả cấu hình đúng project.
+4. Firestore Rules đang chạy: đọc không đăng nhập bị từ chối (403).
+5. Auth không cho đăng ký ẩn danh.
+
+Preview thất bại thì bản live **không** được deploy. Tên channel preview giúp xem thử bằng tay: URL in trong tóm tắt của lần chạy. Nếu `FIREBASE_DEPLOY_TARGETS` không có `hosting`, preview và smoke test trang bị bỏ qua.
 
 ### Thiết lập deploy tự động (một lần)
 
@@ -154,7 +166,7 @@ Mọi workflow **chỉ chạy khi push lên `main`** (không chạy trên PR hay
    - Variable `FIREBASE_DEPLOY_TARGETS` (mặc định `firestore,hosting`). Thêm `storage` sau khi bật Cloud Storage, `remoteconfig`, và `functions` khi đã có Blaze + Cloud Vision API.
 4. **Settings → Environments → production**: bật *Required reviewers* nếu muốn duyệt tay trước mỗi lần deploy.
 
-Thiếu secret thì job `deploy` dừng với thông báo rõ ràng. Deploy thủ công vẫn dùng được: `./scripts/deploy.ps1` (mục 5).
+Thiếu secret thì job `preview` dừng với thông báo rõ ràng. Deploy thủ công vẫn dùng được: `./scripts/deploy.ps1` (mục 5).
 
 ### Lưu ý
 
