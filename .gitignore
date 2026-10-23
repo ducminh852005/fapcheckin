@@ -30,12 +30,12 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+**/build/
 
-# Local OAuth credentials used for desktop builds
+# Local OAuth credentials used for desktop builds (đặt trong mobile/)
 desktop_oauth.json
 desktop_oauth.local.json
-/coverage/
+**/coverage/
 
 # Symbolication related
 app.*.symbols
@@ -44,9 +44,9 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+/mobile/android/app/debug
+/mobile/android/app/profile
+/mobile/android/app/release
 
 # Widget Preview related
 .widget_preview/
@@ -57,6 +57,15 @@ docs/assets/*
 .firebase/
 firebase-debug.log*
 firestore-debug.log
+ui-debug.log
+*-debug.log
+
+# Node (firebase/, firebase/functions/, e2e_test/)
+node_modules/
+
+# Package nội bộ không cần khóa phiên bản riêng
+packages/core/pubspec.lock
+
 
 # GCP service account keys
 *-[0-9a-f]*.json.key
