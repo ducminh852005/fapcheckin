@@ -1,13 +1,10 @@
 name: CI
 
+# Chỉ chạy khi push lên main (không chạy trên PR hay nhánh khác).
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths-ignore: ['docs/**', '**/*.md']
-  pull_request:
-    paths-ignore: ['docs/**', '**/*.md']
-  # Được deploy.yml gọi lại: chỉ deploy khi toàn bộ test xanh.
-  workflow_call:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

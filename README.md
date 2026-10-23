@@ -90,7 +90,7 @@ Admin cấp tài khoản GV/SV bằng cách tạo `user_invites/{email}` (role `
 
 ## CI/CD
 
-GitHub Actions: `ci.yml` (test Rules/Functions/e2e trên Emulator + Flutter), `deploy.yml` (deploy Firebase sau khi merge vào `main`, chỉ khi test xanh), `preview.yml` (preview trang SV cho PR), `mobile-build.yml` (APK debug). Thiết lập secret và quy trình: [docs/deploy-firebase.md §10](docs/deploy-firebase.md#10-cicd-github-actions).
+GitHub Actions, chỉ chạy khi push lên `main`: `ci.yml` (test Rules/Functions/e2e trên Emulator + Flutter), `deploy.yml` (deploy Firebase khi CI xanh), `mobile-build.yml` (APK debug). Thiết lập secret và quy trình: [docs/deploy-firebase.md §10](docs/deploy-firebase.md#10-cicd-github-actions).
 
 ## Deploy
 
