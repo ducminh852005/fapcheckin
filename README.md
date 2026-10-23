@@ -88,6 +88,10 @@ Rules không cho client tự đặt role, nên admin đầu tiên được tạo
 
 Admin cấp tài khoản GV/SV bằng cách tạo `user_invites/{email}` (role `staff` / `user`, `memberCode`, `rollNumber`). Hướng dẫn đầy đủ: [docs/deploy-firebase.md §3](docs/deploy-firebase.md#3-tài-khoản-admin-đầu-tiên).
 
+## CI/CD
+
+GitHub Actions: `ci.yml` (test Rules/Functions/e2e trên Emulator + Flutter), `deploy.yml` (deploy Firebase sau khi merge vào `main`, chỉ khi test xanh), `preview.yml` (preview trang SV cho PR), `mobile-build.yml` (APK debug). Thiết lập secret và quy trình: [docs/deploy-firebase.md §10](docs/deploy-firebase.md#10-cicd-github-actions).
+
 ## Deploy
 
 ```powershell
