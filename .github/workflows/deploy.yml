@@ -1,0 +1,127 @@
+name: Deploy Firebase
+
+# CD: chạy sau khi workflow "CI" của lần push lên main kết thúc THÀNH CÔNG.
+#   1. preview : deploy trang SV lên preview channel + smoke test (chưa đụng bản live)
+#   2. deploy  : firebase deploy bản live + smoke test lại bản live
+# Thiết lập một lần: docs/deploy-firebase.md §10.
+#   Secret   FIREBASE_SERVICE_ACCOUNT : JSON khóa service account (vai trò Firebase Admin) — KHÔNG commit
+#   Variable FIREBASE_PROJECT_ID      : mặc định fapcheckin-3bn2di
+#   Variable FIREBASE_DEPLOY_TARGETS  : mặc định "firestore,hosting"; thêm storage, remoteconfig, functions
+#                                       khi đã bật (Storage; Functions cần gói Blaze + Cloud Vision API)
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Không hủy deploy đang chạy giữa chừng.
+concurrency:
+  group: deploy-firebase
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'fapcheckin-3bn2di' }}
+  TARGETS: ${{ vars.FIREBASE_DEPLOY_TARGETS || 'firestore,hosting' }}
+  SHA: ${{ github.event.workflow_run.head_sha }}
+
+jobs:
+  preview:
+    name: Preview + smoke test
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Kiểm tra secret
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Thiếu secret FIREBASE_SERVICE_ACCOUNT (xem docs/deploy-firebase.md §10)."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - run: npm install -g firebase-tools@15
+
+      - name: Deploy preview channel
+        id: deploy
+        if: contains(env.TARGETS, 'hosting')
+        run: |
+          CHANNEL="main-${SHA:0:7}"
+          firebase hosting:channel:deploy "$CHANNEL" --project "$PROJECT_ID" \
+            --expires 2d --non-interactive --json > preview.json
+          URL=$(node -e "const j=require('./preview.json');console.log(Object.values(j.result)[0].url)")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Preview: $URL"
+
+      - name: Smoke test preview
+        if: steps.deploy.outputs.url != ''
+        run: node firebase/scripts/smoke-test.mjs "${{ steps.deploy.outputs.url }}" "$PROJECT_ID"
+
+      - name: Tóm tắt
+        if: steps.deploy.outputs.url != ''
+        run: |
+          echo "- Preview (hết hạn sau 2 ngày): ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy live + smoke test
+    needs: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Cấu hình Required reviewers cho environment "production" nếu muốn duyệt tay sau khi xem preview.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Đăng nhập Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@15
+
+      - name: Install Functions dependencies
+        if: contains(env.TARGETS, 'functions')
+        run: npm ci --prefix firebase/functions
+
+      - name: Deploy
+        run: firebase deploy --only "$TARGETS" --project "$PROJECT_ID" --non-interactive
+
+      - name: Smoke test bản live
+        if: contains(env.TARGETS, 'hosting')
+        run: node firebase/scripts/smoke-test.mjs "https://$PROJECT_ID.web.app" "$PROJECT_ID"
+
+      - name: Tóm tắt
+        run: |
+          {
+            echo "### Deploy Firebase"
+            echo "- Commit: \`$SHA\`"
+            echo "- Project: \`$PROJECT_ID\`"
+            echo "- Targets: \`$TARGETS\`"
+            echo "- Preview: ${{ needs.preview.outputs.url }}"
+            echo "- Trang SV: https://$PROJECT_ID.web.app"
+          } >> "$GITHUB_STEP_SUMMARY"
