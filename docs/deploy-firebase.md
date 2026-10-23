@@ -134,8 +134,44 @@ Lưu ý:
 | Port 8080 bận khi chạy Emulator | Dự án dùng Firestore Emulator cổng **8085** (`firebase.json`). |
 | `firebase: command not found` | `npm install -g firebase-tools` (script cũng thử `npx firebase-tools`). |
 
-## 10. CI
+## 10. CI/CD (GitHub Actions)
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) chạy mỗi lần push/PR: test Rules + Functions + e2e trên Emulator, `flutter analyze`/`test` cho `packages/core` và `mobile`. CI **không** tự deploy; deploy là bước thủ công có kiểm soát.
+Mọi workflow **chỉ chạy khi push lên `main`** (không chạy trên PR hay nhánh khác) — nên test trên máy trước khi merge (`npm test` trong `firebase/`, `flutter test`).
+
+| Workflow | Kích hoạt | Việc làm |
+|---|---|---|
+| [`ci.yml`](../.github/workflows/ci.yml) | push `main` (bỏ qua thay đổi chỉ có `docs/`/`*.md`) | Rules + Functions + e2e trên Emulator (cache Emulator và npm), kiểm tra JSON cấu hình và cú pháp `web/checkin/app.js`; `flutter analyze`/`test` cho `packages/core` và `mobile` (job `mobile` còn `continue-on-error` vì 2 test lỗi sẵn có — [quick-start-mobile §7](quick-start-mobile.md#7-kiểm-tra)) |
+| [`deploy.yml`](../.github/workflows/deploy.yml) | `workflow_run`: ngay khi `CI` của push `main` kết thúc **thành công** | Job `preview`: deploy trang SV lên preview channel `main-<sha7>` (hết hạn 2 ngày) rồi **smoke test**. Job `deploy` (cần `preview` xanh; environment `production`): `firebase deploy` bản live rồi smoke test lại |
+| [`mobile-build.yml`](../.github/workflows/mobile-build.yml) | push `main` đụng `mobile/**`, `packages/core/**` | Build APK debug, đưa lên artifact (14 ngày). Không phát hành lên Play |
+
+### Smoke test sau deploy
+
+[`firebase/scripts/smoke-test.mjs`](../firebase/scripts/smoke-test.mjs) chỉ gọi HTTP công khai, chạy được trên preview lẫn live (`node firebase/scripts/smoke-test.mjs <baseUrl> [projectId]`):
+
+1. Trang SV trả 200, nạp `app.js`, không còn tham chiếu Apps Script / `BACKEND_URL`.
+2. `app.js` tải được và ghi `attendance_records`.
+3. `/__/firebase/init.json` trả cấu hình đúng project.
+4. Firestore Rules đang chạy: đọc không đăng nhập bị từ chối (403).
+5. Auth không cho đăng ký ẩn danh.
+
+Preview thất bại thì bản live **không** được deploy. Tên channel preview giúp xem thử bằng tay: URL in trong tóm tắt của lần chạy. Nếu `FIREBASE_DEPLOY_TARGETS` không có `hosting`, preview và smoke test trang bị bỏ qua.
+
+### Thiết lập deploy tự động (một lần)
+
+1. Google Cloud Console → **IAM & Admin → Service Accounts** của project `fapcheckin-3bn2di` → tạo service account (vd `github-deploy`) với các vai trò: *Firebase Admin* (hoặc tối thiểu *Firebase Rules Admin*, *Firebase Hosting Admin*, *Cloud Datastore Index Admin*, *Firebase Remote Config Admin*; thêm *Cloud Functions Admin* và *Service Account User* nếu deploy Functions).
+2. Tạo khóa JSON cho service account đó (**Keys → Add key → JSON**).
+3. GitHub → **Settings → Secrets and variables → Actions**:
+   - Secret `FIREBASE_SERVICE_ACCOUNT` = toàn bộ nội dung file JSON (xóa file khỏi máy sau khi dán; **không** commit).
+   - Variable `FIREBASE_PROJECT_ID` (tùy chọn, mặc định `fapcheckin-3bn2di`).
+   - Variable `FIREBASE_DEPLOY_TARGETS` (mặc định `firestore,hosting`). Thêm `storage` sau khi bật Cloud Storage, `remoteconfig`, và `functions` khi đã có Blaze + Cloud Vision API.
+4. **Settings → Environments → production**: bật *Required reviewers* nếu muốn duyệt tay trước mỗi lần deploy.
+
+Thiếu secret thì job `preview` dừng với thông báo rõ ràng. Deploy thủ công vẫn dùng được: `./scripts/deploy.ps1` (mục 5).
+
+### Lưu ý
+
+- `deploy.yml` chạy sau mỗi lần CI xanh trên `main` và deploy lại các target đã cấu hình (idempotent). Push chỉ sửa tài liệu không chạy CI nên không deploy.
+- Rules sai là lỗi bảo mật nghiêm trọng: deploy luôn đi sau test Rules trên Emulator, không có lối tắt trong workflow.
+- APK build trên CI ký bằng debug keystore của runner (SHA-1 riêng) nên đăng nhập Google chỉ hoạt động khi SHA-1 đó được thêm vào Firebase.
 
 [← Mục lục](README.md)
