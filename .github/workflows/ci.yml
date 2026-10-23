@@ -69,10 +69,11 @@ jobs:
       - name: End-to-end flow
         run: npm test --prefix e2e_test
 
-      - name: Syntax check student check-in page
+      - name: Syntax check student check-in page and scripts
         run: |
           cp web/checkin/app.js "$RUNNER_TEMP/checkin-app.mjs"
           node --check "$RUNNER_TEMP/checkin-app.mjs"
+          for f in firebase/scripts/*.mjs; do node --check "$f" && echo "ok $f"; done
 
   flutter-core:
     name: packages/core
