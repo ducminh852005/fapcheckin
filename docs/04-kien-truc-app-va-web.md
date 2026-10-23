@@ -1,96 +1,92 @@
 [← Mục lục](README.md)
 
-# 04 · Kiến trúc App Giảng viên & Trang Web Sinh viên
+# 04 · Cấu trúc monorepo, App Giảng viên & Trang Web Sinh viên
 
-Chỉ app của giảng viên theo MVVM — trang web của sinh viên đơn giản đến mức không cần một kiến trúc phân lớp riêng.
+Chỉ app của giảng viên theo MVVM — trang web của sinh viên đơn giản đến mức không cần kiến trúc phân lớp riêng.
+
+## 04.0 — Cấu trúc thư mục
+
+```
+fapcheckin/
+├─ firebase.json, .firebaserc      # cấu hình Firebase (Hosting, Firestore, Storage, Remote Config, Functions, Emulators)
+├─ packages/core/                  # Dart package `fapcheckin_core` — dùng chung cho mobile và Web Admin
+│  └─ lib/
+│     ├─ models/                   # UserModel, SessionModel, ClassSectionModel, ... (fromJson / fromFirestore)
+│     ├─ repositories/             # Repository đọc/ghi Firestore (+ internal/ truy vấn dùng chung)
+│     ├─ result/                   # ApiResult / ApiSuccess / ApiFailure, guardApi, ApiException
+│     ├─ session/                  # CurrentUser (hồ sơ đang đăng nhập)
+│     ├─ firebase/                 # tiện ích Timestamp -> JSON, ngày giờ giờ Việt Nam
+│     ├─ theme/ constants/ responsive/   # design system
+│     └─ utils/                    # json_values, history_excel (xuất .xlsx)
+├─ mobile/                         # App Flutter cho GV (staff): lib/{app,viewmodels,views,core}, android/ ios/ windows/ ...
+├─ web/
+│  ├─ checkin/                     # Trang điểm danh SV (HTML + Firebase JS SDK), host trên Firebase Hosting
+│  └─ admin/                       # Web Admin (chưa code — chỉ README thiết kế)
+├─ firebase/
+│  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
+│  ├─ functions/                   # Cloud Function scanTimetable (OCR)
+│  ├─ tests/                       # test Security Rules trên Emulator
+│  └─ scripts/                     # seed-admin, seed-reference, migrate-legacy
+├─ e2e_test/                       # luồng end-to-end trên Emulator
+├─ scripts/deploy.ps1              # chạy test rules rồi firebase deploy
+└─ docs/                           # tài liệu này
+```
 
 ## 04.1 — App Giảng viên: Flutter, MVVM
 
-Bốn lớp tách biệt rõ trách nhiệm; ViewModel **không biết** Firestore, Sheet hay Apps Script tồn tại — nó chỉ biết Repository.
+Bốn lớp tách biệt; ViewModel **không biết** Firestore tồn tại — nó chỉ biết Repository (trong `packages/core`).
 
 ```mermaid
 flowchart LR
-    View <--> ViewModel <--> Repository <--> DataSource[Data Source<br/>Apps Script API]
-    DataSource --> DB[(Firestore)]
+    View <--> ViewModel <--> Repository --> Firestore[("Cloud Firestore<br/>+ Security Rules")]
+    Repository --> Storage[Storage] 
+    Repository --> Functions[Cloud Functions]
+    AuthRepository --> Auth[Firebase Auth]
 ```
 
-App GV chỉ gọi API của Apps Script; việc CSDL phía sau là Firestore hay Google Sheet không ảnh hưởng app ([01](01-kien-truc-tong-the.md)). App GV là app Flutter cài trên máy giảng viên, **không** deploy lên Firebase Hosting.
-
-### Stack — thư viện chính (app GV)
+### Stack — thư viện chính
 
 | Nhóm | Package | Vai trò |
 |---|---|---|
-| State (ViewModel) | `provider` | `ChangeNotifier` = ViewModel; View "lắng nghe" qua `Consumer`/`Selector`. |
-| Gọi API | `dio` | Interceptor tự đính kèm token phiên vào mỗi request tới BE. |
-| Đăng nhập | `google_sign_in` | SSO bằng tài khoản Google của trường. |
-| Sinh QR | `qr_flutter` | Vẽ QR từ URL chứa `qrToken`, làm mới mỗi 60 giây. |
-| Lấy IP công khai | `http` (gọi ipify) | **Chỉ khi GV tích "Kiểm tra IP mạng"** lúc mở phiên (mặc định không tích): lấy `teacherIp` để Backend đối chiếu với SV — không dùng `geolocator`/GPS. |
-| Token an toàn | `flutter_secure_storage` | Lưu session token của GV, tách khỏi cache thường. |
-| Biểu đồ | `fl_chart` | % chuyên cần theo môn, xem trong app GV. |
-| Điều hướng | `go_router` | Điều hướng giữa các màn của GV sau đăng nhập. |
+| State (ViewModel) | `provider` | `ChangeNotifier` = ViewModel; View lắng nghe qua `Consumer`/`Selector`. |
+| Firebase | `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `cloud_functions`, `firebase_remote_config` | Repository dùng trực tiếp; `firebase_analytics` + `firebase_crashlytics` chỉ bật trên Android/iOS. |
+| Đăng nhập | `google_sign_in` (+ luồng OAuth riêng cho Windows/Linux) | Lấy Google ID token → `GoogleAuthProvider.credential` → Firebase Auth. |
+| Sinh QR | `qr_flutter` | Vẽ QR từ URL `…/?s=<sessionId>&t=<qrSecret>&ic=<0\|1>`, làm mới theo `qr_refresh_seconds`. |
+| Điều hướng | `go_router` | Giữa các màn của GV sau đăng nhập. |
+| HTTP nhỏ | `dio` | Chỉ để lấy IP công khai (ipify) khi bật kiểm tra IP. |
 
-### Cấu trúc thư mục dự án (app GV)
+### Cấu trúc `mobile/lib`
 
 ```
-lib/
-├─ main.dart
-├─ app/
-│  ├─ app.dart                  // MaterialApp, theme sáng/tối
-│  └─ router.dart               // go_router giữa các màn của GV
+mobile/lib/
+├─ main.dart                  # Firebase.initializeApp, Crashlytics, Remote Config
+├─ firebase_options.dart      # sinh bởi `flutterfire configure`
+├─ app/                       # MaterialApp, router, dựng Provider/Repository
 ├─ core/
-│  ├─ constants/
-│  ├─ services/
-│  │  ├─ api_service.dart       // Dio client + interceptor token
-│  │  ├─ auth_service.dart      // google_sign_in, quản lý session
-│  │  ├─ qr_service.dart        // timer 60 giây và mã hoá URL vào QR
-│  │  └─ ip_service.dart        // gọi ipify lấy teacherIp (chỉ khi bật kiểm tra IP)
-│  └─ utils/
-├─ data/
-│  ├─ models/
-│  │  ├─ user_model.dart
-│  │  ├─ class_model.dart
-│  │  ├─ session_model.dart
-│  │  └─ attendance_model.dart
-│  └─ repositories/
-│     ├─ auth_repository.dart
-│     ├─ class_repository.dart
-│     └─ attendance_repository.dart   // nơi duy nhất biết "nguồn dữ liệu" là gì
-├─ viewmodels/
-│  ├─ login_viewmodel.dart
-│  ├─ teacher_session_viewmodel.dart  // tạo phiên, xoay QR 60 giây, roster real-time
-│  └─ history_viewmodel.dart          // lịch sử điểm danh của lớp, thống kê
-└─ views/
-   ├─ auth/login_screen.dart
-   └─ teacher/
-      ├─ class_list_screen.dart
-      ├─ start_session_screen.dart    // hiển thị QR xoay mỗi phút
-      ├─ live_roster_screen.dart      // danh sách đã điểm danh + điểm danh tay
-      └─ class_stats_screen.dart      // biểu đồ % chuyên cần
+│  ├─ config/                 # AuthConfig (OAuth client), AppConfig (URL trang check-in)
+│  └─ services/               # google_auth_service, desktop_google_auth, ip_service, remote_settings, telemetry
+├─ viewmodels/                # auth, dashboard, live_session, attendance_history, report
+└─ views/                     # auth, main_screen, teacher/{dashboard,live_session,attendance_history,class_management,report,settings,schedule}
 ```
 
-> Khung thư mục này đã được dựng sẵn trong repo (rỗng, giữ chỗ bằng `.gitkeep`) — xem [lib/](../lib).
+Model, Repository, theme dùng chung nằm ở [`packages/core/lib`](../packages/core/lib) và được import qua `package:fapcheckin_core/...`.
 
 ## 04.2 — Trang Web Điểm danh: Sinh viên
 
-Không cần MVVM cho một trang chỉ làm đúng một việc. Toàn bộ là HTML/CSS/JS thuần trong một file, **host trên Firebase Hosting** (gốc `/`, link dạng `https://<project>.web.app/?token=<qrToken>`) và gọi API của Backend Apps Script qua `BACKEND_URL`.
-
-```
-checkin-web/
-└─ index.html      // Toàn bộ giao diện, CSS và JS của trang SV
-
-scripts/deploy.ps1 // gom checkin-web/ → build/firebase-hosting, điền BACKEND_URL, firebase deploy
-firebase.json      // cấu hình Hosting (mọi đường dẫn → index.html, no-cache)
-```
-
-Deploy: `./scripts/deploy.ps1 -ProjectId <id> -Only hosting` — xem [deploy-firebase.md](deploy-firebase.md). Script điền `BACKEND_URL` vào bản copy khi deploy, source `checkin-web/index.html` giữ nguyên `var BACKEND_URL = '';`.
-
-> **Đường lui:** nhánh `doGet(e)` cũ (`?page=checkin`, render `apps-script/index.html` bằng `HtmlService`) vẫn còn trong backend. QR hiện vẫn trỏ về đó cho tới khi chuyển sang Hosting ([deploy-firebase.md §6](deploy-firebase.md#6-chuyển-qr-của-sinh-viên-sang-hosting-chưa-làm)). Trang chạy trong iframe sandbox của Apps Script phải đăng nhập Google bằng chế độ redirect; trang trên Hosting có origin riêng nên phải được thêm vào OAuth ([google-oauth-setup.md](google-oauth-setup.md)).
+Không cần MVVM cho một trang chỉ làm đúng một việc: [`web/checkin/`](../web/checkin) gồm `index.html` (giao diện + CSS) và `app.js` (module ES, Firebase JS SDK qua CDN gstatic, phiên bản ghim). Cấu hình Firebase lấy từ `/__/firebase/init.json` do Hosting tự phục vụ nên không commit khóa nào.
 
 | Thành phần | Vai trò |
 |---|---|
-| Google Identity Services (GIS) | Nút "Đăng nhập bằng Google" trên web, giới hạn theo domain trường — tương đương `google_sign_in` bên app. |
-| Fetch API | Gọi `checkin` tới Backend (`BACKEND_URL`), body `text/plain` để tránh preflight CORS; không cần thư viện ngoài. |
-| ipify (hoặc tương đương) | Trang chỉ lấy IP công khai của SV khi phiên bật kiểm tra IP (backend trả `IP_REQUIRED`) — không xin quyền định vị. |
-| localStorage | Lưu session token của trình duyệt để lần quét sau tự nhận diện, không cần đăng nhập lại. |
+| Firebase Auth (Google) | Nút "Đăng nhập bằng Google" (popup, tự chuyển sang redirect nếu bị chặn) — thay Google Identity Services cũ. |
+| Firestore SDK | Đọc `user_invites`, `users`, `enrollments` của chính mình; tạo `attendance_records`. |
+| ipify | Chỉ gọi khi QR có `ic=1` — không xin quyền định vị. |
+| Phiên đăng nhập | Firebase Auth lưu trong trình duyệt → lần quét sau tự điểm danh. |
+
+Chạy thử cục bộ với Emulator: `firebase emulators:start`, mở `http://localhost:5000/?s=<id>&t=<secret>&emulator=1`.
+Deploy: `./scripts/deploy.ps1 -Only hosting` — xem [deploy-firebase.md](deploy-firebase.md).
+
+## 04.3 — Web Admin
+
+Chưa triển khai; [`web/admin/README.md`](../web/admin/README.md) mô tả chức năng, collection và quyền tương ứng. Vì `packages/core` đã chứa model, Repository, theme, Web Admin sẽ tái sử dụng và chỉ viết thêm các màn quản trị.
 
 [→ 05 Xác thực & phân quyền](05-xac-thuc-va-phan-quyen.md)

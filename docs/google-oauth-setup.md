@@ -1,50 +1,49 @@
-# Google OAuth setup for the check-in Web App
+[← Mục lục](README.md)
 
-> **Firebase Hosting:** the student page is also deployed to Firebase Hosting
-> (`https://<project-id>.web.app`, see `docs/deploy-firebase.md`). That page has a
-> normal origin, so add `https://<project-id>.web.app` to **Authorized JavaScript
-> origins** of the same Web client. The rest of this file describes the older page
-> served by Apps Script (kept as a fallback until the QR code points to Hosting).
-> Before switching the QR, check that `checkin-web/index.html` signs in correctly
-> from the Hosting origin (its `g_id_onload` uses the same client ID).
+# Thiết lập đăng nhập Google (Firebase Authentication)
 
-The student check-in page served by Apps Script is rendered inside an Apps Script HTML Service iframe.
-Its generated `script.googleusercontent.com` sandbox host cannot be registered
-reliably as an OAuth JavaScript origin. The Apps Script UI therefore uses Google
-Identity Services **redirect mode**, not popup mode.
+Cả app GV, trang SV và (sau này) Web Admin đều đăng nhập bằng **Firebase Authentication — nhà cung cấp Google**. Không còn luồng Google Identity Services + backend tự xác minh `idToken` như thời Apps Script.
 
-## OAuth web client
+## 1. Bật nhà cung cấp Google
 
-- Client ID: `222111384223-rk24tqqmdp7bof592plvogk5u2ng2ci0.apps.googleusercontent.com`
-- Application type: **Web application**
-- Authorized redirect URI:
-  `https://script.google.com/macros/s/AKfycbwhbrv6Y76dGETuwDeMqObH1Dvf9RwQ5obDkxuuR-x5m2T3JoCByY0EuuB4ptuTHC3cwA/exec`
+Firebase Console → **Authentication → Sign-in method → Google → Enable**, chọn email hỗ trợ dự án. Firebase tự tạo một **Web client** trong project Google Cloud tương ứng.
 
-Open Google Cloud Console, select the project that owns the client ID, then go
-to **Google Auth Platform > Clients**, open this Web client, add the complete URL
-above under **Authorized redirect URIs**, and save. It must match exactly,
-including the `/exec` path and without a query string or trailing slash.
+## 2. Trang SV (Hosting) — không cần cấu hình OAuth thủ công
 
-If the standalone Flutter web application is also used locally, add its exact
-development origin under **Authorized JavaScript origins**, for example
-`http://localhost:7357`. Production static hosts must likewise be listed as
-their own HTTPS origins.
+Trang `web/checkin` dùng `signInWithPopup` của Firebase Auth trên origin `https://<project-id>.web.app`. Origin này đã nằm trong **Authentication → Settings → Authorized domains** mặc định; thêm `localhost` để thử cục bộ. Không cần khai báo Authorized JavaScript origins / redirect URI trong Google Cloud Console (Firebase tự lo handler `/__/auth/handler`).
 
-After changing an OAuth client, allow several minutes for the setting to
-propagate, open a fresh incognito window, and test with a newly generated QR.
+## 3. App Android
 
-## Desktop OAuth client
+1. Thêm SHA-1 của máy bạn vào app Android trong Firebase (*Project settings → Your apps*) và chạy lại `flutterfire configure` để tải `google-services.json` — chi tiết: [quick-start-mobile.md §5](quick-start-mobile.md#5-đăng-nhập-google-trên-android).
+2. `GOOGLE_SERVER_CLIENT_ID` mặc định (`mobile/lib/core/config/auth_config.dart`) là Web client của chính project Firebase (`161196189514-jtodr06udnlqeca7768qkqq5lrqn32qo.apps.googleusercontent.com`), nên không cần safelist. Nếu đổi sang client của project khác, thêm nó vào *Authentication → Sign-in method → Google → Safelist client IDs from external projects*.
+3. Nếu OAuth consent screen đang ở chế độ **Testing**, thêm email thành viên vào **Test users**.
 
-Windows and Linux builds use the installed-app OAuth flow, so they must be run
-with the Desktop client secret that belongs to
-`222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com`.
+## 4. Desktop (Windows / Linux)
 
-Copy `desktop_oauth.example.json` to `desktop_oauth.local.json`, replace the
-placeholder with the real secret from Google Cloud Console, then run:
+Bản desktop dùng luồng OAuth *installed app* (mở trình duyệt, nhận mã qua loopback) để lấy Google `idToken`, rồi đổi sang phiên Firebase giống mobile. Cần **Desktop OAuth client** của project và client secret của nó:
+
+- Client ID mặc định: `222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com` (`AuthConfig.googleDesktopClientId`).
+- Client secret **không** nằm trong repo. Tạo file `mobile/desktop_oauth.local.json` (đã được `.gitignore`) chứa `{"GOOGLE_DESKTOP_CLIENT_SECRET": "<secret thật từ Google Cloud Console>"}` rồi chạy:
 
 ```powershell
+cd mobile
 flutter run -d windows --dart-define-from-file=desktop_oauth.local.json
 ```
 
-If the local file still contains the placeholder, Google will reject the token
-exchange with `invalid_client`.
+Nếu file vẫn là giá trị mẫu, Google từ chối đổi mã với `invalid_client`.
+
+> Hỗ trợ Windows/Linux của các plugin Firebase còn hạn chế (xem [06](06-rui-ro-va-mo-rong.md)). Nếu `signInWithCredential` lỗi trên desktop, dùng Android hoặc web.
+
+## 5. Cấp quyền truy cập
+
+Đăng nhập Google thành công **chưa** có nghĩa được vào hệ thống: email phải có bản ghi `user_invites/{email}` (admin cấp) thì mới tạo được hồ sơ `users/{uid}`. Xem [05](05-xac-thuc-va-phan-quyen.md).
+
+## Chẩn đoán nhanh
+
+| Triệu chứng | Nguyên nhân thường gặp |
+|---|---|
+| `DEVELOPER_ERROR` / `clientConfigurationError` (Android) | SHA-1 chưa khai báo trong Firebase, hoặc `google-services.json` cũ. |
+| `auth/invalid-credential` / audience không hợp lệ | `GOOGLE_SERVER_CLIENT_ID` không thuộc project Firebase và chưa được safelist. |
+| `auth/unauthorized-domain` (web) | Thêm domain vào *Authorized domains*. |
+| "Tài khoản không thuộc hệ thống…" | Email chưa có `user_invites`. |
+| `access_denied` khi đăng nhập | Consent screen ở chế độ Testing và email chưa vào Test users. |
