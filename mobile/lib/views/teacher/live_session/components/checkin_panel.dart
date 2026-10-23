@@ -1,0 +1,1072 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:fapcheckin_core/constants/app_colors.dart';
+import 'package:fapcheckin_core/constants/app_spacing.dart';
+import 'package:fapcheckin_core/constants/app_text_styles.dart';
+import 'package:fapcheckin_core/responsive/breakpoints.dart';
+import 'package:fapcheckin_core/models/student_checkin.dart';
+import '../../../../viewmodels/live_session_viewmodel.dart';
+
+import '../dialogs/manual_attendance_dialog.dart';
+
+/// Right column: stats + search + table
+class CheckinPanel extends StatelessWidget {
+  const CheckinPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LiveSessionViewModel>(
+      builder: (context, vm, _) {
+        return Container(
+          padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0A142433),
+                blurRadius: 4,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _PanelHeader(vm: vm),
+              SizedBox(height: AppSpacing.md),
+              _StatsCards(vm: vm),
+              SizedBox(height: AppSpacing.md),
+              _SearchAndFilter(vm: vm),
+              SizedBox(height: AppSpacing.md),
+              _CheckinTable(vm: vm),
+              SizedBox(height: AppSpacing.sm),
+              _TableFooter(vm: vm),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Header row: title + manual attendance button
+class _PanelHeader extends StatelessWidget {
+  final LiveSessionViewModel vm;
+  const _PanelHeader({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    final titles = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Danh sách check-in thời gian thực',
+          style: AppTextStyles.headlineMd.copyWith(
+            color: AppColors.textPrimary,
+            letterSpacing: -0.3,
+          ),
+        ),
+        SizedBox(height: 2),
+        Text(
+          'Cập nhật tự động ngay khi sinh viên quét mã thành công',
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+        ),
+      ],
+    );
+
+    if (context.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [titles, SizedBox(height: 12), _ManualButton()],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: titles),
+        SizedBox(width: 12),
+        _ManualButton(),
+      ],
+    );
+  }
+}
+
+class _ManualButton extends StatefulWidget {
+  @override
+  State<_ManualButton> createState() => _ManualButtonState();
+}
+
+class _ManualButtonState extends State<_ManualButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => ManualAttendanceDialog(),
+          );
+        },
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: context.isMobile ? 12 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? AppColors.primaryDark
+                : AppColors.primaryContainer,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0A142433),
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: context.isMobile
+                ? MainAxisSize.max
+                : MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.edit_calendar_outlined,
+                size: 18,
+                color: AppColors.onPrimary,
+              ),
+              SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'Điểm danh thủ công',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: AppColors.onPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 3 metric cards: present, late, unchecked
+class _StatsCards extends StatelessWidget {
+  final LiveSessionViewModel vm;
+  const _StatsCards({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    final showAbsent = vm.absentCount > 0 || vm.isClosed;
+    final uncheckOrAbsentCount = showAbsent
+        ? vm.absentCount
+        : vm.uncheckedCount;
+
+    final presentCard = _MetricCard(
+      label: 'ĐÃ ĐIỂM DANH',
+      count: vm.checkedInCount,
+      total: vm.totalStudents,
+      countSuffix: '/ ${vm.totalStudents}',
+      progress: vm.checkedInCount / vm.totalStudents,
+      color: AppColors.statusPresent,
+      bgColor: AppColors.statusPresentBg,
+      barColor: AppColors.statusPresentBorder,
+      icon: Icons.check_circle_outlined,
+    );
+    final lateCard = _MetricCard(
+      label: 'ĐI TRỄ',
+      count: vm.lateCount,
+      countSuffix: 'sinh viên',
+      progress: vm.lateCount / vm.totalStudents,
+      color: AppColors.statusLate,
+      bgColor: AppColors.statusLateBg,
+      barColor: AppColors.statusLateBorder,
+      icon: Icons.alarm_on_outlined,
+    );
+    final otherCard = _MetricCard(
+      label: showAbsent ? 'VẮNG MẶT' : 'CHƯA CHECK-IN',
+      count: uncheckOrAbsentCount,
+      countSuffix: 'sinh viên',
+      progress: uncheckOrAbsentCount / vm.totalStudents,
+      color: showAbsent ? AppColors.statusAbsent : AppColors.statusUnchecked,
+      bgColor: showAbsent
+          ? AppColors.statusAbsentBg
+          : AppColors.statusUncheckedBg,
+      barColor: showAbsent
+          ? AppColors.statusAbsentBorder
+          : AppColors.statusUncheckedBorder,
+      icon: showAbsent ? Icons.cancel_outlined : Icons.person_off_outlined,
+    );
+
+    if (context.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          presentCard,
+          SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(child: lateCard),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(child: otherCard),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: presentCard),
+        SizedBox(width: AppSpacing.sm),
+        Expanded(child: lateCard),
+        SizedBox(width: AppSpacing.sm),
+        Expanded(child: otherCard),
+      ],
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  final String label;
+  final int count;
+  final int? total;
+  final String countSuffix;
+  final double progress;
+  final Color color;
+  final Color bgColor;
+  final Color barColor;
+  final IconData icon;
+
+  const _MetricCard({
+    required this.label,
+    required this.count,
+    this.total,
+    required this.countSuffix,
+    required this.progress,
+    required this.color,
+    required this.bgColor,
+    required this.barColor,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyles.caption.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(icon, size: 18, color: color),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$count',
+                style: AppTextStyles.headlineLg.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  countSuffix,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.labelMd.copyWith(
+                    color: color.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: barColor,
+              valueColor: AlwaysStoppedAnimation(color),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Search bar + filter tabs
+class _SearchAndFilter extends StatelessWidget {
+  final LiveSessionViewModel vm;
+  const _SearchAndFilter({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+      ),
+      child: _layout(
+        context,
+        // Search input
+        search: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x08142433),
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: TextField(
+            onChanged: vm.setSearchQuery,
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(left: 10, right: 6),
+                child: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              prefixIconConstraints: BoxConstraints(minWidth: 36),
+              hintText: 'Tìm theo MSSV hoặc họ tên sinh viên...',
+              hintStyle: AppTextStyles.bodySm.copyWith(
+                color: AppColors.textTertiary,
+              ),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        // Filter tabs
+        filters: Container(
+          padding: EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _FilterTab(
+                label: 'Tất cả (${vm.totalStudents})',
+                isActive: vm.activeFilter == 'all',
+                onTap: () => vm.setFilter('all'),
+              ),
+              _FilterTab(
+                label: 'Đã check-in (${vm.checkedInCount})',
+                isActive: vm.activeFilter == 'checked',
+                onTap: () => vm.setFilter('checked'),
+              ),
+              _FilterTab(
+                label: (vm.absentCount > 0 || vm.isClosed)
+                    ? 'Vắng mặt (${vm.absentCount > 0 ? vm.absentCount : vm.uncheckedCount})'
+                    : 'Chưa check-in (${vm.uncheckedCount})',
+                isActive: vm.activeFilter == 'unchecked',
+                onTap: () => vm.setFilter('unchecked'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _layout(
+    BuildContext context, {
+    required Widget search,
+    required Widget filters,
+  }) {
+    if (context.isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          search,
+          SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: filters,
+          ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: search),
+        SizedBox(width: 8),
+        filters,
+      ],
+    );
+  }
+}
+
+class _FilterTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _FilterTab({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Color(0x0A142433),
+                    blurRadius: 2,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.labelSm.copyWith(
+            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Data table for student check-in records
+class _CheckinTable extends StatefulWidget {
+  final LiveSessionViewModel vm;
+  const _CheckinTable({required this.vm});
+
+  @override
+  State<_CheckinTable> createState() => _CheckinTableState();
+}
+
+class _CheckinTableState extends State<_CheckinTable> {
+  int _currentPage = 0;
+  static const int _itemsPerPage = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = widget.vm;
+    final students = vm.filteredStudents;
+
+    final totalStudents = students.length;
+    final totalPages = (totalStudents / _itemsPerPage).ceil();
+    if (_currentPage >= totalPages && totalPages > 0) {
+      _currentPage = totalPages - 1;
+    }
+
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage > totalStudents)
+        ? totalStudents
+        : startIndex + _itemsPerPage;
+
+    final paginatedStudents = totalStudents > 0
+        ? students.sublist(startIndex, endIndex)
+        : <StudentCheckin>[];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+        boxShadow: [
+          BoxShadow(color: Color(0x05142433), blurRadius: 4, spreadRadius: 1),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          if (context.isMobile)
+            _MobileCheckinList(students: paginatedStudents)
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: 920,
+                child: Table(
+                  columnWidths: {
+                    0: FixedColumnWidth(52), // STT
+                    1: FixedColumnWidth(118), // MSSV
+                    2: FixedColumnWidth(300), // Họ tên
+                    3: FixedColumnWidth(120), // Thời gian
+                    4: FixedColumnWidth(180), // Trạng thái
+                    5: FixedColumnWidth(150), // IP
+                  },
+                  children: [
+                    // Header
+                    TableRow(
+                      decoration: BoxDecoration(color: AppColors.surfaceMuted),
+                      children: [
+                        _HeaderCell('STT', center: true),
+                        _HeaderCell('MSSV'),
+                        _HeaderCell('Họ và tên'),
+                        _HeaderCell('Thời gian'),
+                        _HeaderCell('Trạng thái'),
+                        _HeaderCell('IP Mạng'),
+                      ],
+                    ),
+                    // Data rows
+                    ...paginatedStudents.asMap().entries.map((e) {
+                      final i = e.key;
+                      final s = e.value;
+                      return TableRow(
+                        decoration: BoxDecoration(
+                          color: i.isOdd
+                              ? AppColors.surfaceContainerLow.withValues(
+                                  alpha: 0.3,
+                                )
+                              : Colors.transparent,
+                        ),
+                        children: [
+                          _DataCell(
+                            center: true,
+                            child: Text(
+                              s.index.toString().padLeft(2, '0'),
+                              style: AppTextStyles.codeSm.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          _DataCell(
+                            child: Text(
+                              s.studentId,
+                              style: AppTextStyles.code.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: s.status == CheckinStatus.unchecked
+                                    ? AppColors.textSecondary
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          _DataCell(
+                            child: Row(
+                              children: [
+                                _AvatarCircle(
+                                  initials: s.initials,
+                                  status: s.status,
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    s.fullName,
+                                    style: AppTextStyles.bodySm.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.visible,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _DataCell(
+                            child: Text(
+                              s.checkInTime,
+                              style: AppTextStyles.code.copyWith(
+                                fontSize: 12,
+                                color: s.status == CheckinStatus.late
+                                    ? AppColors.statusLate
+                                    : AppColors.textSecondary,
+                                fontWeight: s.status == CheckinStatus.late
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                          _DataCell(
+                            child: _StatusChip(
+                              status: s.status,
+                              lateMinutes: s.lateMinutes,
+                            ),
+                          ),
+                          _DataCell(
+                            child: s.ipAddress == '--'
+                                ? Text(
+                                    '--',
+                                    style: AppTextStyles.codeSm.copyWith(
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  )
+                                : Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceMuted,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      s.ipAddress,
+                                      style: AppTextStyles.codeSm.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.visible,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          if (totalPages > 1)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.chevron_left),
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    color: AppColors.textSecondary,
+                  ),
+                  Text(
+                    'Trang ${_currentPage + 1} / $totalPages',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.chevron_right),
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Phone layout for the check-in table: one compact card per student.
+class _MobileCheckinList extends StatelessWidget {
+  final List<StudentCheckin> students;
+  const _MobileCheckinList({required this.students});
+
+  @override
+  Widget build(BuildContext context) {
+    if (students.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Center(
+          child: Text(
+            'Chưa có sinh viên nào.',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < students.length; i++)
+          _MobileCheckinRow(student: students[i], odd: i.isOdd),
+      ],
+    );
+  }
+}
+
+class _MobileCheckinRow extends StatelessWidget {
+  final StudentCheckin student;
+  final bool odd;
+  const _MobileCheckinRow({required this.student, required this.odd});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = student;
+    final isLate = s.status == CheckinStatus.late;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      color: odd
+          ? AppColors.surfaceContainerLow.withValues(alpha: 0.3)
+          : Colors.transparent,
+      child: Row(
+        children: [
+          _AvatarCircle(initials: s.initials, status: s.status),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.fullName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  [
+                    s.studentId,
+                    if (!s.checkInTime.startsWith('--')) s.checkInTime,
+                    if (s.ipAddress != '--') s.ipAddress,
+                  ].join('  •  '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.codeSm.copyWith(
+                    color: isLate
+                        ? AppColors.statusLate
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          Flexible(
+            child: _StatusChip(status: s.status, lateMinutes: s.lateMinutes),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderCell extends StatelessWidget {
+  final String text;
+  final bool center;
+  const _HeaderCell(this.text, {this.center = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSm.copyWith(
+          fontSize: 11,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.5,
+          fontWeight: FontWeight.w600,
+        ),
+        textAlign: center ? TextAlign.center : TextAlign.left,
+      ),
+    );
+  }
+}
+
+class _DataCell extends StatelessWidget {
+  final Widget child;
+  final bool center;
+  const _DataCell({required this.child, this.center = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: center
+          ? Center(child: child)
+          : Align(alignment: Alignment.centerLeft, child: child),
+    );
+  }
+}
+
+class _AvatarCircle extends StatelessWidget {
+  final String initials;
+  final CheckinStatus status;
+  const _AvatarCircle({required this.initials, required this.status});
+
+  Color get bg {
+    switch (status) {
+      case CheckinStatus.present:
+        return AppColors.primaryLight;
+      case CheckinStatus.late:
+        return Color(0xFFFFDCC2); // tertiary-fixed
+      case CheckinStatus.absent:
+        return AppColors.statusAbsentBg;
+      case CheckinStatus.unchecked:
+        return AppColors.surfaceContainerHigh;
+    }
+  }
+
+  Color get fg {
+    switch (status) {
+      case CheckinStatus.present:
+        return AppColors.primaryDark;
+      case CheckinStatus.late:
+        return Color(0xFF2E1500); // on-tertiary-fixed
+      case CheckinStatus.absent:
+        return AppColors.statusAbsent;
+      case CheckinStatus.unchecked:
+        return AppColors.textSecondary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: AppTextStyles.codeSm.copyWith(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final CheckinStatus status;
+  final String? lateMinutes;
+  const _StatusChip({required this.status, this.lateMinutes});
+
+  @override
+  Widget build(BuildContext context) {
+    late Color dotColor, textColor, bgColor;
+    late String label;
+
+    switch (status) {
+      case CheckinStatus.present:
+        dotColor = AppColors.statusPresent;
+        textColor = AppColors.statusPresent;
+        bgColor = AppColors.statusPresentBg;
+        label = 'Có mặt';
+        break;
+      case CheckinStatus.late:
+        dotColor = AppColors.statusLate;
+        textColor = AppColors.statusLate;
+        bgColor = AppColors.statusLateBg;
+        label = 'Đi trễ (${lateMinutes ?? ''})';
+        break;
+      case CheckinStatus.absent:
+        dotColor = AppColors.statusAbsent;
+        textColor = AppColors.statusAbsent;
+        bgColor = AppColors.statusAbsentBg;
+        label = 'Vắng mặt';
+        break;
+      case CheckinStatus.unchecked:
+        dotColor = AppColors.statusUnchecked;
+        textColor = AppColors.statusUnchecked;
+        bgColor = AppColors.statusUncheckedBg;
+        label = 'Chưa điểm danh';
+        break;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: textColor,
+                fontWeight: status == CheckinStatus.unchecked
+                    ? FontWeight.w500
+                    : FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarkPresentButton extends StatefulWidget {
+  final String studentId;
+  final LiveSessionViewModel vm;
+  const _MarkPresentButton({required this.studentId, required this.vm});
+
+  @override
+  State<_MarkPresentButton> createState() => _MarkPresentButtonState();
+}
+
+class _MarkPresentButtonState extends State<_MarkPresentButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () {
+          widget.vm.manualCheckin(widget.studentId);
+        },
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: _hovered ? AppColors.statusManual : AppColors.statusManualBg,
+            borderRadius: BorderRadius.circular(4),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0A142433),
+                blurRadius: 2,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Text(
+            'Đánh dấu có mặt',
+            style: AppTextStyles.caption.copyWith(
+              color: _hovered ? AppColors.onPrimary : AppColors.statusManual,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Footer summary bar
+class _TableFooter extends StatelessWidget {
+  final LiveSessionViewModel vm;
+  const _TableFooter({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 4,
+        children: [
+          RichText(
+            text: TextSpan(
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              children: [
+                TextSpan(text: 'Hiển thị '),
+                TextSpan(
+                  text: '${vm.filteredStudents.length}',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(text: ' trên tổng số '),
+                TextSpan(
+                  text: '${vm.totalStudents}',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(text: ' sinh viên'),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: AppColors.statusPresent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  'Tự động cuộn khi có dữ liệu mới',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

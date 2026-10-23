@@ -1,11 +1,9 @@
 {
   "hosting": {
-    "public": "build/firebase-hosting",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "public": "web/checkin",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md"],
     "cleanUrls": false,
-    "rewrites": [
-      { "source": "**", "destination": "/index.html" }
-    ],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [
       {
         "source": "/**",
@@ -14,7 +12,29 @@
     ]
   },
   "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules": "firebase/firestore.rules",
+    "indexes": "firebase/firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "firebase/storage.rules"
+  },
+  "remoteconfig": {
+    "template": "firebase/remoteconfig.template.json"
+  },
+  "functions": [
+    {
+      "source": "firebase/functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "*.log", "test"]
+    }
+  ],
+  "emulators": {
+    "auth": { "port": 9099 },
+    "firestore": { "port": 8085 },
+    "storage": { "port": 9199 },
+    "functions": { "port": 5001 },
+    "hosting": { "port": 5000 },
+    "ui": { "enabled": true, "port": 4000 },
+    "singleProjectMode": true
   }
 }
