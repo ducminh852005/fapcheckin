@@ -1,0 +1,278 @@
+rules_version = '2';
+
+// FAP Check-in — Cloud Firestore Security Rules
+//
+// Nguyên tắc: DENY BY DEFAULT. Mọi collection phải có `match` riêng; collection
+// không khai báo bị từ chối (khối cuối file). Không có `allow ...: if true`.
+//
+// Vai trò (users/{uid}.role):  user (sinh viên) | staff (giảng viên) | admin
+// Sở hữu dữ liệu tính theo memberCode / rollNumber trong users/{uid} (không phải
+// uid) để dữ liệu migrate từ hệ thống cũ không cần biết uid trước.
+//
+// Tài liệu: docs/08-security-rules.md · Test: firebase/tests/
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------- helpers
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+    function hasProfile() {
+      return signedIn() && exists(profilePath());
+    }
+    function profile() {
+      return get(profilePath()).data;
+    }
+    function isActive() {
+      return profile().get('active', true) == true;
+    }
+    function isRole(r) {
+      return hasProfile() && isActive() && profile().role == r;
+    }
+    function isAdmin() { return isRole('admin'); }
+    function isStaff() { return isRole('staff'); }
+    function isStudent() { return isRole('user'); }
+    function myMemberCode() { return profile().memberCode; }
+    function myRollNumber() { return profile().get('rollNumber', ''); }
+
+    // GV sở hữu tài liệu có trường teacherMemberCode khớp với memberCode của mình.
+    function ownsDoc(data) {
+      return isStaff() && data.teacherMemberCode == myMemberCode();
+    }
+    // Trường định danh không được đổi khi cập nhật.
+    function keepsFields(fields) {
+      return request.resource.data.diff(resource.data).unchangedKeys().hasAll(fields);
+    }
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+    function emailKey() {
+      return request.auth.token.email.lower();
+    }
+
+    // --------------------------------------------------------------- users
+    // Tài khoản được tạo ở lần đăng nhập đầu tiên, và chỉ khi khớp user_invites
+    // do admin cấp — người dùng không thể tự đặt role.
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/user_invites/$(emailKey()))
+        && request.resource.data.keys().hasOnly(
+             ['memberCode', 'fullName', 'email', 'role', 'rollNumber', 'active', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['memberCode', 'fullName', 'email', 'role', 'active', 'createdAt'])
+        && request.resource.data.email == emailKey()
+        && request.resource.data.active == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.role ==
+             get(/databases/$(database)/documents/user_invites/$(emailKey())).data.role
+        && request.resource.data.memberCode ==
+             get(/databases/$(database)/documents/user_invites/$(emailKey())).data.memberCode
+        && request.resource.data.get('rollNumber', '') ==
+             get(/databases/$(database)/documents/user_invites/$(emailKey())).data.get('rollNumber', '');
+
+      // Người dùng chỉ được sửa tên hiển thị của chính mình.
+      allow update: if (signedIn() && request.auth.uid == uid
+                        && resource.data.role == profile().role
+                        && onlyChanges(['fullName']))
+                    || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------- user_invites
+    // Admin cấp trước tài khoản theo email; chủ email đọc được đúng bản ghi của mình.
+    match /user_invites/{email} {
+      allow get: if signedIn() && (request.auth.token.email.lower() == email || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------ dữ liệu tham chiếu
+    match /subjects/{id} {
+      allow read: if hasProfile();
+      allow write: if isAdmin();
+    }
+    match /timeSlots/{id} {
+      allow read: if hasProfile();
+      allow write: if isAdmin();
+    }
+    match /slots/{id} {
+      allow read: if hasProfile();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------- classes
+    // Lớp chưa có GV (teacherMemberCode == '') mọi GV đều thấy và được "nhận"
+    // (import thời khóa biểu). Sau đó chỉ GV đó và admin truy cập.
+    match /classes/{classCode} {
+      allow read: if isAdmin()
+        || (isStaff() && (resource.data.teacherMemberCode == myMemberCode()
+                          || resource.data.teacherMemberCode == ''));
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isStaff()
+            && resource.data.teacherMemberCode == ''
+            && request.resource.data.teacherMemberCode == myMemberCode()
+            && onlyChanges(['teacherMemberCode']));
+    }
+
+    // --------------------------------------------------------- enrollments
+    // id = {classCode}_{rollNumber}. Có denormalize teacherMemberCode để GV
+    // truy vấn danh sách lớp mà rules không cần get() cho từng dòng.
+    match /enrollments/{id} {
+      allow read: if isAdmin()
+        || ownsDoc(resource.data)
+        || (isStaff() && resource.data.teacherMemberCode == '')
+        || (isStudent() && resource.data.rollNumber == myRollNumber());
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isStaff()
+            && resource.data.teacherMemberCode == ''
+            && request.resource.data.teacherMemberCode == myMemberCode()
+            && onlyChanges(['teacherMemberCode']));
+    }
+
+    // ----------------------------------------------------- class_schedules
+    match /class_schedules/{scheduleId} {
+      allow read: if isAdmin() || ownsDoc(resource.data);
+      allow create: if isAdmin()
+        || (ownsDoc(request.resource.data)
+            && get(/databases/$(database)/documents/classes/$(request.resource.data.classCode))
+                 .data.teacherMemberCode == myMemberCode());
+      allow update: if isAdmin()
+        || (ownsDoc(resource.data) && ownsDoc(request.resource.data)
+            && keepsFields(['classCode', 'teacherMemberCode']));
+      allow delete: if isAdmin() || ownsDoc(resource.data);
+    }
+
+    // ------------------------------------------------------------ sessions
+    // Sinh viên KHÔNG đọc được sessions (tránh lộ qrSecret); SV chỉ chạm vào
+    // attendance_records. Mã QR mang sessionId + qrSecret.
+    match /sessions/{sessionId} {
+      allow read: if isAdmin() || ownsDoc(resource.data);
+      allow create: if isStaff()
+        && request.resource.data.teacherMemberCode == myMemberCode()
+        && request.resource.data.sessionStatus == 'open'
+        && request.resource.data.qrSecret is string
+        && request.resource.data.qrSecret.size() >= 16
+        && request.resource.data.ipCheck is bool
+        && get(/databases/$(database)/documents/classes/$(request.resource.data.classCode))
+             .data.teacherMemberCode == myMemberCode();
+      allow update: if isAdmin()
+        || (ownsDoc(resource.data) && ownsDoc(request.resource.data)
+            && keepsFields(['classCode', 'teacherMemberCode', 'sessionDate']));
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------- attendance_records
+    // id = {sessionId}_{rollNumber}. Mỗi SV một bản ghi mỗi phiên: SV chỉ được
+    // `create` (không update) nên điểm danh trùng bị từ chối ở tầng CSDL.
+    match /attendance_records/{recordId} {
+      allow read: if isAdmin()
+        || ownsDoc(resource.data)
+        || (isStudent() && resource.data.rollNumber == myRollNumber());
+
+      allow create: if studentCheckin(recordId) || teacherCreatesRecord(recordId);
+
+      allow update: if isAdmin()
+        || (ownsDoc(resource.data) && ownsDoc(request.resource.data)
+            && onlyChanges(['status', 'checkinTime', 'networkVerificationResult', 'ipAddress',
+                            'note', 'updatedAt', 'updatedBy', 'syncedToFap']));
+      allow delete: if isAdmin();
+
+      // SV quét QR: điều kiện kiểm tra QR, ghi danh, trạng thái phiên và IP.
+      function studentCheckin(recordId) {
+        let d = request.resource.data;
+        let s = get(/databases/$(database)/documents/sessions/$(d.sessionId)).data;
+        return isStudent()
+          && d.keys().hasOnly(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode',
+               'qrToken', 'status', 'checkinTime', 'networkVerificationResult',
+               'ipAddress', 'syncedToFap'])
+          && d.keys().hasAll(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode',
+               'qrToken', 'status', 'checkinTime', 'networkVerificationResult',
+               'ipAddress', 'syncedToFap'])
+          && recordId == d.sessionId + '_' + d.rollNumber
+          && d.rollNumber == myRollNumber()
+          && s.sessionStatus == 'open'
+          && d.qrToken == s.qrSecret
+          && d.classCode == s.classCode
+          && d.teacherMemberCode == s.teacherMemberCode
+          && exists(/databases/$(database)/documents/enrollments/$(s.classCode + '_' + d.rollNumber))
+          && d.status == 'Present'
+          && d.checkinTime == request.time
+          && d.syncedToFap == false
+          && (s.get('ipCheck', true) == true
+              ? (s.get('teacherIp', '') != ''
+                 && d.ipAddress == s.teacherIp
+                 && d.networkVerificationResult == 'Match')
+              : (d.ipAddress == '' && d.networkVerificationResult == 'Skipped'));
+      }
+
+      // GV điểm danh thủ công / sinh Absent khi đóng phiên.
+      function teacherCreatesRecord(recordId) {
+        let d = request.resource.data;
+        let s = get(/databases/$(database)/documents/sessions/$(d.sessionId)).data;
+        return ownsDoc(d)
+          && d.keys().hasOnly(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode',
+               'status', 'checkinTime', 'networkVerificationResult', 'ipAddress', 'note',
+               'updatedAt', 'updatedBy', 'syncedToFap'])
+          && d.keys().hasAll(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode', 'status'])
+          && recordId == d.sessionId + '_' + d.rollNumber
+          && d.status in ['Present', 'Late', 'Absent', 'ManualByGV', 'Unchecked']
+          && s.teacherMemberCode == myMemberCode()
+          && d.classCode == s.classCode
+          && exists(/databases/$(database)/documents/enrollments/$(s.classCode + '_' + d.rollNumber));
+      }
+    }
+
+    // ------------------------------------------------------------ requests
+    // Đơn (sửa điểm danh / nghỉ phép) do user hoặc staff gửi, admin duyệt.
+    match /requests/{requestId} {
+      allow read: if isAdmin()
+        || (hasProfile() && resource.data.authorUid == request.auth.uid);
+      allow create: if hasProfile() && isActive()
+        && (profile().role == 'user' || profile().role == 'staff')
+        && request.resource.data.keys().hasOnly(
+             ['type', 'authorUid', 'authorMemberCode', 'sessionId', 'classCode',
+              'reason', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['type', 'authorUid', 'authorMemberCode', 'reason', 'status', 'createdAt'])
+        && request.resource.data.type in ['attendance_fix', 'leave']
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorMemberCode == myMemberCode()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 2000;
+      // Chỉ admin duyệt, và chỉ từ pending sang approved/rejected.
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected']
+        && onlyChanges(['status', 'resolvedBy', 'resolvedAt', 'adminNote']);
+      allow delete: if hasProfile() && resource.data.authorUid == request.auth.uid
+        && resource.data.status == 'pending';
+    }
+
+    // ------------------------------------------------------- announcements
+    // Admin phát hành; audience = all | staff | user.
+    match /announcements/{id} {
+      allow read: if hasProfile()
+        && (resource.data.audience == 'all'
+            || resource.data.audience == profile().role
+            || profile().role == 'admin');
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------- deny by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

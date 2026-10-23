@@ -1,0 +1,30 @@
+name: fapcheckin_core
+description: "Mô hình dữ liệu, repository Firestore và design system dùng chung cho mobile và web admin của FAP Check-in."
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  archive: ^4.5.2
+  cloud_firestore: ^7.1.0
+  cloud_functions: ^7.0.1
+  firebase_auth: ^7.0.1
+  firebase_storage: ^14.0.1
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  fake_cloud_firestore: ^4.4.0
+
+# fake_cloud_firestore 4.4.0 chưa biên dịch được với cloud_firestore_platform_interface 8.1.x
+# (thêm FieldValue.maximum/minimum). Ghim 7.0.0 chỉ khi chạy test trong package này;
+# app mobile vẫn dùng bản mới nhất. Bỏ override khi fake_cloud_firestore hỗ trợ 8.1.
+dependency_overrides:
+  cloud_firestore: 7.0.0
+  cloud_firestore_platform_interface: 8.0.8
