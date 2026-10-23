@@ -1,0 +1,19 @@
+{
+  "parameters": {
+    "qr_refresh_seconds": {
+      "defaultValue": { "value": "60" },
+      "valueType": "NUMBER",
+      "description": "Chu kỳ xoay mã QR của phiên điểm danh (giây)."
+    },
+    "ip_check_default": {
+      "defaultValue": { "value": "false" },
+      "valueType": "BOOLEAN",
+      "description": "Giá trị mặc định của ô 'Kiểm tra IP mạng' khi GV mở phiên."
+    },
+    "maintenance_mode": {
+      "defaultValue": { "value": "false" },
+      "valueType": "BOOLEAN",
+      "description": "Bật để app hiện thông báo bảo trì và ngừng mở phiên mới."
+    }
+  }
+}

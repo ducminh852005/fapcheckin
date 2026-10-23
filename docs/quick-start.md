@@ -1,348 +1,131 @@
 [← Mục lục](README.md)
 
-# Quick Start — Pattern kết nối App GV (Flutter MVVM) ↔ Backend Apps Script
+# Quick Start — Pattern MVVM + Repository trên Firebase
 
-Tài liệu này chốt **quy ước code** dùng chung cho cả nhóm khi implement app GV ([04](04-kien-truc-app-va-web.md)), để không ai tự sáng tạo format riêng giữa chừng. Không đổi kiến trúc đã chốt (View ↔ ViewModel ↔ Repository ↔ Data Source) — đây là cách hiện thực hoá 4 lớp đó bằng code cụ thể, đúng với giới hạn thật của Google Apps Script Web App.
+Cách viết code cho app GV (Flutter MVVM) khi dữ liệu nằm hoàn toàn trên Firebase. Đọc kèm [01](01-kien-truc-tong-the.md) và [04](04-kien-truc-app-va-web.md).
 
-## 0. Vì sao không dùng REST chuẩn
+## 0. Khác gì so với hướng Apps Script cũ
 
-Apps Script Web App **không đáp ứng được REST đầy đủ** — đây là giới hạn nền tảng, không phải lựa chọn thiết kế:
-
-| Yêu cầu REST chuẩn | Thực tế Apps Script |
+| Cũ | Mới |
 |---|---|
-| Đủ HTTP verb (GET/POST/PUT/PATCH/DELETE) | Chỉ có `doGet(e)` / `doPost(e)`. Không có `doPut`/`doDelete`/`doPatch`. |
-| Status code phản ánh kết quả (200/400/401/404/409...) | `ContentService` luôn trả **200** (hoặc redirect nội bộ). Không set status code tuỳ ý được. |
-| URL theo resource (`/sessions/123`, `/students/45`) | Chỉ có **một URL cố định** (URL exec của script) — không có path routing thật. |
-| CORS preflight cho request phức tạp (JSON, custom header) | `application/json` từ trình duyệt → preflight OPTIONS → Apps Script xử lý kém/không ổn định. |
+| `ApiService.postAction('getClasses', …)` → HTTP tới `script.google.com` | Repository gọi **Cloud Firestore SDK** trực tiếp |
+| Envelope `{success, data, error}`, `ApiResponse<T>` | Không còn envelope; Repository trả `ApiResult<T>` |
+| Phân quyền trong code Apps Script (`requireTeacher`) | Phân quyền bằng **Security Rules** + lọc `teacherMemberCode` ở mọi truy vấn |
+| Token phiên tự cấp (`sessionToken`) | Firebase Auth (`uid`), hồ sơ `users/{uid}` |
+| View/ViewModel/Model | **Giữ nguyên** |
 
-**Hệ quả bắt buộc cho thiết kế:**
+## 1. Chạy toàn bộ môi trường cục bộ
 
-1. **Routing giả REST bằng field `action`** — không dùng path, không dùng verb để phân biệt nghiệp vụ. Mọi request đọc dữ liệu → `doGet(e)` + query `?action=...`; mọi request ghi/hành động → `doPost(e)` + body JSON có field `"action"`.
-2. **Không bao giờ đọc HTTP status code** — kết quả/lỗi luôn nằm trong body JSON (envelope ở mục 1), vì status luôn là 200.
-3. **App GV (Flutter, `dio`) không bị ảnh hưởng bởi CORS** — CORS chỉ áp dụng cho trình duyệt. Chỉ `checkin-web` (SV) cần né preflight: gửi `Content-Type: text/plain;charset=utf-8` thay vì `application/json`, backend tự `JSON.parse(e.postData.contents)`.
+```bash
+# 1) Emulator (Auth 9099, Firestore 8085, Storage 9199, Functions 5001, Hosting 5000, UI 4000)
+cd firebase && npm ci && cd ..
+firebase emulators:start --project demo-fapcheckin
 
-## 1. Chuẩn Request — action-based
-
-Mọi request (đọc lẫn ghi) đều mang một field `action` để backend tự định tuyến trong `doGet`/`doPost` — đây là "endpoint" thay cho path REST.
-
-```json
-// GET  ?action=getClasses&teacherId=T001
-// POST body (Content-Type: text/plain, backend tự JSON.parse)
-{
-  "action": "checkin",
-  "qrToken": "abc123",
-  "studentIp": "203.0.113.5"
-}
+# 2) Dữ liệu mẫu (terminal khác)
+cd firebase
+node scripts/seed-reference.mjs --emulator
+node scripts/seed-admin.mjs --emulator --email admin@fpt.edu.vn --password Passw0rd!
 ```
 
-| `action` | Verb | Dùng khi |
-|---|---|---|
-| `login` | POST | Đăng nhập, đổi idToken Google lấy session token |
-| `getClasses` | GET | GV lấy danh sách lớp mình dạy |
-| `startSession` | POST | GV mở phiên điểm danh (sinh `qrSecret`; `ipCheck` = bật kiểm tra IP, mặc định `false`; `teacherIp` chỉ cần và chỉ được ghi khi `ipCheck = true`) |
-| `checkin` | POST | SV gửi điểm danh (kèm `qrToken`; `studentIp` chỉ bắt buộc khi phiên bật kiểm tra IP) |
-| `manualCheckin` | POST | GV điểm danh tay dự phòng |
-| `getRoster` | GET | GV xem danh sách đã điểm danh (real-time) |
-| `getStats` | GET | GV xem % chuyên cần |
+Mở Emulator UI tại <http://localhost:4000> để xem Auth/Firestore. Test: `cd firebase && npm test` (Rules), `cd packages/core && flutter test`, `cd mobile && flutter test`, `cd e2e_test && npm test`.
 
-## 2. Chuẩn Response — envelope JSON
+## 2. Result pattern — `ApiResult<T>`
 
-Mọi `action` trả về **cùng một envelope**, dù thành công hay lỗi — vì status code không dùng được:
+Repository không ném exception cho lỗi nghiệp vụ — nó trả `ApiResult<T>` để ViewModel xử lý tường minh.
 
-```json
-// Thành công
-{
-  "success": true,
-  "data": { "sessionId": "S001", "qrToken": "abc123" },
-  "error": null
-}
-
-// Thất bại
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "IP_MISMATCH",
-    "message": "IP của bạn không khớp với mạng của lớp học."
-  }
-}
-```
-
-- `success`: luôn có, quyết định cách client parse — **client luôn đọc field này, không đọc HTTP status**.
-- `data`: object hoặc `null`. Không bọc thêm tầng nào khác (không `data.result.value`).
-- `error`: `null` khi `success = true`. Khi lỗi, luôn có `code` (SCREAMING_SNAKE_CASE, để client so sánh/switch) và `message` (tiếng Việt, hiển thị thẳng cho người dùng).
-
-### Mã lỗi chuẩn hoá (mở rộng dần trong `core/constants`)
-
-| `code` | Khi nào |
-|---|---|
-| `UNAUTHORIZED` | Thiếu/sai session token |
-| `DOMAIN_NOT_ALLOWED` | Email đăng nhập không đúng domain trường |
-| `UNKNOWN_ACTION` | `action` không khớp handler nào ở backend |
-| `SESSION_NOT_FOUND` | `sessionId`/`qrToken` không tồn tại hoặc đã hết hạn |
-| `IP_REQUIRED` | Phiên bật kiểm tra IP nhưng request không có `studentIp` (client lấy IP rồi gửi lại) |
-| `IP_MISMATCH` | Phiên bật kiểm tra IP và `studentIp != teacherIp` |
-| `ALREADY_CHECKED_IN` | SV đã điểm danh phiên này rồi |
-| `NOT_ENROLLED` | SV không thuộc lớp của phiên |
-| `VALIDATION_ERROR` | Thiếu field bắt buộc trong request |
-
-## 3. Phía Backend — dispatch theo `action` (Apps Script)
-
-`apps-script/Code.gs` chỉ có 2 hàm entry point, mỗi hàm dispatch qua `action`, luôn trả `ContentService` với envelope ở mục 2 (không bao giờ throw thẳng ra ngoài):
-
-```javascript
-function doGet(e) {
-  return dispatch(e.parameter.action, e.parameter);
-}
-
-function doPost(e) {
-  var body = JSON.parse(e.postData.contents); // text/plain để né CORS preflight
-  return dispatch(body.action, body);
-}
-
-function dispatch(action, params) {
-  var handlers = {
-    getClasses: handleGetClasses,
-    startSession: handleStartSession,
-    checkin: handleCheckin,
-    // ...
-  };
-
-  try {
-    var handler = handlers[action];
-    if (!handler) return jsonResponse({ success: false, data: null, error: { code: 'UNKNOWN_ACTION', message: 'Không rõ hành động: ' + action } });
-
-    var data = handler(params);
-    return jsonResponse({ success: true, data: data, error: null });
-  } catch (err) {
-    return jsonResponse({ success: false, data: null, error: { code: err.code || 'UNKNOWN', message: err.message } });
-  }
-}
-
-function jsonResponse(payload) {
-  return ContentService.createTextOutput(JSON.stringify(payload))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-```
-
-> `doGet(e)` còn kiêm nhiệm vụ trả trang HTML cho SV khi `?page=checkin` (xem [01](01-kien-truc-tong-the.md), [04.2](04-kien-truc-app-va-web.md)) — tách nhánh `page` ra khỏi nhánh `action` ngay đầu `doGet`.
-
-## 4. Model — `ApiResponse<T>` (phía Flutter)
-
-`lib/data/models/api_response.dart`:
+`packages/core/lib/result/api_result.dart`:
 
 ```dart
-class ApiResponse<T> {
-  final bool success;
-  final T? data;
-  final ApiError? error;
-
-  const ApiResponse({required this.success, this.data, this.error});
-
-  factory ApiResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Map<String, dynamic> json) fromJsonT,
-  ) {
-    return ApiResponse<T>(
-      success: json['success'] as bool,
-      data: json['data'] == null ? null : fromJsonT(json['data'] as Map<String, dynamic>),
-      error: json['error'] == null ? null : ApiError.fromJson(json['error'] as Map<String, dynamic>),
-    );
-  }
-}
-
-class ApiError {
-  final String code;
-  final String message;
-
-  const ApiError({required this.code, required this.message});
-
-  factory ApiError.fromJson(Map<String, dynamic> json) =>
-      ApiError(code: json['code'] as String, message: json['message'] as String);
-}
+abstract class ApiResult<T> {}
+class ApiSuccess<T> extends ApiResult<T> { final T data; ApiSuccess(this.data); }
+class ApiFailure<T> extends ApiResult<T> { final ApiError error; ApiFailure(this.error); }  // error.code, error.message
 ```
 
-Mỗi model nghiệp vụ (`session_model.dart`, `attendance_model.dart`, ...) chỉ có `fromJson`/`toJson` của riêng nó — **không** biết gì về envelope. `ApiResponse<T>` là lớp bọc chung, generic theo `T`.
+`guardApi` (cùng thư mục, `guard.dart`) bọc thân phương thức: `ApiException(code, message)` và mọi lỗi Firebase được đổi thành `ApiFailure`, nên Repository không bao giờ ném.
 
-## 5. `ApiService` — nơi duy nhất biết `action` là gì
-
-`lib/core/services/api_service.dart`. Đây là lớp duy nhất gọi `dio`, luôn gửi kèm `action`, luôn parse qua `ApiResponse<T>`:
+## 3. Repository mẫu
 
 ```dart
-class ApiService {
-  final Dio _dio; // baseUrl = URL exec của Apps Script, interceptor đính session token
+class TeacherRepository {
+  TeacherRepository({required this.currentUser, FirebaseFirestore? firestore, DateTime Function()? now});
+  final CurrentUser currentUser;                 // memberCode của GV đang đăng nhập
 
-  ApiService(this._dio);
-
-  Future<ApiResponse<T>> call<T>({
-    required String action,
-    Map<String, dynamic> params = const {},
-    required T Function(Map<String, dynamic> json) fromJsonT,
-  }) async {
-    final response = await _dio.post(
-      '', // một URL duy nhất, không có path
-      data: {'action': action, ...params},
-      options: Options(contentType: 'text/plain;charset=utf-8'), // né CORS preflight
-    );
-    return ApiResponse.fromJson(response.data as Map<String, dynamic>, fromJsonT);
-  }
-}
-```
-
-> App GV luôn POST (kể cả đọc dữ liệu) để dùng chung một code path — Apps Script không phân biệt "đọc/ghi" theo verb nên không có lý do tách GET riêng ở phía app. `checkin-web` (JS thuần) mới cần cân nhắc GET cho trang HTML tĩnh.
-
-## 6. Result pattern — `ApiResult<T>` (dùng trong Repository)
-
-Repository không ném exception cho lỗi nghiệp vụ (sai IP, hết hạn QR...) — nó trả về một `ApiResult<T>` để ViewModel xử lý tường minh, không cần `try/catch` rải khắp nơi.
-
-`lib/core/utils/api_result.dart`:
-
-```dart
-sealed class ApiResult<T> {
-  const ApiResult();
-}
-
-class ApiSuccess<T> extends ApiResult<T> {
-  final T data;
-  const ApiSuccess(this.data);
-}
-
-class ApiFailure<T> extends ApiResult<T> {
-  final String code;
-  final String message;
-  const ApiFailure({required this.code, required this.message});
-}
-```
-
-Repository mẫu — `lib/data/repositories/attendance_repository.dart`:
-
-```dart
-class AttendanceRepository {
-  final ApiService _api;
-
-  AttendanceRepository(this._api);
-
-  Future<ApiResult<AttendanceModel>> checkIn({
-    required String qrToken,
-    required String studentIp,
-  }) async {
-    final response = await _api.call(
-      action: 'checkin',
-      params: {'qrToken': qrToken, 'studentIp': studentIp},
-      fromJsonT: AttendanceModel.fromJson,
-    );
-
-    return switch (response) {
-      ApiResponse(success: true, :final data?) => ApiSuccess(data),
-      ApiResponse(:final error?) => ApiFailure(code: error.code, message: error.message),
-      _ => const ApiFailure(code: 'UNKNOWN', message: 'Đã có lỗi xảy ra.'),
-    };
-  }
-}
-```
-
-> Chỉ Repository được import `ApiService`/`ApiResponse`. ViewModel chỉ import Repository + model nghiệp vụ + `ApiResult` — không biết `action` là gì.
-
-## 7. Base ViewModel — trạng thái màn hình chuẩn hoá
-
-Mọi ViewModel extend `BaseViewModel` để View luôn xử lý loading/error theo cùng một cách.
-
-`lib/viewmodels/base_view_model.dart`:
-
-```dart
-enum ViewStatus { idle, loading, success, error }
-
-abstract class BaseViewModel extends ChangeNotifier {
-  ViewStatus _status = ViewStatus.idle;
-  String? _errorMessage;
-
-  ViewStatus get status => _status;
-  String? get errorMessage => _errorMessage;
-  bool get isLoading => _status == ViewStatus.loading;
-
-  Future<void> runCatching(Future<void> Function() action) async {
-    _status = ViewStatus.loading;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      await action();
-      _status = ViewStatus.success;
-    } catch (e) {
-      _status = ViewStatus.error;
-      _errorMessage = e.toString();
+  Future<ApiResult<String>> rotateQr({required String sessionId}) => guardApi(() async {
+    final session = await _session(sessionId);   // kiểm tra phiên tồn tại và thuộc GV
+    if (session['sessionStatus'] != 'open') {
+      throw ApiException('SESSION_NOT_FOUND', 'Phiên đã đóng, không thể làm mới QR.');
     }
-    notifyListeners();
-  }
+    final secret = randomSecret();
+    await _db.collection('sessions').doc(sessionId).update({'qrSecret': secret});
+    return secret;
+  });
 }
 ```
 
-ViewModel mẫu — `lib/viewmodels/teacher_session_viewmodel.dart`:
+Quy tắc khi viết Repository mới:
+
+1. **Luôn lọc theo `teacherMemberCode`** (`where('teacherMemberCode', isEqualTo: memberCode)`) khi truy vấn `classes`, `enrollments`, `sessions`, `attendance_records`, `class_schedules` — Rules từ chối truy vấn không chứng minh được quyền sở hữu.
+2. Ghi nhiều tài liệu cùng lúc bằng `WriteBatch` (≤ 500 thao tác; dùng `commitInBatches`) hoặc `runTransaction` khi cần so sánh-rồi-ghi.
+3. Thời điểm ghi bằng `FieldValue.serverTimestamp()`; khi đọc, `docToJson` đổi `Timestamp` → chuỗi ISO để model dùng lại `fromJson`.
+4. Giữ mã lỗi nghiệp vụ ổn định (`FORBIDDEN`, `CONFLICT`…); View phụ thuộc vào chúng ([06](09-repository-api.md)).
+5. Thêm test trong `packages/core/test/` bằng `fake_cloud_firestore`, và test Rules cho mọi quyền mới ([08](08-security-rules.md)).
+
+## 4. Base ViewModel — trạng thái màn hình chuẩn hoá
+
+ViewModel extend `ChangeNotifier`, dùng `ViewStatus { idle, loading, success, error }` để View xử lý loading/error theo cùng một cách (xem `mobile/lib/viewmodels/live_session_viewmodel.dart`):
 
 ```dart
-class TeacherSessionViewModel extends BaseViewModel {
-  final AttendanceRepository _repository;
-  SessionModel? session;
-
-  TeacherSessionViewModel(this._repository);
-
-  Future<void> startSession(String classId) => runCatching(() async {
-        final result = await _repository.startSession(classId);
-        switch (result) {
-          case ApiSuccess(:final data):
-            session = data;
-          case ApiFailure(:final message):
-            throw Exception(message);
-        }
-      });
+Future<void> loadClasses() async {
+  _status = ViewStatus.loading;
+  notifyListeners();
+  final result = await _repository.getClasses(teacherMemberCode: _memberCode);
+  switch (result) {
+    case ApiSuccess(:final data): _classes = data; _status = ViewStatus.success;
+    case ApiFailure(:final error): _errorMessage = error.message; _status = ViewStatus.error;
+  }
+  notifyListeners();
 }
 ```
 
-## 8. View — chỉ hiển thị theo `status`
+## 5. View — chỉ hiển thị theo `status`
 
 ```dart
-class StartSessionScreen extends StatelessWidget {
-  const StartSessionScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<TeacherSessionViewModel>(
-      builder: (context, vm, _) => switch (vm.status) {
-        ViewStatus.loading => const CircularProgressIndicator(),
-        ViewStatus.error => Text(vm.errorMessage ?? 'Lỗi không xác định'),
-        _ => QrView(session: vm.session),
-      },
-    );
-  }
-}
+Consumer<DashboardViewModel>(
+  builder: (context, vm, _) => switch (vm.status) {
+    ViewStatus.loading => const CircularProgressIndicator(),
+    ViewStatus.error   => Text(vm.errorMessage ?? 'Lỗi không xác định'),
+    _                  => ClassList(classes: vm.classes),
+  },
+)
 ```
 
-View **không** gọi `ApiService`/`Repository` trực tiếp, không tự parse JSON, không biết `action` — chỉ đọc field của ViewModel qua `Consumer`/`Selector` (`provider`, xem [04](04-kien-truc-app-va-web.md)).
+View **không** gọi Repository hay Firebase trực tiếp, không parse JSON — chỉ đọc state của ViewModel qua `Consumer`/`Selector`. Ngoại lệ có chủ đích: hai hộp thoại (`create_class_dialog`, `import_timetable_dialog`) lấy `ScheduleRepository`/`TimetableRepository` từ `Provider` để tách khỏi ViewModel.
 
-## 9. Quy ước đặt tên
+## 6. Quy ước đặt tên
 
 | Loại | Quy ước | Ví dụ |
 |---|---|---|
-| Model | `xxx_model.dart`, class `XxxModel` | `session_model.dart` → `SessionModel` |
-| Repository | `xxx_repository.dart`, class `XxxRepository` | `attendance_repository.dart` → `AttendanceRepository` |
-| ViewModel | `xxx_viewmodel.dart`, class `XxxViewModel` | `teacher_session_viewmodel.dart` → `TeacherSessionViewModel` |
-| View | `xxx_screen.dart`, class `XxxScreen` | `start_session_screen.dart` → `StartSessionScreen` |
-| `action` (request) | `camelCase`, động từ + danh từ | `startSession`, `getClasses` |
-| Mã lỗi API (`code`) | `SCREAMING_SNAKE_CASE` | `IP_MISMATCH` |
+| Model | `xxx_model.dart`, `XxxModel` | `session_model.dart` → `SessionModel` |
+| Repository | `xxx_repository.dart`, `XxxRepository` | `teacher_repository.dart` |
+| ViewModel | `xxx_viewmodel.dart`, `XxxViewModel` | `live_session_viewmodel.dart` |
+| View | `xxx_screen.dart` / `xxx_body.dart` | `login_screen.dart` |
+| Collection / trường Firestore | `snake_case` số nhiều cho collection, `camelCase` cho trường | `attendance_records.checkinTime` |
+| Mã lỗi (`code`) | `SCREAMING_SNAKE_CASE` | `SESSION_ALREADY_OPEN` |
+| Import mã dùng chung | `package:fapcheckin_core/…` | `package:fapcheckin_core/models/user_model.dart` |
 
-## 10. Luồng phụ thuộc tóm tắt
+## 7. Luồng phụ thuộc tóm tắt
 
 ```mermaid
 flowchart LR
     View -->|đọc state, gọi method| ViewModel
     ViewModel -->|gọi, nhận ApiResult| Repository
-    Repository -->|gọi action, nhận ApiResponse| ApiService
-    ApiService -->|POST duy nhất, body có action| Backend[(Apps Script: doGet/doPost → dispatch)]
+    Repository -->|SDK| Firebase[(Firestore · Auth · Storage · Functions)]
+    Firebase -.Security Rules thi hành quyền.-> Repository
 ```
 
-- **View**: không biết `ApiResult`/`ApiResponse`/`action` tồn tại.
-- **ViewModel**: không biết `dio`/HTTP/JSON/`action` tồn tại — chỉ biết `ApiResult<T>`.
-- **Repository**: nơi duy nhất chuyển `ApiResponse<T>` (hình dạng HTTP) → `ApiResult<T>` (hình dạng nghiệp vụ), và là nơi duy nhất biết tên `action`.
-- **Backend**: một URL, hai hàm entry (`doGet`/`doPost`), dispatch nội bộ theo `action` — thay cho routing REST thật. Đây cũng là nơi duy nhất đổi khi hạ tầng đổi (xem [10 · Định hướng mở rộng](10-dinh-huong-mo-rong.md)).
+- **View**: không biết `ApiResult`/Firebase tồn tại.
+- **ViewModel**: không biết Firebase tồn tại — chỉ biết `ApiResult<T>` và model.
+- **Repository**: nơi duy nhất biết tên collection, truy vấn, batch/transaction và chuyển lỗi Firebase → `ApiFailure`.
+- **Security Rules**: hàng rào thật sự; Repository chỉ là cách dùng đúng.
 
 [← Mục lục](README.md)
