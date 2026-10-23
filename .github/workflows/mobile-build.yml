@@ -5,7 +5,6 @@ name: Build Android APK
 # trong APK này, thêm SHA-1 của runner vào Firebase (docs/quick-start-mobile.md §5).
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths:

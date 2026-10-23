@@ -1,27 +1,17 @@
 name: Deploy Firebase
 
-# CD: sau khi merge vào main (và test xanh), deploy các thành phần Firebase đã đổi.
+# CD: chạy sau khi workflow "CI" của lần push lên main kết thúc THÀNH CÔNG (test xanh mới deploy).
 # Thiết lập một lần: docs/deploy-firebase.md §10.
-#   Secret   FIREBASE_SERVICE_ACCOUNT      : JSON khóa service account (vai trò Firebase Admin) — KHÔNG commit
-#   Variable FIREBASE_PROJECT_ID           : mặc định fapcheckin-3bn2di
-#   Variable FIREBASE_DEPLOY_TARGETS       : mặc định "firestore,hosting"; thêm storage, remoteconfig, functions
-#                                            khi đã bật (Storage; Functions cần gói Blaze + Cloud Vision API)
+#   Secret   FIREBASE_SERVICE_ACCOUNT : JSON khóa service account (vai trò Firebase Admin) — KHÔNG commit
+#   Variable FIREBASE_PROJECT_ID      : mặc định fapcheckin-3bn2di
+#   Variable FIREBASE_DEPLOY_TARGETS  : mặc định "firestore,hosting"; thêm storage, remoteconfig, functions
+#                                       khi đã bật (Storage; Functions cần gói Blaze + Cloud Vision API)
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'firebase/**'
-      - 'firebase.json'
-      - '.firebaserc'
-      - 'web/checkin/**'
-      - '.github/workflows/deploy.yml'
-  workflow_dispatch:
-    inputs:
-      targets:
-        description: 'Thành phần cần deploy (vd: firestore,hosting). Để trống = biến FIREBASE_DEPLOY_TARGETS'
-        required: false
-        default: ''
 
 # Không hủy deploy đang chạy giữa chừng.
 concurrency:
@@ -32,22 +22,20 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    name: Test trước khi deploy
-    uses: ./.github/workflows/ci.yml
-
   deploy:
     name: Deploy
-    needs: ci
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Cấu hình Required reviewers cho environment "production" nếu muốn duyệt tay trước khi deploy.
     environment: production
     env:
       PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'fapcheckin-3bn2di' }}
-      TARGETS: ${{ inputs.targets || vars.FIREBASE_DEPLOY_TARGETS || 'firestore,hosting' }}
+      TARGETS: ${{ vars.FIREBASE_DEPLOY_TARGETS || 'firestore,hosting' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Kiểm tra secret
         env:
@@ -82,6 +70,7 @@ jobs:
         run: |
           {
             echo "### Deploy Firebase"
+            echo "- Commit: \`${{ github.event.workflow_run.head_sha }}\`"
             echo "- Project: \`$PROJECT_ID\`"
             echo "- Targets: \`$TARGETS\`"
             echo "- Trang SV: https://$PROJECT_ID.web.app"
