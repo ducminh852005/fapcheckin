@@ -1,8 +1,29 @@
-# Web Admin (chưa triển khai)
+# FAP Check-in Admin Web
 
-Thư mục giữ chỗ cho **Web Admin** — ứng dụng web (Flutter Web, dùng chung `packages/core`) dành cho
-vai trò `admin`. Hiện chỉ có **thiết kế và dữ liệu nền**: schema Firestore, Security Rules và script khởi tạo
-đã sẵn sàng để Web Admin ghi trực tiếp lên Firestore (không cần backend riêng).
+Ứng dụng quản trị viết bằng React 19, TypeScript, Vite và Tailwind CSS. UI hiện là prototype dùng dữ liệu
+mẫu; bước tiếp theo là nối Firebase Authentication và các collection Firestore đã có trong monorepo.
+
+## Chạy dự án
+
+```bash
+corepack pnpm install
+corepack pnpm dev
+corepack pnpm typecheck
+corepack pnpm build
+```
+
+## Cấu trúc source
+
+```text
+src/
+├── components/    # UI dùng chung, drawer và toast
+├── data/          # Dữ liệu mẫu tạm thời
+├── layouts/       # Khung sidebar/topbar của trang quản trị
+├── pages/         # Login, Dashboard, Catalog và Requests
+├── types/         # Kiểu dữ liệu dùng chung
+├── App.tsx        # Điều phối trạng thái và trang hiện tại
+└── index.css      # Design tokens và style toàn cục
+```
 
 > Trang điểm danh của sinh viên nằm ở [`../checkin/`](../checkin/) (Firebase Hosting).
 > App giảng viên (staff) nằm ở [`../../mobile/`](../../mobile/).
@@ -19,11 +40,10 @@ vai trò `admin`. Hiện chỉ có **thiết kế và dữ liệu nền**: schem
 | Gửi thông báo về app | `announcements/{id}` (`audience: all\|staff\|user`) | chỉ admin ghi |
 | Xem điểm danh toàn trường | `sessions`, `attendance_records` | admin đọc/sửa/xóa |
 
-## Việc cần làm khi triển khai
+## Việc cần làm tiếp theo
 
-1. Tạo project Flutter Web tại thư mục này, phụ thuộc `fapcheckin_core` (`path: ../../packages/core`) để dùng lại
-   theme, model và repository.
-2. Đăng nhập Google → `AuthRepository` → chỉ cho phép `role == 'admin'`.
+1. Nối Firebase JS SDK và đăng nhập Google; chỉ cho phép `role == 'admin'`.
+2. Thay dữ liệu trong `src/data/mock-data.ts` bằng service/repository Firestore.
 3. Thêm một **site Hosting thứ hai** (vd. `fapcheckin-admin`): `firebase hosting:sites:create fapcheckin-admin`,
    gán target (`firebase target:apply hosting admin fapcheckin-admin`) và chuyển `hosting` trong `firebase.json`
    thành mảng hai phần tử (`checkin` → `web/checkin`, `admin` → `web/admin/build/web`).
