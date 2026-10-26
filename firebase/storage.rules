@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// FAP Check-in — Cloud Storage Security Rules (deny by default).
+// Duy nhất một đường dẫn được dùng: ảnh thời khóa biểu GV tải lên để OCR
+// (Cloud Function `scanTimetable` đọc rồi xóa bằng Admin SDK).
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function role() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    match /timetable_scans/{uid}/{fileName} {
+      allow create: if resource == null
+        && request.auth != null
+        && request.auth.uid == uid
+        && role() == 'staff'
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow read: if request.auth != null && (request.auth.uid == uid || role() == 'admin');
+      allow update, delete: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
