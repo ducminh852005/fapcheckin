@@ -6,22 +6,32 @@
 **Pattern code & chuẩn giao tiếp với backend:** [docs/quick-start.md](docs/quick-start.md)
 **Chạy & build app trên mobile:** [docs/quick-start-mobile.md](docs/quick-start-mobile.md)
 
+## PRM323 Lab 2 Artifacts & UX Documentation
+
+- 📄 **User Persona & Success Metrics:** [ux/persona.md](ux/persona.md)
+- 📑 **PRM393 Persona Specification (Full Guideline):** [docs/prm393-persona-document.md](docs/prm393-persona-document.md)
+- 🖥️ **Interactive Persona Presentation Deck:** [docs/persona-slides/index.html](docs/persona-slides/index.html)
+- 🗺️ **Information Architecture & User Flows:** [ux/user-flow.md](ux/user-flow.md)
+- 🤖 **AI UI Generation & Critique Log:** [ux/ai-design-log.md](ux/ai-design-log.md)
+- 🎨 **Design Decisions & Accessibility Audit:** [ux/design-decisions.md](ux/design-decisions.md)
+- 🛠️ **Flutter Handoff Specifications:** [ux/flutter-handoff.md](ux/flutter-handoff.md)
+- 📊 **Slide Presentation & Demo Guide:** [docs/presentation-slide-guide.md](docs/presentation-slide-guide.md)
+
 ## Cấu trúc repo
 
 ```
 lib/                # App Flutter cho Giảng viên (MVVM) — xem docs/04, docs/quick-start
-├─ main.dart        # Khung MaterialApp tối thiểu (chưa nối luồng thật)
-├─ app/             # MaterialApp, router
-├─ core/            # constants, services (ApiService...), utils (ApiResult...)
-├─ data/            # models (ApiResponse...), repositories
-├─ viewmodels/      # BaseViewModel + các ViewModel màn hình
-└─ views/
+├─ main.dart        # Khung ứng dụng Flutter
+├─ core/            # AppColors, AppTextStyles, Theme, Services
+├─ data/            # Models, Repositories
+├─ viewmodels/      # ViewModel quản lý trạng thái
+└─ views/           # Các màn hình chính (Dashboard, Live Session, Report, History, Settings...)
 
-checkin-web/        # Trang web check-in cho Sinh viên (HTML/CSS/JS thuần), host trên Firebase Hosting — xem docs/04, docs/deploy-firebase.md
-apps-script/        # Backend Google Apps Script (API/BFF, lớp dữ liệu SheetDB -> Firestore hoặc Sheet) — xem docs/01, 03, quick-start §3
-scripts/deploy.ps1  # Deploy backend + Hosting + Firestore — xem docs/deploy-firebase.md
-firebase.json, firestore.rules, firestore.indexes.json  # Cấu hình Firebase
-docs/               # Blueprint kiến trúc (00–10) + quick-start pattern
+ux/                 # Bàn giao UX/UI & Nhật ký AI cho PRM323 Lab 2
+checkin-web/        # Trang web check-in cho Sinh viên (HTML/CSS/JS thuần), host trên Firebase Hosting
+apps-script/        # Backend Google Apps Script (API/BFF)
+scripts/            # Deploy scripts
+docs/               # Blueprint kiến trúc (00–11) + Hướng dẫn Slide Presentation & Demo
 ```
 
 > `lib/main.dart` mới là khung tối thiểu; các thư mục con còn lại đang rỗng (giữ chỗ bằng `.gitkeep`). Trước khi code, đọc [docs/quick-start.md](docs/quick-start.md) — chốt sẵn chuẩn request/response (`action` + envelope JSON) và pattern MVVM (`ApiResponse`, `ApiResult`, `BaseViewModel`) để cả nhóm code thống nhất.
