@@ -12,7 +12,10 @@ import './teacher/live_session/live_session_body.dart';
 import './teacher/class_management/class_management_body.dart';
 import './teacher/attendance_history/attendance_history_body.dart';
 import './teacher/report/report_body.dart';
-import './teacher/settings/settings_body.dart';
+import './teacher/profile/profile_body.dart';
+import './teacher/profile/personal_info_body.dart';
+import './teacher/profile/work_info_body.dart';
+import './teacher/dashboard/dashboard_body.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import './teacher/dashboard/components/sidebar.dart';
 import './teacher/dashboard/components/nav_destinations.dart';
@@ -81,12 +84,21 @@ class _MainScreenState extends State<MainScreen> {
         body = AttendanceHistoryBody();
         break;
       case 'cai-dat':
-        body = SettingsBody();
+      case 'ho-so':
+        body = const ProfileBody();
+        break;
+      case 'thong-tin-ca-nhan':
+        body = const PersonalInfoBody();
+        break;
+      case 'thong-tin-cong-tac':
+        body = const WorkInfoBody();
         break;
       case 'bao-cao':
+        body = ReportBody();
+        break;
       case 'tong-quan':
       default:
-        body = ReportBody();
+        body = const DashboardBody();
         break;
     }
 
@@ -116,7 +128,17 @@ class _MainScreenState extends State<MainScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      TopBar(isDesktop: isDesktop, currentRoute: currentRoute),
+                      if (isDesktop ||
+                          (currentRoute != 'tong-quan' &&
+                              currentRoute != 'lich-hoc' &&
+                              currentRoute != 'lop-hoc' &&
+                              currentRoute != 'bao-cao' &&
+                              currentRoute != 'cai-dat' &&
+                              currentRoute != 'ho-so' &&
+                              currentRoute != 'thong-tin-ca-nhan' &&
+                              currentRoute != 'thong-tin-cong-tac' &&
+                              currentRoute != 'diem-danh-qr'))
+                        TopBar(isDesktop: isDesktop, currentRoute: currentRoute),
                       Expanded(child: body),
                     ],
                   ),
@@ -141,23 +163,70 @@ class _MobileNavBar extends StatelessWidget {
     final selected = kNavDestinations.indexWhere(
       (d) => d.isActive(currentRoute),
     );
-    return NavigationBar(
-      height: 64,
-      backgroundColor: AppColors.surface,
-      surfaceTintColor: Colors.transparent,
-      selectedIndex: selected < 0 ? 0 : selected,
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      onDestinationSelected: (i) => context.read<DashboardViewModel>().navigate(
-        kNavDestinations[i].route,
-      ),
-      destinations: [
-        for (final d in kNavDestinations)
-          NavigationDestination(
-            icon: Icon(d.icon),
-            selectedIcon: Icon(d.selectedIcon),
-            label: d.label,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F0F172A),
+            blurRadius: 10,
+            offset: Offset(0, -3),
           ),
-      ],
+        ],
+      ),
+      child: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 64,
+          backgroundColor: Colors.white,
+          indicatorColor: const Color(0xFFFFF0EB),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFFA5A1E),
+              );
+            }
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF8898A4),
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const IconThemeData(
+                color: Color(0xFFFA5A1E),
+                size: 23,
+              );
+            }
+            return const IconThemeData(
+              color: Color(0xFF8898A4),
+              size: 22,
+            );
+          }),
+        ),
+        child: NavigationBar(
+          height: 64,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          selectedIndex: selected < 0 ? 0 : selected,
+          labelBehavior: context.screenWidth < 340
+              ? NavigationDestinationLabelBehavior.onlyShowSelected
+              : NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => context.read<DashboardViewModel>().navigate(
+            kNavDestinations[i].route,
+          ),
+          destinations: [
+            for (final d in kNavDestinations)
+              NavigationDestination(
+                icon: Icon(d.icon),
+                selectedIcon: Icon(d.selectedIcon),
+                label: d.label,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
