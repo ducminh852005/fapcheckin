@@ -13,7 +13,7 @@ class AuthConfig {
 
   static const String googleDesktopClientId = String.fromEnvironment(
     'GOOGLE_DESKTOP_CLIENT_ID',
-    defaultValue: '222111384223-bpv1gtbt3kqs8401b6ethio1gi69ahl1.apps.googleusercontent.com',
+    defaultValue: '161196189514-v8a85qdh5nnlm4pt14ovoknp0i9nacs2.apps.googleusercontent.com',
   );
 
   // Keep the desktop OAuth client secret outside source control and provide it
