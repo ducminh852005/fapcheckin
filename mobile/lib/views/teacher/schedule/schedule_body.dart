@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
+import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/models/timetable_scan_model.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
@@ -34,7 +35,8 @@ class _ScheduleBodyState extends State<ScheduleBody> {
     super.initState();
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _weekStart = _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
+    _weekStart =
+        _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
   }
 
   void _prevWeek() {
@@ -69,13 +71,13 @@ class _ScheduleBodyState extends State<ScheduleBody> {
     if (!context.mounted) return;
 
     context.read<LiveSessionViewModel>().triggerToast(
-      type: ToastType.custom,
-      title: 'Đã cập nhật thời khóa biểu',
-      message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
-      icon: Icons.check_circle_outline,
-      accentColor: AppColors.statusPresent,
-      duration: const Duration(seconds: 4),
-    );
+          type: ToastType.custom,
+          title: 'Đã cập nhật thời khóa biểu',
+          message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
+          icon: Icons.check_circle_outline,
+          accentColor: AppColors.statusPresent,
+          duration: const Duration(seconds: 4),
+        );
   }
 
   @override
@@ -98,81 +100,93 @@ class _ScheduleBodyState extends State<ScheduleBody> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: 14,
+          child: Stack(
+            children: [
+              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ, Báo cáo & Quản lý lớp
+              Container(
+                height: 240,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: AppPalette.headerGradient,
+                ),
               ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. Header (Lời chào, Tiêu đề, Chuông, Sub-nav 5 mục)
-                      ScheduleHeader(
-                        onScanTimetable: () => _scanTimetable(context),
-                      ),
-                      const SizedBox(height: 18),
-
-                      // 2. Thẻ chọn tuần và ngày
-                      ScheduleWeekPicker(
-                        selectedDate: _selectedDate,
-                        weekStart: _weekStart,
-                        onDaySelected: _onDaySelected,
-                        onPrevWeek: _prevWeek,
-                        onNextWeek: _nextWeek,
-                        daysWithClasses: daysWithClasses,
-                      ),
-                      const SizedBox(height: 18),
-
-                      // 3. Dòng tóm tắt ngày
-                      ScheduleDaySummary(
-                        date: _selectedDate,
-                        sessionCount: sessions.length,
-                        semester: dashboardVm.semester.isNotEmpty
-                            ? 'Học kỳ ${dashboardVm.semester}'
-                            : 'Học kỳ Thu 2026',
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 4. Trục Timeline các ca dạy
-                      Column(
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 14,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (int i = 0; i < sessions.length; i++) ...[
-                            ScheduleTimelineItem(
-                              slot: sessions[i].slot,
-                              timeRange: sessions[i].timeRange,
-                              subjectCode: sessions[i].subjectCode,
-                              classCode: sessions[i].classCode,
-                              subjectName: sessions[i].subjectName,
-                              room: sessions[i].room,
-                              subtext: sessions[i].subtext,
-                              status: sessions[i].status,
-                              isFirst: i == 0,
-                              isLast: i == sessions.length - 1,
-                              onOpenAttendance: () {
-                                // Mở phiên điểm danh QR
-                                dashboardVm.navigate('diem-danh-qr');
-                              },
-                              onTap: () {
-                                if (sessions[i].status ==
-                                    ScheduleSessionStatus.active) {
-                                  dashboardVm.navigate('diem-danh-qr');
-                                }
-                              },
-                            ),
-                          ],
+                          // 1. Header (Lời chào, Tiêu đề, Chuông, Sub-nav 5 mục)
+                          ScheduleHeader(
+                            onScanTimetable: () => _scanTimetable(context),
+                          ),
+                          const SizedBox(height: 18),
+
+                          // 2. Thẻ chọn tuần và ngày
+                          ScheduleWeekPicker(
+                            selectedDate: _selectedDate,
+                            weekStart: _weekStart,
+                            onDaySelected: _onDaySelected,
+                            onPrevWeek: _prevWeek,
+                            onNextWeek: _nextWeek,
+                            daysWithClasses: daysWithClasses,
+                          ),
+                          const SizedBox(height: 18),
+
+                          // 3. Dòng tóm tắt ngày
+                          ScheduleDaySummary(
+                            date: _selectedDate,
+                            sessionCount: sessions.length,
+                            semester: dashboardVm.semester.isNotEmpty
+                                ? 'Học kỳ ${dashboardVm.semester}'
+                                : 'Học kỳ Thu 2026',
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 4. Trục Timeline các ca dạy
+                          Column(
+                            children: [
+                              for (int i = 0; i < sessions.length; i++) ...[
+                                ScheduleTimelineItem(
+                                  slot: sessions[i].slot,
+                                  timeRange: sessions[i].timeRange,
+                                  subjectCode: sessions[i].subjectCode,
+                                  classCode: sessions[i].classCode,
+                                  subjectName: sessions[i].subjectName,
+                                  room: sessions[i].room,
+                                  subtext: sessions[i].subtext,
+                                  status: sessions[i].status,
+                                  isFirst: i == 0,
+                                  isLast: i == sessions.length - 1,
+                                  onOpenAttendance: () {
+                                    // Mở phiên điểm danh QR
+                                    dashboardVm.navigate('diem-danh-qr');
+                                  },
+                                  onTap: () {
+                                    if (sessions[i].status ==
+                                        ScheduleSessionStatus.active) {
+                                      dashboardVm.navigate('diem-danh-qr');
+                                    }
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 36),
                         ],
                       ),
-                      const SizedBox(height: 36),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -216,9 +230,8 @@ class _ScheduleBodyState extends State<ScheduleBody> {
 
         if (c.isActive) {
           status = ScheduleSessionStatus.active;
-          final scanned = vm.activeSessionScanned > 0
-              ? vm.activeSessionScanned
-              : 28;
+          final scanned =
+              vm.activeSessionScanned > 0 ? vm.activeSessionScanned : 28;
           subtext = '$scanned/${c.studentCount} sinh viên đã điểm danh';
         } else if (slotNum == 1) {
           status = ScheduleSessionStatus.completed;

@@ -29,13 +29,19 @@ class ReportHeroGaugeCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: ReportColors.heroBannerBg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x33000000),
+            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -53,8 +59,8 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   size: const Size(96, 96),
                   painter: _GaugePainter(
                     percentage: (attendanceRate / 100.0).clamp(0.0, 1.0),
-                    trackColor: ReportColors.gaugeTrack,
-                    progressColor: ReportColors.gaugeOrange,
+                    trackColor: const Color(0xFFFFF0EB),
+                    progressColor: ReportColors.orangePrimary,
                     strokeWidth: 9.0,
                   ),
                 ),
@@ -66,7 +72,7 @@ class ReportHeroGaugeCard extends StatelessWidget {
                       child: Text(
                         attendanceRateText,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: ReportColors.textDark,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
@@ -77,9 +83,9 @@ class ReportHeroGaugeCard extends StatelessWidget {
                     const Text(
                       'CÓ MẶT',
                       style: TextStyle(
-                        color: ReportColors.textSubtle,
+                        color: ReportColors.orangePrimary,
                         fontSize: 9,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -102,7 +108,7 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   child: Text(
                     statusHeadline,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: ReportColors.textDark,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       height: 1.25,
@@ -113,7 +119,7 @@ class ReportHeroGaugeCard extends StatelessWidget {
                 Text(
                   detailText,
                   style: const TextStyle(
-                    color: ReportColors.textSubtle,
+                    color: ReportColors.textMuted,
                     fontSize: 11.5,
                     height: 1.3,
                   ),
@@ -127,9 +133,9 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   child: Text(
                     trendText,
                     style: const TextStyle(
-                      color: ReportColors.statusTrendGreen,
+                      color: ReportColors.statusGreen,
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

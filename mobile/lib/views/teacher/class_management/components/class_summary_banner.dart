@@ -21,13 +21,19 @@ class ClassSummaryBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       decoration: BoxDecoration(
-        color: ClassManagementColors.bannerBg,
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-            blurRadius: 14,
+            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
+            blurRadius: 16,
             offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -44,7 +50,7 @@ class ClassSummaryBanner extends StatelessWidget {
                   child: Text(
                     classCountStr,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: ClassManagementColors.textDark,
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -56,7 +62,7 @@ class ClassSummaryBanner extends StatelessWidget {
                 const Text(
                   'Lớp phụ trách',
                   style: TextStyle(
-                    color: Color(0xFF94A3B8),
+                    color: ClassManagementColors.textMuted,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -65,11 +71,11 @@ class ClassSummaryBanner extends StatelessWidget {
             ),
           ),
 
-          // Vạch ngăn cách dọc
+          // Vạch ngăn cách dọc tone cam nhạt
           Container(
             width: 1,
             height: 44,
-            color: const Color(0xFF334155),
+            color: const Color(0xFFFFE0D3),
           ),
           const SizedBox(width: 24),
 
@@ -96,7 +102,7 @@ class ClassSummaryBanner extends StatelessWidget {
                 const Text(
                   'Sinh viên',
                   style: TextStyle(
-                    color: Color(0xFF94A3B8),
+                    color: ClassManagementColors.textMuted,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),

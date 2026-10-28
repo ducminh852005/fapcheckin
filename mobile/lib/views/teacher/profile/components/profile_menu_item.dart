@@ -30,18 +30,18 @@ class ProfileMenuItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: [
-            // Ô chứa icon
+            // Ô chứa icon tone cam ấm áp FAP Check-in
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: ProfileColors.iconTileBg,
-                borderRadius: BorderRadius.circular(10),
+                color: ProfileColors.orangeLight,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
                 size: 20,
-                color: const Color(0xFF334155),
+                color: ProfileColors.orangePrimary,
               ),
             ),
             const SizedBox(width: 14),
