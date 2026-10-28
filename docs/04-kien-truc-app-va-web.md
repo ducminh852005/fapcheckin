@@ -21,7 +21,7 @@ fapcheckin/
 ├─ mobile/                         # App Flutter cho GV (staff): lib/{app,viewmodels,views,core}, android/ ios/ windows/ ...
 ├─ web/
 │  ├─ checkin/                     # Trang điểm danh SV (HTML + Firebase JS SDK), host trên Firebase Hosting
-│  └─ admin/                       # Web Admin (chưa code — chỉ README thiết kế)
+│  └─ admin/                       # Web Admin (React + Vite, UI prototype)
 ├─ firebase/
 │  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
 │  ├─ functions/                   # Cloud Function scanTimetable (OCR)
