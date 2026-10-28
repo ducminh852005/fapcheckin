@@ -9,9 +9,9 @@ class ProfileHeroCard extends StatelessWidget {
   final String roleTitle;
   final String department;
   final String initials;
-  final int classCount;
-  final int studentCount;
-  final String attendanceRate;
+  final int? classCount;
+  final int? studentCount;
+  final String? attendanceRate;
 
   const ProfileHeroCard({
     super.key,
@@ -19,182 +19,96 @@ class ProfileHeroCard extends StatelessWidget {
     this.roleTitle = 'Giảng viên • FPT University',
     this.department = 'Khoa Công nghệ thông tin',
     this.initials = 'NM',
-    this.classCount = 6,
-    this.studentCount = 120,
-    this.attendanceRate = '94,1%',
+    this.classCount,
+    this.studentCount,
+    this.attendanceRate,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        color: ProfileColors.heroBannerBg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
+        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x33000000),
+            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Phần thông tin Giảng viên (Avatar + Tên)
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: ProfileColors.orangePrimary,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+          Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              color: ProfileColors.orangePrimary,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    fullName,
+                    style: const TextStyle(
+                      color: ProfileColors.textDark,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittedBox(
-                      alignment: Alignment.centerLeft,
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        fullName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      roleTitle,
-                      style: const TextStyle(
-                        color: ProfileColors.textSubtle,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      department,
-                      style: const TextStyle(
-                        color: ProfileColors.textSubtle,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                const SizedBox(height: 3),
+                Text(
+                  roleTitle,
+                  style: const TextStyle(
+                    color: ProfileColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Đường kẻ ngang mỏng phân cách
-          Container(
-            height: 1,
-            color: ProfileColors.heroDivider,
-          ),
-          const SizedBox(height: 16),
-
-          // 3 cột chỉ số
-          Row(
-            children: [
-              Expanded(
-                child: _HeroStatItem(
-                  value: '$classCount',
-                  label: 'Lớp giảng dạy',
+                const SizedBox(height: 2),
+                Text(
+                  department,
+                  style: const TextStyle(
+                    color: ProfileColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Container(
-                width: 1,
-                height: 34,
-                color: ProfileColors.heroDivider,
-              ),
-              Expanded(
-                child: _HeroStatItem(
-                  value: '$studentCount',
-                  label: 'Sinh viên',
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 34,
-                color: ProfileColors.heroDivider,
-              ),
-              Expanded(
-                child: _HeroStatItem(
-                  value: attendanceRate,
-                  label: 'Chuyên cần\ntuần này',
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 }
-
-class _HeroStatItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _HeroStatItem({
-    required this.value,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: ProfileColors.textSubtle,
-              fontSize: 11,
-              height: 1.2,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-

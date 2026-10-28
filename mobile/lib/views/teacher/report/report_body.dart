@@ -59,18 +59,37 @@ class _ReportBodyState extends State<ReportBody> {
         onRefresh: () => reportVm.load(force: true),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            context.isMobile ? 16.0 : 24.0,
-            horizontalPadding,
-            context.isMobile ? 32.0 : 40.0,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+          child: Stack(
+            children: [
+              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
+              Container(
+                height: 220,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFFFEDE3),
+                      Color(0xFFFFF8F5),
+                      Color(0xFFF8FAFC),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  context.isMobile ? 16.0 : 24.0,
+                  horizontalPadding,
+                  context.isMobile ? 32.0 : 40.0,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                   // 1. Header
                   ReportCustomHeader(
                     onDownload: () => _handleExportExcel(context),
@@ -160,8 +179,11 @@ class _ReportBodyState extends State<ReportBody> {
             ),
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+),
+);
   }
 
   double _getAttendanceRate(ReportData? report) {

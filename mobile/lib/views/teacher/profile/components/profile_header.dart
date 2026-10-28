@@ -4,12 +4,16 @@ import '../profile_colors.dart';
 /// Header của màn hình Hồ sơ:
 /// - Subtitle uppercase: "TÀI KHOẢN GIẢNG VIÊN"
 /// - Title: "Hồ sơ"
-/// - Nút chỉnh sửa (pencil icon) bên phải
+/// - Nút thông báo (bell) và Nút cài đặt (gear) bên phải
 class ProfileHeader extends StatelessWidget {
+  final VoidCallback? onSettings;
+  final VoidCallback? onNotification;
   final VoidCallback? onEdit;
 
   const ProfileHeader({
     super.key,
+    this.onSettings,
+    this.onNotification,
     this.onEdit,
   });
 
@@ -48,8 +52,9 @@ class ProfileHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+            // Nút icon răng cưa (Cài đặt & Trợ giúp)
             InkWell(
-              onTap: onEdit,
+              onTap: onSettings,
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 width: 42,
@@ -61,8 +66,8 @@ class ProfileHeader extends StatelessWidget {
                   boxShadow: ProfileColors.cardShadow,
                 ),
                 child: const Icon(
-                  Icons.edit_outlined,
-                  size: 20,
+                  Icons.settings_outlined,
+                  size: 21,
                   color: Color(0xFF334155),
                 ),
               ),
@@ -73,4 +78,3 @@ class ProfileHeader extends StatelessWidget {
     );
   }
 }
-

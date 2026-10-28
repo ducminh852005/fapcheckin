@@ -20,20 +20,20 @@ class LoginDesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight),
-              child: _buildContent(context, false, isLoading),
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: box.maxHeight),
+                  child: _buildContent(context, false, isLoading),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-      const Expanded(child: _HeroVisualColumn()),
-    ],
-  );
+          const Expanded(child: _HeroVisualColumn()),
+        ],
+      );
   Widget _buildContent(
     BuildContext context,
     bool mobile,
@@ -56,6 +56,13 @@ class LoginDesktopLayout extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Image.asset(
+                    'assets/logos/fap_checkin_logo.png',
+                    width: 210,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 20),
                   Text(
                     'Hệ thống điểm danh FAP',
                     textAlign: TextAlign.center,
@@ -90,7 +97,6 @@ class LoginDesktopLayout extends StatelessWidget {
                         </svg>''',
                       onTap: isGoogleLoading ? null : onGoogleSignIn,
                     ),
-
                   SizedBox(height: 12),
                   _SsoButton(
                     label: '\u0110\u0103ng nh\u1eadp v\u1edbi FE Edu SSO',
@@ -151,7 +157,8 @@ class LoginDesktopLayout extends StatelessWidget {
             padding: EdgeInsets.only(top: 24),
             child: Text.rich(
               TextSpan(
-                text: 'B\u1eb1ng vi\u1ec7c \u0111\u0103ng nh\u1eadp, b\u1ea1n \u0111\u1ed3ng \u00fd v\u1edbi ',
+                text:
+                    'B\u1eb1ng vi\u1ec7c \u0111\u0103ng nh\u1eadp, b\u1ea1n \u0111\u1ed3ng \u00fd v\u1edbi ',
                 children: [
                   TextSpan(
                     text: '\u0110i\u1ec1u kho\u1ea3n d\u1ecbch v\u1ee5',

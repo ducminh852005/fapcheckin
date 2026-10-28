@@ -108,9 +108,9 @@ class ScheduleWeekPicker extends StatelessWidget {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: ScheduleColors.orangeLighter,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+          border: Border.all(color: ScheduleColors.orangeBorder, width: 1),
         ),
         alignment: Alignment.center,
         child: Icon(
@@ -138,9 +138,17 @@ class ScheduleWeekPicker extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? ScheduleColors.orangePrimary
-              : Colors.transparent,
+          gradient: isSelected
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFF7235),
+                    Color(0xFFFA5A1E),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           boxShadow: isSelected
               ? [
@@ -187,7 +195,9 @@ class ScheduleWeekPicker extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected
                     ? Colors.white
-                    : (hasClass ? ScheduleColors.orangePrimary : Colors.transparent),
+                    : (hasClass
+                        ? ScheduleColors.orangePrimary
+                        : Colors.transparent),
               ),
             ),
           ],

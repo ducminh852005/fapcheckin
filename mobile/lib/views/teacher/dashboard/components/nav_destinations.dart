@@ -54,6 +54,6 @@ const List<NavDestination> kNavDestinations = [
     selectedIcon: Icons.person_rounded,
     label: 'Hồ sơ',
     route: 'cai-dat',
-    activeRoutes: {'ho-so', 'thong-tin-ca-nhan', 'thong-tin-cong-tac'},
+    activeRoutes: {'ho-so', 'thong-tin-ca-nhan', 'thong-tin-cong-tac', 'cai-dat-tro-giup'},
   ),
 ];

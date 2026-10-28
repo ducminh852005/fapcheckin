@@ -60,70 +60,37 @@ class ScheduleHeader extends StatelessWidget {
           ),
         ),
 
-        // Nút Scan TKB & Nút chuông
-        Row(
-          children: [
-            if (onScanTimetable != null) ...[
-              IconButton.outlined(
-                icon: const Icon(
-                  Icons.document_scanner_outlined,
-                  size: 20,
-                  color: ScheduleColors.textDark,
-                ),
-                tooltip: 'Quét thời khóa biểu',
-                onPressed: onScanTimetable,
-                style: IconButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  shape: const CircleBorder(),
-                ),
+        // Nút Scan TKB
+        if (onScanTimetable != null)
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ScheduleColors.orangeBorder,
+                width: 1.2,
               ),
-              const SizedBox(width: 8),
-            ],
-
-            // Nút chuông
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFE2E8F0),
-                  width: 1,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.notifications_none_rounded,
-                    color: ScheduleColors.textDark,
-                    size: 22,
-                  ),
-                  Positioned(
-                    top: 9,
-                    right: 10,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: ScheduleColors.orangePrimary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.document_scanner_outlined,
+                size: 20,
+                color: ScheduleColors.textDark,
+              ),
+              tooltip: 'Quét thời khóa biểu',
+              onPressed: onScanTimetable,
+              padding: EdgeInsets.zero,
+            ),
+          ),
       ],
     );
   }

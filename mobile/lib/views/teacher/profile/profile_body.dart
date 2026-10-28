@@ -7,7 +7,6 @@ import 'profile_colors.dart';
 import 'components/profile_header.dart';
 import 'components/profile_hero_card.dart';
 import 'components/profile_account_card.dart';
-import 'components/profile_settings_card.dart';
 import 'components/profile_logout_button.dart';
 
 /// Màn hình Hồ sơ giảng viên (Profile):
@@ -33,90 +32,100 @@ class ProfileBody extends StatelessWidget {
         : 'Nguyễn Thị Mai';
 
     final initials = _extractInitials(fullName);
-    final classCount = dashboardVm.classes.isNotEmpty
-        ? dashboardVm.classes.length
-        : 6;
-    final studentCount = dashboardVm.totalStudents > 0
-        ? dashboardVm.totalStudents
-        : 120;
-    final attendanceRate = dashboardVm.avgAttendance > 0
-        ? '${(dashboardVm.avgAttendance * 100).toStringAsFixed(1).replaceAll('.', ',')}%'
-        : '94,1%';
 
     return Scaffold(
       backgroundColor: ProfileColors.pageBg,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          context.isMobile ? 16.0 : 24.0,
-          horizontalPadding,
-          context.isMobile ? 32.0 : 40.0,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Header
-                ProfileHeader(
-                  onEdit: () => dashboardVm.navigate('thong-tin-ca-nhan'),
+        child: Stack(
+          children: [
+            // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
+            Container(
+              height: 220,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFEDE3),
+                    Color(0xFFFFF8F5),
+                    Color(0xFFF8FAFC),
+                  ],
                 ),
-                const SizedBox(height: 16),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                context.isMobile ? 16.0 : 24.0,
+                horizontalPadding,
+                context.isMobile ? 32.0 : 40.0,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Header
+                      ProfileHeader(
+                        onSettings: () =>
+                            dashboardVm.navigate('cai-dat-tro-giup'),
+                        onNotification: () => _showNotificationSheet(context),
+                        onEdit: () => dashboardVm.navigate('thong-tin-ca-nhan'),
+                      ),
+                      const SizedBox(height: 16),
 
-                // 2. Thẻ Hero Dark Navy
-                ProfileHeroCard(
-                  fullName: fullName,
-                  initials: initials,
-                  classCount: classCount,
-                  studentCount: studentCount,
-                  attendanceRate: attendanceRate,
-                ),
-                const SizedBox(height: 16),
+                      // 2. Thẻ Hero Dark Navy
+                      ProfileHeroCard(
+                        fullName: fullName,
+                        initials: initials,
+                      ),
+                      const SizedBox(height: 16),
 
-                // 3. Nhóm mục Tài khoản
-                ProfileAccountCard(
-                  onPersonalInfoTap: () => dashboardVm.navigate('thong-tin-ca-nhan'),
-                  onWorkInfoTap: () => dashboardVm.navigate('thong-tin-cong-tac'),
-                  onSecurityTap: () => _showDetailSnackbar(context, 'Tài khoản & Bảo mật'),
-                ),
-                const SizedBox(height: 16),
+                      // 3. Nhóm mục Tài khoản
+                      ProfileAccountCard(
+                        onPersonalInfoTap: () =>
+                            dashboardVm.navigate('thong-tin-ca-nhan'),
+                        onWorkInfoTap: () =>
+                            dashboardVm.navigate('thong-tin-cong-tac'),
+                        onSecurityTap: () =>
+                            _showDetailSnackbar(context, 'Tài khoản & Bảo mật'),
+                      ),
+                      const SizedBox(height: 18),
 
-                // 4. Nhóm mục Cài đặt
-                ProfileSettingsCard(
-                  onThemeTap: () => _showDetailSnackbar(context, 'Cài đặt giao diện'),
-                  onNotificationsTap: () => _showDetailSnackbar(context, 'Cài đặt thông báo'),
-                ),
-                const SizedBox(height: 18),
+                      // 4. Nút Đăng xuất
+                      ProfileLogoutButton(
+                        onLogout: () => _confirmSignOut(context, authVm),
+                      ),
+                      const SizedBox(height: 16),
 
-                // 5. Nút Đăng xuất
-                ProfileLogoutButton(
-                  onLogout: () => _confirmSignOut(context, authVm),
-                ),
-                const SizedBox(height: 16),
-
-                // 6. Phiên bản ứng dụng
-                const Center(
-                  child: Text(
-                    'Phiên bản 1.0.0',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: ProfileColors.textSubtle,
-                      fontWeight: FontWeight.w500,
-                    ),
+                      // 6. Phiên bản ứng dụng
+                      const Center(
+                        child: Text(
+                          'Phiên bản 1.0.0',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: ProfileColors.textSubtle,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
   String _extractInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return 'NM';
     if (parts.length == 1) {
       return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
@@ -133,12 +142,89 @@ class ProfileBody extends StatelessWidget {
     );
   }
 
+  void _showNotificationSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Thông báo',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: ProfileColors.textDark,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: ProfileColors.orangeLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.notifications_active_rounded,
+                      color: ProfileColors.orangePrimary, size: 20),
+                ),
+                title: const Text('Nhắc nhở ca dạy',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                subtitle: const Text(
+                    'Lớp PRM392 - SE1801 sẽ bắt đầu vào 07:30 ngày mai.'),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.check_circle_outline_rounded,
+                      color: Color(0xFF16A34A), size: 20),
+                ),
+                title: const Text('Đồng bộ thành công',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                subtitle: const Text(
+                    'Dữ liệu điểm danh slot 4 đã được đồng bộ lên FAP.'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _confirmSignOut(BuildContext context, AuthViewModel authVm) {
     showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Đăng xuất'),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản giảng viên?'),
+        content: const Text(
+            'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản giảng viên?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

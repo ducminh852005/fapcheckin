@@ -1,57 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:fapcheckin_core/constants/app_palette.dart';
 
 /// Bảng màu chuyên biệt cho màn hình Dashboard (Tổng quan) theo thiết kế.
+/// Kế thừa và đồng bộ từ AppPalette (Trắng & Cam).
 class DashboardColors {
   DashboardColors._();
 
   // Cam chủ đạo (FPT Orange & Brand accents)
-  static const Color orangePrimary = Color(0xFFFA5A1E);
-  static const Color orangeDark = Color(0xFFE04408);
-  static const Color orangeLight = Color(0xFFFFF0EB);
-  static const Color orangeLighter = Color(0xFFFFF7F2);
-  static const Color orangeBorder = Color(0xFFFFD8C7);
+  static const Color orangePrimary = AppPalette.primary;
+  static const Color orangeDark = AppPalette.primaryDark;
+  static const Color orangeLight = AppPalette.orangeLight;
+  static const Color orangeLighter = AppPalette.orangeLighter;
+  static const Color orangeBorder = AppPalette.orangeBorder;
 
   // Gradient ấm áp cho vùng Header trên cùng
-  static const LinearGradient headerGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFFFEDE3),
-      Color(0xFFFFF8F5),
-      Color(0xFFF8FAFC),
-    ],
-  );
+  static const LinearGradient headerGradient = AppPalette.headerGradient;
 
   // Gradient cho nút hành động nổi bật (Mở Live QR)
-  static const LinearGradient primaryButtonGradient = LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [
-      Color(0xFFFA5A1E),
-      Color(0xFFFF7235),
-    ],
-  );
+  static const LinearGradient primaryButtonGradient = AppPalette.primaryButtonGradient;
 
   // Màu chữ (Typography)
-  static const Color textDark = Color(0xFF1E293B); // Slate 800
-  static const Color textBody = Color(0xFF334155); // Slate 700
-  static const Color textMuted = Color(0xFF64748B); // Slate 500
-  static const Color textSubtle = Color(0xFF94A3B8); // Slate 400
+  static const Color textDark = AppPalette.textDark;
+  static const Color textBody = AppPalette.textBody;
+  static const Color textMuted = AppPalette.textMuted;
+  static const Color textSubtle = AppPalette.textSubtle;
 
   // Màu nền & Thẻ (Surfaces & Cards)
-  static const Color pageBg = Color(0xFFF8FAFC);
-  static const Color cardBg = Colors.white;
-  static const Color cardBorder = Color(0xFFF1F5F9);
+  static const Color pageBg = AppPalette.pageBg;
+  static const Color cardBg = AppPalette.cardBg;
+  static const Color cardBorder = AppPalette.cardBorder;
   static const Color cardTrack = Color(0xFFE2E8F0);
 
   // Màu trạng thái
-  // Đang diễn ra / Tích cực (Xanh lá)
-  static const Color statusGreen = Color(0xFF16A34A);
-  static const Color statusGreenBg = Color(0xFFDCFCE7);
+  static const Color statusGreen = AppPalette.statusGreen;
+  static const Color statusGreenBg = AppPalette.statusGreenBg;
   static const Color statusGreenDot = Color(0xFF22C55E);
 
-  // Chưa bắt đầu / Trung tính
-  static const Color statusNeutral = Color(0xFF64748B);
+  static const Color statusNeutral = AppPalette.textMuted;
   static const Color statusNeutralBg = Color(0xFFF1F5F9);
 
   // Màu các biểu tượng chức năng chính (Quick actions)
@@ -68,25 +53,6 @@ class DashboardColors {
   static const Color quickActionHistoryBg = Color(0xFFF5F3FF);
 
   // Box shadow chuẩn cho các Card
-  static final List<BoxShadow> cardShadow = [
-    BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 10,
-      offset: const Offset(0, 4),
-    ),
-  ];
-
-  static final List<BoxShadow> activeCardShadow = [
-    BoxShadow(
-      color: const Color(0xFFFA5A1E).withValues(alpha: 0.08),
-      blurRadius: 16,
-      offset: const Offset(0, 6),
-    ),
-    BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 6,
-      offset: const Offset(0, 2),
-    ),
-  ];
+  static final List<BoxShadow> cardShadow = AppPalette.cardShadow;
+  static final List<BoxShadow> activeCardShadow = AppPalette.cardShadow;
 }
-

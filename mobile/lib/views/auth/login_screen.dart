@@ -119,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
 
-    context.go(AppRoutes.teacher);
+    // Chuyển sang màn hình Loading Page khởi động ứng dụng
+    context.go(AppRoutes.loading);
   }
 
   void _showAuthError() {

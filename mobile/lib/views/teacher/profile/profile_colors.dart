@@ -1,44 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:fapcheckin_core/constants/app_palette.dart';
 
-/// Bảng màu chuyên biệt cho màn hình Hồ sơ giảng viên (Profile).
+/// Bảng màu Hồ sơ — Đồng bộ trực tiếp từ AppPalette (Trắng & Cam).
 class ProfileColors {
   ProfileColors._();
 
-  // Tone cam chủ đạo FAP Checkin
-  static const Color orangePrimary = Color(0xFFFA5A1E);
-  static const Color orangeLight = Color(0xFFFFF0EB);
-  static const Color orangeLighter = Color(0xFFFFF7F2);
+  static const Color orangePrimary = AppPalette.primary;
+  static const Color orangeLight = AppPalette.orangeLight;
+  static const Color orangeLighter = AppPalette.orangeLighter;
 
-  // Thẻ Hero Dark Navy
-  static const Color heroBannerBg = Color(0xFF142438);
-  static const Color heroDivider = Color(0xFF22354A);
+  static const Color heroBannerBg = AppPalette.cardBg;
+  static const Color heroDivider = AppPalette.orangeDivider;
 
-  // Màu chữ
-  static const Color textDark = Color(0xFF0F172A);
-  static const Color textMuted = Color(0xFF64748B);
-  static const Color textSubtle = Color(0xFF94A3B8);
+  static const Color textDark = AppPalette.textDark;
+  static const Color textMuted = AppPalette.textMuted;
+  static const Color textSubtle = AppPalette.textSubtle;
 
-  // Nền & Viền
-  static const Color cardBg = Colors.white;
-  static const Color pageBg = Color(0xFFF8FAFC);
-  static const Color cardBorder = Color(0xFFF1F5F9);
-  static const Color borderSubtle = Color(0xFFE2E8F0);
-  static const Color iconTileBg = Color(0xFFF1F5F9);
+  static const Color cardBg = AppPalette.cardBg;
+  static const Color pageBg = AppPalette.pageBg;
+  static const Color cardBorder = AppPalette.cardBorder;
+  static const Color borderSubtle = AppPalette.borderSubtle;
+  static const Color iconTileBg = AppPalette.orangeLight;
 
-  // Màu trạng thái công tác
-  static const Color statusGreen = Color(0xFF16A34A);
-  static const Color statusGreenLight = Color(0xFFDCFCE7);
+  static const Color statusGreen = AppPalette.statusGreen;
+  static const Color statusGreenLight = AppPalette.statusGreenBg;
 
-  // Màu nút Đăng xuất
-  static const Color logoutRed = Color(0xFFEF4444);
-  static const Color logoutBorder = Color(0xFFFEE2E2);
+  static const Color logoutRed = AppPalette.statusRed;
+  static const Color logoutBorder = AppPalette.statusRedBg;
 
-  // Shadow dùng chung
-  static final List<BoxShadow> cardShadow = [
-    BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 10,
-      offset: const Offset(0, 3),
-    ),
-  ];
+  static final List<BoxShadow> cardShadow = AppPalette.cardShadow;
 }

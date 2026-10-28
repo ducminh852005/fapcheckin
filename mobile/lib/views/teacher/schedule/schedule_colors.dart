@@ -1,45 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:fapcheckin_core/constants/app_palette.dart';
 
-/// Bảng màu chuyên biệt cho màn hình Lịch dạy (Schedule Timeline).
+/// Bảng màu chuyên biệt cho màn hình Lịch dạy (Schedule Timeline),
+/// đồng bộ tuyệt đối với tone Trắng & Cam FPT (AppPalette).
 class ScheduleColors {
   ScheduleColors._();
 
-  static const Color orangePrimary = Color(0xFFFA5A1E);
-  static const Color orangeLight = Color(0xFFFFF0EB);
-  static const Color orangeLighter = Color(0xFFFFF7F2);
-  static const Color orangeBadgeBg = Color(0xFFFFEDE5);
+  static const Color orangePrimary = AppPalette.primary;
+  static const Color orangeLight = AppPalette.orangeLight;
+  static const Color orangeLighter = AppPalette.orangeLighter;
+  static const Color orangeBadgeBg = AppPalette.orangeLight;
+  static const Color orangeBorder = AppPalette.orangeBorder;
 
-  static const Color textDark = Color(0xFF1E293B);
-  static const Color textMuted = Color(0xFF64748B);
-  static const Color textSubtle = Color(0xFF94A3B8);
+  static const Color textDark = AppPalette.textDark;
+  static const Color textMuted = AppPalette.textMuted;
+  static const Color textSubtle = AppPalette.textSubtle;
 
-  static const Color cardBg = Colors.white;
-  static const Color pageBg = Color(0xFFF8FAFC);
-  static const Color cardBorder = Color(0xFFF1F5F9);
-  static const Color timelineLine = Color(0xFFE2E8F0);
-  static const Color slotBadgeBg = Color(0xFFEEF2F6);
+  static const Color cardBg = AppPalette.cardBg;
+  static const Color pageBg = AppPalette.pageBg;
+  static const Color cardBorder = AppPalette.orangeBorder;
+  static const Color timelineLine = Color(0xFFFFE0D3);
+  static const Color slotBadgeBg = Color(0xFFFFF4EE);
 
-  static const Color statusDone = Color(0xFF16A34A);
-  static const Color statusDoneBg = Color(0xFFDCFCE7);
+  static const Color statusDone = AppPalette.statusGreen;
+  static const Color statusDoneBg = AppPalette.statusGreenBg;
 
-  static const Color statusActive = Color(0xFFFA5A1E);
+  static const Color statusActive = AppPalette.primary;
   static const Color statusActiveBg = Color(0xFFFFEDE5);
 
   static const Color statusPending = Color(0xFF64748B);
-  static const Color statusPendingBg = Color(0xFFF1F5F9);
+  static const Color statusPendingBg = Color(0xFFFFF4EE);
 
-  static final List<BoxShadow> cardShadow = [
-    BoxShadow(
-      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-      blurRadius: 10,
-      offset: const Offset(0, 3),
-    ),
-  ];
+  static final List<BoxShadow> cardShadow = AppPalette.cardShadow;
 
   static final List<BoxShadow> activeCardShadow = [
     BoxShadow(
-      color: const Color(0xFFFA5A1E).withValues(alpha: 0.12),
-      blurRadius: 14,
+      color: const Color(0xFFFA5A1E).withValues(alpha: 0.16),
+      blurRadius: 16,
       offset: const Offset(0, 4),
     ),
     BoxShadow(
@@ -49,4 +46,3 @@ class ScheduleColors {
     ),
   ];
 }
-
