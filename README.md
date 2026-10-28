@@ -16,7 +16,7 @@ fapcheckin/
 ├─ mobile/            # App Flutter cho Giảng viên (staff): lib/{app,viewmodels,views,core}, android/ ios/ windows/ ...
 ├─ web/
 │  ├─ checkin/        # Trang điểm danh cho Sinh viên (HTML + Firebase JS SDK), host trên Firebase Hosting
-│  └─ admin/          # Web Admin (chưa code — README thiết kế)
+│  └─ admin/          # Web Admin (React + Vite, UI prototype dữ liệu mẫu)
 ├─ firebase/
 │  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
 │  ├─ functions/      # Cloud Function scanTimetable (OCR thời khóa biểu)
@@ -32,7 +32,7 @@ fapcheckin/
 |---|---|---|
 | `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử, báo cáo |
 | `user` (sinh viên) | `web/checkin/` (quét QR) | Tạo bản ghi điểm danh của chính mình; xem dữ liệu của mình |
-| `admin` | `web/admin/` (chưa code) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
+| `admin` | `web/admin/` (UI prototype, chưa nối Firebase) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
 
 ## Chạy thử nhanh (Firebase Emulator)
 
