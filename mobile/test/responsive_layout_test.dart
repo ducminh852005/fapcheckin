@@ -108,6 +108,10 @@ void main() {
         'tong-quan',
         'lich-hoc',
         'lop-hoc',
+        'bao-cao',
+        'cai-dat',
+        'thong-tin-ca-nhan',
+        'thong-tin-cong-tac',
         'lich-su-diem-danh',
         'diem-danh-qr',
       ]) {
@@ -125,7 +129,15 @@ void main() {
 
     testWidgets('phone: switching tab updates route', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
-      await tester.tap(find.text('Tiết học'));
+      final tabFinder = find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Quản lý lớp'),
+      );
+      if (tabFinder.evaluate().isNotEmpty) {
+        await tester.tap(tabFinder);
+      } else {
+        await tester.tap(find.text('Tiết học'));
+      }
       await tester.pump(const Duration(milliseconds: 100));
       final ctx = tester.element(find.byType(MainScreen));
       expect(ctx.read<DashboardViewModel>().currentRoute, 'lop-hoc');
