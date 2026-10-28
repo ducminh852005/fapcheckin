@@ -30,7 +30,9 @@ class UserModel {
 
   bool get isTeacher {
     final normalized = role.trim().toUpperCase();
-    return normalized == 'TEACHER' ||
+    return normalized == 'STAFF' ||
+        normalized == 'ADMIN' ||
+        normalized == 'TEACHER' ||
         normalized == 'GV' ||
         normalized == 'GIANG_VIEN' ||
         normalized == 'GIẢNG VIÊN';
