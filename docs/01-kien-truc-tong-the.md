@@ -8,7 +8,7 @@ Toàn bộ backend và cơ sở dữ liệu là **Firebase**. Không còn máy c
 flowchart LR
     GV["App GV (staff)<br/>mobile/ — Flutter"] --> AUTH[Firebase Auth<br/>Google Sign-In]
     SV["Trang SV (user)<br/>web/checkin — Hosting"] --> AUTH
-    ADM["Web Admin (admin)<br/>web/admin — chưa code"] -.-> AUTH
+    ADM["Web Admin (admin)<br/>web/admin — prototype UI"] -.-> AUTH
     GV --> FS[("Cloud Firestore<br/>+ Security Rules")]
     SV --> FS
     ADM -.-> FS

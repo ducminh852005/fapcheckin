@@ -10,7 +10,7 @@ Không tự làm hệ thống mật khẩu — dùng **Firebase Authentication v
 |---|---|---|---|
 | `user` | Sinh viên | `web/checkin` | Tạo bản ghi điểm danh của chính mình; đọc bản ghi/ghi danh/đơn của mình; tạo đơn `requests`; đọc `announcements` cho `all`/`user`. |
 | `staff` | Giảng viên | app `mobile/` | Quản lý **lớp mình phụ trách**: phiên, điểm danh, lịch ngoài lịch, ghi danh (đọc), nhận lớp chưa có GV; tạo đơn; đọc `announcements` cho `all`/`staff`. |
-| `admin` | Quản trị | Web Admin (chưa code) | Toàn quyền dữ liệu tham chiếu, `users`, `user_invites`, lớp/ghi danh; duyệt `requests`; phát `announcements`; đọc/sửa/xóa điểm danh. |
+| `admin` | Quản trị | Web Admin (UI prototype, chưa nối Firebase) | Toàn quyền dữ liệu tham chiếu, `users`, `user_invites`, lớp/ghi danh; duyệt `requests`; phát `announcements`; đọc/sửa/xóa điểm danh. |
 
 Ma trận đầy đủ role × collection × thao tác: [08](08-security-rules.md).
 

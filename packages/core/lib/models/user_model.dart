@@ -9,6 +9,8 @@ class UserModel {
   final String role;
   final String rollNumber;
   final String email;
+  final bool active;
+  final DateTime? createdAt;
 
   const UserModel({
     required this.memberCode,
@@ -16,6 +18,8 @@ class UserModel {
     required this.role,
     required this.rollNumber,
     required this.email,
+    this.active = true,
+    this.createdAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +29,8 @@ class UserModel {
       role: jsonText(json['role']) ?? '',
       rollNumber: jsonText(json['rollNumber']) ?? '',
       email: jsonText(json['email']) ?? '',
+      active: jsonBool(json['active']) ?? true,
+      createdAt: DateTime.tryParse(jsonText(json['createdAt']) ?? ''),
     );
   }
 
@@ -61,5 +67,7 @@ class UserModel {
     'role': role,
     'rollNumber': rollNumber,
     'email': email,
+    'active': active,
+    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
   };
 }
