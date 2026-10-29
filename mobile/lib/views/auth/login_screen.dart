@@ -64,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
             return LoginMobileLayout(
               isLoading: loading,
               onGoogleSignIn: _loginWithGoogle,
-              onDevSignIn: _enterMainScreen,
             );
           }
           return LoginDesktopLayout(

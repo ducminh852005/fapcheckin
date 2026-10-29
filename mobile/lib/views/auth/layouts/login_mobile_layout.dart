@@ -12,11 +12,9 @@ class LoginMobileLayout extends StatelessWidget {
     super.key,
     required this.isLoading,
     required this.onGoogleSignIn,
-    this.onDevSignIn,
   });
   final bool isLoading;
   final VoidCallback onGoogleSignIn;
-  final VoidCallback? onDevSignIn;
 
   @override
   Widget build(BuildContext context) => LoginBackground(
@@ -42,7 +40,6 @@ class LoginMobileLayout extends StatelessWidget {
                 LoginSignInCard(
                   isLoading: isLoading,
                   onGoogleSignIn: onGoogleSignIn,
-                  onDevSignIn: onDevSignIn,
                 ),
                 const SizedBox(height: 8),
                 const LoginFooter(),
