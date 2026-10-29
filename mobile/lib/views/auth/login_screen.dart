@@ -64,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
             return LoginMobileLayout(
               isLoading: loading,
               onGoogleSignIn: _loginWithGoogle,
+              onDevSignIn: _enterMainScreen,
             );
           }
           return LoginDesktopLayout(
@@ -116,6 +117,12 @@ class _LoginScreenState extends State<LoginScreen> {
         name: authSession.user.displayName,
         email: authSession.user.email,
         memberCode: authSession.user.memberCode,
+      );
+    } else {
+      context.read<DashboardViewModel>().setTeacherInfo(
+        name: 'Khoaaaa',
+        email: 'khoale@fpt.edu.vn',
+        memberCode: 'GV01234',
       );
     }
 

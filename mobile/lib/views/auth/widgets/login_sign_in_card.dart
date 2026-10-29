@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../styles/login_styles.dart';
@@ -8,9 +9,11 @@ class LoginSignInCard extends StatelessWidget {
     super.key,
     required this.isLoading,
     required this.onGoogleSignIn,
+    this.onDevSignIn,
   });
   final bool isLoading;
   final VoidCallback onGoogleSignIn;
+  final VoidCallback? onDevSignIn;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -26,6 +29,23 @@ class LoginSignInCard extends StatelessWidget {
         const Text('Chào mừng thầy cô', style: LoginStyles.title),
         const SizedBox(height: 16),
         LoginGoogleButton(isLoading: isLoading, onPressed: onGoogleSignIn),
+        if (kDebugMode && onDevSignIn != null) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: isLoading ? null : onDevSignIn,
+              icon: const Icon(Icons.bolt, size: 16, color: LoginStyles.orange),
+              label: const Text(
+                'Vào nhanh tài khoản thử nghiệm (Dev)',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: LoginStyles.orange,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
