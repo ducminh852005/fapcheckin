@@ -5,6 +5,7 @@ import 'package:fapcheckin_core/constants/app_spacing.dart';
 import 'package:fapcheckin_core/constants/app_text_styles.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import './nav_destinations.dart';
+import './notification_modal.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 
 class TopBar extends StatelessWidget {
@@ -70,7 +71,7 @@ class TopBar extends StatelessWidget {
                     children: [
                       _TopBarIconButton(
                         icon: Icons.notifications_outlined,
-                        onTap: () {},
+                        onTap: () => showNotificationModal(context),
                       ),
                       Positioned(
                         top: 4,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../viewmodels/auth_viewmodel.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard_colors.dart';
+import 'notification_modal.dart';
 
 /// Phần Header chào giảng viên với Avatar, trạng thái hoạt động và chuông thông báo.
 class DashboardHeader extends StatelessWidget {
@@ -124,15 +125,7 @@ class DashboardHeader extends StatelessWidget {
 
         // Nút chuông thông báo (Có chấm cam)
         InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Không có thông báo mới'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onTap: () => showNotificationModal(context),
           borderRadius: BorderRadius.circular(24),
           child: Container(
             width: 44,
