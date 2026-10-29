@@ -38,3 +38,4 @@ class AttendanceHistoryColors {
   // Shadow
   static final List<BoxShadow> cardShadow = AppPalette.cardShadow;
 }
+

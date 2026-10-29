@@ -16,13 +16,19 @@ class AppRoutes {
 
 GoRouter createAppRouter(AuthViewModel authViewModel) {
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: '/',
     refreshListenable: authViewModel,
     errorBuilder: (context, state) => const LoadingScreen(),
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggedIn = authViewModel.isAuthenticated;
-      if (!isLoggedIn && state.matchedLocation != AppRoutes.login) {
+      final isLoginRoute = state.matchedLocation == AppRoutes.login;
+
+      if (!isLoggedIn && !isLoginRoute) {
         return AppRoutes.login;
+      }
+
+      if (isLoggedIn && isLoginRoute) {
+        return AppRoutes.teacher;
       }
 
       return null;
@@ -31,7 +37,7 @@ GoRouter createAppRouter(AuthViewModel authViewModel) {
       GoRoute(
         path: '/',
         redirect: (_, _) =>
-            authViewModel.isAuthenticated ? AppRoutes.loading : AppRoutes.login,
+            authViewModel.isAuthenticated ? AppRoutes.teacher : AppRoutes.login,
       ),
       GoRoute(
         path: AppRoutes.login,
