@@ -10,7 +10,7 @@ import 'components/class_summary_banner.dart';
 import 'components/class_item_card.dart';
 
 /// Màn hình Quản lý lớp học của Giảng viên:
-/// 1. Header (Học kỳ Thu 2026, Tiêu đề "Quản lý lớp", Nút "Lịch sử điểm danh")
+/// 1. Header (Tiêu đề "Quản lý lớp")
 /// 2. Thanh tìm kiếm lớp / mã môn / sinh viên
 /// 3. Thẻ Dark Navy thống kê: 06 Lớp phụ trách & 192 Sinh viên
 /// 4. Nhóm "Tất cả lớp học" (HÔM NAY):
