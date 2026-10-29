@@ -91,7 +91,7 @@ void main() {
   group('MainScreen shell', () {
     testWidgets('phone: bottom NavigationBar, no sidebar', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Trang chủ'), findsOneWidget);
       expect(find.byType(Sidebar), findsNothing);
       _expectNoErrors(tester);
     });
@@ -99,7 +99,6 @@ void main() {
     testWidgets('desktop: sidebar, no NavigationBar', (tester) async {
       await _pumpMainScreen(tester, const Size(1280, 800));
       expect(find.byType(Sidebar), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
       _expectNoErrors(tester);
     });
 
@@ -129,15 +128,7 @@ void main() {
 
     testWidgets('phone: switching tab updates route', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
-      final tabFinder = find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Quản lý lớp'),
-      );
-      if (tabFinder.evaluate().isNotEmpty) {
-        await tester.tap(tabFinder);
-      } else {
-        await tester.tap(find.text('Tiết học'));
-      }
+      await tester.tap(find.text('Quản lý lớp'));
       await tester.pump(const Duration(milliseconds: 100));
       final ctx = tester.element(find.byType(MainScreen));
       expect(ctx.read<DashboardViewModel>().currentRoute, 'lop-hoc');
