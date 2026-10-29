@@ -68,6 +68,18 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _router = createAppRouter(_authViewModel);
     // Firebase Auth giữ phiên trên thiết bị: nạp lại hồ sơ để khỏi đăng nhập lại.
     _authViewModel.restoreSession();
+
+    // Nạp RemoteSettings ở background không làm nghẽn khởi động giao diện đầu tiên
+    RemoteSettings.load().then((settings) {
+      if (mounted) {
+        _liveSessionViewModel.applyRemoteSettings(
+          qrCycleSeconds: settings.qrRefreshSeconds,
+          ipCheckDefault: settings.ipCheckDefault,
+        );
+      }
+    }).catchError((e) {
+      debugPrint('RemoteSettings load error: $e');
+    });
   }
 
   void _syncHistoryAccount() {

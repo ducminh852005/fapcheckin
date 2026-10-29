@@ -48,6 +48,12 @@ class _MainScreenState extends State<MainScreen> {
             email: authVm.session!.user.email,
             memberCode: authVm.session!.user.memberCode,
           );
+        } else if (dashboardVm.teacherMemberCode.isEmpty) {
+          dashboardVm.setTeacherInfo(
+            name: 'Khoaaaa',
+            email: 'khoale@fpt.edu.vn',
+            memberCode: 'GV01234',
+          );
         }
 
         dashboardVm.loadClasses();
