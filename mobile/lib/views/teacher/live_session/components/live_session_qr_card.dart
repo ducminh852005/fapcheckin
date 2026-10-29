@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
 import '../live_session_colors.dart';
 
 /// Thẻ QR Điểm danh trực tiếp:
@@ -16,7 +18,7 @@ class LiveSessionQrCard extends StatelessWidget {
 
   const LiveSessionQrCard({
     super.key,
-    this.qrData = 'https://fapcheckin.edu.vn/checkin?class=PRN231-SE1801&token=demo',
+    required this.qrData,
     this.refreshSeconds = 42,
     this.totalCycleSeconds = 60,
     this.onRefresh,
@@ -93,13 +95,19 @@ class LiveSessionQrCard extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: QrImageView(
-              data: qrData.isNotEmpty ? qrData : 'https://fapcheckin.edu.vn/checkin',
-              version: QrVersions.auto,
-              size: 190,
-              padding: EdgeInsets.zero,
-              errorCorrectionLevel: QrErrorCorrectLevel.M,
-            ),
+            child: qrData.isEmpty
+                ? const SizedBox(
+                    width: 190,
+                    height: 190,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 190,
+                    padding: EdgeInsets.zero,
+                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  ),
           ),
           const SizedBox(height: 8),
 
@@ -134,7 +142,10 @@ class LiveSessionQrCard extends StatelessWidget {
                       CustomPaint(
                         size: const Size(44, 44),
                         painter: _CountdownPainter(
-                          progress: (refreshSeconds / totalCycleSeconds).clamp(0.0, 1.0),
+                          progress: (refreshSeconds / totalCycleSeconds).clamp(
+                            0.0,
+                            1.0,
+                          ),
                           trackColor: const Color(0xFFE2E8F0),
                           progressColor: LiveSessionColors.orangePrimary,
                           strokeWidth: 3.5,
@@ -259,4 +270,3 @@ class _CountdownPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
-

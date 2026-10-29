@@ -2,9 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import '../core/services/google_auth_service.dart';
+
 import 'package:fapcheckin_core/models/auth_session_model.dart';
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
+
 import './live_session_viewmodel.dart';
 
 class AuthViewModel extends ChangeNotifier {
@@ -33,17 +36,24 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Khôi phục phiên Firebase đã lưu trên thiết bị (gọi một lần khi mở app).
   Future<void> restoreSession() async {
+    _status = ViewStatus.loading;
+    notifyListeners();
     final result = await _repository.restoreSession();
+    _status = ViewStatus.idle;
     if (result is ApiSuccess<AuthSessionModel?>) {
       final data = result.data;
       if (data != null && data.user.isTeacher) {
         _session = data;
         _status = ViewStatus.success;
-        notifyListeners();
       } else if (data != null) {
         await _repository.signOut();
       }
     }
+    if (result is ApiFailure<AuthSessionModel?>) {
+      _errorMessage = result.error.message;
+      _status = ViewStatus.error;
+    }
+    notifyListeners();
   }
 
   Future<bool> loginWithGoogle() async {
@@ -102,8 +112,7 @@ class AuthViewModel extends ChangeNotifier {
       final data = result.data;
       if (!data.user.isTeacher) {
         _status = ViewStatus.error;
-        _errorMessage =
-            'Tài khoản này không có quyền giảng viên. Sinh viên điểm danh bằng cách quét mã QR của giảng viên.';
+        _errorMessage = 'Tài khoản này không có quyền giảng viên. Sinh viên điểm danh bằng cách quét mã QR của giảng viên.';
         await _repository.signOut();
         notifyListeners();
         return false;
@@ -123,6 +132,34 @@ class AuthViewModel extends ChangeNotifier {
 
     _status = ViewStatus.error;
     _errorMessage = 'Không thể xử lý phản hồi đăng nhập.';
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> updateName(String name) async {
+    final account = _session?.token;
+    final result = await _repository.updateName(name);
+    if (account != _session?.token) return false;
+    switch (result) {
+      case ApiSuccess<AuthSessionModel>(:final data):
+        _session = data;
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      case ApiFailure<AuthSessionModel>(:final error):
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
+  }
+
+  Future<bool> updateProfile(String name, String phone, String birthDate) async {
+    final account = _session?.token;
+    final result = await _repository.updateProfile(name: name, phone: phone, birthDate: birthDate);
+    if (account != _session?.token) return false;
+    if (result is ApiSuccess<AuthSessionModel>) { _session = result.data; _errorMessage = null; notifyListeners(); return true; }
+    if (result is ApiFailure<AuthSessionModel>) _errorMessage = result.error.message;
     notifyListeners();
     return false;
   }

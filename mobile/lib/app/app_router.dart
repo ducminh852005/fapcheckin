@@ -15,14 +15,21 @@ class AppRoutes {
 
 GoRouter createAppRouter(AuthViewModel authViewModel) {
   return GoRouter(
-    initialLocation: AppRoutes.teacher,
+    initialLocation: AppRoutes.login,
+    redirect: (context, state) {
+      if (!authViewModel.isAuthenticated) {
+        return state.matchedLocation == AppRoutes.login
+            ? null
+            : AppRoutes.login;
+      }
+      return state.matchedLocation == AppRoutes.login
+          ? AppRoutes.teacher
+          : null;
+    },
     refreshListenable: authViewModel,
     errorBuilder: (context, state) => const LoadingScreen(),
     routes: [
-      GoRoute(
-        path: '/',
-        redirect: (_, _) => AppRoutes.teacher,
-      ),
+      GoRoute(path: '/', redirect: (_, _) => AppRoutes.teacher),
       GoRoute(
         path: AppRoutes.login,
         name: 'login',

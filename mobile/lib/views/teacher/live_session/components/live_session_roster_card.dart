@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../live_session_colors.dart';
 
 class StudentAttendanceItem {
@@ -32,61 +33,10 @@ class LiveSessionRosterCard extends StatefulWidget {
 
   const LiveSessionRosterCard({
     super.key,
-    this.presentCount = 28,
-    this.totalCount = 32,
-    this.presentStudents = const [
-      StudentAttendanceItem(
-        rollNumber: 'HE180101',
-        fullName: 'Nguyễn Minh Anh',
-        initials: 'MA',
-        checkinTime: '09:40',
-        isPresent: true,
-      ),
-      StudentAttendanceItem(
-        rollNumber: 'HE180102',
-        fullName: 'Trần Đức Huy',
-        initials: 'DH',
-        checkinTime: '09:39',
-        isPresent: true,
-      ),
-      StudentAttendanceItem(
-        rollNumber: 'HE180103',
-        fullName: 'Lê Hoàng Nam',
-        initials: 'HN',
-        checkinTime: '09:38',
-        isPresent: true,
-      ),
-    ],
-    this.absentStudents = const [
-      StudentAttendanceItem(
-        rollNumber: 'HE180104',
-        fullName: 'Phạm Quốc Bảo',
-        initials: 'QB',
-        methodText: 'Chưa điểm danh',
-        isPresent: false,
-      ),
-      StudentAttendanceItem(
-        rollNumber: 'HE180105',
-        fullName: 'Vũ Thu Trang',
-        initials: 'TT',
-        methodText: 'Chưa điểm danh',
-        isPresent: false,
-      ),
-      StudentAttendanceItem(
-        rollNumber: 'HE180106',
-        fullName: 'Đỗ Hải Đăng',
-        initials: 'HD',
-        methodText: 'Chưa điểm danh',
-        isPresent: false,
-      ),
-      StudentAttendanceItem(
-        rollNumber: 'HE180107',
-        fullName: 'Hoàng Yến Linh',
-        initials: 'YL',
-        methodText: 'Chưa điểm danh',
-        isPresent: false,
-      ),
-    ],
+    this.presentCount = 0,
+    this.totalCount = 0,
+    this.presentStudents = const [],
+    this.absentStudents = const [],
   });
 
   @override
@@ -406,4 +356,3 @@ class _StudentItemTile extends StatelessWidget {
     );
   }
 }
-

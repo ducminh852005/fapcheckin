@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/auth_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import 'account_dialogs.dart';
 import 'profile_colors.dart';
 import 'components/profile_sub_header.dart';
 import 'components/personal_avatar_card.dart';
@@ -32,13 +34,13 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
     final authVm = context.read<AuthViewModel>();
     final user = authVm.session?.user;
 
-    final name = (user?.fullName.isNotEmpty ?? false) ? user!.fullName : 'Nguyễn Thị Mai';
-    final email = (user?.email.isNotEmpty ?? false) ? user!.email : 'mainguyen@fpt.edu.vn';
+    final name = (user?.fullName.isNotEmpty ?? false) ? user!.fullName : '';
+    final email = (user?.email.isNotEmpty ?? false) ? user!.email : '';
 
     _nameController = TextEditingController(text: name);
     _emailController = TextEditingController(text: email);
-    _phoneController = TextEditingController(text: '0912 345 678');
-    _birthDateController = TextEditingController(text: '15/08/1995');
+    _phoneController = TextEditingController(text: user?.phone ?? '');
+    _birthDateController = TextEditingController(text: user?.birthDate ?? '');
   }
 
   @override
@@ -51,7 +53,11 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
   }
 
   String _extractInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'NM';
     if (parts.length == 1) {
       return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
@@ -61,9 +67,11 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
 
   @override
   Widget build(BuildContext context) {
+    final authVm = context.watch<AuthViewModel>();
     final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
     final initials = _extractInitials(_nameController.text);
+    final avatarPath = authVm.session?.user.avatarPath ?? '';
 
     return Scaffold(
       backgroundColor: ProfileColors.pageBg,
@@ -91,14 +99,8 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
                 // 2. Thẻ Avatar
                 PersonalAvatarCard(
                   initials: initials,
-                  onChangeAvatar: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Tính năng tải ảnh đại diện đang được cập nhật'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  avatarPath: avatarPath,
+                  onChangeAvatar: () => chooseAvatar(context),
                 ),
                 const SizedBox(height: 16),
 
@@ -108,7 +110,10 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
                   emailController: _emailController,
                   phoneController: _phoneController,
                   birthDateController: _birthDateController,
-                  onPickBirthDate: _handlePickBirthDate,
+                  onPickBirthDate: () async {
+                    final date = await showDatePicker(context: context, initialDate: DateTime.tryParse(_birthDateController.text) ?? DateTime(2000), firstDate: DateTime(1900), lastDate: DateTime.now());
+                    if (date != null && mounted) setState(() => _birthDateController.text = date.toIso8601String().substring(0, 10));
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -123,7 +128,9 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: ProfileColors.orangePrimary.withValues(alpha: 0.3),
+                          color: ProfileColors.orangePrimary.withValues(
+                            alpha: 0.3,
+                          ),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -149,24 +156,20 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
     );
   }
 
-  void _handlePickBirthDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(1995, 8, 15),
-      firstDate: DateTime(1950),
-      lastDate: now,
-    );
-    if (picked != null) {
-      final day = picked.day.toString().padLeft(2, '0');
-      final month = picked.month.toString().padLeft(2, '0');
-      setState(() {
-        _birthDateController.text = '$day/$month/${picked.year}';
-      });
+  bool _saving = false;
+  Future<void> _handleSave() async {
+    if (_saving) return;
+    _saving = true;
+    final vm = context.read<AuthViewModel>();
+    final ok = await vm.updateProfile(_nameController.text, _phoneController.text, _birthDateController.text);
+    if (!mounted) return;
+    _saving = false;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.errorMessage ?? 'Không thể lưu.')),
+      );
+      return;
     }
-  }
-
-  void _handleSave() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Đã lưu thay đổi thông tin cá nhân thành công'),
@@ -176,4 +179,3 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
     );
   }
 }
-

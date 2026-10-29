@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../viewmodels/live_session_viewmodel.dart';
 import '../live_session_colors.dart';
 
@@ -56,7 +57,7 @@ class _ManualAttendanceBottomSheetState
   @override
   void initState() {
     super.initState();
-    _selectedIds = {'HE180129', 'HE180130'};
+    _selectedIds = {};
   }
 
   @override
@@ -68,16 +69,18 @@ class _ManualAttendanceBottomSheetState
   @override
   Widget build(BuildContext context) {
     final liveVm = context.watch<LiveSessionViewModel>();
-    final classTitle = liveVm.courseCode.isNotEmpty
-        ? liveVm.courseCode
-        : 'PRN231 - SE1801';
-    final currentPresent = liveVm.presentCount > 0 ? liveVm.presentCount : 28;
-    final totalCount = liveVm.totalStudents > 0 ? liveVm.totalStudents : 32;
+    final classTitle = liveVm.courseCode.isNotEmpty ? liveVm.courseCode : '';
+    final currentPresent = liveVm.checkedInCount;
+    final totalCount = liveVm.totalStudents;
 
     // Dữ liệu sinh viên (lấy từ roster ViewModel hoặc fallback chuẩn mockup)
     final allStudents = _buildStudentsList(liveVm);
-    final absentStudents = allStudents.where((s) => !s.isAlreadyPresent).toList();
-    final currentList = _selectedFilterIndex == 0 ? absentStudents : allStudents;
+    final absentStudents = allStudents
+        .where((s) => !s.isAlreadyPresent)
+        .toList();
+    final currentList = _selectedFilterIndex == 0
+        ? absentStudents
+        : allStudents;
 
     // Lọc theo tìm kiếm
     final filteredList = currentList.where((s) {
@@ -286,15 +289,21 @@ class _ManualAttendanceBottomSheetState
                         if (_selectedIds.length == filteredList.length) {
                           _selectedIds.clear();
                         } else {
-                          _selectedIds.addAll(filteredList.map((s) => s.rollNumber));
+                          _selectedIds.addAll(
+                            filteredList.map((s) => s.rollNumber),
+                          );
                         }
                       });
                     },
                     borderRadius: BorderRadius.circular(6),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       child: Text(
-                        _selectedIds.length == filteredList.length && filteredList.isNotEmpty
+                        _selectedIds.length == filteredList.length &&
+                                filteredList.isNotEmpty
                             ? 'Bỏ chọn'
                             : 'Chọn tất cả',
                         style: const TextStyle(
@@ -326,14 +335,18 @@ class _ManualAttendanceBottomSheetState
                     : ListView.separated(
                         shrinkWrap: true,
                         itemCount: filteredList.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final student = filteredList[index];
-                          final isSelected = _selectedIds.contains(student.rollNumber);
+                          final isSelected = _selectedIds.contains(
+                            student.rollNumber,
+                          );
                           return _StudentSelectionTile(
                             student: student,
                             isSelected: isSelected,
                             onToggle: () {
+                              if (student.isAlreadyPresent || _saving) return;
                               setState(() {
                                 if (isSelected) {
                                   _selectedIds.remove(student.rollNumber);
@@ -381,7 +394,9 @@ class _ManualAttendanceBottomSheetState
                         ? null
                         : [
                             BoxShadow(
-                              color: LiveSessionColors.orangePrimary.withValues(alpha: 0.3),
+                              color: LiveSessionColors.orangePrimary.withValues(
+                                alpha: 0.3,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -495,42 +510,38 @@ class _ManualAttendanceBottomSheetState
         return ManualAttendanceStudent(
           rollNumber: r.rollNumber,
           fullName: r.fullName,
-          statusText: r.isPresent ? 'Đã điểm danh' : 'Chưa điểm danh',
-          isAlreadyPresent: r.isPresent,
+          statusText: r.hasCheckedIn ? 'Đã điểm danh' : 'Chưa điểm danh',
+          isAlreadyPresent: r.hasCheckedIn,
         );
       }).toList();
     }
 
-    return const [
-      ManualAttendanceStudent(
-        rollNumber: 'HE180129',
-        fullName: 'Phạm Thu Hà',
-        statusText: 'Chưa điểm danh',
-        isAlreadyPresent: false,
-      ),
-      ManualAttendanceStudent(
-        rollNumber: 'HE180130',
-        fullName: 'Vũ Quang Minh',
-        statusText: 'Chưa điểm danh',
-        isAlreadyPresent: false,
-      ),
-      ManualAttendanceStudent(
-        rollNumber: 'HE180131',
-        fullName: 'Đỗ Hải Đăng',
-        statusText: 'Chưa điểm danh',
-        isAlreadyPresent: false,
-      ),
-      ManualAttendanceStudent(
-        rollNumber: 'HE180132',
-        fullName: 'Bùi Ngọc Linh',
-        statusText: 'Chưa điểm danh',
-        isAlreadyPresent: false,
-      ),
-    ];
+    return const [];
   }
 
-  void _handleConfirmAttendance(BuildContext context) {
-    final count = _selectedIds.length;
+  bool _saving = false;
+  Future<void> _handleConfirmAttendance(BuildContext context) async {
+    if (_saving || _selectedIds.isEmpty) return;
+    _saving = true;
+    final vm = context.read<LiveSessionViewModel>();
+    final changes = vm.roster
+        .where((r) => _selectedIds.contains(r.rollNumber) && !r.hasCheckedIn)
+        .map(
+          (r) => <String, dynamic>{
+            'rollNumber': r.rollNumber,
+            'status': 'ManualByGV',
+          },
+        )
+        .toList();
+    await vm.manualCheckinBulk(changes);
+    if (!context.mounted) return;
+    _saving = false;
+    if (vm.errorMessage != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+      return;
+    }
+    final count = changes.length;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

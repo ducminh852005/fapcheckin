@@ -7,7 +7,7 @@ enum ClassCardStatus { active, next, normal }
 /// - Bên trái: Khối giờ học (Thứ/Hôm nay, Giờ bắt đầu, Số slot)
 /// - Ở giữa: Mã môn, Mã lớp, Tên môn, Giờ chi tiết, Phòng, Sĩ số, Tỉ lệ có mặt
 /// - Bên phải: Badge trạng thái (Đang dạy / Tiếp theo / Mũi tên >)
-/// - Bên dưới (nếu đang dạy): Nút "Mở điểm danh • 28/32 có mặt >"
+/// - Viền cam nổi bật khi đến khung giờ dạy của lớp đó
 class ClassItemCard extends StatelessWidget {
   final String dayLabel; // "Hôm nay", "Thứ 6", "Thứ 2"
   final String startTime; // "07:30", "12:50"
@@ -279,54 +279,6 @@ class ClassItemCard extends StatelessWidget {
                     ),
                 ],
               ),
-
-              // Nếu đang dạy -> Nút "Mở điểm danh • 28/32 có mặt >"
-              if (isActive) ...[
-                const SizedBox(height: 14),
-                InkWell(
-                  onTap: onOpenCheckin,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 42,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: ClassManagementColors.orangeLight,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.qr_code_scanner_rounded,
-                              color: ClassManagementColors.orangePrimary,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Mở điểm danh • ${activeScannedInfo ?? "28/32 có mặt"}',
-                              style: const TextStyle(
-                                color: ClassManagementColors.orangePrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              color: ClassManagementColors.orangePrimary,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),

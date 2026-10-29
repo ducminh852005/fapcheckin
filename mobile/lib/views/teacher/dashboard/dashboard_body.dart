@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import 'dashboard_colors.dart';
 import 'components/dashboard_header.dart';
@@ -55,7 +56,14 @@ class DashboardBody extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 800),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
+                          if (dashboardVm.isLoading)
+                            const LinearProgressIndicator(),
+                          if (dashboardVm.errorMessage != null)
+                            Text(dashboardVm.errorMessage!),
+                          if (!dashboardVm.isLoading &&
+                              dashboardVm.classes.isEmpty)
+                            const Text('Chưa có lớp được phân công.'),
                           // 1. Header
                           DashboardHeader(),
                           SizedBox(height: 18),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../viewmodels/auth_viewmodel.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard_colors.dart';
+import 'notification_modal.dart';
 
 /// Phần Header chào giảng viên với Avatar, trạng thái hoạt động và chuông thông báo.
 class DashboardHeader extends StatelessWidget {
@@ -14,8 +16,8 @@ class DashboardHeader extends StatelessWidget {
     final dashboardVm = context.watch<DashboardViewModel>();
 
     // Lấy thông tin giảng viên (Ưu tiên auth session -> dashboardVm -> Mặc định theo mockup)
-    String teacherName = 'Thầy Minh';
-    String initials = 'TM';
+    String teacherName = 'Giảng viên';
+    String initials = 'GV';
 
     final sessionName = authVm.session?.user.fullName;
     if (sessionName != null && sessionName.trim().isNotEmpty) {
@@ -30,8 +32,10 @@ class DashboardHeader extends StatelessWidget {
     // Học kỳ & Khoa
     final semesterText = dashboardVm.semester.isNotEmpty
         ? dashboardVm.semester
-        : 'Fall 2026';
-    final departmentText = 'Khoa CNTT • $semesterText';
+        : '';
+    final departmentText = semesterText.isEmpty
+        ? dashboardVm.teacherEmail
+        : semesterText;
 
     return Row(
       children: [
@@ -55,10 +59,7 @@ class DashboardHeader extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFF7235),
-                      Color(0xFFFA5A1E),
-                    ],
+                    colors: [Color(0xFFFF7235), Color(0xFFFA5A1E)],
                   ),
                 ),
                 alignment: Alignment.center,
@@ -124,15 +125,7 @@ class DashboardHeader extends StatelessWidget {
 
         // Nút chuông thông báo (Có chấm cam)
         InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Không có thông báo mới'),
-                duration: Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onTap: () => showNotificationModal(context),
           borderRadius: BorderRadius.circular(24),
           child: Container(
             width: 44,
@@ -177,4 +170,3 @@ class DashboardHeader extends StatelessWidget {
     );
   }
 }
-

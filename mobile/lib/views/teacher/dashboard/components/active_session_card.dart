@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
+
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../../../../viewmodels/live_session_viewmodel.dart';
 import '../../live_session/components/manual_attendance_bottom_sheet.dart';
 import '../dashboard_colors.dart';
+import '../../live_session/dialogs/start_session_dialog.dart';
 
 /// Thẻ hiển thị ca học đang diễn ra kèm tiến độ điểm danh và 2 nút hành động nhanh.
 class ActiveSessionCard extends StatelessWidget {
@@ -23,33 +25,27 @@ class ActiveSessionCard extends StatelessWidget {
         break;
       }
     }
-    activeClass ??= dashboardVm.classes.isNotEmpty
-        ? dashboardVm.classes.first
-        : null;
-
-    final subjectCode = activeClass?.subjectCode.isNotEmpty == true
-        ? activeClass!.subjectCode
-        : 'PRN231';
-    final classCode = activeClass?.classCode.isNotEmpty == true
-        ? activeClass!.classCode
-        : 'SE1801';
-    final subjectName = activeClass?.subjectName.isNotEmpty == true
-        ? activeClass!.subjectName
-        : 'Lập trình ứng dụng .NET (C#)';
-    final room = activeClass?.room.isNotEmpty == true
-        ? activeClass!.room
-        : 'AL-204';
-    final slotLabel = activeClass?.slotCode.isNotEmpty == true
-        ? 'Ca ${activeClass!.slotCode}: ${activeClass.timeLabel}'
-        : 'Ca 2: 08:45 – 10:15';
+    if (activeClass == null) return const SizedBox.shrink();
+    final subjectCode = activeClass.subjectCode.isNotEmpty == true
+        ? activeClass.subjectCode
+        : '—';
+    final classCode = activeClass.classCode.isNotEmpty == true
+        ? activeClass.classCode
+        : '—';
+    final subjectName = activeClass.subjectName.isNotEmpty == true
+        ? activeClass.subjectName
+        : '—';
+    final room = activeClass.room.isNotEmpty == true ? activeClass.room : '—';
+    final slotLabel = activeClass.slotCode.isNotEmpty == true
+        ? 'Ca ${activeClass.slotCode}: ${activeClass.timeLabel}'
+        : 'Chưa có giờ học';
 
     // Thống kê sinh viên điểm danh
-    final totalStudents = activeClass?.studentCount != null &&
-            activeClass!.studentCount > 0
+    final totalStudents = activeClass.studentCount > 0
         ? activeClass.studentCount
-        : 32;
+        : 0;
 
-    int scannedStudents = 28;
+    int scannedStudents = 0;
     if (liveSessionVm.session != null &&
         liveSessionVm.classInfo?.classCode == classCode) {
       scannedStudents = liveSessionVm.roster.where((r) => r.isPresent).length;
@@ -57,7 +53,9 @@ class ActiveSessionCard extends StatelessWidget {
       scannedStudents = dashboardVm.activeSessionScanned;
     }
 
-    final double progress = (scannedStudents / totalStudents).clamp(0.0, 1.0);
+    final double progress = totalStudents == 0
+        ? 0
+        : (scannedStudents / totalStudents).clamp(0.0, 1.0);
     final percentText = '${(progress * 100).toStringAsFixed(1)}%';
 
     return Container(
@@ -78,7 +76,10 @@ class ActiveSessionCard extends StatelessWidget {
             children: [
               // Badge "Đang diễn ra"
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: DashboardColors.statusGreenBg,
                   borderRadius: BorderRadius.circular(20),
@@ -265,9 +266,15 @@ class ActiveSessionCard extends StatelessWidget {
               Expanded(
                 flex: 6,
                 child: InkWell(
-                  onTap: () {
-                    // Chuyển sang màn hình điểm danh QR
-                    dashboardVm.navigate('diem-danh-qr');
+                  onTap: () async {
+                    final ok = await startSessionWithOptions(
+                      context,
+                      classSection: activeClass!,
+                      slotCode: activeClass.slotCode,
+                    );
+                    if (context.mounted && ok) {
+                      dashboardVm.navigate('diem-danh-qr');
+                    }
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -278,7 +285,9 @@ class ActiveSessionCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: DashboardColors.orangePrimary.withValues(alpha: 0.28),
+                          color: DashboardColors.orangePrimary.withValues(
+                            alpha: 0.28,
+                          ),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -317,7 +326,16 @@ class ActiveSessionCard extends StatelessWidget {
               Expanded(
                 flex: 5,
                 child: InkWell(
-                  onTap: () => ManualAttendanceBottomSheet.show(context),
+                  onTap: () async {
+                    final ok = await startSessionWithOptions(
+                      context,
+                      classSection: activeClass!,
+                      slotCode: activeClass.slotCode,
+                    );
+                    if (context.mounted && ok) {
+                      await ManualAttendanceBottomSheet.show(context);
+                    }
+                  },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     height: 48,
@@ -364,4 +382,3 @@ class ActiveSessionCard extends StatelessWidget {
     );
   }
 }
-

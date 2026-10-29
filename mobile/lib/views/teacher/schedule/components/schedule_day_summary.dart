@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../schedule_colors.dart';
 
 /// Dòng tóm tắt ngày đang chọn và tổng số ca dạy:
@@ -12,7 +13,7 @@ class ScheduleDaySummary extends StatelessWidget {
     super.key,
     required this.date,
     required this.sessionCount,
-    this.semester = 'Học kỳ Thu 2026',
+    this.semester = '',
   });
 
   static const List<String> _dayFullNames = [
@@ -64,4 +65,3 @@ class ScheduleDaySummary extends StatelessWidget {
     );
   }
 }
-

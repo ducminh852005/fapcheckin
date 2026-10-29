@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../live_session_colors.dart';
 
 /// Thẻ kiểm tra IP mạng:
 /// - Icon khiên bảo mật màu xanh ngọc
 /// - Tiêu đề: "Kiểm tra IP mạng"
 /// - Nút gạt chuyển đổi trạng thái "Tắt" / "Bật" (màu cam khi chọn)
-/// - Phụ đề: "Chỉ chấp nhận mạng FPTU-Campus · IP 10.22.*.*"
+/// - Phụ đề: "Sinh viên cần dùng cùng IP công khai với giảng viên"
 class LiveSessionNetworkCard extends StatelessWidget {
   final bool isEnforced;
   final ValueChanged<bool>? onToggle;
@@ -83,7 +84,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             fit: BoxFit.scaleDown,
             child: Text(
-              'Chỉ chấp nhận mạng FPTU-Campus · IP 10.22.*.*',
+              'Sinh viên cần dùng cùng IP công khai với giảng viên',
               style: TextStyle(
                 fontSize: 11,
                 color: LiveSessionColors.textMuted,
@@ -115,12 +116,16 @@ class _SwitchSegment extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? LiveSessionColors.orangePrimary : Colors.transparent,
+          color: isSelected
+              ? LiveSessionColors.orangePrimary
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: LiveSessionColors.orangePrimary.withValues(alpha: 0.3),
+                    color: LiveSessionColors.orangePrimary.withValues(
+                      alpha: 0.3,
+                    ),
                     blurRadius: 4,
                     offset: const Offset(0, 1),
                   ),
@@ -139,4 +144,3 @@ class _SwitchSegment extends StatelessWidget {
     );
   }
 }
-

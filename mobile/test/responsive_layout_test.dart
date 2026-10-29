@@ -1,4 +1,5 @@
 import 'package:fapcheckin_core/session/current_user.dart';
+import 'package:fapcheckin_core/repositories/schedule_repository.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import 'package:fapcheckin_core/responsive/responsive_dialog.dart';
 import 'package:fapcheckin/core/services/google_auth_service.dart';
@@ -41,7 +42,10 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   // Chưa khởi tạo Firebase: mọi lời gọi repository trả ApiFailure (như khi mất mạng).
   final user = CurrentUser();
   final teacherRepo = TeacherRepository(currentUser: user);
-  final auth = AuthViewModel(AuthRepository(currentUser: user), GoogleAuthService());
+  final auth = AuthViewModel(
+    AuthRepository(currentUser: user),
+    GoogleAuthService(),
+  );
   final dashboard = DashboardViewModel(teacherRepo);
   final live = LiveSessionViewModel(teacherRepo);
   final history = AttendanceHistoryViewModel(
@@ -52,6 +56,7 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   await tester.pumpWidget(
     MultiProvider(
       providers: [
+        Provider(create: (_) => ScheduleRepository(currentUser: user)),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: dashboard),
         ChangeNotifierProvider.value(value: live),
@@ -64,11 +69,7 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
-Future<void> _pumpWidth(
-  WidgetTester tester,
-  Size size,
-  Widget child,
-) async {
+Future<void> _pumpWidth(WidgetTester tester, Size size, Widget child) async {
   _setSize(tester, size);
   await tester.pumpWidget(
     MaterialApp(
