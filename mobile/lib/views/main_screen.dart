@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../viewmodels/live_session_viewmodel.dart';
 import './teacher/schedule/schedule_body.dart';
@@ -47,12 +48,6 @@ class _MainScreenState extends State<MainScreen> {
             name: authVm.session!.user.fullName,
             email: authVm.session!.user.email,
             memberCode: authVm.session!.user.memberCode,
-          );
-        } else if (dashboardVm.teacherMemberCode.isEmpty) {
-          dashboardVm.setTeacherInfo(
-            name: 'Khoaaaa',
-            email: 'khoale@fpt.edu.vn',
-            memberCode: 'GV01234',
           );
         }
 
@@ -128,8 +123,9 @@ class _MainScreenState extends State<MainScreen> {
               backgroundColor: AppColors.surface,
               child: SafeArea(child: Sidebar(width: double.infinity)),
             ),
-      bottomNavigationBar:
-          isMobile ? _MobileNavBar(currentRoute: currentRoute) : null,
+      bottomNavigationBar: isMobile
+          ? _MobileNavBar(currentRoute: currentRoute)
+          : null,
       body: SafeArea(
         bottom: !isMobile,
         child: Stack(
@@ -153,7 +149,9 @@ class _MainScreenState extends State<MainScreen> {
                               currentRoute != 'lich-su-diem-danh' &&
                               currentRoute != 'diem-danh-qr'))
                         TopBar(
-                            isDesktop: isDesktop, currentRoute: currentRoute),
+                          isDesktop: isDesktop,
+                          currentRoute: currentRoute,
+                        ),
                       Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
@@ -308,8 +306,9 @@ class _NavBarItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color:
-                      isSelected ? AppPalette.primary : const Color(0xFF64748B),
+                  color: isSelected
+                      ? AppPalette.primary
+                      : const Color(0xFF64748B),
                   letterSpacing: -0.2,
                 ),
               ),

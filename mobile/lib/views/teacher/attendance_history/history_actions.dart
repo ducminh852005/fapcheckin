@@ -9,6 +9,8 @@ import '../../../viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin_core/models/history_detail.dart';
 import 'package:fapcheckin_core/models/history_student.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
+import 'package:fapcheckin_core/models/sync_result_model.dart';
+import 'package:fapcheckin_core/result/api_result.dart';
 import '../../../core/services/history_download.dart';
 
 Future<void> exportHistory(BuildContext context) async {
@@ -31,6 +33,24 @@ Future<void> exportHistory(BuildContext context) async {
           .showSnackBar(SnackBar(content: Text('Không thể tải tệp: $e')));
     }
   }
+}
+
+Future<void> syncClassToFap(BuildContext context) async {
+  final historyVm = context.read<AttendanceHistoryViewModel>();
+  final dashboardVm = context.read<DashboardViewModel?>();
+  if (dashboardVm == null) return;
+  final result = await dashboardVm.syncToFap(
+    classCode: historyVm.selectedClassCode,
+  );
+  if (!context.mounted) return;
+  final msg = switch (result) {
+    ApiSuccess<SyncResult>(:final data) => data.message,
+    ApiFailure<SyncResult>(:final error) => error.message,
+    _ => 'Không thể đồng bộ FAP.',
+  };
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(msg)),
+  );
 }
 
 Future<void> showHistoryMatrix(BuildContext context) async {

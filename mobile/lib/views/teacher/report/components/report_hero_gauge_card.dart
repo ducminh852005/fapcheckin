@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../report_colors.dart';
 
 /// Thẻ Hero Dark Navy:
@@ -16,8 +18,8 @@ class ReportHeroGaugeCard extends StatelessWidget {
 
   const ReportHeroGaugeCard({
     super.key,
-    this.attendanceRate = 94.1,
-    this.attendanceRateText = '94,1%',
+    this.attendanceRate = 0,
+    this.attendanceRateText = '0%',
     this.statusHeadline = 'Nhịp học tập\nđang rất tốt',
     this.detailText = '542/576 lượt có mặt\ntrong 18 buổi học',
     this.trendText = '↗ +2,3 điểm % so với tuần trước',
@@ -198,4 +200,3 @@ class _GaugePainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
-

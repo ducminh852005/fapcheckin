@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../report_colors.dart';
 
 class DailyAttendanceItem {
@@ -15,8 +16,8 @@ class DailyAttendanceItem {
   });
 }
 
-/// Thẻ "Chuyên cần theo ngày":
-/// - Header: "Chuyên cần theo ngày" & "Tỷ lệ có mặt (%)"
+/// Thẻ "Chuyên cần theo tuần":
+/// - Header: "Chuyên cần theo tuần" & "Tỷ lệ có mặt (%)"
 /// - Biểu đồ cột thể hiện tỷ lệ điểm danh theo ngày trong tuần
 /// - Cột ngày đang chọn/hiện tại có màu cam nổi bật
 /// - Ghi chú: "T6–CN: chưa có buổi học kết thúc."
@@ -27,21 +28,9 @@ class ReportDailyChart extends StatelessWidget {
   const ReportDailyChart({
     super.key,
     this.items = const [
-      DailyAttendanceItem(
-        dayLabel: 'T2 - 05',
-        rate: 93.8,
-        rateText: '93,8',
-      ),
-      DailyAttendanceItem(
-        dayLabel: 'T3 - 06',
-        rate: 95.1,
-        rateText: '95,1',
-      ),
-      DailyAttendanceItem(
-        dayLabel: 'T4 - 07',
-        rate: 92.7,
-        rateText: '92,7',
-      ),
+      DailyAttendanceItem(dayLabel: 'T2 - 05', rate: 93.8, rateText: '93,8'),
+      DailyAttendanceItem(dayLabel: 'T3 - 06', rate: 95.1, rateText: '95,1'),
+      DailyAttendanceItem(dayLabel: 'T4 - 07', rate: 92.7, rateText: '92,7'),
       DailyAttendanceItem(
         dayLabel: 'T5 - 08',
         rate: 93.8,
@@ -74,7 +63,7 @@ class ReportDailyChart extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Chuyên cần theo ngày',
+                    'Chuyên cần theo tuần',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -110,9 +99,7 @@ class ReportDailyChart extends StatelessWidget {
               children: [
                 for (int i = 0; i < items.length; i++) ...[
                   if (i > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _DailyBarItem(item: items[i]),
-                  ),
+                  Expanded(child: _DailyBarItem(item: items[i])),
                 ],
               ],
             ),
@@ -147,7 +134,10 @@ class _DailyBarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     // Chiều cao tối đa của thanh cột là 80dp (tương ứng ~100%)
     const maxBarHeight = 80.0;
-    final fillHeight = (item.rate / 100.0 * maxBarHeight).clamp(10.0, maxBarHeight);
+    final fillHeight = (item.rate / 100.0 * maxBarHeight).clamp(
+      10.0,
+      maxBarHeight,
+    );
     final barColor = item.isHighlighted
         ? ReportColors.barOrange
         : ReportColors.barBlueMuted;
@@ -195,4 +185,3 @@ class _DailyBarItem extends StatelessWidget {
     );
   }
 }
-

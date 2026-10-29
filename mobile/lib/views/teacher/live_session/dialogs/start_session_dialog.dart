@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_text_styles.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
+
 import '../../../../viewmodels/live_session_viewmodel.dart';
 
 /// Asks how the attendance session should be opened.
@@ -83,6 +84,15 @@ Future<bool> startSessionWithOptions(
   required String slotCode,
 }) async {
   final liveVm = context.read<LiveSessionViewModel>();
+  if (liveVm.session?.isOpen == true &&
+      liveVm.session!.classCode != classSection.classCode) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Hãy đóng phiên đang mở trước khi chuyển sang lớp khác.'),
+      ),
+    );
+    return false;
+  }
   final resuming =
       classSection.isActive &&
       (classSection.activeSessionId?.isNotEmpty ?? false);
@@ -98,10 +108,11 @@ Future<bool> startSessionWithOptions(
     ipCheck = choice;
   }
 
+  if (!context.mounted) return false;
   await liveVm.startSession(
     classSection: classSection,
     slotCode: slotCode,
     ipCheck: ipCheck,
   );
-  return true;
+  return liveVm.session?.isOpen == true && liveVm.errorMessage == null;
 }

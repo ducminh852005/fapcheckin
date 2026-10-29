@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../profile_colors.dart';
 
 /// Thẻ tóm tắt thông tin công tác:
@@ -12,7 +13,7 @@ class WorkSummaryCard extends StatelessWidget {
 
   const WorkSummaryCard({
     super.key,
-    this.fullName = 'Nguyễn Thị Mai',
+    this.fullName = '',
     this.roleTitle = 'Giảng viên',
     this.statusBadge = 'Đang công tác',
   });
@@ -98,4 +99,3 @@ class WorkSummaryCard extends StatelessWidget {
     );
   }
 }
-

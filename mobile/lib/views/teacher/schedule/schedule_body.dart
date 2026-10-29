@@ -4,11 +4,18 @@ import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/models/timetable_scan_model.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../../../viewmodels/live_session_viewmodel.dart';
 import '../class_management/dialogs/import_timetable_dialog.dart';
 import '../dashboard/components/weekly_timetable.dart';
 import 'schedule_colors.dart';
+
+import 'package:fapcheckin_core/repositories/schedule_repository.dart';
+import 'package:fapcheckin_core/result/api_result.dart';
+
+import '../live_session/dialogs/start_session_dialog.dart';
+import '../class_management/dialogs/create_class_dialog.dart';
 import 'components/schedule_header.dart';
 import 'components/schedule_week_picker.dart';
 import 'components/schedule_day_summary.dart';
@@ -27,16 +34,56 @@ class ScheduleBody extends StatefulWidget {
 }
 
 class _ScheduleBodyState extends State<ScheduleBody> {
+  List<Map<String, dynamic>> _plans = [];
+  String? _error;
+  Future<void> _loadPlans() async {
+    final result = await context.read<ScheduleRepository>().list();
+    if (!mounted) return;
+    setState(() {
+      if (result is ApiSuccess<List<Map<String, dynamic>>>) {
+        _plans = result.data;
+        _error = null;
+      }
+      if (result is ApiFailure<List<Map<String, dynamic>>>) {
+        _error = result.error.message;
+      }
+    });
+  }
+
+  Future<void> _open(_TimelineSessionData item) async {
+    if (!DateUtils.isSameDay(_selectedDate, DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chỉ mở điểm danh cho ngày hôm nay.')),
+      );
+      return;
+    }
+    final vm = context.read<DashboardViewModel>();
+    final cls = vm.classes
+        .where((c) => c.classCode == item.classCode)
+        .firstOrNull;
+    if (cls == null) return;
+    final ok = await startSessionWithOptions(
+      context,
+      classSection: cls,
+      slotCode: item.slotCode,
+    );
+    if (mounted && ok) vm.navigate('diem-danh-qr');
+  }
+
   late DateTime _selectedDate;
   late DateTime _weekStart;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPlans();
+    });
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
-    _weekStart =
-        _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
+    _weekStart = _selectedDate.subtract(
+      Duration(days: _selectedDate.weekday - 1),
+    );
   }
 
   void _prevWeek() {
@@ -71,13 +118,13 @@ class _ScheduleBodyState extends State<ScheduleBody> {
     if (!context.mounted) return;
 
     context.read<LiveSessionViewModel>().triggerToast(
-          type: ToastType.custom,
-          title: 'Đã cập nhật thời khóa biểu',
-          message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
-          icon: Icons.check_circle_outline,
-          accentColor: AppColors.statusPresent,
-          duration: const Duration(seconds: 4),
-        );
+      type: ToastType.custom,
+      title: 'Đã cập nhật thời khóa biểu',
+      message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
+      icon: Icons.check_circle_outline,
+      accentColor: AppColors.statusPresent,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   @override
@@ -97,6 +144,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
         color: ScheduleColors.orangePrimary,
         onRefresh: () async {
           await dashboardVm.loadClasses();
+          if (mounted) await _loadPlans();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -129,6 +177,24 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                           ),
                           const SizedBox(height: 18),
 
+                          if (dashboardVm.isLoading)
+                            const LinearProgressIndicator(),
+                          if (dashboardVm.errorMessage != null)
+                            Text(dashboardVm.errorMessage!),
+                          if (_error != null) Text(_error!),
+                          TextButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Thêm lịch học bù / workshop'),
+                            onPressed: () async {
+                              await showDialog(
+                                context: context,
+                                builder: (_) => const CreateClassDialog(),
+                              );
+                              if (mounted) await _loadPlans();
+                            },
+                          ),
+                          if (sessions.isEmpty)
+                            const Text('Không có lịch dạy trong ngày đã chọn.'),
                           // 2. Thẻ chọn tuần và ngày
                           ScheduleWeekPicker(
                             selectedDate: _selectedDate,
@@ -146,7 +212,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                             sessionCount: sessions.length,
                             semester: dashboardVm.semester.isNotEmpty
                                 ? 'Học kỳ ${dashboardVm.semester}'
-                                : 'Học kỳ Thu 2026',
+                                : '',
                           ),
                           const SizedBox(height: 16),
 
@@ -165,14 +231,11 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                                   status: sessions[i].status,
                                   isFirst: i == 0,
                                   isLast: i == sessions.length - 1,
-                                  onOpenAttendance: () {
-                                    // Mở phiên điểm danh QR
-                                    dashboardVm.navigate('diem-danh-qr');
-                                  },
+                                  onOpenAttendance: () => _open(sessions[i]),
                                   onTap: () {
                                     if (sessions[i].status ==
                                         ScheduleSessionStatus.active) {
-                                      dashboardVm.navigate('diem-danh-qr');
+                                      _open(sessions[i]);
                                     }
                                   },
                                 ),
@@ -201,9 +264,14 @@ class _ScheduleBodyState extends State<ScheduleBody> {
         days.addAll(info.weekdays);
       }
     }
-    // Nếu chưa có dữ liệu từ server, mặc định Thứ 2 -> Thứ 6 có lịch (khớp mockup)
-    if (days.isEmpty) {
-      return {1, 2, 3, 4, 5};
+    for (final p in _plans) {
+      final date = DateTime.tryParse(p['scheduleDate']?.toString() ?? '');
+      if (date != null &&
+          p['status'] != 'cancelled' &&
+          !date.isBefore(_weekStart) &&
+          date.isBefore(_weekStart.add(const Duration(days: 7)))) {
+        days.add(date.weekday);
+      }
     }
     return days;
   }
@@ -218,29 +286,24 @@ class _ScheduleBodyState extends State<ScheduleBody> {
       final info = SlotCodeParser.parse(c.slotCode);
       final isToday = info != null
           ? info.weekdays.contains(date.weekday)
-          : date.weekday == DateTime.now().weekday;
+          : false;
 
       if (isToday) {
-        final slotNum = info?.slot ??
-            int.tryParse(c.slotCode.replaceAll(RegExp(r'[^0-9]'), '')) ??
-            1;
+        final slotNum = info.slot;
 
         ScheduleSessionStatus status = ScheduleSessionStatus.upcoming;
         String subtext = '${c.studentCount} sinh viên • Điểm danh QR';
 
-        if (c.isActive) {
+        if (c.isActive && DateUtils.isSameDay(date, DateTime.now())) {
           status = ScheduleSessionStatus.active;
-          final scanned =
-              vm.activeSessionScanned > 0 ? vm.activeSessionScanned : 28;
+          final scanned = vm.activeSessionScanned;
           subtext = '$scanned/${c.studentCount} sinh viên đã điểm danh';
-        } else if (slotNum == 1) {
-          status = ScheduleSessionStatus.completed;
-          subtext = '${c.studentCount - 2}/${c.studentCount} sinh viên có mặt';
         }
 
         result.add(
           _TimelineSessionData(
             slot: slotNum,
+            slotCode: c.slotCode,
             timeRange: (c.startTime != null && c.endTime != null)
                 ? '${c.startTime}–${c.endTime}'
                 : c.timeLabel,
@@ -255,72 +318,30 @@ class _ScheduleBodyState extends State<ScheduleBody> {
       }
     }
 
-    // Nếu danh sách từ classes trống (chưa có lớp nào), nạp 6 ca mẫu chính xác theo mockup
-    if (result.isEmpty) {
-      return [
-        const _TimelineSessionData(
-          slot: 1,
-          timeRange: '07:00–08:30',
-          subjectCode: 'SWP391',
-          classCode: 'SE1802',
-          subjectName: 'Dự án phát triển phần mềm',
-          room: 'BE-301',
-          subtext: '30/32 sinh viên có mặt',
-          status: ScheduleSessionStatus.completed,
-        ),
-        const _TimelineSessionData(
-          slot: 2,
-          timeRange: '08:45–10:15',
-          subjectCode: 'PRN231',
-          classCode: 'SE1801',
-          subjectName: 'Lập trình ứng dụng .NET',
-          room: 'AL-204',
-          subtext: '28/32 sinh viên đã điểm danh',
-          status: ScheduleSessionStatus.active,
-        ),
-        const _TimelineSessionData(
-          slot: 3,
-          timeRange: '10:30–12:00',
-          subjectCode: 'PRN231',
-          classCode: 'SE1803',
-          subjectName: 'Lập trình ứng dụng .NET',
-          room: 'AL-204',
-          subtext: '32 sinh viên • Điểm danh QR',
+    final dateKey =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    for (final p in _plans.where(
+      (p) => p['scheduleDate'] == dateKey && p['status'] != 'cancelled',
+    )) {
+      final cls = vm.classes
+          .where((c) => c.classCode == p['classCode'])
+          .firstOrNull;
+      if (cls == null) continue;
+      final code = p['slotCode']?.toString() ?? '';
+      result.add(
+        _TimelineSessionData(
+          slot: SlotCodeParser.parse(code)?.slot ?? 0,
+          slotCode: code,
+          timeRange: code,
+          subjectCode: cls.subjectCode,
+          classCode: cls.classCode,
+          subjectName: cls.subjectName,
+          room: p['room']?.toString() ?? cls.room,
+          subtext: 'Lịch bổ sung · ${p['note'] ?? ''}',
           status: ScheduleSessionStatus.upcoming,
         ),
-        const _TimelineSessionData(
-          slot: 4,
-          timeRange: '12:30–14:00',
-          subjectCode: 'SWP391',
-          classCode: 'SE1804',
-          subjectName: 'Dự án phát triển phần mềm',
-          room: 'BE-302',
-          subtext: '32 sinh viên • Điểm danh QR',
-          status: ScheduleSessionStatus.upcoming,
-        ),
-        const _TimelineSessionData(
-          slot: 5,
-          timeRange: '14:15–15:45',
-          subjectCode: 'SWT301',
-          classCode: 'SE1805',
-          subjectName: 'Kiểm thử phần mềm',
-          room: 'AL-305',
-          subtext: '32 sinh viên • Điểm danh QR',
-          status: ScheduleSessionStatus.upcoming,
-        ),
-        const _TimelineSessionData(
-          slot: 6,
-          timeRange: '16:00–17:30',
-          subjectCode: 'PRM392',
-          classCode: 'SE1806',
-          subjectName: 'Lập trình di động',
-          room: 'AL-306',
-          subtext: '32 sinh viên • Điểm danh QR',
-          status: ScheduleSessionStatus.upcoming,
-        ),
-      ];
+      );
     }
-
     // Sắp xếp các ca theo thứ tự số ca tăng dần (1 -> 6)
     result.sort((a, b) => a.slot.compareTo(b.slot));
     return result;
@@ -329,6 +350,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
 
 class _TimelineSessionData {
   final int slot;
+  final String slotCode;
   final String timeRange;
   final String subjectCode;
   final String classCode;
@@ -339,6 +361,7 @@ class _TimelineSessionData {
 
   const _TimelineSessionData({
     required this.slot,
+    required this.slotCode,
     required this.timeRange,
     required this.subjectCode,
     required this.classCode,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/live_session_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import './components/manual_attendance_bottom_sheet.dart';
 import 'live_session_colors.dart';
+import 'dialogs/start_session_dialog.dart';
 import 'components/live_session_custom_header.dart';
 import 'components/live_session_qr_card.dart';
 import 'components/live_session_network_card.dart';
@@ -28,64 +30,63 @@ class LiveSessionBody extends StatelessWidget {
     final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
-    // Chuẩn bị dữ liệu hiển thị (kết hợp dữ liệu từ ViewModel và dữ liệu mẫu chuẩn mockup)
-    final classTitle = liveVm.courseCode.isNotEmpty
-        ? liveVm.courseCode
-        : 'PRN231 · SE1801';
-    final timeAndRoom = liveVm.room.isNotEmpty
-        ? '08:45–10:15 · Phòng ${liveVm.room}'
-        : '08:45–10:15 · Phòng AL-204';
-
-    final qrData = liveVm.checkinUrl.isNotEmpty
-        ? liveVm.checkinUrl
-        : 'https://fapcheckin.edu.vn/checkin?class=PRN231-SE1801&token=demo';
-
-    final refreshSeconds = liveVm.qrRefreshSeconds > 0
-        ? liveVm.qrRefreshSeconds
-        : 42;
-    final totalCycleSeconds = liveVm.qrCycleSeconds > 0
-        ? liveVm.qrCycleSeconds
-        : 60;
-
-    final presentCount = liveVm.presentCount > 0 ? liveVm.presentCount : 28;
-    final totalCount = liveVm.totalStudents > 0 ? liveVm.totalStudents : 32;
-
-    // Chuyển danh sách sinh viên từ ViewModel (nếu có) sang StudentAttendanceItem
-    final presentStudents = liveVm.roster.where((r) => r.isPresent).isNotEmpty
-        ? liveVm.roster.where((r) => r.isPresent).map((c) {
-            return StudentAttendanceItem(
-              rollNumber: c.rollNumber,
-              fullName: c.fullName,
-              initials: _extractInitials(c.fullName),
-              checkinTime: '09:40',
-              methodText: 'QR hợp lệ',
-              isPresent: true,
-            );
-          }).toList()
-        : const [
-            StudentAttendanceItem(
-              rollNumber: 'HE180101',
-              fullName: 'Nguyễn Minh Anh',
-              initials: 'MA',
-              checkinTime: '09:40',
-              isPresent: true,
+    if (liveVm.session == null || liveVm.isClosed) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'Chọn lớp để mở điểm danh',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          if (liveVm.isLoading) const LinearProgressIndicator(),
+          if (liveVm.errorMessage != null) Text(liveVm.errorMessage!),
+          if (dashboardVm.classes.isEmpty)
+            const Text('Chưa có lớp được phân công.'),
+          for (final c in dashboardVm.classes)
+            ListTile(
+              title: Text('${c.subjectCode} · ${c.classCode}'),
+              subtitle: Text('${c.timeLabel} · ${c.room}'),
+              trailing: const Icon(Icons.qr_code),
+              onTap: liveVm.isLoading
+                  ? null
+                  : () async {
+                      await startSessionWithOptions(
+                        context,
+                        classSection: c,
+                        slotCode: c.slotCode,
+                      );
+                    },
             ),
-            StudentAttendanceItem(
-              rollNumber: 'HE180102',
-              fullName: 'Trần Đức Huy',
-              initials: 'DH',
-              checkinTime: '09:39',
-              isPresent: true,
-            ),
-            StudentAttendanceItem(
-              rollNumber: 'HE180103',
-              fullName: 'Lê Hoàng Nam',
-              initials: 'HN',
-              checkinTime: '09:38',
-              isPresent: true,
-            ),
-          ];
-
+        ],
+      );
+    }
+    final classTitle =
+        '${liveVm.classInfo?.subjectCode ?? ''} · ${liveVm.courseCode}';
+    final timeAndRoom = '${liveVm.classInfo?.timeLabel ?? ''} · ${liveVm.room}';
+    final qrData = liveVm.checkinUrl;
+    final refreshSeconds = liveVm.qrRefreshSeconds;
+    final totalCycleSeconds = liveVm.qrCycleSeconds;
+    final presentCount = liveVm.checkedInCount;
+    final totalCount = liveVm.totalStudents;
+    final students = liveVm.roster
+        .map(
+          (r) => StudentAttendanceItem(
+            rollNumber: r.rollNumber,
+            fullName: r.displayName,
+            initials: _extractInitials(r.displayName),
+            checkinTime: r.displayCheckinTime,
+            methodText: r.hasCheckedIn
+                ? (r.status == 'ManualByGV'
+                      ? 'Giảng viên xác nhận'
+                      : r.status == 'Late'
+                      ? 'Đi muộn'
+                      : 'QR')
+                : 'Chưa điểm danh',
+            isPresent: r.hasCheckedIn,
+          ),
+        )
+        .toList();
+    final presentStudents = students.where((s) => s.isPresent).toList();
     return Scaffold(
       backgroundColor: LiveSessionColors.pageBg,
       body: SingleChildScrollView(
@@ -102,9 +103,15 @@ class LiveSessionBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (liveVm.isLoading) const LinearProgressIndicator(),
+                if (liveVm.errorMessage != null)
+                  Text(
+                    liveVm.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 // 1 & 2. Header & Banner môn học
                 LiveSessionCustomHeader(
-                  sessionSubtitle: 'CA 2 · THỨ NĂM, 08/10/2026',
+                  sessionSubtitle: 'Ca ${liveVm.slot} · ${liveVm.dateLabel}',
                   classTitle: classTitle,
                   timeAndRoom: timeAndRoom,
                   onMoreTap: () => _showMoreOptions(context, dashboardVm),
@@ -116,29 +123,13 @@ class LiveSessionBody extends StatelessWidget {
                   qrData: qrData,
                   refreshSeconds: refreshSeconds,
                   totalCycleSeconds: totalCycleSeconds,
-                  onRefresh: () {
-                    // Cập nhật lại đếm ngược hoặc gọi làm mới
-                  },
+                  onRefresh: liveVm.refreshQrNow,
                   onFullscreen: () => _showFullscreenQr(context, qrData),
                 ),
                 const SizedBox(height: 14),
 
                 // 4. Thẻ Kiểm tra IP mạng
-                LiveSessionNetworkCard(
-                  isEnforced: liveVm.ipCheck,
-                  onToggle: (enforce) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          enforce
-                              ? 'Đã bật kiểm tra IP mạng FPTU-Campus'
-                              : 'Đã tắt kiểm tra IP mạng',
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                ),
+                LiveSessionNetworkCard(isEnforced: liveVm.ipCheck),
                 const SizedBox(height: 18),
 
                 // 5. Thẻ danh sách sinh viên điểm danh
@@ -146,6 +137,7 @@ class LiveSessionBody extends StatelessWidget {
                   presentCount: presentCount,
                   totalCount: totalCount,
                   presentStudents: presentStudents,
+                  absentStudents: students.where((s) => !s.isPresent).toList(),
                 ),
                 const SizedBox(height: 16),
 
@@ -158,7 +150,7 @@ class LiveSessionBody extends StatelessWidget {
                 // 7. Chân trang ghi chú
                 const Center(
                   child: Text(
-                    'QR minh họa · Không dùng để điểm danh thực tế',
+                    'Sinh viên quét mã QR để điểm danh. Cấu hình IP được chọn khi mở phiên.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
@@ -175,7 +167,11 @@ class LiveSessionBody extends StatelessWidget {
   }
 
   String _extractInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'SV';
     if (parts.length == 1) {
       return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
@@ -206,15 +202,27 @@ class LiveSessionBody extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.refresh_rounded),
                 title: const Text('Làm mới phiên'),
-                onTap: () => Navigator.pop(ctx),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.read<LiveSessionViewModel>().refreshQrNow();
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.close_rounded, color: Colors.red),
                 title: const Text(
                   'Đóng phiên điểm danh',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                onTap: () => Navigator.pop(ctx),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final ok = await context
+                      .read<LiveSessionViewModel>()
+                      .closeCurrentSession();
+                  if (ok) await dashboardVm.loadClasses();
+                },
               ),
             ],
           ),
@@ -256,9 +264,13 @@ class LiveSessionBody extends StatelessWidget {
               // Toàn màn hình QR
               InteractiveViewer(
                 child: LiveSessionQrCard(
-                  qrData: qrData,
-                  refreshSeconds: 42,
-                  totalCycleSeconds: 60,
+                  qrData: ctx.watch<LiveSessionViewModel>().checkinUrl,
+                  refreshSeconds: ctx
+                      .watch<LiveSessionViewModel>()
+                      .qrRefreshSeconds,
+                  totalCycleSeconds: ctx
+                      .watch<LiveSessionViewModel>()
+                      .qrCycleSeconds,
                 ),
               ),
             ],

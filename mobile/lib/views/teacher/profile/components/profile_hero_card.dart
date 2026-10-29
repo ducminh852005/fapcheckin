@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../account_dialogs.dart';
 import '../profile_colors.dart';
 
 /// Thẻ Dark Navy chứa thông tin tổng quan của Giảng viên:
@@ -9,16 +11,18 @@ class ProfileHeroCard extends StatelessWidget {
   final String roleTitle;
   final String department;
   final String initials;
+  final String avatarPath;
   final int? classCount;
   final int? studentCount;
   final String? attendanceRate;
 
   const ProfileHeroCard({
     super.key,
-    this.fullName = 'Nguyễn Thị Mai',
+    this.fullName = '',
     this.roleTitle = 'Giảng viên • FPT University',
-    this.department = 'Khoa Công nghệ thông tin',
+    this.department = '',
     this.initials = 'NM',
+    this.avatarPath = '',
     this.classCount,
     this.studentCount,
     this.attendanceRate,
@@ -48,23 +52,35 @@ class ProfileHeroCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: ProfileColors.orangePrimary,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+          avatarPath.isNotEmpty
+              ? AccountAvatar(
+                  path: avatarPath,
+                  initials: initials,
+                  radius: 26,
+                  backgroundColor: ProfileColors.orangePrimary,
+                  textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                )
+              : Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    color: ProfileColors.orangePrimary,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

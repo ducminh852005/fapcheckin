@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard_colors.dart';
 
-/// Mục "TỔNG QUAN TUẦN NÀY" gồm 2 thẻ chỉ số: Lớp phụ trách và Tỉ lệ Chuyên cần TB.
+/// Mục "TỔNG QUAN LỚP HỌC" gồm 2 thẻ chỉ số: Lớp phụ trách và Tỉ lệ Chuyên cần TB.
 class WeeklyOverviewCards extends StatelessWidget {
   const WeeklyOverviewCards({super.key});
 
@@ -14,15 +15,15 @@ class WeeklyOverviewCards extends StatelessWidget {
     // Số lớp & số sinh viên thực tế (hoặc fallback theo mockup)
     final classCount = dashboardVm.classes.isNotEmpty
         ? dashboardVm.classes.length
-        : 6;
+        : 0;
     final studentCount = dashboardVm.totalStudents > 0
         ? dashboardVm.totalStudents
-        : 192;
+        : 0;
 
     // Tỉ lệ chuyên cần
     final attendanceRate = dashboardVm.avgAttendance > 0
         ? '${(dashboardVm.avgAttendance * 100).toStringAsFixed(1)}%'
-        : '94.1%';
+        : '—';
 
     // Giờ cập nhật hiện tại (format HH:mm)
     final now = DateTime.now();
@@ -32,13 +33,13 @@ class WeeklyOverviewCards extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tiêu đề: TỔNG QUAN TUẦN NÀY + Cập nhật 09:41
+        // Tiêu đề: TỔNG QUAN LỚP HỌC + Cập nhật 09:41
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Flexible(
               child: Text(
-                'TỔNG QUAN TUẦN NÀY',
+                'TỔNG QUAN LỚP HỌC',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -51,7 +52,7 @@ class WeeklyOverviewCards extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Cập nhật $updateTime',
+              'Lúc $updateTime',
               style: const TextStyle(
                 color: DashboardColors.textSubtle,
                 fontSize: 11.5,
@@ -190,7 +191,7 @@ class WeeklyOverviewCards extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
-                            '+2.3%',
+                            'Lịch sử',
                             style: TextStyle(
                               color: DashboardColors.statusGreen,
                               fontSize: 10.5,
@@ -224,4 +225,3 @@ class WeeklyOverviewCards extends StatelessWidget {
     );
   }
 }
-

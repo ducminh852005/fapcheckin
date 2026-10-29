@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
+
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard_colors.dart';
+import 'weekly_timetable.dart';
 
 /// Mục "CA DẠY KẾ TIẾP" liệt kê các ca học sắp diễn ra trong ngày.
 class UpcomingSessionsList extends StatelessWidget {
@@ -14,34 +16,20 @@ class UpcomingSessionsList extends StatelessWidget {
 
     // Lọc các lớp chưa diễn ra trong danh sách classes
     final upcomingFromClasses = dashboardVm.classes
-        .where((c) => !c.isActive)
+        .where(
+          (c) =>
+              !c.isActive &&
+              (SlotCodeParser.parse(c.slotCode)?.weekdays
+                      .contains(DateTime.now().weekday) ??
+                  false),
+        )
         .toList();
-
-    // Dữ liệu mẫu khớp mockup thiết kế nếu danh sách thực tế trống
-    final defaultSessions = [
-      _UpcomingSessionItemData(
-        slot: '3',
-        courseCode: 'PRN231',
-        classCode: 'SE1803',
-        timeRange: '10:30 – 12:00',
-        room: 'AL-204',
-      ),
-      _UpcomingSessionItemData(
-        slot: '4',
-        courseCode: 'SWP391',
-        classCode: 'SE1804',
-        timeRange: '12:30 – 14:00',
-        room: 'BE-302',
-      ),
-    ];
 
     final List<_UpcomingSessionItemData> items = [];
     if (upcomingFromClasses.isNotEmpty) {
       for (final c in upcomingFromClasses) {
         items.add(_UpcomingSessionItemData.fromModel(c));
       }
-    } else {
-      items.addAll(defaultSessions);
     }
 
     return Column(
@@ -293,10 +281,10 @@ class _UpcomingSessionItemData {
   });
 
   factory _UpcomingSessionItemData.fromModel(ClassSectionModel model) {
-    String slot = model.slotCode.isNotEmpty ? model.slotCode : '3';
+    String slot = model.slotCode.isNotEmpty ? model.slotCode : '—';
     // Xóa chữ "Ca" nếu có trong slotCode
     slot = slot.replaceAll(RegExp(r'[^0-9]'), '');
-    if (slot.isEmpty) slot = '3';
+    if (slot.isEmpty) slot = '—';
 
     return _UpcomingSessionItemData(
       slot: slot,
@@ -307,4 +295,3 @@ class _UpcomingSessionItemData {
     );
   }
 }
-

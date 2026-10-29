@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import 'package:fapcheckin_core/models/report_model.dart';
+
 import '../../../viewmodels/report_viewmodel.dart';
 import 'report_colors.dart';
+
+import 'package:fapcheckin_core/utils/history_excel.dart';
+
+import '../../../core/services/history_download.dart';
 import 'components/report_custom_header.dart';
 import 'components/report_week_selector.dart';
 import 'components/report_hero_gauge_card.dart';
@@ -34,7 +39,7 @@ class _ReportBodyState extends State<ReportBody> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<ReportViewModel>().load();
+        context.read<ReportViewModel>().load(force: true);
       }
     });
   }
@@ -90,177 +95,154 @@ class _ReportBodyState extends State<ReportBody> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                  // 1. Header
-                  ReportCustomHeader(
-                    onDownload: () => _handleExportExcel(context),
-                  ),
-                  const SizedBox(height: 16),
+                        if (reportVm.loading) const LinearProgressIndicator(),
+                        if (reportVm.errorMessage != null)
+                          Text(reportVm.errorMessage!),
+                        // 1. Header
+                        ReportCustomHeader(
+                          onDownload: () => _handleExportExcel(context),
+                        ),
+                        const SizedBox(height: 16),
 
-                  // 2. Chọn tuần
-                  ReportWeekSelector(
-                    weekLabel: 'Tuần này - 05-11/10/2026',
-                    subtitle: 'Tất cả ${report?.classCount ?? 6} lớp • Chỉ tính ${report?.closedSessionCount ?? 18} buổi đã kết thúc',
-                    onTap: () {
-                      // Có thể mở popup chọn tuần khi cần
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                        // 2. Chọn tuần
+                        ReportWeekSelector(
+                          weekLabel: reportVm.from == null ? 'Toàn bộ lịch sử điểm danh' : '${reportVm.from!.toIso8601String().substring(0,10)} → ${reportVm.to!.toIso8601String().substring(0,10)}',
+                          subtitle:
+                              'Tất cả ${report?.classCount ?? 0} lớp • Đã kết thúc: ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final choice = await showDialog<String>(context: context, builder: (ctx) => SimpleDialog(title: const Text('Phạm vi báo cáo'), children: [
+                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'all'), child: const Text('Toàn bộ lịch sử')),
+                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'week'), child: const Text('Tuần này')),
+                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'range'), child: const Text('Chọn khoảng ngày')),
+                            ]));
+                            if (!context.mounted || choice == null) return;
+                            if (choice == 'all') { await reportVm.setRange(null, null); return; }
+                            if (choice == 'week') { final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday-1)); await reportVm.setRange(start, start.add(const Duration(days: 6))); return; }
+                            final range = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: now);
+                            if (range != null) await reportVm.setRange(range.start, range.end);
+                          },
+                        ),
+                        const SizedBox(height: 16),
 
-                  // 3. Hero Gauge Card (Dark Navy)
-                  ReportHeroGaugeCard(
-                    attendanceRate: attendanceRate,
-                    attendanceRateText: attendanceRateText,
-                    statusHeadline: 'Nhịp học tập\nđang rất tốt',
-                    detailText: '$presentCount/${presentCount + absentCount} lượt có mặt\ntrong ${report?.closedSessionCount ?? 18} buổi học',
-                    trendText: '↗ +2,3 điểm % so với tuần trước',
-                  ),
-                  const SizedBox(height: 14),
+                        // 3. Hero Gauge Card (Dark Navy)
+                        ReportHeroGaugeCard(
+                          attendanceRate: attendanceRate,
+                          attendanceRateText: attendanceRateText,
+                          statusHeadline: report == null
+                              ? 'Chưa có dữ liệu'
+                              : 'Chuyên cần\ncác lớp phụ trách',
+                          detailText:
+                              '$presentCount/${presentCount + absentCount} lượt có mặt\ntrong ${report?.closedSessionCount ?? 0} buổi học',
+                          trendText: 'Tính trên các lượt đã ghi nhận',
+                        ),
+                        const SizedBox(height: 14),
 
-                  // 4. Hai thẻ thống kê nhanh: Lượt có mặt & Lượt vắng mặt
-                  ReportStatCards(
-                    presentCount: presentCount,
-                    absentCount: absentCount,
-                  ),
-                  const SizedBox(height: 16),
+                        // 4. Hai thẻ thống kê nhanh: Lượt có mặt & Lượt vắng mặt
+                        ReportStatCards(
+                          presentCount: presentCount,
+                          absentCount: absentCount,
+                        ),
+                        const SizedBox(height: 16),
 
-                  // 5. Thẻ chuyên cần theo ngày (Biểu đồ cột)
-                  const ReportDailyChart(
-                    items: [
-                      DailyAttendanceItem(
-                        dayLabel: 'T2 - 05',
-                        rate: 93.8,
-                        rateText: '93,8',
-                      ),
-                      DailyAttendanceItem(
-                        dayLabel: 'T3 - 06',
-                        rate: 95.1,
-                        rateText: '95,1',
-                      ),
-                      DailyAttendanceItem(
-                        dayLabel: 'T4 - 07',
-                        rate: 92.7,
-                        rateText: '92,7',
-                      ),
-                      DailyAttendanceItem(
-                        dayLabel: 'T5 - 08',
-                        rate: 93.8,
-                        rateText: '93,8',
-                        isHighlighted: true,
-                      ),
-                    ],
-                    note: 'T6–CN: chưa có buổi học kết thúc.',
-                  ),
-                  const SizedBox(height: 16),
+                        // 5. Thẻ chuyên cần theo ngày (Biểu đồ cột)
+                        ReportDailyChart(
+                          items: [
+                            for (final w in report?.weekly ?? <ReportWeek>[])
+                              DailyAttendanceItem(
+                                dayLabel: w.label,
+                                rate: w.presentRate * 100,
+                                rateText: (w.presentRate * 100).toStringAsFixed(
+                                  1,
+                                ),
+                              ),
+                          ],
+                          note: 'Tuần tính từ buổi học đầu tiên. Chỉ tính lượt đã ghi nhận.',
+                        ),
+                        const SizedBox(height: 16),
 
-                  // 6. Tổng hợp theo môn
-                  ReportSubjectSummary(subjects: subjects),
-                  const SizedBox(height: 18),
+                        // 6. Tổng hợp theo môn
+                        ReportSubjectSummary(subjects: subjects),
+                        const SizedBox(height: 18),
 
-                  // 7. Nút xuất file Excel
-                  ReportExportButton(
-                    onPressed: () => _handleExportExcel(context),
-                  ),
-                  const SizedBox(height: 16),
+                        // 7. Nút xuất file Excel
+                        ReportExportButton(
+                          onPressed: () => _handleExportExcel(context),
+                        ),
+                        const SizedBox(height: 16),
 
-                  // 8. Chân trang thông tin cập nhật
-                  Center(
-                    child: Text(
-                      'Cập nhật lúc 09:41, 08/10/2026.\nPhiên PRN231 - SE1801 đang mở chưa được tính.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: ReportColors.textSubtle,
-                        height: 1.45,
-                      ),
+                        // 8. Chân trang thông tin cập nhật
+                        Center(
+                          child: Text(
+                            report == null
+                                ? 'Chưa có báo cáo.'
+                                : 'Cập nhật: ${DateTime.tryParse(report.generatedAt)?.toLocal() ?? report.generatedAt}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: ReportColors.textSubtle,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
-      ],
-    ),
-  ),
-),
-);
-  }
-
-  double _getAttendanceRate(ReportData? report) {
-    if (report == null) return 94.1;
-    final rate = report.kpis.attendanceRate;
-    if (rate <= 0) return 94.1;
-    return rate > 1.0 ? rate : rate * 100.0;
-  }
-
-  String _getAttendanceRateText(double rate) {
-    return '${rate.toStringAsFixed(1).replaceAll('.', ',')}%';
-  }
-
-  int _getPresentCount(ReportData? report) {
-    if (report != null && report.kpis.totalCheckins > 0) {
-      return report.kpis.totalCheckins;
-    }
-    return 542;
-  }
-
-  int _getAbsentCount(ReportData? report, int presentCount) {
-    if (report != null && report.warnings.isNotEmpty) {
-      final totalAbs = report.warnings.fold<int>(0, (acc, w) => acc + w.absent);
-      if (totalAbs > 0) return totalAbs;
-    }
-    return 34;
-  }
-
-  List<SubjectAttendanceSummary> _getSubjects(ReportData? report) {
-    if (report != null && report.subjects.isNotEmpty) {
-      return report.subjects.map((s) {
-        final rate = s.attendanceRate > 1.0 ? s.attendanceRate / 100.0 : s.attendanceRate;
-        final count = (s.studentCount * rate * 8).round();
-        final total = s.studentCount * 8;
-        return SubjectAttendanceSummary(
-          code: s.classCode.isNotEmpty ? s.classCode : s.subjectName,
-          checkinCountText: '$count/$total lượt',
-          rateText: '${(rate * 100).toStringAsFixed(1).replaceAll('.', ',')}%',
-          rate: rate,
-        );
-      }).toList();
-    }
-
-    return const [
-      SubjectAttendanceSummary(
-        code: 'PRN231',
-        checkinCountText: '238/256 lượt',
-        rateText: '93,0%',
-        rate: 0.930,
-      ),
-      SubjectAttendanceSummary(
-        code: 'SWP391',
-        checkinCountText: '244/256 lượt',
-        rateText: '95,3%',
-        rate: 0.953,
-      ),
-      SubjectAttendanceSummary(
-        code: 'SWT301',
-        checkinCountText: '30/32 lượt',
-        rateText: '93,8%',
-        rate: 0.938,
-      ),
-      SubjectAttendanceSummary(
-        code: 'PRM392',
-        checkinCountText: '30/32 lượt',
-        rateText: '93,8%',
-        rate: 0.938,
-      ),
-    ];
-  }
-
-  void _handleExportExcel(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đang xuất báo cáo chuyên cần ra file Excel...'),
-        duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  double _getAttendanceRate(ReportData? report) =>
+      (report?.kpis.attendanceRate ?? 0) * 100;
+  String _getAttendanceRateText(double rate) => '${rate.toStringAsFixed(1)}%';
+  int _getPresentCount(ReportData? report) => report?.kpis.totalCheckins ?? 0;
+  int _getAbsentCount(ReportData? report, int presentCount) =>
+      report?.kpis.absentCount ?? 0;
+  List<SubjectAttendanceSummary> _getSubjects(ReportData? report) => [
+    for (final s in report?.subjects ?? <ReportSubject>[])
+      SubjectAttendanceSummary(
+        code: '${s.classCode} · ${s.subjectName}',
+        checkinCountText: '${s.presentCount}/${s.expectedCount} lượt',
+        rateText: '${(s.attendanceRate * 100).toStringAsFixed(1)}%',
+        rate: s.attendanceRate,
+      ),
+  ];
+  Future<void> _handleExportExcel(BuildContext context) async {
+    final report = context.read<ReportViewModel>().report;
+    if (report == null) return;
+    try {
+      final file = buildHistoryWorkbook([
+        ['Lớp', 'Môn', 'Sĩ số', 'Có mặt', 'Tổng lượt', 'Tỷ lệ có mặt'],
+        for (final s in report.subjects)
+          [
+            s.classCode,
+            s.subjectName,
+            s.studentCount,
+            s.presentCount,
+            s.expectedCount,
+            s.attendanceRate,
+          ],
+      ], 'report');
+      final message = await downloadHistory(
+        file.filename,
+        file.base64,
+        file.mimeType,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Không thể xuất báo cáo: $e')));
+      }
+    }
   }
 }

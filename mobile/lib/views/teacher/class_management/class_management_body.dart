@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard/components/weekly_timetable.dart';
 import 'class_management_colors.dart';
+import '../../../viewmodels/attendance_history_viewmodel.dart';
+import '../live_session/dialogs/start_session_dialog.dart';
 import 'components/class_management_header.dart';
 import 'components/class_search_bar.dart';
 import 'components/class_summary_banner.dart';
@@ -34,6 +37,15 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
   String _searchQuery = '';
   bool _sortAscending = true;
 
+  Future<void> _openHistory(String classCode) async {
+    final history = context.read<AttendanceHistoryViewModel>();
+    final dashboard = context.read<DashboardViewModel>();
+    await history.loadClasses();
+    if (!mounted) return;
+    await history.selectClass(classCode);
+    if (mounted) dashboard.navigate('lich-su-diem-danh');
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -48,10 +60,10 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
     // Tổng số lớp và tổng số sinh viên
     final totalClasses = dashboardVm.classes.isNotEmpty
         ? dashboardVm.classes.length
-        : 6;
+        : 0;
     final totalStudents = dashboardVm.totalStudents > 0
         ? dashboardVm.totalStudents
-        : 192;
+        : 0;
 
     // Dữ liệu lớp học
     final classGroups = _buildClassGroups(dashboardVm);
@@ -90,179 +102,195 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                     horizontal: horizontalPadding,
                     vertical: 14,
                   ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. Header
-                      const ClassManagementHeader(),
-                      const SizedBox(height: 16),
-
-                      // 2. Ô tìm kiếm
-                      ClassSearchBar(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val.trim().toLowerCase();
-                          });
-                        },
-                        onClear: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 3. Thẻ thống kê màu tối (Dark Navy Banner)
-                      ClassSummaryBanner(
-                        classCount: totalClasses,
-                        studentCount: totalStudents,
-                      ),
-                      const SizedBox(height: 22),
-
-                      // 4. Tiêu đề mục: "Tất cả lớp học" & "Theo giờ dạy ↑"
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Flexible(
-                            child: Text(
-                              'Tất cả lớp học',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: ClassManagementColors.textDark,
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {
+                          if (dashboardVm.isLoading)
+                            const LinearProgressIndicator(),
+                          if (dashboardVm.errorMessage != null)
+                            Text(dashboardVm.errorMessage!),
+                          if (!dashboardVm.isLoading &&
+                              dashboardVm.classes.isEmpty)
+                            const Text('Chưa có lớp được phân công.'),
+                          // 1. Header
+                          const ClassManagementHeader(),
+                          const SizedBox(height: 16),
+
+                          // 2. Ô tìm kiếm
+                          ClassSearchBar(
+                            controller: _searchController,
+                            onChanged: (val) {
                               setState(() {
-                                _sortAscending = !_sortAscending;
+                                _searchQuery = val.trim().toLowerCase();
                               });
                             },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Theo giờ dạy ${_sortAscending ? "↑" : "↓"}',
-                                    style: const TextStyle(
-                                      color: ClassManagementColors.textMuted,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                            onClear: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 3. Thẻ thống kê màu tối (Dark Navy Banner)
+                          ClassSummaryBanner(
+                            classCount: totalClasses,
+                            studentCount: totalStudents,
+                          ),
+                          const SizedBox(height: 22),
+
+                          // 4. Tiêu đề mục: "Tất cả lớp học" & "Theo giờ dạy ↑"
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Flexible(
+                                child: Text(
+                                  'Tất cả lớp học',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: ClassManagementColors.textDark,
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.2,
                                   ),
-                                ],
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _sortAscending = !_sortAscending;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(6),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Theo giờ dạy ${_sortAscending ? "↑" : "↓"}',
+                                        style: const TextStyle(
+                                          color:
+                                              ClassManagementColors.textMuted,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // 5. Khối HÔM NAY
+                          if (classGroups.todayClasses.isNotEmpty) ...[
+                            Text(
+                              'HÔM NAY • ${_getTodaySubtitle()}',
+                              style: const TextStyle(
+                                color: ClassManagementColors.textMuted,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            for (final item in classGroups.todayClasses) ...[
+                              ClassItemCard(
+                                dayLabel: item.dayLabel,
+                                startTime: item.startTime,
+                                slotLabel: item.slotLabel,
+                                subjectCode: item.subjectCode,
+                                classCode: item.classCode,
+                                subjectName: item.subjectName,
+                                timeDetail: item.timeDetail,
+                                attendanceRate: item.attendanceRate,
+                                status: item.status,
+                                activeScannedInfo: item.activeScannedInfo,
+                                onOpenCheckin: () async {
+                                  final cls = dashboardVm.classes
+                                      .where(
+                                        (c) => c.classCode == item.classCode,
+                                      )
+                                      .first;
+                                  final ok = await startSessionWithOptions(
+                                    context,
+                                    classSection: cls,
+                                    slotCode: cls.slotCode,
+                                  );
+                                  if (mounted && ok) {
+                                    dashboardVm.navigate('diem-danh-qr');
+                                  }
+                                },
+                                onTap: () => _openHistory(item.classCode),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 6. Khối SẮP TỚI
+                          if (classGroups.upcomingClasses.isNotEmpty) ...[
+                            const Text(
+                              'SẮP TỚI',
+                              style: TextStyle(
+                                color: ClassManagementColors.textMuted,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            for (final item in classGroups.upcomingClasses) ...[
+                              ClassItemCard(
+                                dayLabel: item.dayLabel,
+                                startTime: item.startTime,
+                                slotLabel: item.slotLabel,
+                                subjectCode: item.subjectCode,
+                                classCode: item.classCode,
+                                subjectName: item.subjectName,
+                                timeDetail: item.timeDetail,
+                                attendanceRate: item.attendanceRate,
+                                status: item.status,
+                                onTap: () => _openHistory(item.classCode),
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                          ],
+
+                          // 7. Ghi chú chân trang (Footer note)
+                          Center(
+                            child: Text(
+                              'Danh sách lớp được tải từ Firebase.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: ClassManagementColors.textSubtle,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                height: 1.5,
                               ),
                             ),
                           ),
+                          const SizedBox(height: 36),
                         ],
                       ),
-                      const SizedBox(height: 10),
-
-                      // 5. Khối HÔM NAY
-                      if (classGroups.todayClasses.isNotEmpty) ...[
-                        Text(
-                          'HÔM NAY • ${_getTodaySubtitle()}',
-                          style: const TextStyle(
-                            color: ClassManagementColors.textMuted,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        for (final item in classGroups.todayClasses) ...[
-                          ClassItemCard(
-                            dayLabel: item.dayLabel,
-                            startTime: item.startTime,
-                            slotLabel: item.slotLabel,
-                            subjectCode: item.subjectCode,
-                            classCode: item.classCode,
-                            subjectName: item.subjectName,
-                            timeDetail: item.timeDetail,
-                            attendanceRate: item.attendanceRate,
-                            status: item.status,
-                            activeScannedInfo: item.activeScannedInfo,
-                            onOpenCheckin: () {
-                              dashboardVm.navigate('diem-danh-qr');
-                            },
-                            onTap: () {
-                              dashboardVm.navigate('lich-su-diem-danh');
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                      ],
-
-                      // 6. Khối SẮP TỚI
-                      if (classGroups.upcomingClasses.isNotEmpty) ...[
-                        const Text(
-                          'SẮP TỚI',
-                          style: TextStyle(
-                            color: ClassManagementColors.textMuted,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        for (final item in classGroups.upcomingClasses) ...[
-                          ClassItemCard(
-                            dayLabel: item.dayLabel,
-                            startTime: item.startTime,
-                            slotLabel: item.slotLabel,
-                            subjectCode: item.subjectCode,
-                            classCode: item.classCode,
-                            subjectName: item.subjectName,
-                            timeDetail: item.timeDetail,
-                            attendanceRate: item.attendanceRate,
-                            status: item.status,
-                            onTap: () {
-                              dashboardVm.navigate('lich-su-diem-danh');
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                      ],
-
-                      // 7. Ghi chú chân trang (Footer note)
-                      Center(
-                        child: Text(
-                          'Danh sách lớp được đồng bộ từ FAP.\nCập nhật gần nhất lúc 09:35, 08/10/2026.',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: ClassManagementColors.textSubtle,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 36),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 
   String _getTodaySubtitle() {
@@ -281,85 +309,6 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
   }
 
   _ClassGroups _buildClassGroups(DashboardViewModel vm) {
-    // Dữ liệu mẫu chuẩn khớp 100% với mockup
-    final List<_ClassCardData> defaultItems = [
-      // Hôm nay
-      const _ClassCardData(
-        dayLabel: 'Hôm nay',
-        startTime: '07:30',
-        slotLabel: 'Slot 1',
-        subjectCode: 'PRN231',
-        classCode: 'SE1801',
-        subjectName: 'Lập trình ứng dụng .NET',
-        timeDetail: '07:30–09:50 • AL-204 • 32 SV',
-        attendanceRate: '92,5%',
-        status: ClassCardStatus.active,
-        activeScannedInfo: '28/32 có mặt',
-        isToday: true,
-      ),
-      const _ClassCardData(
-        dayLabel: 'Hôm nay',
-        startTime: '12:50',
-        slotLabel: 'Slot 3',
-        subjectCode: 'PRN231',
-        classCode: 'SE1803',
-        subjectName: 'Lập trình ứng dụng .NET',
-        timeDetail: '12:50–15:10 • AL-204 • 32 SV',
-        attendanceRate: '93,8%',
-        status: ClassCardStatus.next,
-        isToday: true,
-      ),
-      const _ClassCardData(
-        dayLabel: 'Hôm nay',
-        startTime: '15:20',
-        slotLabel: 'Slot 4',
-        subjectCode: 'SWT301',
-        classCode: 'SE1805',
-        subjectName: 'Kiểm thử phần mềm',
-        timeDetail: '15:20–17:40 • AL-305 • 32 SV',
-        attendanceRate: '93,8%',
-        status: ClassCardStatus.normal,
-        isToday: true,
-      ),
-      // Sắp tới
-      const _ClassCardData(
-        dayLabel: 'Thứ 6',
-        startTime: '07:30',
-        slotLabel: 'Slot 1',
-        subjectCode: 'SWP391',
-        classCode: 'SE1802',
-        subjectName: 'Dự án phát triển phần mềm',
-        timeDetail: '07:30–09:50 • BE-301 • 32 SV',
-        attendanceRate: '96,3%',
-        status: ClassCardStatus.normal,
-        isToday: false,
-      ),
-      const _ClassCardData(
-        dayLabel: 'Thứ 6',
-        startTime: '12:50',
-        slotLabel: 'Slot 3',
-        subjectCode: 'SWP391',
-        classCode: 'SE1804',
-        subjectName: 'Dự án phát triển phần mềm',
-        timeDetail: '12:50–15:10 • BE-302 • 32 SV',
-        attendanceRate: '93,8%',
-        status: ClassCardStatus.normal,
-        isToday: false,
-      ),
-      const _ClassCardData(
-        dayLabel: 'Thứ 2',
-        startTime: '10:00',
-        slotLabel: 'Slot 2',
-        subjectCode: 'PRM392',
-        classCode: 'SE1806',
-        subjectName: 'Lập trình di động',
-        timeDetail: '10:00–12:20 • AL-306 • 32 SV',
-        attendanceRate: '93,8%',
-        status: ClassCardStatus.normal,
-        isToday: false,
-      ),
-    ];
-
     List<_ClassCardData> allItems = [];
 
     if (vm.classes.isNotEmpty) {
@@ -372,12 +321,22 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
 
         String dayLabel = isToday ? 'Hôm nay' : 'Sắp tới';
         if (info != null && !isToday && info.weekdays.isNotEmpty) {
-          const names = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+          const names = [
+            'Thứ 2',
+            'Thứ 3',
+            'Thứ 4',
+            'Thứ 5',
+            'Thứ 6',
+            'Thứ 7',
+            'CN',
+          ];
           dayLabel = names[info.weekdays.first - 1];
         }
 
-        String startTime = c.startTime ?? '07:30';
-        String slotLabel = c.slotCode.isNotEmpty ? 'Slot ${c.slotCode}' : 'Slot 1';
+        String startTime = c.startTime ?? '—';
+        String slotLabel = c.slotCode.isNotEmpty
+            ? 'Slot ${c.slotCode}'
+            : 'Chưa có ca';
         slotLabel = slotLabel.replaceAll('Slot Ca ', 'Slot ');
 
         ClassCardStatus status = ClassCardStatus.normal;
@@ -386,8 +345,8 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
         }
 
         final rateStr = c.averageAttendance > 0
-            ? '${(c.averageAttendance * 100).toStringAsFixed(1)}%'
-            : '93,8%';
+            ? '${(c.averageAttendance).toStringAsFixed(1)}%'
+            : '—';
 
         allItems.add(
           _ClassCardData(
@@ -400,13 +359,12 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
             timeDetail: '${c.timeLabel} • ${c.room} • ${c.studentCount} SV',
             attendanceRate: rateStr,
             status: status,
-            activeScannedInfo: '${vm.activeSessionScanned}/${c.studentCount} có mặt',
+            activeScannedInfo:
+                '${vm.activeSessionScanned}/${c.studentCount} có mặt',
             isToday: isToday,
           ),
         );
       }
-    } else {
-      allItems.addAll(defaultItems);
     }
 
     // Lọc theo tìm kiếm
@@ -418,6 +376,11 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
       }).toList();
     }
 
+    allItems.sort(
+      (a, b) => _sortAscending
+          ? a.startTime.compareTo(b.startTime)
+          : b.startTime.compareTo(a.startTime),
+    );
     final today = allItems.where((c) => c.isToday).toList();
     final upcoming = allItems.where((c) => !c.isToday).toList();
 

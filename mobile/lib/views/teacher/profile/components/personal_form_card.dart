@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../profile_colors.dart';
 
 /// Thẻ biểu mẫu thông tin cá nhân:
@@ -37,10 +38,7 @@ class PersonalFormCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Họ và tên
-          _buildField(
-            label: 'Họ và tên',
-            controller: nameController,
-          ),
+          _buildField(label: 'Họ và tên', controller: nameController),
           const SizedBox(height: 16),
 
           // 2. Email (read-only)
@@ -58,14 +56,14 @@ class PersonalFormCard extends StatelessWidget {
             label: 'Số điện thoại',
             controller: phoneController,
             keyboardType: TextInputType.phone,
+
           ),
           const SizedBox(height: 16),
 
           // 4. Ngày sinh
           _buildField(
-            label: 'Ngày sinh',
+            label: 'Ngày sinh (YYYY-MM-DD)',
             controller: birthDateController,
-            readOnly: true,
             onTap: onPickBirthDate,
             trailingIcon: Icons.calendar_today_outlined,
           ),
@@ -127,11 +125,7 @@ class PersonalFormCard extends StatelessWidget {
                 ),
                 if (trailingIcon != null) ...[
                   const SizedBox(width: 8),
-                  Icon(
-                    trailingIcon,
-                    size: 18,
-                    color: ProfileColors.textSubtle,
-                  ),
+                  Icon(trailingIcon, size: 18, color: ProfileColors.textSubtle),
                 ],
               ],
             ),
@@ -152,4 +146,3 @@ class PersonalFormCard extends StatelessWidget {
     );
   }
 }
-

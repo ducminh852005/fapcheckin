@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import '../account_dialogs.dart';
 import '../profile_colors.dart';
 
 /// Thẻ hiển thị và thay đổi ảnh đại diện (Avatar):
-/// - Vòng tròn viền cam, chữ viết tắt tên màu cam
+/// - Vòng tròn viền cam, chữ viết tắt tên màu cam hoặc ảnh đại diện từ Storage
 /// - Icon camera nhỏ ở góc phải avatar
 /// - Nút "Đổi ảnh đại diện" & Ghi chú "JPG hoặc PNG, tối đa 5 MB"
 class PersonalAvatarCard extends StatelessWidget {
   final String initials;
+  final String avatarPath;
   final VoidCallback? onChangeAvatar;
 
   const PersonalAvatarCard({
     super.key,
     this.initials = 'NM',
+    this.avatarPath = '',
     this.onChangeAvatar,
   });
 
@@ -44,14 +47,26 @@ class PersonalAvatarCard extends StatelessWidget {
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: ProfileColors.orangePrimary,
-                  ),
-                ),
+                child: avatarPath.isNotEmpty
+                    ? AccountAvatar(
+                        path: avatarPath,
+                        initials: initials,
+                        radius: 41,
+                        backgroundColor: Colors.white,
+                        textStyle: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: ProfileColors.orangePrimary,
+                        ),
+                      )
+                    : Text(
+                        initials,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: ProfileColors.orangePrimary,
+                        ),
+                      ),
               ),
               InkWell(
                 onTap: onChangeAvatar,
@@ -101,4 +116,3 @@ class PersonalAvatarCard extends StatelessWidget {
     );
   }
 }
-

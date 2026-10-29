@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../report_colors.dart';
 
 /// Thẻ chọn phạm vi tuần báo cáo:
@@ -11,7 +12,7 @@ class ReportWeekSelector extends StatelessWidget {
 
   const ReportWeekSelector({
     super.key,
-    this.weekLabel = 'Tuần này - 05-11/10/2026',
+    this.weekLabel = '',
     this.subtitle = 'Tất cả 6 lớp • Chỉ tính 18 buổi đã kết thúc',
     this.onTap,
   });
@@ -81,4 +82,3 @@ class ReportWeekSelector extends StatelessWidget {
     );
   }
 }
-

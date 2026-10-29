@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:fapcheckin_core/repositories/account_features_repository.dart';
+import 'package:fapcheckin_core/result/api_result.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../viewmodels/preferences_viewmodel.dart';
+import '../profile/account_dialogs.dart';
 import '../profile/profile_colors.dart';
+import 'account_features_body.dart';
 
 /// Màn hình "Cài đặt & Trợ giúp" (Settings & Help) dành cho Giảng viên:
 /// 1. Header: Nút back (<), Tiêu đề "Cài đặt & Trợ giúp", Icon bánh răng cưa màu cam
 /// 2. Cài đặt ứng dụng:
-///    - Nhắc lịch dạy (Switch bật/tắt)
-///    - Giao diện (Sáng)
-///    - Ngôn ngữ (Tiếng Việt)
-///    - Bảo mật & quyền riêng tư
+///    - Nhắc lịch dạy (Switch bật/tắt kết nối user_preferences + FCM)
+///    - Giao diện (Sáng / Tối / Theo thiết bị)
+///    - Ngôn ngữ (Tiếng Việt / English)
+///    - Bảo mật & quyền riêng tư (Tài khoản Google & 2FA)
 /// 3. Trợ giúp điểm danh:
 ///    - Hướng dẫn điểm danh QR
 ///    - Sinh viên không quét được mã QR? (Expandable FAQ)
-///    - Báo lỗi / Gửi góp ý
-/// 4. Thẻ "Bạn cần thêm trợ giúp?" kèm nút cam "Liên hệ hỗ trợ"
+///    - Báo lỗi / Gửi góp ý (Gửi và xem lịch sử phản hồi từ Admin)
+/// 4. Thẻ "Bạn cần thêm trợ giúp?" kèm nút cam "Liên hệ hỗ trợ" (support_config/public)
 /// 5. Footer: "Điểm danh giảng viên · Phiên bản 1.0.0"
 class SettingsHelpBody extends StatefulWidget {
   const SettingsHelpBody({super.key});
@@ -25,19 +32,54 @@ class SettingsHelpBody extends StatefulWidget {
 }
 
 class _SettingsHelpBodyState extends State<SettingsHelpBody> {
-  // Trạng thái nhắc lịch dạy
-  bool _reminderEnabled = true;
-
-  // Lựa chọn giao diện và ngôn ngữ
-  String _selectedTheme = 'Sáng';
-  String _selectedLanguage = 'Tiếng Việt';
+  // Trạng thái dự phòng khi chạy widget test độc lập không có PreferencesViewModel
+  bool _localReminderEnabled = false;
+  String _localTheme = 'light';
+  String _localLanguage = 'vi';
 
   // Trạng thái mở rộng FAQ
   bool _isFaqExpanded = true;
 
+  // Cấu hình liên hệ hỗ trợ từ support_config/public
+  Map<String, dynamic> _supportData = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSupportConfig());
+  }
+
+  Future<void> _loadSupportConfig() async {
+    final repo = context.read<AccountFeaturesRepository?>();
+    if (repo == null) return;
+    final res = await repo.support();
+    if (!mounted) return;
+    if (res is ApiSuccess<Map<String, dynamic>>) {
+      setState(() {
+        _supportData = res.data;
+      });
+    }
+  }
+
+  String _themeLabel(String code) {
+    switch (code) {
+      case 'dark':
+        return 'Tối';
+      case 'system':
+        return 'Theo thiết bị';
+      default:
+        return 'Sáng';
+    }
+  }
+
+  String _languageLabel(String code) {
+    return code == 'en' ? 'English' : 'Tiếng Việt';
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardVm = context.watch<DashboardViewModel>();
+    final prefsVm = context.watch<PreferencesViewModel?>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
     return Scaffold(
@@ -58,12 +100,27 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
               children: [
                 // 1. Header
                 _buildHeader(context, dashboardVm),
+                if (prefsVm?.saving == true) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ],
+                if (prefsVm?.error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    prefsVm!.error!,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
 
                 // 2. Nhóm "Cài đặt ứng dụng"
                 _buildSectionTitle('Cài đặt ứng dụng'),
                 const SizedBox(height: 10),
-                _buildAppSettingsCard(context),
+                _buildAppSettingsCard(context, prefsVm),
                 const SizedBox(height: 24),
 
                 // 3. Nhóm "Trợ giúp điểm danh"
@@ -169,7 +226,15 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   }
 
   /// 2. Thẻ Cài đặt ứng dụng
-  Widget _buildAppSettingsCard(BuildContext context) {
+  Widget _buildAppSettingsCard(
+    BuildContext context,
+    PreferencesViewModel? prefsVm,
+  ) {
+    final reminderOn = prefsVm?.reminders ?? _localReminderEnabled;
+    final currentTheme = prefsVm?.theme ?? _localTheme;
+    final currentLang = prefsVm?.language ?? _localLanguage;
+    final isSaving = prefsVm?.saving ?? false;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -200,7 +265,7 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Thông báo trước giờ dạy 15 phút',
+                        'Thông báo tự động 15 phút trước giờ dạy',
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w400,
@@ -211,45 +276,54 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                   ),
                 ),
                 Switch.adaptive(
-                  value: _reminderEnabled,
-                  activeColor: ProfileColors.orangePrimary,
+                  value: reminderOn,
+                  activeThumbColor: ProfileColors.orangePrimary,
                   activeTrackColor: ProfileColors.orangeLight,
-                  onChanged: (val) {
-                    setState(() => _reminderEnabled = val);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          val
-                              ? 'Đã bật nhắc lịch dạy trước 15 phút'
-                              : 'Đã tắt nhắc lịch dạy',
-                        ),
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  onChanged: isSaving
+                      ? null
+                      : (val) async {
+                          if (prefsVm == null) {
+                            setState(() => _localReminderEnabled = val);
+                            return;
+                          }
+                          final ok = await prefsVm.save(newReminders: val);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ok
+                                    ? (val
+                                        ? 'Đã bật nhắc lịch trước giờ dạy 15 phút.'
+                                        : 'Đã tắt nhắc lịch dạy.')
+                                    : (prefsVm.error ??
+                                        'Không thể lưu cài đặt nhắc lịch.'),
+                              ),
+                            ),
+                          );
+                        },
                 ),
               ],
             ),
           ),
           _buildDivider(),
 
-          // Giao diện (Sáng / Tối)
+          // Giao diện (Sáng / Tối / Theo thiết bị)
           _buildActionRow(
             icon: Icons.wb_sunny_outlined,
             title: 'Giao diện',
             subtitle: 'Chế độ hiển thị ứng dụng',
-            trailingText: _selectedTheme,
-            onTap: () => _showThemePicker(context),
+            trailingText: _themeLabel(currentTheme),
+            onTap: () => _showThemePicker(context, prefsVm, currentTheme),
           ),
           _buildDivider(),
 
-          // Ngôn ngữ (Tiếng Việt)
+          // Ngôn ngữ (Tiếng Việt / English)
           _buildActionRow(
             icon: Icons.language_rounded,
             title: 'Ngôn ngữ',
             subtitle: 'Ngôn ngữ sử dụng',
-            trailingText: _selectedLanguage,
-            onTap: () => _showLanguagePicker(context),
+            trailingText: _languageLabel(currentLang),
+            onTap: () => _showLanguagePicker(context, prefsVm, currentLang),
           ),
           _buildDivider(),
 
@@ -257,8 +331,15 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
           _buildActionRow(
             icon: Icons.shield_outlined,
             title: 'Bảo mật & quyền riêng tư',
-            subtitle: 'Mật khẩu, quyền truy cập',
-            onTap: () => _showSecurityDialog(context),
+            subtitle: 'Mật khẩu, xác thực hai lớp (Google)',
+            onTap: () {
+              final repo = context.read<AccountFeaturesRepository?>();
+              if (repo != null) {
+                showAccountSecurity(context);
+              } else {
+                _showSecurityDialog(context);
+              }
+            },
           ),
         ],
       ),
@@ -341,8 +422,17 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
           _buildActionRow(
             icon: Icons.chat_bubble_outline_rounded,
             title: 'Báo lỗi / Gửi góp ý',
-            subtitle: 'Đính kèm mã lớp và ảnh lỗi để hỗ trợ',
+            subtitle: 'Gửi báo lỗi hoặc đề xuất tới quản trị viên',
             onTap: () => _showFeedbackDialog(context),
+          ),
+          _buildDivider(),
+
+          // Lịch sử góp ý đã gửi
+          _buildActionRow(
+            icon: Icons.history_rounded,
+            title: 'Lịch sử góp ý đã gửi',
+            subtitle: 'Xem trạng thái xử lý và phản hồi từ nhà trường',
+            onTap: () => _showFeedbackHistoryDialog(context),
           ),
         ],
       ),
@@ -351,6 +441,9 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
   /// 4. Thẻ Bạn cần thêm trợ giúp? (Banner cam nhạt)
   Widget _buildSupportBannerCard(BuildContext context) {
+    final hours = (_supportData['hours']?.toString().isNotEmpty ?? false)
+        ? _supportData['hours'].toString()
+        : 'Thứ 2–6, 08:00–17:00';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -378,11 +471,11 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Bạn cần thêm trợ giúp?',
                       style: TextStyle(
                         fontSize: 15,
@@ -390,10 +483,10 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                         color: ProfileColors.textDark,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 3),
                     Text(
-                      'Bộ phận hỗ trợ · Thứ 2–6, 08:00–17:00',
-                      style: TextStyle(
+                      'Bộ phận hỗ trợ · $hours',
+                      style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w400,
                         color: ProfileColors.textMuted,
@@ -411,7 +504,11 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
             height: 44,
             child: ElevatedButton.icon(
               onPressed: () => _showContactSupportSheet(context),
-              icon: const Icon(Icons.send_rounded, size: 17, color: Colors.white),
+              icon: const Icon(
+                Icons.send_rounded,
+                size: 17,
+                color: Colors.white,
+              ),
               label: const Text(
                 'Liên hệ hỗ trợ',
                 style: TextStyle(
@@ -443,11 +540,7 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
         color: ProfileColors.orangeLight,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(
-        icon,
-        size: 20,
-        color: ProfileColors.orangePrimary,
-      ),
+      child: Icon(icon, size: 20, color: ProfileColors.orangePrimary),
     );
   }
 
@@ -525,122 +618,126 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
   // ── Các Dialogs / Bottom Sheets tương tác ─────────────────────────────────────
 
-  void _showThemePicker(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> _showThemePicker(
+    BuildContext context,
+    PreferencesViewModel? prefsVm,
+    String currentTheme,
+  ) async {
+    final chosen = await showDialog<String>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn giao diện'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'light'),
+            child: Row(
               children: [
-                const Text(
-                  'Chọn giao diện',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: ProfileColors.textDark,
-                  ),
+                Icon(
+                  currentTheme == 'light'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: ProfileColors.orangePrimary,
+                  size: 20,
                 ),
-                const SizedBox(height: 16),
-                _buildRadioTile(
-                  title: 'Giao diện Sáng (Mặc định)',
-                  selected: _selectedTheme == 'Sáng',
-                  onTap: () {
-                    setState(() => _selectedTheme = 'Sáng');
-                    Navigator.pop(ctx);
-                  },
-                ),
-                _buildRadioTile(
-                  title: 'Giao diện Tối (Đang phát triển)',
-                  selected: _selectedTheme == 'Tối',
-                  onTap: () {
-                    setState(() => _selectedTheme = 'Tối');
-                    Navigator.pop(ctx);
-                  },
-                ),
+                const SizedBox(width: 10),
+                const Text('Sáng (Light)'),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showLanguagePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'dark'),
+            child: Row(
               children: [
-                const Text(
-                  'Chọn ngôn ngữ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: ProfileColors.textDark,
-                  ),
+                Icon(
+                  currentTheme == 'dark'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: ProfileColors.orangePrimary,
+                  size: 20,
                 ),
-                const SizedBox(height: 16),
-                _buildRadioTile(
-                  title: 'Tiếng Việt',
-                  selected: _selectedLanguage == 'Tiếng Việt',
-                  onTap: () {
-                    setState(() => _selectedLanguage = 'Tiếng Việt');
-                    Navigator.pop(ctx);
-                  },
-                ),
-                _buildRadioTile(
-                  title: 'English (US)',
-                  selected: _selectedLanguage == 'English',
-                  onTap: () {
-                    setState(() => _selectedLanguage = 'English');
-                    Navigator.pop(ctx);
-                  },
-                ),
+                const SizedBox(width: 10),
+                const Text('Tối (Dark)'),
               ],
             ),
           ),
-        );
-      },
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'system'),
+            child: Row(
+              children: [
+                Icon(
+                  currentTheme == 'system'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: ProfileColors.orangePrimary,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                const Text('Theo thiết bị (System)'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
+    if (chosen == null || !mounted) return;
+    if (prefsVm == null) {
+      setState(() => _localTheme = chosen);
+      return;
+    }
+    await prefsVm.save(newTheme: chosen);
   }
 
-  Widget _buildRadioTile({
-    required String title,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected ? ProfileColors.orangePrimary : ProfileColors.textDark,
-        ),
+  Future<void> _showLanguagePicker(
+    BuildContext context,
+    PreferencesViewModel? prefsVm,
+    String currentLang,
+  ) async {
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn ngôn ngữ'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'vi'),
+            child: Row(
+              children: [
+                Icon(
+                  currentLang == 'vi'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: ProfileColors.orangePrimary,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                const Text('Tiếng Việt'),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, 'en'),
+            child: Row(
+              children: [
+                Icon(
+                  currentLang == 'en'
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: ProfileColors.orangePrimary,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                const Text('English'),
+              ],
+            ),
+          ),
+        ],
       ),
-      trailing: selected
-          ? const Icon(Icons.check_circle_rounded, color: ProfileColors.orangePrimary)
-          : null,
-      onTap: onTap,
     );
+    if (chosen == null || !mounted) return;
+    if (prefsVm == null) {
+      setState(() => _localLanguage = chosen);
+      return;
+    }
+    await prefsVm.save(newLanguage: chosen);
   }
 
   void _showSecurityDialog(BuildContext context) {
@@ -670,7 +767,10 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Đã hiểu', style: TextStyle(color: ProfileColors.orangePrimary)),
+            child: const Text(
+              'Đã hiểu',
+              style: TextStyle(color: ProfileColors.orangePrimary),
+            ),
           ),
         ],
       ),
@@ -710,10 +810,26 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                 ],
               ),
               const SizedBox(height: 12),
-              _buildStepItem('1', 'Bắt đầu phiên', 'Chọn lớp từ lịch dạy và nhấn "Bắt đầu điểm danh".'),
-              _buildStepItem('2', 'Chiếu mã QR', 'Mã QR tự động làm mới mỗi 15 giây để chống gian lận.'),
-              _buildStepItem('3', 'Điểm danh tay', 'Với SV gặp trục trặc mạng hoặc camera, bấm "Điểm danh tay" để đánh dấu có mặt.'),
-              _buildStepItem('4', 'Kết thúc phiên', 'Nhấn "Đóng phiên" và đồng bộ kết quả lên hệ thống FAP.'),
+              _buildStepItem(
+                '1',
+                'Bắt đầu phiên',
+                'Chọn lớp từ lịch dạy và nhấn "Bắt đầu điểm danh".',
+              ),
+              _buildStepItem(
+                '2',
+                'Chiếu mã QR',
+                'Mã QR tự động làm mới mỗi 15 giây để chống gian lận.',
+              ),
+              _buildStepItem(
+                '3',
+                'Điểm danh tay',
+                'Với SV gặp trục trặc mạng hoặc camera, bấm "Điểm danh tay" để đánh dấu có mặt.',
+              ),
+              _buildStepItem(
+                '4',
+                'Kết thúc phiên',
+                'Nhấn "Đóng phiên" và đồng bộ kết quả lên hệ thống FAP.',
+              ),
               const SizedBox(height: 12),
             ],
           ),
@@ -747,12 +863,18 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   desc,
-                  style: const TextStyle(fontSize: 12.5, color: ProfileColors.textMuted),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: ProfileColors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -763,67 +885,47 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   }
 
   void _showFeedbackDialog(BuildContext context) {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Báo lỗi / Gửi góp ý',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+    final repo = context.read<AccountFeaturesRepository?>();
+    if (repo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chưa khởi tạo dịch vụ gửi góp ý.'),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Mô tả vấn đề bạn gặp phải để đội ngũ kỹ thuật hỗ trợ kịp thời:',
-              style: TextStyle(fontSize: 13, color: ProfileColors.textMuted),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: textController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Nhập nội dung góp ý hoặc mô tả lỗi...',
-                hintStyle: const TextStyle(fontSize: 13, color: ProfileColors.textSubtle),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProfileColors.borderSubtle),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: ProfileColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cảm ơn thầy cô đã gửi góp ý! Chúng tôi sẽ kiểm tra sớm.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ProfileColors.orangePrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Gửi góp ý', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+      );
+      return;
+    }
+    showDialog(context: context, builder: (_) => const FeedbackDialog());
   }
 
-  void _showContactSupportSheet(BuildContext context) {
-    showModalBottomSheet(
+  void _showFeedbackHistoryDialog(BuildContext context) {
+    final repo = context.read<AccountFeaturesRepository?>();
+    if (repo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chưa khởi tạo dịch vụ lịch sử góp ý.'),
+        ),
+      );
+      return;
+    }
+    showDialog(context: context, builder: (_) => const FeedbackHistoryDialog());
+  }
+
+  Future<void> _showContactSupportSheet(BuildContext context) async {
+    final repo = context.read<AccountFeaturesRepository?>();
+    if (repo != null) {
+      final result = await repo.support();
+      if (!context.mounted) return;
+      if (result is ApiSuccess<Map<String, dynamic>>) {
+        setState(() => _supportData = result.data);
+      }
+    }
+
+    final phone = _supportData['phone']?.toString() ?? '';
+    final email = _supportData['email']?.toString() ?? '';
+    final address = _supportData['address']?.toString() ?? '';
+    final hours = _supportData['hours']?.toString() ?? '';
+
+    await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -844,23 +946,78 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                   color: ProfileColors.textDark,
                 ),
               ),
+              if (hours.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Giờ làm việc: $hours',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: ProfileColors.textMuted,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               ListTile(
                 leading: _buildTileIcon(Icons.phone_in_talk_rounded),
-                title: const Text('Hotline Hỗ trợ FAP Check-in', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                subtitle: const Text('024 7300 1866 (Nhánh 2)'),
+                title: const Text(
+                  'Hotline Hỗ trợ FAP Check-in',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: Text(
+                  phone.isNotEmpty ? phone : 'Chưa được nhà trường cấu hình',
+                ),
                 contentPadding: EdgeInsets.zero,
+                onTap: phone.isNotEmpty
+                    ? () async {
+                        final ok = await launchUrl(
+                          Uri(scheme: 'tel', path: phone),
+                        );
+                        if (!ok && ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Không mở được ứng dụng gọi điện.'),
+                            ),
+                          );
+                        }
+                      }
+                    : null,
               ),
               ListTile(
                 leading: _buildTileIcon(Icons.email_outlined),
-                title: const Text('Email hỗ trợ kỹ thuật', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                subtitle: const Text('fap-support@fpt.edu.vn'),
+                title: const Text(
+                  'Email hỗ trợ kỹ thuật',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: Text(
+                  email.isNotEmpty ? email : 'Chưa được nhà trường cấu hình',
+                ),
                 contentPadding: EdgeInsets.zero,
+                onTap: email.isNotEmpty
+                    ? () async {
+                        final ok = await launchUrl(
+                          Uri(scheme: 'mailto', path: email),
+                        );
+                        if (!ok && ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Không mở được ứng dụng email.'),
+                            ),
+                          );
+                        }
+                      }
+                    : null,
               ),
               ListTile(
                 leading: _buildTileIcon(Icons.business_outlined),
-                title: const Text('Phòng Đào tạo / Khảo thí', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                subtitle: const Text('Tòa nhà Alpha, Đại học FPT'),
+                title: const Text(
+                  'Phòng Đào tạo / Khảo thí',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: Text(
+                  address.isNotEmpty
+                      ? address
+                      : 'Liên hệ đơn vị phụ trách tại cơ sở của bạn',
+                ),
                 contentPadding: EdgeInsets.zero,
               ),
             ],

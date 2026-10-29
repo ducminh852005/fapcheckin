@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../live_session_colors.dart';
 
 /// Header của màn hình Điểm danh trực tiếp:
@@ -13,9 +14,9 @@ class LiveSessionCustomHeader extends StatelessWidget {
 
   const LiveSessionCustomHeader({
     super.key,
-    this.sessionSubtitle = 'CA 2 · THỨ NĂM, 08/10/2026',
-    this.classTitle = 'PRN231 · SE1801',
-    this.timeAndRoom = '08:45–10:15 · Phòng AL-204',
+    this.sessionSubtitle = '',
+    this.classTitle = '',
+    this.timeAndRoom = '',
     this.onMoreTap,
   });
 
@@ -140,4 +141,3 @@ class LiveSessionCustomHeader extends StatelessWidget {
     );
   }
 }
-

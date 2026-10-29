@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../app/app_router.dart';
 import '../../../viewmodels/auth_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard/components/notification_modal.dart';
+import 'account_dialogs.dart';
 import 'profile_colors.dart';
 import 'components/profile_header.dart';
 import 'components/profile_hero_card.dart';
@@ -32,7 +34,7 @@ class ProfileBody extends StatelessWidget {
     final teacherUser = authVm.session?.user;
     final fullName = (teacherUser?.fullName.isNotEmpty ?? false)
         ? teacherUser!.fullName
-        : 'Nguyễn Thị Mai';
+        : 'Giảng viên';
 
     final initials = _extractInitials(fullName);
 
@@ -84,6 +86,17 @@ class ProfileBody extends StatelessWidget {
                       ProfileHeroCard(
                         fullName: fullName,
                         initials: initials,
+                        avatarPath: teacherUser?.avatarPath ?? '',
+                        roleTitle: (teacherUser?.jobTitle.isNotEmpty ?? false)
+                            ? '${teacherUser!.jobTitle} • FPT University'
+                            : 'Giảng viên • FPT University',
+                        department: (teacherUser?.department.isNotEmpty ?? false)
+                            ? teacherUser!.department
+                            : (teacherUser?.email ?? ''),
+                        classCount: dashboardVm.classes.length,
+                        studentCount: dashboardVm.totalStudents,
+                        attendanceRate:
+                            '${(dashboardVm.avgAttendance * 100).toStringAsFixed(1)}%',
                       ),
                       const SizedBox(height: 16),
 
@@ -93,8 +106,7 @@ class ProfileBody extends StatelessWidget {
                             dashboardVm.navigate('thong-tin-ca-nhan'),
                         onWorkInfoTap: () =>
                             dashboardVm.navigate('thong-tin-cong-tac'),
-                        onSecurityTap: () =>
-                            _showDetailSnackbar(context, 'Tài khoản & Bảo mật'),
+                        onSecurityTap: () => showAccountSecurity(context),
                       ),
                       const SizedBox(height: 18),
 
@@ -127,22 +139,16 @@ class ProfileBody extends StatelessWidget {
   }
 
   String _extractInitials(String name) {
-    final parts =
-        name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return 'NM';
     if (parts.length == 1) {
       return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
     }
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-
-  void _showDetailSnackbar(BuildContext context, String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$title đang được phát triển'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
   }
 
   void _confirmSignOut(BuildContext context, AuthViewModel authVm) {
@@ -151,7 +157,8 @@ class ProfileBody extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Đăng xuất'),
         content: const Text(
-            'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản giảng viên?'),
+          'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản giảng viên?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
