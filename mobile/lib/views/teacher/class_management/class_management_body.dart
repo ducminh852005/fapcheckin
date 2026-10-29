@@ -14,7 +14,7 @@ import 'components/class_item_card.dart';
 /// 2. Thanh tìm kiếm lớp / mã môn / sinh viên
 /// 3. Thẻ Dark Navy thống kê: 06 Lớp phụ trách & 192 Sinh viên
 /// 4. Nhóm "Tất cả lớp học" (HÔM NAY):
-///    - Ca 1: PRN231 • SE1801 (Đang dạy - Có nút Mở điểm danh)
+///    - Ca 1: PRN231 • SE1801 (Đang dạy - Viền cam nổi bật)
 ///    - Ca 2: PRN231 • SE1803 (Tiếp theo)
 ///    - Ca 3: SWT301 • SE1805
 /// 5. Nhóm "SẮP TỚI":
