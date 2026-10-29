@@ -17,28 +17,58 @@ class ClassManagementHeader extends StatelessWidget {
         ? 'HỌC KỲ ${dashboardVm.semester.toUpperCase()}'
         : 'HỌC KỲ THU 2026';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          semesterText,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: ClassManagementColors.textMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                semesterText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: ClassManagementColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Quản lý lớp',
+                style: TextStyle(
+                  color: ClassManagementColors.textDark,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 2),
-        const Text(
-          'Quản lý lớp',
-          style: TextStyle(
-            color: ClassManagementColors.textDark,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+        const SizedBox(width: 8),
+        InkWell(
+          onTap: () => dashboardVm.navigate('lich-su-diem-danh'),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: ClassManagementColors.cardBorder),
+              boxShadow: ClassManagementColors.cardShadow,
+            ),
+            child: const Text(
+              'Lịch sử điểm danh',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: ClassManagementColors.textDark,
+              ),
+            ),
           ),
         ),
       ],

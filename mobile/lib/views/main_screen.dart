@@ -144,6 +144,7 @@ class _MainScreenState extends State<MainScreen> {
                               currentRoute != 'thong-tin-ca-nhan' &&
                               currentRoute != 'thong-tin-cong-tac' &&
                               currentRoute != 'cai-dat-tro-giup' &&
+                              currentRoute != 'lich-su-diem-danh' &&
                               currentRoute != 'diem-danh-qr'))
                         TopBar(
                             isDesktop: isDesktop, currentRoute: currentRoute),
