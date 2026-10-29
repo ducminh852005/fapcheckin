@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../viewmodels/auth_viewmodel.dart';
@@ -16,22 +15,13 @@ class AppRoutes {
 
 GoRouter createAppRouter(AuthViewModel authViewModel) {
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.teacher,
     refreshListenable: authViewModel,
     errorBuilder: (context, state) => const LoadingScreen(),
-    redirect: (BuildContext context, GoRouterState state) {
-      final isLoggedIn = authViewModel.isAuthenticated;
-      if (!isLoggedIn && state.matchedLocation != AppRoutes.login) {
-        return AppRoutes.login;
-      }
-
-      return null;
-    },
     routes: [
       GoRoute(
         path: '/',
-        redirect: (_, _) =>
-            authViewModel.isAuthenticated ? AppRoutes.loading : AppRoutes.login,
+        redirect: (_, _) => AppRoutes.teacher,
       ),
       GoRoute(
         path: AppRoutes.login,

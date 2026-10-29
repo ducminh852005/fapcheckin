@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+import '../../../app/app_router.dart';
 import '../../../viewmodels/auth_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import 'profile_colors.dart';
@@ -235,9 +237,12 @@ class ProfileBody extends StatelessWidget {
               backgroundColor: ProfileColors.logoutRed,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop(true);
-              authVm.signOut();
+              await authVm.signOut();
+              if (context.mounted) {
+                context.go(AppRoutes.login);
+              }
             },
             child: const Text('Đăng xuất'),
           ),

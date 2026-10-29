@@ -200,9 +200,7 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                               dashboardVm.navigate('diem-danh-qr');
                             },
                             onTap: () {
-                              if (item.status == ClassCardStatus.active) {
-                                dashboardVm.navigate('diem-danh-qr');
-                              }
+                              dashboardVm.navigate('lich-su-diem-danh');
                             },
                           ),
                         ],
@@ -232,7 +230,9 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                             timeDetail: item.timeDetail,
                             attendanceRate: item.attendanceRate,
                             status: item.status,
-                            onTap: () {},
+                            onTap: () {
+                              dashboardVm.navigate('lich-su-diem-danh');
+                            },
                           ),
                         ],
                         const SizedBox(height: 20),

@@ -117,6 +117,12 @@ class _LoginScreenState extends State<LoginScreen> {
         email: authSession.user.email,
         memberCode: authSession.user.memberCode,
       );
+    } else {
+      context.read<DashboardViewModel>().setTeacherInfo(
+        name: 'Khoaaaa',
+        email: 'khoale@fpt.edu.vn',
+        memberCode: 'GV01234',
+      );
     }
 
     // Chuyển sang màn hình Loading Page khởi động ứng dụng

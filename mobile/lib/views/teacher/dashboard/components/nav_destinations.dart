@@ -41,7 +41,7 @@ const List<NavDestination> kNavDestinations = [
     selectedIcon: Icons.groups_rounded,
     label: 'Quản lý lớp',
     route: 'lop-hoc',
-    activeRoutes: {'diem-danh-qr'},
+    activeRoutes: {'diem-danh-qr', 'lich-su-diem-danh'},
   ),
   NavDestination(
     icon: Icons.bar_chart_outlined,
