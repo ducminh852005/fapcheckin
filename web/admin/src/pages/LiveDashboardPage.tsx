@@ -9,17 +9,17 @@ export function LiveDashboard({ onNavigate }: { onNavigate: (page: AdminPage) =>
   const loader = useCallback(getDashboardStats, [])
   const { data, loading, error, reload } = useAsyncData(loader)
   const metrics = [
-    { label: "Tài khoản hoạt động", value: data?.activeUsers, source: "users.active", icon: <Users size={20} />, tone: "blue" },
-    { label: "Lớp đang quản lý", value: data?.classes, source: "classes", icon: <BookOpen size={20} />, tone: "green" },
-    { label: "Phiên đang mở", value: data?.openSessions, source: "sessions", icon: <ClipboardCheck size={20} />, tone: "orange" },
-    { label: "Tài khoản chưa liên kết", value: data?.legacyAccounts, source: "users.role SV/GV", icon: <AlertTriangle size={20} />, tone: "red" },
+    { label: "Tài khoản hoạt động", value: data?.activeUsers, icon: <Users size={20} />, tone: "blue" },
+    { label: "Lớp đang quản lý", value: data?.classes, icon: <BookOpen size={20} />, tone: "green" },
+    { label: "Phiên đang mở", value: data?.openSessions, icon: <ClipboardCheck size={20} />, tone: "orange" },
+    { label: "Tài khoản chưa liên kết", value: data?.legacyAccounts, icon: <AlertTriangle size={20} />, tone: "red" },
   ]
   return (
     <>
       <PageHeader eyebrow="VẬN HÀNH HỆ THỐNG" title="Tổng quan quản trị" description="Các chỉ số hành động được đọc trực tiếp từ Firestore." actions={<Button variant="secondary" icon={<RotateCw size={16} />} onClick={reload} disabled={loading}>Làm mới</Button>} />
       {error && <section className="data-error"><b>Không thể tải tổng quan</b><span>{error}</span></section>}
       <section className="kpi-grid operational-kpis">
-        {metrics.map((metric) => <article className="kpi-card" key={metric.label}><div className={`kpi-icon kpi-${metric.tone}`}>{metric.icon}</div><span>{metric.label}</span><strong>{loading ? "…" : metric.value ?? 0}</strong><p>Nguồn: <b>{metric.source}</b></p></article>)}
+        {metrics.map((metric) => <article className="kpi-card" key={metric.label}><div className={`kpi-icon kpi-${metric.tone}`}>{metric.icon}</div><span>{metric.label}</span><strong>{loading ? "…" : metric.value ?? 0}</strong></article>)}
       </section>
       <section className="operations-grid single-operations">
         <article className="card action-panel">

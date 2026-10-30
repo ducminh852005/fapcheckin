@@ -1,4 +1,4 @@
-import { KeyRound, LoaderCircle, LockKeyhole, Plus, RotateCw, Search, ShieldCheck, Trash2, UserCog, X } from "lucide-react"
+import { KeyRound, LoaderCircle, LockKeyhole, Pencil, Plus, RotateCw, Search, ShieldCheck, Trash2, UserCog, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { Button, Field, PageHeader } from "../components/ui"
 import type { AdminProfile } from "../firebase/admin-auth"
@@ -9,6 +9,7 @@ import {
   revokeInvite,
   setAccountActive,
   setAccountRole,
+  updateAccount,
   type AccountRow,
   type InviteRow,
 } from "../repositories/accountRepository"
@@ -25,6 +26,7 @@ export function AccountControl({ currentAdmin }: { currentAdmin: AdminProfile })
   const [selectedRole, setSelectedRole] = useState<"user" | "staff">("user")
   const [inviteOpen, setInviteOpen] = useState(false)
   const [invite, setInvite] = useState<InviteForm>(emptyInvite)
+  const [edit, setEdit] = useState<InviteForm | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -56,6 +58,20 @@ export function AccountControl({ currentAdmin }: { currentAdmin: AdminProfile })
     role: account.role === "GV" ? "staff" : "user",
     ...(account.role === "GV" ? {} : { rollNumber: account.rollNumber }),
   }), "Đã tạo quyền đăng nhập từ hồ sơ dữ liệu cũ.")
+  const openEdit = (account: AccountRow) => setEdit({
+    email: account.email,
+    fullName: account.fullName,
+    memberCode: account.memberCode,
+    role: account.role === "staff" || account.role === "GV" ? "staff" : "user",
+    rollNumber: account.rollNumber,
+  })
+  const saveEdit = () => {
+    if (!selected || !edit) return
+    void run(async () => {
+      await updateAccount(selected, edit)
+      setEdit(null)
+    }, "Đã cập nhật tài khoản.", true)
+  }
 
   return (
     <>
@@ -78,9 +94,10 @@ export function AccountControl({ currentAdmin }: { currentAdmin: AdminProfile })
         {loading ? <Loading /> : tab === "users" ? <AccountsTable rows={accounts} currentUid={currentAdmin.uid} open={openAccount} /> : <InvitesTable rows={invites} canonicalEmails={canonicalEmails} revoke={(row) => void run(() => revokeInvite(row.id), "Đã thu hồi quyền đăng nhập.")} />}
       </article>
 
-      {selected && <div className="drawer-layer"><div className="scrim" onClick={() => setSelected(null)} /><aside className="drawer account-drawer"><div className="drawer-head"><div><span className="eyebrow">CHI TIẾT TÀI KHOẢN</span><h2>{selected.fullName || selected.memberCode}</h2><p>{selected.email}</p></div><Button variant="icon" onClick={() => setSelected(null)}><X size={20} /></Button></div><div className="drawer-body"><div className="account-summary"><span className="large-avatar">{initials(selected.fullName)}</span><div><b>{selected.memberCode}</b><small>{roleLabel(selected.role)}</small></div><span className={`status ${selected.canonical ? "status-success" : "status-warning"}`}><i />{selected.canonical ? "Đã liên kết" : "Dữ liệu cũ"}</span></div><dl className="detail-list"><div><dt>Document ID</dt><dd>{selected.id}</dd></div><div><dt>Roll number</dt><dd>{selected.rollNumber || "—"}</dd></div><div><dt>Trạng thái</dt><dd>{selected.active === null ? "Chưa liên kết đăng nhập" : selected.active ? "Đang hoạt động" : "Đã khóa"}</dd></div></dl>{selected.canonical ? <section className="account-actions"><h4>Quản lý quyền</h4>{selected.role !== "admin" && <><label className="select-wrap field-select"><span>Vai trò</span><select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value as "user" | "staff")}><option value="user">Sinh viên</option><option value="staff">Giảng viên</option></select></label><Button variant="secondary" icon={<UserCog size={17} />} disabled={busy} onClick={() => void run(() => setAccountRole(selected, selectedRole), "Đã cập nhật vai trò.")}>Lưu vai trò</Button></>}<Button variant={selected.active ? "danger" : "secondary"} icon={<LockKeyhole size={17} />} disabled={busy || selected.id === currentAdmin.uid} onClick={() => void run(() => setAccountActive(selected, selected.active !== true), selected.active ? "Đã khóa tài khoản." : "Đã mở tài khoản.", true)}>{selected.active ? "Khóa tài khoản" : "Mở tài khoản"}</Button>{selected.id === currentAdmin.uid && <small>Không thể tự khóa tài khoản đang đăng nhập.</small>}</section> : <section className="legacy-action"><h4>Hồ sơ dữ liệu cũ</h4><p>Hồ sơ này chưa liên kết với tài khoản Google. Hãy cấp quyền theo email để người dùng tạo hồ sơ đăng nhập mới.</p><Button icon={<KeyRound size={17} />} disabled={busy || !selected.email || inviteEmails.has(selected.email.toLowerCase())} onClick={() => void grantLegacy(selected)}>{inviteEmails.has(selected.email.toLowerCase()) ? "Đã có quyền đăng nhập" : "Cấp quyền từ hồ sơ này"}</Button></section>}</div></aside></div>}
+      {selected && <div className="drawer-layer"><div className="scrim" onClick={() => setSelected(null)} /><aside className="drawer account-drawer"><div className="drawer-head"><div><span className="eyebrow">CHI TIẾT TÀI KHOẢN</span><h2>{selected.fullName || selected.memberCode}</h2><p>{selected.email}</p></div><Button variant="icon" onClick={() => setSelected(null)}><X size={20} /></Button></div><div className="drawer-body"><div className="account-summary"><span className="large-avatar">{initials(selected.fullName)}</span><div><b>{selected.memberCode}</b><small>{roleLabel(selected.role)}</small></div><span className={`status ${selected.canonical ? "status-success" : "status-warning"}`}><i />{selected.canonical ? "Đã liên kết" : "Dữ liệu cũ"}</span></div><dl className="detail-list"><div><dt>Document ID</dt><dd>{selected.id}</dd></div><div><dt>Roll number</dt><dd>{selected.rollNumber || "—"}</dd></div><div><dt>Trạng thái</dt><dd>{selected.active === null ? "Chưa liên kết đăng nhập" : selected.active ? "Đang hoạt động" : "Đã khóa"}</dd></div></dl>{selected.canonical ? <section className="account-actions"><h4>Quản lý quyền</h4>{selected.role !== "admin" && <><Button icon={<Pencil size={17} />} disabled={busy} onClick={() => openEdit(selected)}>Chỉnh sửa tài khoản</Button><label className="select-wrap field-select"><span>Vai trò</span><select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value as "user" | "staff")}><option value="user">Sinh viên</option><option value="staff">Giảng viên</option></select></label><Button variant="secondary" icon={<UserCog size={17} />} disabled={busy} onClick={() => void run(() => setAccountRole(selected, selectedRole), "Đã cập nhật vai trò.")}>Lưu vai trò</Button></>}<Button variant={selected.active ? "danger" : "secondary"} icon={<LockKeyhole size={17} />} disabled={busy || selected.id === currentAdmin.uid} onClick={() => void run(() => setAccountActive(selected, selected.active !== true), selected.active ? "Đã khóa tài khoản." : "Đã mở tài khoản.", true)}>{selected.active ? "Khóa tài khoản" : "Mở tài khoản"}</Button>{selected.id === currentAdmin.uid && <small>Không thể tự khóa tài khoản đang đăng nhập.</small>}</section> : <section className="legacy-action"><h4>Hồ sơ dữ liệu cũ</h4><p>Hồ sơ này chưa liên kết với tài khoản Google. Bạn vẫn có thể chỉnh sửa thông tin hoặc cấp quyền để người dùng liên kết khi đăng nhập.</p><Button variant="secondary" icon={<Pencil size={17} />} disabled={busy} onClick={() => openEdit(selected)}>Chỉnh sửa tài khoản</Button><Button icon={<KeyRound size={17} />} disabled={busy || !selected.email || inviteEmails.has(selected.email.toLowerCase())} onClick={() => void grantLegacy(selected)}>{inviteEmails.has(selected.email.toLowerCase()) ? "Đã có quyền đăng nhập" : "Cấp quyền từ hồ sơ này"}</Button></section>}</div></aside></div>}
 
       {inviteOpen && <InviteModal invite={invite} setInvite={setInvite} busy={busy} close={() => setInviteOpen(false)} save={() => void saveInvite()} />}
+      {edit && <EditAccountModal form={edit} setForm={setEdit} busy={busy} close={() => setEdit(null)} save={saveEdit} />}
     </>
   )
 }
@@ -97,6 +114,10 @@ function InvitesTable({ rows, canonicalEmails, revoke }: { rows: InviteRow[]; ca
 
 function InviteModal({ invite, setInvite, busy, close, save }: { invite: InviteForm; setInvite: (value: InviteForm) => void; busy: boolean; close: () => void; save: () => void }) {
   return <div className="modal-layer"><div className="scrim" onClick={close} /><section className="modal"><div className="modal-head"><div><span className="eyebrow">FIREBASE ACCESS</span><h2>Cấp quyền đăng nhập</h2></div><Button variant="icon" onClick={close}><X size={20} /></Button></div><div className="form-grid"><Field label="Email Google *" value={invite.email} onChange={(value) => setInvite({ ...invite, email: value })} /><Field label="Họ tên *" value={invite.fullName} onChange={(value) => setInvite({ ...invite, fullName: value })} /><Field label="Mã thành viên *" value={invite.memberCode} onChange={(value) => setInvite({ ...invite, memberCode: value })} /><label className="select-wrap field-select"><span>Vai trò *</span><select value={invite.role} onChange={(event) => setInvite({ ...invite, role: event.target.value as "user" | "staff" })}><option value="user">Sinh viên</option><option value="staff">Giảng viên</option></select></label>{invite.role === "user" && <Field label="Roll number *" value={invite.rollNumber} onChange={(value) => setInvite({ ...invite, rollNumber: value })} />}</div><div className="modal-actions"><Button variant="secondary" onClick={close}>Hủy</Button><Button icon={busy ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />} onClick={save} disabled={busy}>Cấp quyền</Button></div></section></div>
+}
+
+function EditAccountModal({ form, setForm, busy, close, save }: { form: InviteForm; setForm: (value: InviteForm | null) => void; busy: boolean; close: () => void; save: () => void }) {
+  return <div className="modal-layer"><div className="scrim" onClick={close} /><section className="modal"><div className="modal-head"><div><span className="eyebrow">THÔNG TIN TÀI KHOẢN</span><h2>Chỉnh sửa tài khoản</h2></div><Button variant="icon" onClick={close}><X size={20} /></Button></div><div className="form-grid"><Field label="Email Google" value={form.email} disabled /><Field label="Họ tên *" value={form.fullName} onChange={(value) => setForm({ ...form, fullName: value })} /><Field label="Mã thành viên *" value={form.memberCode} onChange={(value) => setForm({ ...form, memberCode: value })} /><label className="select-wrap field-select"><span>Vai trò *</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as "user" | "staff" })}><option value="user">Sinh viên</option><option value="staff">Giảng viên</option></select></label>{form.role === "user" && <Field label="Roll number *" value={form.rollNumber} onChange={(value) => setForm({ ...form, rollNumber: value })} />}</div><div className="modal-actions"><Button variant="secondary" onClick={close}>Hủy</Button><Button icon={busy ? <LoaderCircle className="spin" size={17} /> : <Pencil size={17} />} onClick={save} disabled={busy}>Lưu thay đổi</Button></div></section></div>
 }
 
 function roleLabel(role: string) { return ({ user: "Sinh viên", SV: "Sinh viên (dữ liệu cũ)", staff: "Giảng viên", GV: "Giảng viên (dữ liệu cũ)", admin: "Admin" } as Record<string, string>)[role] ?? role }

@@ -68,12 +68,14 @@ export function Field({
   type = "text",
   value,
   onChange,
+  disabled,
 }: {
   label: string
   placeholder?: string
   type?: string
   value?: string
   onChange?: (value: string) => void
+  disabled?: boolean
 }) {
   return (
     <label className="field">
@@ -82,6 +84,7 @@ export function Field({
         type={type}
         placeholder={placeholder}
         value={value}
+        disabled={disabled}
         onChange={(event) => onChange?.(event.target.value)}
       />
     </label>

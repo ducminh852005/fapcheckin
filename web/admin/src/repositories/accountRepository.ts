@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   limit,
@@ -99,6 +100,27 @@ export async function setAccountRole(account: AccountRow, role: "user" | "staff"
   if (account.role === "admin") throw new Error("Không đổi vai trò admin từ màn hình này.")
   if (role === "user" && !account.rollNumber) throw new Error("Không thể chuyển thành sinh viên khi hồ sơ chưa có roll number.")
   await updateDoc(doc(firestore, "users", account.id), { role })
+}
+
+export async function updateAccount(account: AccountRow, input: {
+  fullName: string
+  memberCode: string
+  role: "user" | "staff"
+  rollNumber?: string
+}) {
+  if (account.role === "admin") throw new Error("Không chỉnh sửa tài khoản admin từ màn hình này.")
+  const fullName = input.fullName.trim()
+  const memberCode = input.memberCode.trim()
+  const rollNumber = input.rollNumber?.trim() ?? ""
+  if (!fullName || !memberCode) throw new Error("Vui lòng nhập đủ thông tin bắt buộc.")
+  if (input.role === "user" && !rollNumber) throw new Error("Sinh viên phải có roll number.")
+  await updateDoc(doc(firestore, "users", account.id), {
+    fullName,
+    memberCode,
+    role: account.canonical ? input.role : input.role === "staff" ? "GV" : "SV",
+    rollNumber: input.role === "user" ? rollNumber : deleteField(),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export function revokeInvite(inviteId: string) {
