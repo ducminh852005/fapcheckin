@@ -14,7 +14,7 @@ export type AdminProfile = {
   fullName: string
   email: string
   role: "admin"
-  active: true
+  active: boolean
 }
 
 export class AdminAuthError extends Error {
@@ -29,17 +29,24 @@ async function requireAdminProfile(user: User): Promise<AdminProfile> {
     throw new AdminAuthError("EMAIL_NOT_VERIFIED", "Email Google chưa được xác minh.")
   }
 
+  console.info(`[Admin Auth] Đăng nhập thành công với Google! UID: ${user.uid}, Email: ${user.email}`)
+
   const snapshot = await getDoc(doc(firestore, "users", user.uid))
   if (!snapshot.exists()) {
-    throw new AdminAuthError("PROFILE_NOT_FOUND", "Không tìm thấy hồ sơ admin theo Firebase Auth UID.")
+    console.error(`[Admin Auth] Không tìm thấy document trong collection 'users' với ID: ${user.uid}`)
+    throw new AdminAuthError(
+      "PROFILE_NOT_FOUND",
+      `Không tìm thấy hồ sơ admin theo Firebase Auth UID (${user.uid}). Trong Firestore, Document ID phải là UID này (thay vì "${user.displayName || "KHOADB"}").`
+    )
   }
 
   const data = snapshot.data()
   if (data.role !== "admin") {
-    throw new AdminAuthError("ACCESS_DENIED", "Tài khoản này không có vai trò admin.")
+    throw new AdminAuthError("ACCESS_DENIED", `Tài khoản này có vai trò "${data.role}", không phải "admin".`)
   }
-  if (data.active !== true) {
-    throw new AdminAuthError("ACCOUNT_DISABLED", "Tài khoản admin đang bị khóa.")
+  const isActive = data.active === true || data.active === "true"
+  if (!isActive) {
+    throw new AdminAuthError("ACCOUNT_DISABLED", "Tài khoản admin đang bị khóa (trường active không phải là true).")
   }
 
   return {

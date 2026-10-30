@@ -1,1 +1,1 @@
-export type AdminPage = "dashboard" | "accounts" | "academic" | "attendance"
+export type AdminPage = "dashboard" | "accounts" | "academic" | "attendance" | "announcements" | "reports" | "settings"

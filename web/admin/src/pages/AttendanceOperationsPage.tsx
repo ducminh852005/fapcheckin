@@ -1,12 +1,12 @@
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock3, LoaderCircle, RotateCw, Search, SlidersHorizontal, Users, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { Button, PageHeader } from "../components/ui"
+import { Pagination } from "../components/Pagination"
 import { readError, useAsyncData } from "../hooks/useAsyncData"
-import { listAttendanceData, listSessionRecords, type AttendanceRecordRow, type SessionRow } from "../repositories/attendanceRepository"
+import { listAttendanceData, listAttendanceSessionsPaginated, listSessionRecords, type AttendanceRecordRow, type SessionRow } from "../repositories/attendanceRepository"
 
 export function AttendanceOperations() {
-  const loader = useCallback(listAttendanceData, [])
-  const { data, loading, error, reload } = useAsyncData(loader)
+  const [sessionPage, setSessionPage] = useState(1)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [classCode, setClassCode] = useState("all")
@@ -21,16 +21,26 @@ export function AttendanceOperations() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
-  const sessions = useMemo(() => (data?.sessions ?? []).filter((row) =>
-    (status === "all" || row.sessionStatus === status) &&
-    (classCode === "all" || row.classCode === classCode) &&
-    (teacher === "all" || row.teacherMemberCode === teacher) &&
-    (slot === "all" || row.slotCode === slot) &&
-    (sync === "all" || (sync === "unsynced" ? row.unsyncedCount > 0 : row.unsyncedCount === 0)) &&
-    (warning === "all" || (warning === "warning" ? row.warningCount > 0 : row.warningCount === 0)) &&
-    (!selectedDate || row.sessionDate === selectedDate) &&
-    `${row.classCode} ${row.id} ${row.teacherMemberCode}`.toLowerCase().includes(search.toLowerCase())
-  ), [data, search, status, classCode, teacher, slot, sync, warning, selectedDate])
+  const loader = useCallback(
+    () =>
+      listAttendanceSessionsPaginated({
+        page: sessionPage,
+        pageSize: 10,
+        search,
+        status,
+        classCode,
+        teacher,
+        slot,
+        sync,
+        warning,
+        selectedDate,
+      }),
+    [sessionPage, search, status, classCode, teacher, slot, sync, warning, selectedDate]
+  )
+  const { data, loading, error } = useAsyncData(loader)
+
+  const sessions = data?.sessions ?? []
+  const totalSessions = data?.totalSessions ?? sessions.length
   const warningSessions = data?.sessions.filter((item) => item.warningCount > 0).length ?? 0
   const overdueSessions = data?.sessions.filter((item) => item.overdue).length ?? 0
   const activeAdvancedFilters = [classCode, teacher, slot, sync, warning].filter((value) => value !== "all").length + (selectedDate ? 1 : 0)
@@ -40,14 +50,16 @@ export function AttendanceOperations() {
     try { setRecords(await listSessionRecords(session.id)) } catch (reason) { setDetailError(readError(reason)) }
     finally { setDetailLoading(false) }
   }
-  const clearFilters = () => { setSearch(""); setStatus("all"); setClassCode("all"); setTeacher("all"); setSlot("all"); setSync("all"); setWarning("all"); setSelectedDate("") }
+  const clearFilters = () => { setSearch(""); setStatus("all"); setClassCode("all"); setTeacher("all"); setSlot("all"); setSync("all"); setWarning("all"); setSelectedDate(""); setSessionPage(1) }
+
+  const paginatedSessions = sessions
 
   return <>
-    <PageHeader eyebrow="VẬN HÀNH ĐIỂM DANH" title="Giám sát điểm danh" description="Theo dõi phiên, tỷ lệ tham dự và các bất thường mà không hiển thị QR secret hoặc địa chỉ IP." actions={<Button variant="secondary" icon={<RotateCw size={16} />} onClick={reload} disabled={loading}>Làm mới</Button>} />
+    <PageHeader title="Giám sát điểm danh" description="Theo dõi phiên, tỷ lệ tham dự và các bất thường mà không hiển thị QR secret hoặc địa chỉ IP." />
     {error && <section className="data-error"><b>Không thể tải điểm danh</b><span>{error}</span></section>}
     <section className="monitor-grid attendance-kpis"><Metric icon={<ClipboardCheck size={21} />} tone="warning" label="PHIÊN ĐANG MỞ" value={loading ? "…" : data?.openCount ?? 0} /><Metric icon={<Clock3 size={21} />} tone="danger" label="MỞ QUÁ GIỜ" value={loading ? "…" : overdueSessions} /><Metric icon={<AlertTriangle size={21} />} tone="danger" label="PHIÊN CÓ CẢNH BÁO" value={loading ? "…" : warningSessions} /><Metric icon={<RotateCw size={21} />} tone="warning" label="CHƯA ĐỒNG BỘ FAP" value={loading ? "…" : data?.unsyncedCount ?? 0} /></section>
     <section className={`card attendance-filters ${advancedOpen ? "is-open" : ""}`}><div className="attendance-filter-main"><label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm lớp, giảng viên hoặc session ID..." /></label><Filter value={status} set={setStatus} label="Trạng thái" options={[["all", "Tất cả"], ["open", "Đang mở"], ["closed", "Đã đóng"]]} /><Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setAdvancedOpen(!advancedOpen)}>Bộ lọc nâng cao{activeAdvancedFilters ? ` (${activeAdvancedFilters})` : ""}</Button></div>{advancedOpen && <div className="attendance-filter-advanced"><Filter value={classCode} set={setClassCode} label="Lớp học" options={[["all", "Tất cả lớp"], ...(data?.classes ?? []).map((value) => [value, value])]} /><Filter value={teacher} set={setTeacher} label="Giảng viên" options={[["all", "Tất cả GV"], ...(data?.teachers ?? []).map((value) => [value, value])]} /><Filter value={slot} set={setSlot} label="Slot" options={[["all", "Tất cả slot"], ...(data?.slots ?? []).map((value) => [value, value])]} /><Filter value={sync} set={setSync} label="Đồng bộ FAP" options={[["all", "Tất cả"], ["unsynced", "Chưa đồng bộ"], ["synced", "Đã đồng bộ"]]} /><Filter value={warning} set={setWarning} label="Cảnh báo" options={[["all", "Tất cả"], ["warning", "Có cảnh báo"], ["clean", "Bình thường"]]} /><label className="field"><span>Ngày</span><input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label><Button variant="ghost" onClick={clearFilters}>Xóa bộ lọc</Button></div>}</section>
-    <article className="card table-card"><div className="table-toolbar"><div><b>{sessions.length} / {data?.sessions.length ?? 0} phiên gần nhất</b></div></div>{loading ? <div className="data-loading"><LoaderCircle className="spin" size={24} /><span>Đang tải và đối chiếu phiên...</span></div> : <SessionsTable rows={sessions} open={open} />}</article>
+    <article className="card table-card"><div className="table-toolbar"><div><b>{sessions.length} / {totalSessions} phiên gần nhất</b></div></div>{loading ? <div className="data-loading"><LoaderCircle className="spin" size={24} /><span>Đang tải và đối chiếu phiên...</span></div> : <><SessionsTable rows={paginatedSessions} open={open} /><Pagination currentPage={sessionPage} totalItems={totalSessions} pageSize={10} onPageChange={setSessionPage} itemLabel="phiên điểm danh" syncNote="Google Cloud Firestore realtime" /></>}</article>
     {selected && <SessionDrawer session={selected} records={records} loading={detailLoading} error={detailError} close={() => setSelected(null)} />}
   </>
 }
@@ -69,7 +81,44 @@ function SessionDrawer({ session, records, loading, error, close }: { session: S
   </div></aside></div>
 }
 function Summary({ label, value }: { label: string; value: number }) { return <div><span>{label}</span><b>{value}</b></div> }
-function RecordsTable({ rows }: { rows: AttendanceRecordRow[] }) { if (!rows.length) return <div className="empty-state compact-empty"><span><Users size={28} /></span><h3>Lớp chưa có sinh viên</h3></div>; return <div className="table-scroll"><table className="drawer-table attendance-records"><thead><tr><th>Sinh viên</th><th>Trạng thái</th><th>Mạng</th><th>FAP</th><th>Kiểm tra</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className={!row.enrolled || row.warning ? "record-warning" : ""}><td><b>{row.fullName || row.rollNumber}</b><small className="cell-note">{row.rollNumber} · {row.email}</small></td><td><AttendanceStatus value={row.status} /></td><td>{row.networkResult}</td><td>{row.status === "Chưa điểm danh" ? "—" : row.syncedToFap ? <CheckCircle2 size={16} /> : "Chưa đồng bộ"}</td><td>{row.warning ? <span className="status status-error"><i />{row.warning}</span> : <span className="status status-success"><i />Hợp lệ</span>}</td></tr>)}</tbody></table></div> }
+function RecordsTable({ rows }: { rows: AttendanceRecordRow[] }) {
+  const [recordPage, setRecordPage] = useState(1)
+  const paginated = useMemo(() => {
+    const start = (recordPage - 1) * 10
+    return rows.slice(start, start + 10)
+  }, [rows, recordPage])
+
+  if (!rows.length) return <div className="empty-state compact-empty"><span><Users size={28} /></span><h3>Lớp chưa có sinh viên</h3></div>
+  return (
+    <div>
+      <div className="table-scroll">
+        <table className="drawer-table attendance-records">
+          <thead>
+            <tr><th>Sinh viên</th><th>Trạng thái</th><th>Mạng</th><th>FAP</th><th>Kiểm tra</th></tr>
+          </thead>
+          <tbody>
+            {paginated.map((row) => (
+              <tr key={row.id} className={!row.enrolled || row.warning ? "record-warning" : ""}>
+                <td><b>{row.fullName || row.rollNumber}</b><small className="cell-note">{row.rollNumber} · {row.email}</small></td>
+                <td><AttendanceStatus value={row.status} /></td>
+                <td>{row.networkResult}</td>
+                <td>{row.status === "Chưa điểm danh" ? "—" : row.syncedToFap ? <CheckCircle2 size={16} /> : "Chưa đồng bộ"}</td>
+                <td>{row.warning ? <span className="status status-error"><i />{row.warning}</span> : <span className="status status-success"><i />Hợp lệ</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Pagination
+        currentPage={recordPage}
+        totalItems={rows.length}
+        pageSize={10}
+        onPageChange={setRecordPage}
+        itemLabel="sinh viên trong phiên"
+      />
+    </div>
+  )
+}
 function AttendanceStatus({ value }: { value: string }) {
   const normalized = value.toLowerCase()
   const tone = normalized === "present" ? "success" : normalized === "late" ? "warning" : normalized === "absent" ? "error" : "neutral"

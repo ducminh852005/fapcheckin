@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
   limit,
@@ -76,6 +77,135 @@ export async function listAcademicData(): Promise<AcademicData> {
     }
   }).sort((a, b) => a.slotCode.localeCompare(b.slotCode))
   return { classes, subjects, slots }
+}
+
+export type PaginatedAcademicResult = {
+  classes: ClassRow[]
+  subjects: SubjectRow[]
+  slots: SlotRow[]
+  totalClasses: number
+  totalSubjects: number
+  totalSlots: number
+  page: number
+  pageSize: number
+}
+
+/**
+ * Phân trang dữ liệu học vụ dưới backend Firestore (Tối đa 10 mục/trang)
+ * Chỉ tải collection của tab đang chọn với limit cửa sổ trang để giảm tải backend
+ */
+export async function listAcademicDataPaginated(options: {
+  tab?: "classes" | "subjects" | "slots"
+  page?: number
+  pageSize?: number
+  search?: string
+}): Promise<PaginatedAcademicResult> {
+  const page = Math.max(1, options.page ?? 1)
+  const pageSize = options.pageSize ?? 10
+  const search = (options.search ?? "").trim().toLowerCase()
+  const tab = options.tab ?? "classes"
+
+  const [classesCountSnap, subjectsCountSnap, slotsCountSnap] = await Promise.all([
+    getCountFromServer(collection(firestore, "classes")).catch(() => null),
+    getCountFromServer(collection(firestore, "subjects")).catch(() => null),
+    getCountFromServer(collection(firestore, "slots")).catch(() => null),
+  ])
+
+  let totalClasses = classesCountSnap ? classesCountSnap.data().count : 0
+  let totalSubjects = subjectsCountSnap ? subjectsCountSnap.data().count : 0
+  let totalSlots = slotsCountSnap ? slotsCountSnap.data().count : 0
+
+  const fetchLimit = search ? 200 : Math.min(Math.max(pageSize, page * pageSize), 100)
+
+  let classes: ClassRow[] = []
+  let subjects: SubjectRow[] = []
+  let slots: SlotRow[] = []
+
+  if (tab === "classes") {
+    const [classesSnapshot, usersSnapshot] = await Promise.all([
+      getDocs(query(collection(firestore, "classes"), limit(fetchLimit))),
+      getDocs(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]), limit(100))),
+    ])
+    const teachers = new Map(
+      usersSnapshot.docs.map((item) => [String(item.data().memberCode ?? ""), String(item.data().fullName ?? "")])
+    )
+    classes = classesSnapshot.docs.map((item) => {
+      const data = item.data()
+      const teacherMemberCode = String(data.teacherMemberCode ?? "")
+      return {
+        classCode: String(data.classCode ?? item.id),
+        subjectCode: String(data.subjectCode ?? ""),
+        subjectName: String(data.subjectName ?? ""),
+        credits: Number(data.credits ?? 0),
+        room: String(data.room ?? ""),
+        slotCode: String(data.slotCode ?? ""),
+        studentCount: Number(data.studentCount ?? 0),
+        teacherMemberCode,
+        teacherName: teachers.get(teacherMemberCode) ?? "",
+      }
+    })
+    if (search) {
+      classes = classes.filter((row) =>
+        `${row.classCode} ${row.subjectName} ${row.teacherName} ${row.teacherMemberCode}`
+          .toLowerCase()
+          .includes(search)
+      )
+      totalClasses = classes.length
+    }
+    classes.sort((a, b) => a.classCode.localeCompare(b.classCode))
+    classes = classes.slice((page - 1) * pageSize, page * pageSize)
+  } else if (tab === "subjects") {
+    const subjectsSnapshot = await getDocs(query(collection(firestore, "subjects"), limit(fetchLimit)))
+    subjects = subjectsSnapshot.docs.map((item) => ({
+      subjectCode: String(item.data().subjectCode ?? item.id),
+      subjectName: String(item.data().subjectName ?? ""),
+      credits: Number(item.data().credits ?? 0),
+    }))
+    if (search) {
+      subjects = subjects.filter((row) =>
+        `${row.subjectCode} ${row.subjectName}`.toLowerCase().includes(search)
+      )
+      totalSubjects = subjects.length
+    }
+    subjects.sort((a, b) => a.subjectCode.localeCompare(b.subjectCode))
+    subjects = subjects.slice((page - 1) * pageSize, page * pageSize)
+  } else {
+    const [slotsSnapshot, timesSnapshot] = await Promise.all([
+      getDocs(query(collection(firestore, "slots"), limit(fetchLimit))),
+      getDocs(collection(firestore, "timeSlots")),
+    ])
+    const times = new Map(timesSnapshot.docs.map((item) => [item.id, item.data()]))
+    slots = slotsSnapshot.docs.map((item) => {
+      const data = item.data()
+      const timeSlotId = String(data.timeSlotId ?? "")
+      const time = times.get(timeSlotId) ?? {}
+      return {
+        slotCode: String(data.slotCode ?? item.id),
+        timeSlotId,
+        weekdays: Array.isArray(data.weekdays) ? data.weekdays.map(Number) : [],
+        startTime: String(time.startTime ?? ""),
+        endTime: String(time.endTime ?? ""),
+        period: String(time.period ?? ""),
+      }
+    })
+    if (search) {
+      slots = slots.filter((row) => `${row.slotCode} ${row.timeSlotId}`.toLowerCase().includes(search))
+      totalSlots = slots.length
+    }
+    slots.sort((a, b) => a.slotCode.localeCompare(b.slotCode))
+    slots = slots.slice((page - 1) * pageSize, page * pageSize)
+  }
+
+  return {
+    classes,
+    subjects,
+    slots,
+    totalClasses,
+    totalSubjects,
+    totalSlots,
+    page,
+    pageSize,
+  }
 }
 
 export async function reassignClassTeacher(classCode: string, teacherMemberCode: string) {
