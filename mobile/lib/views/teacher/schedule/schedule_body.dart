@@ -14,7 +14,7 @@ import 'package:fapcheckin_core/repositories/schedule_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
 
 import '../live_session/dialogs/start_session_dialog.dart';
-import '../class_management/dialogs/create_class_dialog.dart';
+import 'components/create_schedule_bottom_sheet.dart';
 import 'components/schedule_header.dart';
 import 'components/schedule_week_picker.dart';
 import 'components/schedule_day_summary.dart';
@@ -178,14 +178,34 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                             Text(dashboardVm.errorMessage!),
                           if (_error != null) Text(_error!),
                           TextButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Thêm lịch học bù / workshop'),
+                            icon: const Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 18,
+                              color: ScheduleColors.orangePrimary,
+                            ),
+                            label: const Text(
+                              'Thêm lịch học bù / workshop',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: ScheduleColors.orangePrimary,
+                              ),
+                            ),
                             onPressed: () async {
-                              await showDialog(
-                                context: context,
-                                builder: (_) => const CreateClassDialog(),
-                              );
-                              if (mounted) await _loadPlans();
+                              final created =
+                                  await showCreateScheduleBottomSheet(context);
+                              if (created != null && mounted) {
+                                await _loadPlans();
+                                if (!context.mounted) return;
+                                context.read<LiveSessionViewModel>().triggerToast(
+                                      type: ToastType.custom,
+                                      title: 'Đã tạo lịch học bổ sung',
+                                      message:
+                                          'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
+                                      icon: Icons.check_circle_outline,
+                                      accentColor: AppColors.statusPresent,
+                                      duration: const Duration(seconds: 4),
+                                    );
+                              }
                             },
                           ),
                           if (sessions.isEmpty)

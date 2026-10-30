@@ -35,37 +35,82 @@ class PreferencesViewModel extends ChangeNotifier {
     } else if (result is ApiFailure<Map<String, dynamic>>) { error = result.error.message; }
     notifyListeners();
     if (reminders) {
-      try { await _registerPush(generation, requestPermission: false); } catch (e) { if (generation == _generation) { error = 'Không thể đăng ký nhận push: $e'; notifyListeners(); } }
+      try {
+        final pushError = await _registerPush(generation, requestPermission: false);
+        if (pushError != null && generation == _generation) {
+          error = 'Không thể đăng ký nhận push: $pushError';
+          notifyListeners();
+        }
+      } catch (e) {
+        if (generation == _generation) {
+          final msg = e.toString().replaceFirst(RegExp(r'^(Bad state|Exception|StateError):\s*'), '');
+          error = 'Không thể đăng ký nhận push: $msg';
+          notifyListeners();
+        }
+      }
     }
   }
-  Future<void> _registerPush(int generation, {bool requestPermission = true}) async {
+
+  Future<String?> _registerPush(int generation, {bool requestPermission = true}) async {
     final messaging = FirebaseMessaging.instance;
     final permission = requestPermission ? await messaging.requestPermission() : await messaging.getNotificationSettings();
-    if (permission.authorizationStatus != AuthorizationStatus.authorized && permission.authorizationStatus != AuthorizationStatus.provisional) throw StateError('Chưa được cấp quyền thông báo trên thiết bị.');
+    if (permission.authorizationStatus != AuthorizationStatus.authorized && permission.authorizationStatus != AuthorizationStatus.provisional) {
+      return 'Chưa được cấp quyền thông báo trên thiết bị.';
+    }
     final token = await messaging.getToken();
-    if (generation != _generation) return;
-    if (token == null) throw StateError('Chưa nhận được token thông báo. Kiểm tra cấu hình FCM/APNs.');
+    if (generation != _generation) return null;
+    if (token == null) {
+      return 'Chưa nhận được token thông báo. Kiểm tra cấu hình FCM/APNs.';
+    }
     final saved = await repository.registerDevice(_deviceId(token), token);
-    if (saved is ApiFailure<void>) throw StateError(saved.error.message);
+    if (saved is ApiFailure<void>) {
+      return saved.error.message;
+    }
     await _tokens?.cancel();
     _tokens = messaging.onTokenRefresh.listen((token) async {
       if (generation == _generation && reminders) await repository.registerDevice(_deviceId(token), token);
     });
+    return null;
   }
+
   Future<bool> save({String? newTheme, String? newLanguage, bool? newReminders}) async {
     if (saving) return false;
     final generation = _generation;
     saving = true; error = null; notifyListeners();
     try {
-      if (newReminders == true) await _registerPush(generation);
+      if (newReminders == true) {
+        final pushError = await _registerPush(generation);
+        if (pushError != null) {
+          if (generation == _generation) error = pushError;
+          return false;
+        }
+      }
       if (generation != _generation) return false;
-      final result = await repository.savePreferences(theme: newTheme ?? theme, language: newLanguage ?? language, reminders: newReminders ?? reminders);
+      final result = await repository.savePreferences(
+        theme: newTheme ?? theme,
+        language: newLanguage ?? language,
+        reminders: newReminders ?? reminders,
+      );
       if (generation != _generation) return false;
-      if (result is ApiFailure<void>) throw StateError(result.error.message);
-      theme = newTheme ?? theme; language = newLanguage ?? language; reminders = newReminders ?? reminders;
+      if (result is ApiFailure<void>) {
+        if (generation == _generation) error = result.error.message;
+        return false;
+      }
+      theme = newTheme ?? theme;
+      language = newLanguage ?? language;
+      reminders = newReminders ?? reminders;
       return true;
-    } catch (e) { if (generation == _generation) error = e.toString(); return false; }
-    finally { if (generation == _generation) { saving = false; notifyListeners(); } }
+    } catch (e) {
+      if (generation == _generation) {
+        error = e.toString().replaceFirst(RegExp(r'^(Bad state|Exception|StateError):\s*'), '');
+      }
+      return false;
+    } finally {
+      if (generation == _generation) {
+        saving = false;
+        notifyListeners();
+      }
+    }
   }
   Future<void> unregisterDevice() async {
     try {
