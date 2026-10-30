@@ -6,7 +6,7 @@ enum AttendanceFilterType { all, present, absent }
 /// Thanh tìm kiếm và bộ lọc trạng thái sinh viên:
 /// - Ô nhập: "Tìm tên hoặc MSSV..."
 /// - Filter chips: Tất cả (32) • Có mặt (28) • Vắng (4)
-/// - Nút hành động: "⚡ Chọn nhanh"
+/// - Nút hành động: "✓ Chọn nhanh"
 class AttendanceSearchFilterBar extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
@@ -39,10 +39,10 @@ class AttendanceSearchFilterBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AttendanceHistoryColors.borderSubtle),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.02),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -59,12 +59,12 @@ class AttendanceSearchFilterBar extends StatelessWidget {
               hintText: 'Tìm tên hoặc MSSV...',
               hintStyle: const TextStyle(
                 fontSize: 13,
-                color: AttendanceHistoryColors.textSubtle,
+                color: Color(0xFF94A3B8),
               ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 size: 20,
-                color: AttendanceHistoryColors.textSubtle,
+                color: Color(0xFF94A3B8),
               ),
               suffixIcon: searchController.text.isNotEmpty
                   ? GestureDetector(
@@ -75,7 +75,7 @@ class AttendanceSearchFilterBar extends StatelessWidget {
                       child: const Icon(
                         Icons.close_rounded,
                         size: 18,
-                        color: AttendanceHistoryColors.textSubtle,
+                        color: Color(0xFF94A3B8),
                       ),
                     )
                   : null,
@@ -110,7 +110,7 @@ class AttendanceSearchFilterBar extends StatelessWidget {
                 isSelected: activeFilter == AttendanceFilterType.absent,
                 onTap: () => onFilterChanged(AttendanceFilterType.absent),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               // Nút Chọn nhanh
               InkWell(
                 onTap: onQuickSelect,
@@ -121,15 +121,15 @@ class AttendanceSearchFilterBar extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.bolt_rounded,
+                        Icons.check_rounded,
                         size: 16,
                         color: AttendanceHistoryColors.orangePrimary,
                       ),
-                      SizedBox(width: 2),
+                      SizedBox(width: 3),
                       Text(
                         'Chọn nhanh',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: AttendanceHistoryColors.orangePrimary,
                         ),
@@ -164,14 +164,12 @@ class _FilterChipItem extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AttendanceHistoryColors.textDark : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected
-                ? AttendanceHistoryColors.textDark
-                : AttendanceHistoryColors.borderSubtle,
+            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             width: 1,
           ),
           boxShadow: [
@@ -187,7 +185,7 @@ class _FilterChipItem extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? Colors.white : AttendanceHistoryColors.textDark,
+            color: isSelected ? Colors.white : const Color(0xFF334155),
           ),
         ),
       ),

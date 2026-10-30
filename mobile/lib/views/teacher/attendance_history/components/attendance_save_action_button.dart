@@ -71,7 +71,7 @@ class AttendanceSaveActionButton extends StatelessWidget {
             Icon(
               Icons.sync_rounded,
               size: 15,
-              color: AttendanceHistoryColors.progressGreen,
+              color: Color(0xFF10B981),
             ),
             SizedBox(width: 5),
             Flexible(
@@ -82,7 +82,7 @@ class AttendanceSaveActionButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
-                  color: AttendanceHistoryColors.textMuted,
+                  color: Color(0xFF64748B),
                 ),
               ),
             ),
