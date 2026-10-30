@@ -52,3 +52,34 @@ describe('storage: timetable_scans', () => {
     await assertFails(getBytes(ref(storageOf('admin'), 'misc/file.png')));
   });
 });
+
+describe('storage: avatars', () => {
+  const jpg = new Uint8Array([255, 216, 255, 224]);
+  const jpeg = { contentType: 'image/jpeg' };
+  it('tự tải ảnh đại diện JPG/PNG vào thư mục của mình (ghi đè được)', async () => {
+    await assertSucceeds(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg'), jpg, jpeg));
+    await assertSucceeds(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg'), jpg, jpeg));
+    await assertSucceeds(uploadBytes(ref(storageOf('s1'), 'avatars/u-s1/profile.png'), png, image));
+  });
+  it('chặn tên file lạ, sai content-type, thư mục người khác, file rỗng/quá 5 MB', async () => {
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/other.jpg'), jpg, jpeg));
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg'), png, image));
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.png'), png, { contentType: 'image/svg+xml' }));
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t2/profile.jpg'), jpg, jpeg));
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg'), new Uint8Array(0), jpeg));
+    await assertFails(uploadBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg'), new Uint8Array(5 * 1024 * 1024 + 1), jpeg));
+  });
+  it('tài khoản bị khóa không tải ảnh', async () => {
+    await assertFails(uploadBytes(ref(storageOf('s3'), 'avatars/u-s3/profile.jpg'), jpg, jpeg));
+  });
+  it('chủ ảnh và admin đọc; người khác không; chủ ảnh xóa được', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), 'avatars/u-t1/profile.jpg'), jpg, jpeg);
+    });
+    await assertSucceeds(getBytes(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg')));
+    await assertSucceeds(getBytes(ref(storageOf('admin'), 'avatars/u-t1/profile.jpg')));
+    await assertFails(getBytes(ref(storageOf('t2'), 'avatars/u-t1/profile.jpg')));
+    await assertFails(deleteObject(ref(storageOf('t2'), 'avatars/u-t1/profile.jpg')));
+    await assertSucceeds(deleteObject(ref(storageOf('t1'), 'avatars/u-t1/profile.jpg')));
+  });
+});

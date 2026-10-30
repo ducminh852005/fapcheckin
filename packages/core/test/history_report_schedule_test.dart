@@ -12,7 +12,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support.dart';
 
 T ok<T>(ApiResult<T> r) {
-  expect(r, isA<ApiSuccess<T>>(), reason: r is ApiFailure<T> ? r.error.message : '');
+  expect(
+    r,
+    isA<ApiSuccess<T>>(),
+    reason: r is ApiFailure<T> ? r.error.message : '',
+  );
   return (r as ApiSuccess<T>).data;
 }
 
@@ -85,7 +89,10 @@ void main() {
       expect(s.teacherName, 'GV Một');
       expect(s.slotCodes, ['A1']);
       final se1002 = s.students.firstWhere((x) => x.rollNumber == 'SE1002');
-      expect((se1002.presentCount, se1002.lateCount, se1002.absentCount), (0, 1, 1));
+      expect(
+        (se1002.presentCount, se1002.lateCount, se1002.absentCount),
+        (0, 1, 1),
+      );
       expect(se1002.attendanceRate, 0.5);
     });
 
@@ -93,27 +100,46 @@ void main() {
       expect(failCode(await repo.getSummary('SWD392_SE1801')), 'FORBIDDEN');
     });
 
-    test('getDetail trả revision và trạng thái; phiên lạ → SESSION_NOT_FOUND', () async {
-      await twoClosedSessions();
-      final d = ok(await repo.getDetail('PRN232_SE1917', sessionId: 's1'));
-      expect(d.selectedSession!.sessionId, 's1');
-      final se1001 = d.students.firstWhere((x) => x.rollNumber == 'SE1001');
-      expect(se1001.status, 'Present');
-      expect(se1001.revision, isNotEmpty);
-      expect(failCode(await repo.getDetail('PRN232_SE1917', sessionId: 'nope')), 'SESSION_NOT_FOUND');
-    });
+    test(
+      'getDetail trả revision và trạng thái; phiên lạ → SESSION_NOT_FOUND',
+      () async {
+        await twoClosedSessions();
+        final d = ok(await repo.getDetail('PRN232_SE1917', sessionId: 's1'));
+        expect(d.selectedSession!.sessionId, 's1');
+        final se1001 = d.students.firstWhere((x) => x.rollNumber == 'SE1001');
+        expect(se1001.status, 'Present');
+        expect(se1001.revision, isNotEmpty);
+        expect(
+          failCode(await repo.getDetail('PRN232_SE1917', sessionId: 'nope')),
+          'SESSION_NOT_FOUND',
+        );
+      },
+    );
 
     test('save ghi thay đổi, đánh dấu Manual, và trả chi tiết mới', () async {
       await twoClosedSessions();
       final before = ok(await repo.getDetail('PRN232_SE1917', sessionId: 's1'));
-      final se1003 = before.students.firstWhere((x) => x.rollNumber == 'SE1003');
+      final se1003 = before.students.firstWhere(
+        (x) => x.rollNumber == 'SE1003',
+      );
       final after = ok(
         await repo.save('PRN232_SE1917', 's1', [
-          {'rollNumber': 'SE1003', 'status': 'Present', 'note': 'Có phép', 'revision': se1003.revision},
+          {
+            'rollNumber': 'SE1003',
+            'status': 'Present',
+            'note': 'Có phép',
+            'revision': se1003.revision,
+          },
         ]),
       );
-      expect(after.students.firstWhere((x) => x.rollNumber == 'SE1003').status, 'Present');
-      final doc = await db.collection('attendance_records').doc('s1_SE1003').get();
+      expect(
+        after.students.firstWhere((x) => x.rollNumber == 'SE1003').status,
+        'Present',
+      );
+      final doc = await db
+          .collection('attendance_records')
+          .doc('s1_SE1003')
+          .get();
       expect(doc['networkVerificationResult'], 'Manual');
       expect(doc['note'], 'Có phép');
       expect(doc['updatedBy'], 'GV001');
@@ -124,10 +150,18 @@ void main() {
       await twoClosedSessions();
       ok(
         await repo.save('PRN232_SE1917', 's2', [
-          {'rollNumber': 'SE1002', 'status': 'Late', 'note': '', 'revision': ''},
+          {
+            'rollNumber': 'SE1002',
+            'status': 'Late',
+            'note': '',
+            'revision': '',
+          },
         ]),
       );
-      final doc = await db.collection('attendance_records').doc('s2_SE1002').get();
+      final doc = await db
+          .collection('attendance_records')
+          .doc('s2_SE1002')
+          .get();
       expect(doc['classCode'], 'PRN232_SE1917');
       expect(doc['teacherMemberCode'], 'GV001');
     });
@@ -135,18 +169,34 @@ void main() {
     test('save phát hiện xung đột khi dữ liệu đã đổi', () async {
       await twoClosedSessions();
       final d = ok(await repo.getDetail('PRN232_SE1917', sessionId: 's1'));
-      final revision = d.students.firstWhere((x) => x.rollNumber == 'SE1001').revision;
+      final revision = d.students
+          .firstWhere((x) => x.rollNumber == 'SE1001')
+          .revision;
       // Người khác sửa bản ghi sau khi GV tải trang
-      await db.collection('attendance_records').doc('s1_SE1001').update({'status': 'Late', 'note': 'đổi'});
+      await db.collection('attendance_records').doc('s1_SE1001').update({
+        'status': 'Late',
+        'note': 'đổi',
+      });
       expect(
         failCode(
           await repo.save('PRN232_SE1917', 's1', [
-            {'rollNumber': 'SE1001', 'status': 'Absent', 'note': '', 'revision': revision},
+            {
+              'rollNumber': 'SE1001',
+              'status': 'Absent',
+              'note': '',
+              'revision': revision,
+            },
           ]),
         ),
         'CONFLICT',
       );
-      expect((await db.collection('attendance_records').doc('s1_SE1001').get())['status'], 'Late');
+      expect(
+        (await db
+            .collection('attendance_records')
+            .doc('s1_SE1001')
+            .get())['status'],
+        'Late',
+      );
     });
 
     test('save kiểm tra dữ liệu đầu vào', () async {
@@ -154,13 +204,53 @@ void main() {
       Future<String> code(List<Map<String, dynamic>> changes) async =>
           failCode(await repo.save('PRN232_SE1917', 's1', changes));
       expect(await code([]), 'VALIDATION_ERROR');
-      expect(await code([{'rollNumber': 'SE9999', 'status': 'Present', 'note': '', 'revision': ''}]), 'VALIDATION_ERROR');
-      expect(await code([{'rollNumber': 'SE1001', 'status': 'Bogus', 'note': '', 'revision': ''}]), 'VALIDATION_ERROR');
-      expect(await code([{'rollNumber': 'SE1001', 'status': 'Present', 'note': 'x' * 2001, 'revision': ''}]), 'VALIDATION_ERROR');
       expect(
         await code([
-          {'rollNumber': 'SE1001', 'status': 'Present', 'note': '', 'revision': ''},
-          {'rollNumber': 'SE1001', 'status': 'Late', 'note': '', 'revision': ''},
+          {
+            'rollNumber': 'SE9999',
+            'status': 'Present',
+            'note': '',
+            'revision': '',
+          },
+        ]),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        await code([
+          {
+            'rollNumber': 'SE1001',
+            'status': 'Bogus',
+            'note': '',
+            'revision': '',
+          },
+        ]),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        await code([
+          {
+            'rollNumber': 'SE1001',
+            'status': 'Present',
+            'note': 'x' * 2001,
+            'revision': '',
+          },
+        ]),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        await code([
+          {
+            'rollNumber': 'SE1001',
+            'status': 'Present',
+            'note': '',
+            'revision': '',
+          },
+          {
+            'rollNumber': 'SE1001',
+            'status': 'Late',
+            'note': '',
+            'revision': '',
+          },
         ]),
         'VALIDATION_ERROR',
       );
@@ -182,18 +272,29 @@ void main() {
         final file = ok(await repo.export('PRN232_SE1917', sid));
         expect(file.filename, 'Attendance_PRN232_SE1917.xlsx');
         final zip = ZipDecoder().decodeBytes(base64Decode(file.base64));
-        final sheet = zip.files.firstWhere((f) => f.name == 'xl/worksheets/sheet1.xml');
+        final sheet = zip.files.firstWhere(
+          (f) => f.name == 'xl/worksheets/sheet1.xml',
+        );
         final xml = utf8.decode(sheet.content as List<int>);
         expect(xml, contains('SE1001'));
         expect(xml, contains('Mã lớp'));
       }
     });
 
-    test('startSession từ chối khi lớp đang có phiên mở hoặc slot sai', () async {
-      expect(failCode(await repo.startSession('PRN232_SE1917', 'ZZ', '')), 'VALIDATION_ERROR');
-      ok(await repo.startSession('PRN232_SE1917', 'A1', ''));
-      expect(failCode(await repo.startSession('PRN232_SE1917', 'A1', '')), 'SESSION_ALREADY_OPEN');
-    });
+    test(
+      'startSession từ chối khi lớp đang có phiên mở hoặc slot sai',
+      () async {
+        expect(
+          failCode(await repo.startSession('PRN232_SE1917', 'ZZ', '')),
+          'VALIDATION_ERROR',
+        );
+        ok(await repo.startSession('PRN232_SE1917', 'A1', ''));
+        expect(
+          failCode(await repo.startSession('PRN232_SE1917', 'A1', '')),
+          'SESSION_ALREADY_OPEN',
+        );
+      },
+    );
   });
 
   group('ReportRepository.buildReport', () {
@@ -210,13 +311,18 @@ void main() {
       final report = ReportRepository.buildReport(tables, now: now);
       final kpis = report['kpis'] as Map;
       expect(kpis['totalCheckins'], 4);
+      expect(kpis['absentCount'], 2);
+      expect((report['subjects'] as List).single['presentCount'], 4);
+      expect((report['subjects'] as List).single['expectedCount'], 6);
       expect(kpis['attendanceRate'], closeTo(4 / 6, 1e-9));
       expect(kpis['lateRate'], closeTo(1 / 6, 1e-9));
       expect(report['closedSessionCount'], 2);
       expect(report['classCount'], 1);
       expect(report['semester'], 'Fall 2026');
 
-      final methods = {for (final m in report['methods'] as List) m['key']: m['count']};
+      final methods = {
+        for (final m in report['methods'] as List) m['key']: m['count'],
+      };
       expect(methods, {'qr': 3, 'other': 0, 'manual': 1});
 
       final weekly = report['weekly'] as List;
@@ -225,14 +331,21 @@ void main() {
       expect(weekly[1]['absentRate'], closeTo(2 / 3, 1e-9));
 
       final warnings = report['warnings'] as List;
-      expect(warnings.map((w) => w['rollNumber']).toSet(), {'SE1002', 'SE1003'});
+      expect(warnings.map((w) => w['rollNumber']).toSet(), {
+        'SE1002',
+        'SE1003',
+      });
       expect(warnings.first['absenceRate'], 0.5);
       expect(warnings.first['status'], 'Cần lưu ý');
       expect(kpis['atRiskCount'], 2);
     });
 
     test('không có dữ liệu → báo cáo rỗng hợp lệ', () async {
-      final repo = ReportRepository(currentUser: teacher(), firestore: FakeFirebaseFirestore(), now: () => now);
+      final repo = ReportRepository(
+        currentUser: teacher(),
+        firestore: FakeFirebaseFirestore(),
+        now: () => now,
+      );
       final data = ok(await repo.getReport());
       expect(data.kpis.attendanceRate, 0);
       expect(data.classCount, 0);
@@ -242,10 +355,17 @@ void main() {
   group('ScheduleRepository', () {
     late ScheduleRepository repo;
     setUp(() {
-      repo = ScheduleRepository(currentUser: teacher(), firestore: db, now: () => now);
+      repo = ScheduleRepository(
+        currentUser: teacher(),
+        firestore: db,
+        now: () => now,
+      );
     });
 
-    Map<String, dynamic> input({String requestId = 'req-0001-abcd', String date = '2026-10-28'}) => {
+    Map<String, dynamic> input({
+      String requestId = 'req-0001-abcd',
+      String date = '2026-10-28',
+    }) => {
       'requestId': requestId,
       'classCode': 'PRN232_SE1917',
       'scheduleDate': date,
@@ -262,7 +382,12 @@ void main() {
       expect(o['today'], '2026-10-21');
       expect((o['classes'] as List).single['studentCount'], 3);
       expect(o['rooms'], ['303']);
-      expect((o['slots'] as List).single, {'slotCode': 'A1', 'startTime': '07:00', 'endTime': '09:15', 'available': true});
+      expect((o['slots'] as List).single, {
+        'slotCode': 'A1',
+        'startTime': '07:00',
+        'endTime': '09:15',
+        'available': true,
+      });
     });
 
     test('create ghi lịch, retry cùng requestId là idempotent', () async {
@@ -273,18 +398,45 @@ void main() {
       expect(again['scheduleId'], first['scheduleId']);
       expect((await db.collection('class_schedules').get()).docs.length, 1);
       // cùng requestId nhưng nội dung khác → CONFLICT
-      expect(failCode(await repo.create(input(date: '2026-10-29'))), 'CONFLICT');
+      expect(
+        failCode(await repo.create(input(date: '2026-10-29'))),
+        'CONFLICT',
+      );
     });
 
     test('create từ chối dữ liệu sai', () async {
-      expect(failCode(await repo.create({...input(), 'classCode': 'SWD392_SE1801'})), 'FORBIDDEN');
-      expect(failCode(await repo.create(input(requestId: 'ab'))), 'VALIDATION_ERROR');
-      expect(failCode(await repo.create({...input(), 'slotCode': 'ZZ'})), 'VALIDATION_ERROR');
-      expect(failCode(await repo.create({...input(), 'scheduleDate': '2026-02-30'})), 'VALIDATION_ERROR');
-      expect(failCode(await repo.create({...input(), 'lessonType': 'party'})), 'VALIDATION_ERROR');
-      expect(failCode(await repo.create({...input(), 'room': '999'})), 'VALIDATION_ERROR');
-      expect(failCode(await repo.create({...input(), 'autoQR': true})), 'NOT_SUPPORTED');
-      expect(failCode(await repo.create(input(date: '2026-10-21'))), 'VALIDATION_ERROR'); // ca đã bắt đầu
+      expect(
+        failCode(await repo.create({...input(), 'classCode': 'SWD392_SE1801'})),
+        'FORBIDDEN',
+      );
+      expect(
+        failCode(await repo.create(input(requestId: 'ab'))),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        failCode(await repo.create({...input(), 'slotCode': 'ZZ'})),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        failCode(await repo.create({...input(), 'scheduleDate': '2026-02-30'})),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        failCode(await repo.create({...input(), 'lessonType': 'party'})),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        failCode(await repo.create({...input(), 'room': '999'})),
+        'VALIDATION_ERROR',
+      );
+      expect(
+        failCode(await repo.create({...input(), 'autoQR': true})),
+        'NOT_SUPPORTED',
+      );
+      expect(
+        failCode(await repo.create(input(date: '2026-10-21'))),
+        'VALIDATION_ERROR',
+      ); // ca đã bắt đầu
     });
 
     test('create phát hiện trùng khung giờ trong ngày', () async {

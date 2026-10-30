@@ -9,6 +9,8 @@
     "emulators": "firebase emulators:start --project demo-fapcheckin",
     "seed:admin": "node scripts/seed-admin.mjs",
     "seed:reference": "node scripts/seed-reference.mjs",
+    "seed:support": "node scripts/seed-support.mjs",
+    "set:work-info": "node scripts/set-work-info.mjs",
     "migrate:legacy": "node scripts/migrate-legacy.mjs"
   },
   "devDependencies": {

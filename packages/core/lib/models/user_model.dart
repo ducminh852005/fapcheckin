@@ -9,6 +9,7 @@ class UserModel {
   final String role;
   final String rollNumber;
   final String email;
+  final String phone, birthDate, avatarPath, department, division, jobTitle, employmentDate, contractType;
   final bool active;
   final DateTime? createdAt;
 
@@ -18,6 +19,14 @@ class UserModel {
     required this.role,
     required this.rollNumber,
     required this.email,
+    this.phone = '',
+    this.birthDate = '',
+    this.avatarPath = '',
+    this.department = '',
+    this.division = '',
+    this.jobTitle = '',
+    this.employmentDate = '',
+    this.contractType = '',
     this.active = true,
     this.createdAt,
   });
@@ -29,6 +38,15 @@ class UserModel {
       role: jsonText(json['role']) ?? '',
       rollNumber: jsonText(json['rollNumber']) ?? '',
       email: jsonText(json['email']) ?? '',
+      phone: jsonText(json['phone']) ?? '',
+      birthDate: jsonText(json['birthDate']) ?? '',
+      avatarPath: jsonText(json['avatarPath']) ?? '',
+      department: jsonText(json['department']) ?? '',
+      division: jsonText(json['division']) ?? '',
+      jobTitle: jsonText(json['jobTitle']) ?? '',
+      employmentDate: jsonText(json['employmentDate']) ?? '',
+      contractType: jsonText(json['contractType']) ?? '',
+
       active: jsonBool(json['active']) ?? true,
       createdAt: DateTime.tryParse(jsonText(json['createdAt']) ?? ''),
     );
@@ -68,6 +86,15 @@ class UserModel {
     'rollNumber': rollNumber,
     'email': email,
     'active': active,
+    'phone': phone,
+    'birthDate': birthDate,
+    'avatarPath': avatarPath,
+    'department': department,
+    'division': division,
+    'jobTitle': jobTitle,
+    'employmentDate': employmentDate,
+    'contractType': contractType,
+
     if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
   };
 }

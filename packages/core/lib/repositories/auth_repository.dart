@@ -36,7 +36,10 @@ class AuthRepository {
     final email = user?.email?.toLowerCase();
     if (user == null || email == null || email.isEmpty) {
       await _auth.signOut();
-      throw ApiException('INVALID_TOKEN', 'Không lấy được email từ tài khoản Google.');
+      throw ApiException(
+        'INVALID_TOKEN',
+        'Không lấy được email từ tài khoản Google.',
+      );
     }
     try {
       final profile = await _loadOrCreateProfile(user.uid, email);
@@ -72,9 +75,47 @@ class AuthRepository {
     }
     final data = snap.data() ?? const <String, dynamic>{};
     if (data['active'] == false) {
-      throw ApiException('FORBIDDEN', 'Tài khoản đã bị khóa. Liên hệ quản trị viên.');
+      throw ApiException(
+        'FORBIDDEN',
+        'Tài khoản đã bị khóa. Liên hệ quản trị viên.',
+      );
     }
-    return UserModel.fromFirestore(snap);
+    final user = UserModel.fromFirestore(snap);
+    if (user.department.isEmpty &&
+        user.division.isEmpty &&
+        user.employmentDate.isEmpty &&
+        user.contractType.isEmpty) {
+      try {
+        final invite = await _db.collection('user_invites').doc(email).get();
+        if (invite.exists) {
+          final inv = invite.data() ?? const <String, dynamic>{};
+          return UserModel(
+            memberCode: user.memberCode,
+            fullName: user.fullName,
+            role: user.role,
+            rollNumber: user.rollNumber,
+            email: user.email,
+            phone: user.phone.isNotEmpty
+                ? user.phone
+                : (inv['phone'] ?? '').toString(),
+            birthDate: user.birthDate.isNotEmpty
+                ? user.birthDate
+                : (inv['birthDate'] ?? '').toString(),
+            avatarPath: user.avatarPath,
+            department: (inv['department'] ?? '').toString(),
+            division: (inv['division'] ?? '').toString(),
+            jobTitle: user.jobTitle.isNotEmpty
+                ? user.jobTitle
+                : (inv['jobTitle'] ?? '').toString(),
+            employmentDate: (inv['employmentDate'] ?? '').toString(),
+            contractType: (inv['contractType'] ?? '').toString(),
+            active: user.active,
+            createdAt: user.createdAt,
+          );
+        }
+      } catch (_) {}
+    }
+    return user;
   }
 
   /// Khôi phục phiên khi mở lại app (Firebase Auth giữ đăng nhập trên thiết bị).
@@ -85,6 +126,43 @@ class AuthRepository {
     final profile = await _loadOrCreateProfile(user.uid, email);
     currentUser.set(profile);
     return AuthSessionModel(token: user.uid, user: profile);
+  });
+
+  Future<ApiResult<AuthSessionModel>> updateName(String value) =>
+      guardApi(() async {
+        final name = value.trim();
+        if (name.isEmpty || name.length > 200) {
+          throw ApiException(
+            'VALIDATION_ERROR',
+            'Tên phải có từ 1 đến 200 ký tự.',
+          );
+        }
+        final uid = _auth.currentUser?.uid;
+        if (uid == null) {
+          throw ApiException('UNAUTHENTICATED', 'Vui lòng đăng nhập lại.');
+        }
+        await _db.collection('users').doc(uid).update({'fullName': name});
+        final profile = UserModel.fromFirestore(
+          await _db.collection('users').doc(uid).get(),
+        );
+        currentUser.set(profile);
+        return AuthSessionModel(token: uid, user: profile);
+      });
+
+  Future<ApiResult<AuthSessionModel>> updateProfile({required String name, required String phone, required String birthDate}) => guardApi(() async {
+    final cleanName = name.trim(), cleanPhone = phone.trim(), date = birthDate.trim();
+    final parsed = date.isEmpty ? null : DateTime.tryParse(date);
+    if (cleanName.isEmpty || cleanName.length > 200 || !RegExp(r'^[+0-9 ()-]{0,25}$').hasMatch(cleanPhone) ||
+      (date.isNotEmpty && (parsed == null || parsed.toIso8601String().substring(0, 10) != date || parsed.isAfter(DateTime.now()) || parsed.year < 1900))) {
+      throw ApiException('VALIDATION_ERROR', 'Kiểm tra họ tên, số điện thoại và ngày sinh (YYYY-MM-DD).');
+    }
+    final account = _auth.currentUser;
+    if (account == null) throw ApiException('UNAUTHORIZED', 'Vui lòng đăng nhập lại.');
+    await _db.collection('users').doc(account.uid).update({'fullName': cleanName, 'phone': cleanPhone, 'birthDate': date});
+    final profile = UserModel.fromFirestore(await _db.collection('users').doc(account.uid).get());
+    if (_auth.currentUser?.uid != account.uid) throw ApiException('UNAUTHORIZED', 'Tài khoản đã thay đổi.');
+    currentUser.set(profile);
+    return AuthSessionModel(token: account.uid, user: profile);
   });
 
   Future<void> signOut() async {
