@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
-import 'package:fapcheckin_core/models/timetable_scan_model.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../../../viewmodels/live_session_viewmodel.dart';
-import '../class_management/dialogs/import_timetable_dialog.dart';
+import 'components/import_timetable_bottom_sheet.dart';
 import '../dashboard/components/weekly_timetable.dart';
 import 'schedule_colors.dart';
 
@@ -107,11 +106,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
   }
 
   Future<void> _scanTimetable(BuildContext context) async {
-    final result = await showDialog<TimetableImportResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const ImportTimetableDialog(),
-    );
+    final result = await showImportTimetableBottomSheet(context);
     if (!context.mounted || result == null) return;
 
     await context.read<DashboardViewModel>().loadClasses();

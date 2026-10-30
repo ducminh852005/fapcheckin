@@ -64,7 +64,11 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _teacherRepo = TeacherRepository(currentUser: _currentUser);
     _scheduleRepo = ScheduleRepository(currentUser: _currentUser);
     _timetableRepo = TimetableRepository(currentUser: _currentUser);
-    _authViewModel = AuthViewModel(_authRepo, _googleAuthService);
+    _authViewModel = AuthViewModel(
+      _authRepo,
+      _googleAuthService,
+      initialRestoring: true,
+    );
     _accountFeaturesRepo = AccountFeaturesRepository(
       uid: () => _authViewModel.session?.token ?? '',
     );

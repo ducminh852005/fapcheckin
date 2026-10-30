@@ -35,10 +35,11 @@ class ReportData {
 
 class ReportKpiSummary {
   final double attendanceRate, lateRate;
-  final int totalCheckins, atRiskCount, studentCount;
+  final int totalCheckins, atRiskCount, studentCount, absentCount;
   ReportKpiSummary.fromJson(Map<String, dynamic> json)
     : attendanceRate = jsonNumber(json['attendanceRate'])?.toDouble() ?? 0,
       lateRate = jsonNumber(json['lateRate'])?.toDouble() ?? 0,
+      absentCount = jsonNumber(json['absentCount'])?.toInt() ?? 0,
       totalCheckins = jsonNumber(json['totalCheckins'])?.toInt() ?? 0,
       atRiskCount = jsonNumber(json['atRiskCount'])?.toInt() ?? 0,
       studentCount = jsonNumber(json['studentCount'])?.toInt() ?? 0;
@@ -68,9 +69,11 @@ class ReportWeek {
 class ReportSubject {
   final String classCode, subjectName;
   final double attendanceRate, absentRate;
-  final int studentCount;
+  final int studentCount, presentCount, expectedCount;
   ReportSubject.fromJson(Map<String, dynamic> json)
     : classCode = jsonText(json['classCode']) ?? '',
+      presentCount = jsonNumber(json['presentCount'])?.toInt() ?? 0,
+      expectedCount = jsonNumber(json['expectedCount'])?.toInt() ?? 0,
       subjectName = jsonText(json['subjectName']) ?? '',
       attendanceRate = jsonNumber(json['attendanceRate'])?.toDouble() ?? 0,
       absentRate = jsonNumber(json['absentRate'])?.toDouble() ?? 0,
