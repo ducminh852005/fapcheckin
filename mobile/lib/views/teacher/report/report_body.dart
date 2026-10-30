@@ -11,6 +11,7 @@ import 'package:fapcheckin_core/utils/history_excel.dart';
 import '../../../core/services/history_download.dart';
 import 'components/report_custom_header.dart';
 import 'components/report_week_selector.dart';
+import 'components/report_scope_bottom_sheet.dart';
 import 'components/report_hero_gauge_card.dart';
 import 'components/report_stat_cards.dart';
 import 'components/report_daily_chart.dart';
@@ -104,23 +105,20 @@ class _ReportBodyState extends State<ReportBody> {
                         ),
                         const SizedBox(height: 16),
 
-                        // 2. Chọn tuần
+                        // 2. Chọn tuần / Phạm vi báo cáo
                         ReportWeekSelector(
-                          weekLabel: reportVm.from == null ? 'Toàn bộ lịch sử điểm danh' : '${reportVm.from!.toIso8601String().substring(0,10)} → ${reportVm.to!.toIso8601String().substring(0,10)}',
+                          weekLabel: _formatWeekLabel(reportVm.from, reportVm.to),
                           subtitle:
                               'Tất cả ${report?.classCount ?? 0} lớp • Đã kết thúc: ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
                           onTap: () async {
-                            final now = DateTime.now();
-                            final choice = await showDialog<String>(context: context, builder: (ctx) => SimpleDialog(title: const Text('Phạm vi báo cáo'), children: [
-                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'all'), child: const Text('Toàn bộ lịch sử')),
-                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'week'), child: const Text('Tuần này')),
-                              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, 'range'), child: const Text('Chọn khoảng ngày')),
-                            ]));
-                            if (!context.mounted || choice == null) return;
-                            if (choice == 'all') { await reportVm.setRange(null, null); return; }
-                            if (choice == 'week') { final start = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday-1)); await reportVm.setRange(start, start.add(const Duration(days: 6))); return; }
-                            final range = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: now);
-                            if (range != null) await reportVm.setRange(range.start, range.end);
+                            final range = await showReportScopeBottomSheet(
+                              context: context,
+                              currentFrom: reportVm.from,
+                              currentTo: reportVm.to,
+                              totalClosedSessions: report?.closedSessionCount ?? 0,
+                            );
+                            if (!context.mounted || range == null) return;
+                            await reportVm.setRange(range['start'], range['end']);
                           },
                         ),
                         const SizedBox(height: 16),
@@ -195,6 +193,18 @@ class _ReportBodyState extends State<ReportBody> {
         ),
       ),
     );
+  }
+
+  String _formatWeekLabel(DateTime? from, DateTime? to) {
+    if (from == null || to == null) return 'Toàn bộ lịch sử điểm danh';
+    final fromStr =
+        '${from.day.toString().padLeft(2, '0')}/${from.month.toString().padLeft(2, '0')}/${from.year}';
+    final toStr =
+        '${to.day.toString().padLeft(2, '0')}/${to.month.toString().padLeft(2, '0')}/${to.year}';
+    if (fromStr == toStr) {
+      return 'Hôm nay - $fromStr';
+    }
+    return '$fromStr → $toStr';
   }
 
   double _getAttendanceRate(ReportData? report) =>

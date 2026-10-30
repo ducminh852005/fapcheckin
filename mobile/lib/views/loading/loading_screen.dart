@@ -6,6 +6,7 @@ import 'package:fapcheckin_core/constants/app_palette.dart';
 import '../../app/app_router.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
+import '../auth/widgets/login_brand.dart';
 
 /// Màn hình Loading chuyển tiếp sau khi đăng nhập thành công:
 /// 1. Nền trắng với hiệu ứng ánh sáng cam ấm áp ở góc trên bên phải
@@ -38,6 +39,18 @@ class _LoadingScreenState extends State<LoadingScreen> {
   Future<void> _initializeAndNavigate() async {
     final authVm = context.read<AuthViewModel>();
     final dashboardVm = context.read<DashboardViewModel>();
+
+    // Chờ quá trình khôi phục phiên nếu đang diễn ra lúc khởi động app
+    while (authVm.isRestoringSession && mounted) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    if (!mounted) return;
+
+    // Nếu không có phiên đăng nhập, chuyển hướng về màn hình Login
+    if (!authVm.isAuthenticated) {
+      context.go(AppRoutes.login);
+      return;
+    }
 
     // 1. Nạp hồ sơ Giảng viên từ session đăng nhập
     if (authVm.session != null && dashboardVm.teacherMemberCode.isEmpty) {
@@ -90,14 +103,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
             children: [
               const Spacer(flex: 3),
 
-              // ── Khối Logo FAP CHECK-IN ở giữa ─────────────────────────────
-              Image.asset(
-                'assets/logos/fap_checkin_logo.png',
-                width: 210,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    _buildFallbackLogo(),
-              ),
+              // ── Khối Logo FAP CHECK-IN ở giữa (đồng bộ với trang Login) ──
+              const LoginBrandCard(),
               const SizedBox(height: 38),
 
               // ── Vòng xoay tải màu cam FPT ──────────────────────────────────
@@ -157,56 +164,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  /// Logo dự phòng vẽ bằng Flutter nếu file ảnh chưa nạp xong
-  Widget _buildFallbackLogo() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppPalette.orangeLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppPalette.orangeBorder),
-          ),
-          child: const Icon(
-            Icons.qr_code_scanner_rounded,
-            color: AppPalette.primary,
-            size: 26,
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'FAP',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF1E3A8A),
-                letterSpacing: -0.5,
-                height: 1.0,
-              ),
-            ),
-            Text(
-              'CHECK-IN',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF0F766E),
-                letterSpacing: 2.0,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

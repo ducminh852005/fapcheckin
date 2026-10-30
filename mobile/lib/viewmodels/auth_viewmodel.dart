@@ -14,10 +14,24 @@ class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository;
   final GoogleAuthService _googleAuthService;
 
-  AuthViewModel(this._repository, this._googleAuthService);
+  AuthViewModel(
+    this._repository,
+    this._googleAuthService, {
+    bool initialRestoring = false,
+  }) : _isRestoringSession = initialRestoring;
+
+  bool _isRestoringSession;
+  bool get isRestoringSession => _isRestoringSession;
 
   AuthSessionModel? _session;
   AuthSessionModel? get session => _session;
+
+  @visibleForTesting
+  void setSessionForTesting(AuthSessionModel? session) {
+    _session = session;
+    _status = session != null ? ViewStatus.success : ViewStatus.idle;
+    notifyListeners();
+  }
 
   ViewStatus _status = ViewStatus.idle;
   ViewStatus get status => _status;
@@ -36,24 +50,29 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Khôi phục phiên Firebase đã lưu trên thiết bị (gọi một lần khi mở app).
   Future<void> restoreSession() async {
+    _isRestoringSession = true;
     _status = ViewStatus.loading;
     notifyListeners();
-    final result = await _repository.restoreSession();
-    _status = ViewStatus.idle;
-    if (result is ApiSuccess<AuthSessionModel?>) {
-      final data = result.data;
-      if (data != null && data.user.isTeacher) {
-        _session = data;
-        _status = ViewStatus.success;
-      } else if (data != null) {
-        await _repository.signOut();
+    try {
+      final result = await _repository.restoreSession();
+      _status = ViewStatus.idle;
+      if (result is ApiSuccess<AuthSessionModel?>) {
+        final data = result.data;
+        if (data != null && data.user.isTeacher) {
+          _session = data;
+          _status = ViewStatus.success;
+        } else if (data != null) {
+          await _repository.signOut();
+        }
       }
+      if (result is ApiFailure<AuthSessionModel?>) {
+        _errorMessage = result.error.message;
+        _status = ViewStatus.error;
+      }
+    } finally {
+      _isRestoringSession = false;
+      notifyListeners();
     }
-    if (result is ApiFailure<AuthSessionModel?>) {
-      _errorMessage = result.error.message;
-      _status = ViewStatus.error;
-    }
-    notifyListeners();
   }
 
   Future<bool> loginWithGoogle() async {

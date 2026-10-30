@@ -15,16 +15,28 @@ class AppRoutes {
 
 GoRouter createAppRouter(AuthViewModel authViewModel) {
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.loading,
     redirect: (context, state) {
+      // 1. Đang kiểm tra/khôi phục session khi bật app: giữ ở màn hình Loading
+      if (authViewModel.isRestoringSession) {
+        return state.matchedLocation == AppRoutes.loading
+            ? null
+            : AppRoutes.loading;
+      }
+
+      // 2. Chưa đăng nhập: chuyển về trang Login
       if (!authViewModel.isAuthenticated) {
         return state.matchedLocation == AppRoutes.login
             ? null
             : AppRoutes.login;
       }
-      return state.matchedLocation == AppRoutes.login
-          ? AppRoutes.teacher
-          : null;
+
+      // 3. Đã có phiên đăng nhập: nếu đang ở Login thì qua Loading trước khi vào Teacher
+      if (state.matchedLocation == AppRoutes.login) {
+        return AppRoutes.loading;
+      }
+
+      return null;
     },
     refreshListenable: authViewModel,
     errorBuilder: (context, state) => const LoadingScreen(),
