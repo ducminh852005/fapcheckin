@@ -65,23 +65,31 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    expect(find.text('Giảng viên: Real Teacher'), findsOneWidget);
+    expect(find.textContaining('Giảng viên: Real Teacher'), findsOneWidget);
     await tester.tap(find.text('Xác nhận tạo lịch'));
     await tester.pumpAndSettle();
     expect(repo.requests, isEmpty);
+
     final dropdowns = find.byType(DropdownButtonFormField<String>);
+
+    // Chọn lớp học (dropdown thứ 2: index 1)
     await tester.tap(dropdowns.at(1));
     await tester.pumpAndSettle();
     await tester.tap(find.text('C1 — Real Course').last);
     await tester.pumpAndSettle();
+
+    // Chọn ca học (Slot 1) từ Grid thẻ slot
+    await tester.tap(find.text('Slot 1 ✓'));
+    await tester.pumpAndSettle();
+
+    // Chọn phòng học (dropdown thứ 3: index 2)
+    await tester.ensureVisible(dropdowns.at(2));
     await tester.tap(dropdowns.at(2));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('A1 • 07:00 – 09:15').last);
+    await tester.tap(find.text('Phòng 303').last);
     await tester.pumpAndSettle();
-    await tester.tap(dropdowns.at(3));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('303').last);
-    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Xác nhận tạo lịch'));
     await tester.tap(find.text('Xác nhận tạo lịch'));
     await tester.pumpAndSettle();
     expect(repo.requests.length, 1);
