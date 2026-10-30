@@ -3,9 +3,13 @@ import { observeAdminSession, signInAdmin, signOutAdmin, type AdminProfile } fro
 import { AdminShell } from "./layouts/AdminShell"
 import { AccountControl } from "./pages/AccountControlPage"
 import { AttendanceOperations } from "./pages/AttendanceOperationsPage"
+import { AttendanceMonitoring } from "./pages/AttendanceMonitoringPage"
+import { AttendanceReport } from "./pages/AttendanceReportPage"
+import { SystemSettingsPage } from "./pages/SystemSettingsPage"
 import { AcademicEnrollmentManagement } from "./pages/AcademicEnrollmentPage"
 import { LiveDashboard } from "./pages/LiveDashboardPage"
 import { AdminLogin } from "./pages/AdminLoginPage"
+import { AnnouncementPage } from "./pages/AnnouncementPage"
 import type { AdminPage } from "./types/admin-v2"
 
 export default function AdminApp() {
@@ -43,6 +47,11 @@ export default function AdminApp() {
     accounts: <AccountControl currentAdmin={profile} />,
     academic: <AcademicEnrollmentManagement />,
     attendance: <AttendanceOperations />,
+    announcements: (
+      <AnnouncementPage onNavigate={setPage} adminEmail={profile.email} />
+    ),
+    reports: <AttendanceReport />,
+    settings: <SystemSettingsPage adminEmail={profile.email} />,
   }[page]
 
   return (

@@ -16,17 +16,15 @@ import 'components/report_hero_gauge_card.dart';
 import 'components/report_stat_cards.dart';
 import 'components/report_daily_chart.dart';
 import 'components/report_subject_summary.dart';
-import 'components/report_export_button.dart';
 
 /// Màn hình Báo cáo chuyên cần:
-/// 1. Header (DỮ LIỆU ĐỂ THẤU HIỂU LỚP HỌC, Báo cáo chuyên cần, icon Download)
+/// 1. Header (Báo cáo chuyên cần, icon Download xuất Excel ở góc phải)
 /// 2. Thẻ chọn tuần: "Tuần này - 05-11/10/2026"
 /// 3. Thẻ Hero Dark Navy: Circular progress gauge (94,1% CÓ MẶT) + Nhịp học tập đang rất tốt
 /// 4. 2 thẻ thống kê: Lượt có mặt (542) & Lượt vắng mặt (34)
 /// 5. Thẻ biểu đồ cột: Chuyên cần theo ngày (T2 - 05 đến T5 - 08 cam)
 /// 6. Thẻ danh sách: Tổng hợp theo môn (PRN231, SWP391, SWT301, PRM392)
-/// 7. Nút: Xuất báo cáo Excel
-/// 8. Ghi chú chân trang cập nhật thời gian
+/// 7. Ghi chú chân trang cập nhật thời gian
 class ReportBody extends StatefulWidget {
   const ReportBody({super.key});
 
@@ -99,7 +97,7 @@ class _ReportBodyState extends State<ReportBody> {
                         if (reportVm.loading) const LinearProgressIndicator(),
                         if (reportVm.errorMessage != null)
                           Text(reportVm.errorMessage!),
-                        // 1. Header
+                        // 1. Header có nút xuất Excel ở góc phải
                         ReportCustomHeader(
                           onDownload: () => _handleExportExcel(context),
                         ),
@@ -151,7 +149,7 @@ class _ReportBodyState extends State<ReportBody> {
                                 dayLabel: w.label,
                                 rate: w.presentRate * 100,
                                 rateText: (w.presentRate * 100).toStringAsFixed(
-                                  1,
+                                   1,
                                 ),
                               ),
                           ],
@@ -163,13 +161,7 @@ class _ReportBodyState extends State<ReportBody> {
                         ReportSubjectSummary(subjects: subjects),
                         const SizedBox(height: 18),
 
-                        // 7. Nút xuất file Excel
-                        ReportExportButton(
-                          onPressed: () => _handleExportExcel(context),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 8. Chân trang thông tin cập nhật
+                        // 7. Chân trang thông tin cập nhật
                         Center(
                           child: Text(
                             report == null

@@ -4,7 +4,7 @@ import '../attendance_history_colors.dart';
 /// Header thanh điều hướng trên cùng của màn hình Điểm danh sinh viên:
 /// - Nút quay lại (Back)
 /// - Tiêu đề "Điểm danh sinh viên"
-/// - Thông tin lớp "PRN231 • SE1801 • Ca 2 (Phòng AL-204)"
+/// - Thông tin lớp "PRN231 · SE1801 · Buổi 12 · Ca 2 (Phòng AL-204)"
 /// - 2 nút chức năng: Xuất file & Tuỳ chọn (...)
 class AttendanceHistoryHeader extends StatelessWidget {
   final String title;
@@ -16,7 +16,7 @@ class AttendanceHistoryHeader extends StatelessWidget {
   const AttendanceHistoryHeader({
     super.key,
     this.title = 'Điểm danh sinh viên',
-    this.subtitle = 'PRN231 • SE1801 • Ca 2 (Phòng AL-204)',
+    this.subtitle = 'PRN231 · SE1801 · Buổi 12 · Ca 2 (Phòng AL-204)',
     required this.onBack,
     this.onExport,
     this.onOptions,
@@ -36,7 +36,7 @@ class AttendanceHistoryHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AttendanceHistoryColors.cardBorder),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF0F172A).withValues(alpha: 0.04),
@@ -47,7 +47,7 @@ class AttendanceHistoryHeader extends StatelessWidget {
             ),
             child: const Icon(
               Icons.arrow_back_ios_new_rounded,
-              size: 16,
+              size: 15,
               color: AttendanceHistoryColors.textDark,
             ),
           ),
@@ -71,7 +71,7 @@ class AttendanceHistoryHeader extends StatelessWidget {
                   letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 1),
+              const SizedBox(height: 1.5),
               Text(
                 subtitle,
                 maxLines: 1,
@@ -79,14 +79,14 @@ class AttendanceHistoryHeader extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
-                  color: AttendanceHistoryColors.textMuted,
+                  color: Color(0xFF64748B),
                 ),
               ),
             ],
           ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
 
         // Nút xuất báo cáo/tải xuống
         _CircleActionButton(
@@ -131,7 +131,7 @@ class _CircleActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AttendanceHistoryColors.cardBorder),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF0F172A).withValues(alpha: 0.04),
@@ -150,4 +150,3 @@ class _CircleActionButton extends StatelessWidget {
     );
   }
 }
-

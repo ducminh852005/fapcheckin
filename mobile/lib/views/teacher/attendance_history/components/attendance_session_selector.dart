@@ -1,50 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:fapcheckin_core/models/session_model.dart';
 import '../attendance_history_colors.dart';
 
-/// Thanh trượt chọn buổi học (Session Picker):
-/// - Buổi 12 (Hôm nay) [Selected - Nền cam FPT, chữ trắng, icon mũi tên xuống]
-/// - Buổi 11, Buổi 10, Buổi 09, ... [Nền trắng, viền nhẹ, chữ Slate]
+/// Thanh trượt chọn buổi học (Session Picker) từ danh sách phiên thực tế trên Firebase:
+/// - Buổi mới nhất / Đang mở [Selected - Nền cam FPT, chữ trắng]
+/// - Các buổi trước [Nền trắng, viền nhẹ, chữ Slate]
 class AttendanceSessionSelector extends StatelessWidget {
-  final int selectedSession;
-  final ValueChanged<int> onSelectSession;
+  final List<SessionModel> sessions;
+  final String? selectedSessionId;
+  final ValueChanged<String> onSelectSession;
 
   const AttendanceSessionSelector({
     super.key,
-    required this.selectedSession,
+    required this.sessions,
+    required this.selectedSessionId,
     required this.onSelectSession,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Danh sách 12 buổi (hoặc tùy biến)
-    final sessions = [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    if (sessions.isEmpty) return const SizedBox.shrink();
+
+    final total = sessions.length;
 
     return SizedBox(
-      height: 38,
+      height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: sessions.length,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final sessionNum = sessions[index];
-          final isSelected = sessionNum == selectedSession;
-          final isToday = sessionNum == 12;
+          final session = sessions[index];
+          final sessionNum = total - index;
+          final isSelected = session.sessionId == selectedSessionId;
 
-          final label = isToday
-              ? 'Buổi $sessionNum (Hôm nay)'
-              : sessionNum < 10
-                  ? 'Buổi 0$sessionNum'
-                  : 'Buổi $sessionNum';
+          final numLabel = sessionNum < 10 ? '0$sessionNum' : '$sessionNum';
+          final dateShort = _shortDate(session.sessionDate);
+          final label = session.isOpen
+              ? 'Buổi $numLabel (Đang mở)'
+              : dateShort.isNotEmpty
+                  ? 'Buổi $numLabel ($dateShort)'
+                  : 'Buổi $numLabel';
 
           return InkWell(
-            onTap: () => onSelectSession(sessionNum),
+            onTap: () => onSelectSession(session.sessionId),
             borderRadius: BorderRadius.circular(20),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: EdgeInsets.symmetric(
-                horizontal: isSelected ? 14 : 12,
-                vertical: 8,
+                horizontal: isSelected ? 13 : 11,
+                vertical: 6,
               ),
               decoration: BoxDecoration(
                 color: isSelected
@@ -81,7 +87,7 @@ class AttendanceSessionSelector extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
@@ -93,7 +99,7 @@ class AttendanceSessionSelector extends StatelessWidget {
                     const SizedBox(width: 4),
                     const Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      size: 16,
+                      size: 15,
                       color: Colors.white,
                     ),
                   ],
@@ -104,5 +110,14 @@ class AttendanceSessionSelector extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _shortDate(String value) {
+    if (value.isEmpty) return '';
+    final dt = DateTime.tryParse(value)?.toLocal();
+    if (dt != null) {
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+    }
+    return value;
   }
 }

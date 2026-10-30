@@ -13,7 +13,7 @@ export function AcademicData() {
   const current = tabs[tab]
   return (
     <>
-      <PageHeader eyebrow="DỮ LIỆU NỀN" title="Dữ liệu học vụ" description="Quản lý dữ liệu tham chiếu phục vụ lịch học và điểm danh." />
+      <PageHeader title="Dữ liệu học vụ" description="Quản lý dữ liệu tham chiếu phục vụ lịch học và điểm danh." />
       <div className="tabs">
         {(Object.entries(tabs) as Array<[keyof typeof tabs, typeof tabs[keyof typeof tabs]]>).map(([id, item]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{item.label}</button>)}
       </div>
