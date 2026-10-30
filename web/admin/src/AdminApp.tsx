@@ -2,8 +2,8 @@ import { useEffect, useState } from "react"
 import { observeAdminSession, signInAdmin, signOutAdmin, type AdminProfile } from "./firebase/admin-auth"
 import { AdminShell } from "./layouts/AdminShell"
 import { AccountControl } from "./pages/AccountControlPage"
-import { AttendanceMonitoring } from "./pages/AttendanceMonitoringPage"
-import { AcademicManagement } from "./pages/AcademicManagementPage"
+import { AttendanceOperations } from "./pages/AttendanceOperationsPage"
+import { AcademicEnrollmentManagement } from "./pages/AcademicEnrollmentPage"
 import { LiveDashboard } from "./pages/LiveDashboardPage"
 import { AdminLogin } from "./pages/AdminLoginPage"
 import type { AdminPage } from "./types/admin-v2"
@@ -41,8 +41,8 @@ export default function AdminApp() {
   const content = {
     dashboard: <LiveDashboard onNavigate={setPage} />,
     accounts: <AccountControl currentAdmin={profile} />,
-    academic: <AcademicManagement />,
-    attendance: <AttendanceMonitoring />,
+    academic: <AcademicEnrollmentManagement />,
+    attendance: <AttendanceOperations />,
   }[page]
 
   return (

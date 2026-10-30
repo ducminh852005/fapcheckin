@@ -26,7 +26,6 @@ export function AdminLogin({ loading, error, onLogin }: {
           <div><span className="eyebrow">CỔNG QUẢN TRỊ</span><h2>Đăng nhập quản trị</h2><p className="muted">Chỉ tài khoản có vai trò Admin và đang hoạt động mới được phép truy cập.</p></div>
           {error && <div className="login-error"><CircleAlert size={19} /><div><b>Không thể truy cập</b><span>{error}</span></div></div>}
           <Button className="google-btn" variant="secondary" onClick={() => void onLogin()} disabled={loading} icon={loading ? <LoaderCircle className="spin" size={19} /> : <span className="google-g">G</span>}>{loading ? "Đang xác thực..." : "Tiếp tục với Google"}</Button>
-          <div className="login-note"><ShieldCheck size={16} /><span>Chỉ hồ sơ có role admin và active = true được phép truy cập.</span></div>
         </div>
         <p className="login-footer">© 2026 FPT Education · FAP Check-in</p>
       </section>
