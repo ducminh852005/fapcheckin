@@ -3,10 +3,10 @@ import { Button, PageHeader } from "../components/ui"
 import type { AdminPage } from "../types/admin-v2"
 
 const metrics = [
-  { label: "Tài khoản hoạt động", source: "users", icon: <Users size={20} />, tone: "blue" },
-  { label: "Lớp đang quản lý", source: "classes", icon: <BookOpen size={20} />, tone: "green" },
-  { label: "Phiên đang mở", source: "sessions", icon: <ClipboardCheck size={20} />, tone: "orange" },
-  { label: "Chưa đồng bộ FAP", source: "attendance_records", icon: <RefreshCw size={20} />, tone: "red" },
+  { label: "Tài khoản hoạt động", icon: <Users size={20} />, tone: "blue" },
+  { label: "Lớp đang quản lý", icon: <BookOpen size={20} />, tone: "green" },
+  { label: "Phiên đang mở", icon: <ClipboardCheck size={20} />, tone: "orange" },
+  { label: "Chưa đồng bộ FAP", icon: <RefreshCw size={20} />, tone: "red" },
 ]
 
 export function OperationsDashboard({ onNavigate }: { onNavigate: (page: AdminPage) => void }) {
@@ -22,7 +22,7 @@ export function OperationsDashboard({ onNavigate }: { onNavigate: (page: AdminPa
         {metrics.map((metric) => (
           <article className="kpi-card" key={metric.label}>
             <div className={`kpi-icon kpi-${metric.tone}`}>{metric.icon}</div>
-            <span>{metric.label}</span><strong>—</strong><p>Nguồn: <b>{metric.source}</b></p>
+            <span>{metric.label}</span><strong>—</strong>
           </article>
         ))}
       </section>
