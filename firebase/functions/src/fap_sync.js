@@ -67,7 +67,15 @@ export async function runFapSync(deps, { uid, classCode = '', sessionId = '' } =
     };
   }
 
-  if (fapUrl && typeof fetchImpl === 'function') {
+  if (!fapUrl || typeof fetchImpl !== 'function') {
+    throw new FapSyncError(
+      'failed-precondition',
+      'FAP_NOT_CONFIGURED',
+      'Máy chủ chưa được cấu hình cổng đồng bộ FAP.',
+    );
+  }
+
+  {
     const records = unsynced.map((d) => {
       const data = d.data();
       return {
