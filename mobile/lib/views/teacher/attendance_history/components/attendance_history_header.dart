@@ -89,19 +89,22 @@ class AttendanceHistoryHeader extends StatelessWidget {
         const SizedBox(width: 6),
 
         // Nút xuất báo cáo/tải xuống
-        _CircleActionButton(
-          icon: Icons.file_download_outlined,
-          tooltip: 'Xuất bảng điểm danh',
-          onTap: onExport,
-        ),
-        const SizedBox(width: 8),
+        if (onExport != null)
+          _CircleActionButton(
+            icon: Icons.file_download_outlined,
+            tooltip: 'Xuất bảng điểm danh',
+            onTap: onExport,
+          ),
 
-        // Nút tuỳ chọn thêm
-        _CircleActionButton(
-          icon: Icons.more_horiz_rounded,
-          tooltip: 'Tuỳ chọn thêm',
-          onTap: onOptions,
-        ),
+        // Nút tuỳ chọn thêm (ẩn nếu không truyền hoặc truyền null)
+        if (onOptions != null) ...[
+          const SizedBox(width: 8),
+          _CircleActionButton(
+            icon: Icons.more_horiz_rounded,
+            tooltip: 'Tuỳ chọn thêm',
+            onTap: onOptions,
+          ),
+        ],
       ],
     );
   }

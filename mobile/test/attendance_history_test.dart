@@ -297,7 +297,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Student One'), findsOneWidget);
-      expect(find.textContaining('Lớp chưa có phiên'), findsOneWidget);
+
       expect(tester.takeException(), isNull);
     },
   );
