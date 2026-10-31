@@ -36,7 +36,7 @@ class ImportTimetableBottomSheet extends StatefulWidget {
 
 class _ImportTimetableBottomSheetState
     extends State<ImportTimetableBottomSheet> {
-  static const int _maxFileSizeBytes = 15 * 1024 * 1024; // 15 MB
+  static const int _maxFileSizeBytes = 5 * 1024 * 1024;
 
   late final TimetableRepository _repository;
 
@@ -58,8 +58,6 @@ class _ImportTimetableBottomSheetState
     return switch (extension) {
       'jpg' || 'jpeg' => 'image/jpeg',
       'png' => 'image/png',
-      'gif' => 'image/gif',
-      'bmp' => 'image/bmp',
       _ => null,
     };
   }
@@ -67,7 +65,7 @@ class _ImportTimetableBottomSheetState
   Future<void> _pickAndScan() async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
       allowMultiple: false,
       withData: true,
     );
@@ -82,7 +80,7 @@ class _ImportTimetableBottomSheetState
     if (bytes.lengthInBytes > _maxFileSizeBytes) {
       setState(
         () => _error =
-            'Ảnh vượt quá 15 MB. Hãy cắt gọn hoặc nén ảnh rồi thử lại.',
+            'Ảnh vượt quá 5 MB. Hãy cắt gọn hoặc nén ảnh rồi thử lại.',
       );
       return;
     }
@@ -495,7 +493,7 @@ class _ImportTimetableBottomSheetState
 
                     // Phụ đề
                     const Text(
-                      'Hỗ trợ ảnh chụp JPG, PNG, HEIC hoặc tệp PDF\nchụp từ FAP • Tối đa 15 MB',
+                      'Hỗ trợ ảnh JPG, PNG • Tối đa 5 MB\nẢnh được nhận dạng ngay trên điện thoại',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 11.5,
@@ -580,7 +578,7 @@ class _ImportTimetableBottomSheetState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bộ nhận diện FPT AI OCR 4.2',
+                  'Nhận dạng trên thiết bị',
                   style: TextStyle(
                     fontSize: 12.8,
                     fontWeight: FontWeight.w700,
@@ -589,7 +587,7 @@ class _ImportTimetableBottomSheetState
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Hỗ trợ mã slot 1-6 & campus HL/ĐN/HCM/CT/QN',
+                  'Đọc mã lớp–môn • Kiểm tra kết quả trước khi nhập',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
@@ -892,7 +890,7 @@ class _ImportTimetableBottomSheetState
         Row(
           children: [
             Text(
-              'Tìm thấy ${entries.length} ca học trong ảnh',
+              'Đọc được ${entries.length} mã lớp–môn',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -908,6 +906,14 @@ class _ImportTimetableBottomSheetState
           ],
         ),
         const SizedBox(height: 8),
+        if (entries.isNotEmpty && !entries.any((e) => e.canImport))
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Không có lớp mới đủ điều kiện để nhận. OCR chỉ đọc mã từ ảnh, không tạo lớp mới. Lớp cần có trong hệ thống, đúng mã môn và chưa được phân công; lớp bạn đã nhận không cần thêm lại.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF9A3412)),
+            ),
+          ),
         for (final entry in entries) ...[
           Container(
             margin: const EdgeInsets.only(bottom: 8),

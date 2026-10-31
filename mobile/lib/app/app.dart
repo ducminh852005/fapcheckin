@@ -10,6 +10,7 @@ import 'package:fapcheckin_core/theme/app_theme.dart';
 
 import '../core/services/google_auth_service.dart';
 import '../core/services/remote_settings.dart';
+import '../core/services/timetable_ocr_service.dart';
 
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
 import 'package:fapcheckin_core/repositories/schedule_repository.dart';
@@ -63,7 +64,10 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _authRepo = AuthRepository(currentUser: _currentUser);
     _teacherRepo = TeacherRepository(currentUser: _currentUser);
     _scheduleRepo = ScheduleRepository(currentUser: _currentUser);
-    _timetableRepo = TimetableRepository(currentUser: _currentUser);
+    _timetableRepo = TimetableRepository(
+      currentUser: _currentUser,
+      recognizeText: TimetableOcrService().recognize,
+    );
     _authViewModel = AuthViewModel(
       _authRepo,
       _googleAuthService,

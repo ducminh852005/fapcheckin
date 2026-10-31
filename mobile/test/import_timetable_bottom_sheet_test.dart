@@ -52,9 +52,9 @@ void main() {
     expect(find.text('Thư viện ảnh'), findsNothing);
 
     // 3. AI OCR Status Card
-    expect(find.text('Bộ nhận diện FPT AI OCR 4.2'), findsOneWidget);
+    expect(find.text('Nhận dạng trên thiết bị'), findsOneWidget);
     expect(
-      find.text('Hỗ trợ mã slot 1-6 & campus HL/ĐN/HCM/CT/QN'),
+      find.text('Đọc mã lớp–môn • Kiểm tra kết quả trước khi nhập'),
       findsOneWidget,
     );
     expect(find.text('Sẵn\nsàng'), findsOneWidget);
