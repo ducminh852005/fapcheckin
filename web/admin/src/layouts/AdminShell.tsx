@@ -321,7 +321,7 @@ export function AdminShell({
         <div className="flex-1 flex flex-col min-w-0 lg:pl-[72px] transition-all duration-300">
           {/* Top Bar */}
           <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-            {/* Left: Mobile hamburger & Breadcrumbs */}
+            {/* Left: Mobile hamburger */}
             <div className="flex items-center gap-3">
               <button
                 className="lg:hidden p-2 text-slate-500 hover:text-slate-700 cursor-pointer"
@@ -329,37 +329,10 @@ export function AdminShell({
               >
                 <Menu size={20} />
               </button>
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400">
-                <span className="font-semibold text-slate-700">FAP Admin</span>
-                <span>›</span>
-                <span>Vận hành hệ thống</span>
-                <span>›</span>
-                <span className="font-bold text-[#EA580C]">
-                  {page === "dashboard"
-                    ? "Tổng quan"
-                    : page === "academic"
-                      ? "Quản lý danh mục"
-                      : page === "attendance"
-                        ? "Xét duyệt điểm danh"
-                        : page === "announcements"
-                          ? "Đăng thông báo"
-                          : page === "reports"
-                            ? "Báo cáo chuyên cần"
-                            : page === "accounts"
-                              ? "Quyền truy cập tài khoản"
-                              : "Cài đặt hệ thống"}
-                </span>
-              </div>
             </div>
 
-            {/* Right: Portal active badge, Notification Bell with live data, User profile */}
+            {/* Right: Notification Bell with live data, User profile */}
             <div className="flex items-center gap-3">
-              {/* Portal Live Status */}
-              <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                PORTAL ACTIVE
-              </span>
-
               {/* Real-time Notifications Bell */}
               <div ref={notifRef} className="relative">
                 <button
