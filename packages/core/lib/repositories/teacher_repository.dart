@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../firebase/firestore_json.dart';
 import '../models/attendance_history_model.dart';
@@ -21,16 +22,22 @@ class TeacherRepository {
   TeacherRepository({
     required this.currentUser,
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
     DateTime Function()? now,
   }) : _injectedDb = firestore,
+       _injectedFunctions = functions,
        _now = now ?? DateTime.now;
 
   final CurrentUser currentUser;
   final FirebaseFirestore? _injectedDb;
+  final FirebaseFunctions? _injectedFunctions;
 
   /// Truy cập chậm để repository dựng được khi chưa khởi tạo Firebase (widget test);
   /// lỗi khi gọi sẽ được `guardApi` đổi thành `ApiFailure`.
   FirebaseFirestore get _db => _injectedDb ?? FirebaseFirestore.instance;
+  FirebaseFunctions get _functions =>
+      _injectedFunctions ??
+      FirebaseFunctions.instanceFor(region: 'asia-southeast1');
   final DateTime Function() _now;
 
   static const int plannedSessionsPerClass = 30;
@@ -674,6 +681,25 @@ class TeacherRepository {
     String? classCode,
     String? sessionId,
   }) => guardApi(() async {
+    // Production uses the trusted callable backend, which owns the actual
+    // FAP integration and authorization. An injected Firestore instance is
+    // reserved for deterministic repository unit tests below.
+    if (_injectedDb == null) {
+      final response = await _functions.httpsCallable('syncToFap').call({
+        if (classCode != null && classCode.trim().isNotEmpty)
+          'classCode': classCode.trim(),
+        if (sessionId != null && sessionId.trim().isNotEmpty)
+          'sessionId': sessionId.trim(),
+      });
+      final raw = response.data;
+      if (raw is! Map) {
+        throw ApiException(
+          'INVALID_RESPONSE',
+          'Máy chủ trả về dữ liệu đồng bộ không hợp lệ.',
+        );
+      }
+      return SyncResult.fromJson(Map<String, dynamic>.from(raw));
+    }
     final memberCode = _me;
     if (memberCode.isEmpty) {
       throw ApiException('UNAUTHORIZED', 'Vui lòng đăng nhập lại.');

@@ -33,9 +33,20 @@ function seedDb() {
 describe('runFapSync', () => {
   it('đồng bộ các bản ghi chưa đồng bộ và đánh dấu syncedToFap = true', async () => {
     const db = seedDb();
-    const deps = { db, serverTimestamp: () => 'TS' };
+    const requests = [];
+    const deps = {
+      db,
+      serverTimestamp: () => 'TS',
+      fapUrl: 'https://fap.example.test/attendance',
+      fetchImpl: async (url, options) => {
+        requests.push({ url, options });
+        return { ok: true, status: 200 };
+      },
+    };
     const first = await runFapSync(deps, { uid: 'u-t1', classCode: 'PRN231_SE1801' });
     assert.equal(first.syncedCount, 1);
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, deps.fapUrl);
     const updated = (await db.doc('attendance_records/s1_HE180101').get()).data();
     assert.equal(updated.syncedToFap, true);
     assert.equal(updated.updatedBy, 'GV001');
@@ -43,6 +54,16 @@ describe('runFapSync', () => {
     // Gọi lại lần 2 -> không còn bản ghi chưa đồng bộ
     const second = await runFapSync(deps, { uid: 'u-t1', classCode: 'PRN231_SE1801' });
     assert.equal(second.syncedCount, 0);
+  });
+
+  it('does not mark records as synced when the FAP gateway is missing', async () => {
+    const db = seedDb();
+    await assert.rejects(
+      () => runFapSync({ db, serverTimestamp: () => 'TS', fapUrl: '' }, { uid: 'u-t1' }),
+      (e) => e instanceof FapSyncError && e.code === 'FAP_NOT_CONFIGURED',
+    );
+    const record = (await db.doc('attendance_records/s1_HE180101').get()).data();
+    assert.equal(record.syncedToFap, false);
   });
 
   it('từ chối người chưa đăng nhập, sinh viên hoặc lớp của giảng viên khác', async () => {

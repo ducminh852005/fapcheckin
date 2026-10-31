@@ -193,7 +193,7 @@ export function AdminLogin({
       {/* Cột phải: Ảnh khuôn viên trường FPT tràn viền */}
       <section className="hidden md:block relative h-full w-full bg-[#0F172A] overflow-hidden select-none">
         <img
-          src="/fpt_campus.jpg"
+          src="/fpt_hcm_campus.jpg"
           alt="Cơ sở Đại học FPT"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
