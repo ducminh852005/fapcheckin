@@ -66,7 +66,17 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<AttendanceHistoryViewModel>().loadClasses();
+        final historyVm = context.read<AttendanceHistoryViewModel>();
+        final dashVm = context.read<DashboardViewModel>();
+
+        // Nếu chưa có lớp nào được chọn, ưu tiên lớp đang học/diễn ra từ Dashboard
+        if (historyVm.selectedClassCode == null && dashVm.classes.isNotEmpty) {
+          final activeClass = dashVm.classes.where((c) => c.isActive).firstOrNull ??
+              dashVm.classes.first;
+          historyVm.selectClass(activeClass.classCode);
+        } else if (historyVm.classes.isEmpty) {
+          historyVm.loadClasses();
+        }
       }
     });
   }
@@ -99,11 +109,19 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       return;
     }
 
+    final dashVm = context.read<DashboardViewModel?>();
+    final dashClass =
+        dashVm?.classes.where((c) => c.classCode == classCode).firstOrNull;
+    final activeSessionId = dashClass?.activeSessionId;
+
     final targetSessionId =
-        (_selectedSessionId != null &&
-            sessions.any((s) => s.sessionId == _selectedSessionId))
-        ? _selectedSessionId!
-        : sessions.first.sessionId;
+        (activeSessionId != null &&
+                sessions.any((s) => s.sessionId == activeSessionId))
+            ? activeSessionId
+            : ((_selectedSessionId != null &&
+                    sessions.any((s) => s.sessionId == _selectedSessionId))
+                ? _selectedSessionId!
+                : sessions.first.sessionId);
 
     if (_loadedClassCode != classCode || _selectedSessionId != targetSessionId) {
       _loadedClassCode = classCode;
@@ -241,13 +259,13 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         checkinTime = edit.checkinTime.isNotEmpty ? edit.checkinTime : null;
       } else if (!hasSessions) {
         state = StudentAttendanceState.absentUnscanned;
-        seatOrNote = 'Chưa có phiên';
+        seatOrNote = null;
       } else if (s.presentCount + s.lateCount > 0) {
         state = StudentAttendanceState.presentQr;
         seatOrNote = 'Có mặt ${s.presentCount + s.lateCount}/${s.closedSessions} buổi';
       } else {
         state = StudentAttendanceState.absentUnscanned;
-        seatOrNote = 'Chưa điểm danh';
+        seatOrNote = null;
       }
 
       final warningText = s.absenceRate > 0.2
@@ -299,11 +317,40 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     return found?.revision ?? '';
   }
 
+  Future<String?> _ensureSession(String classCode) async {
+    if (_selectedSessionId != null) return _selectedSessionId;
+    final vm = context.read<AttendanceHistoryViewModel>();
+    final dashVm = context.read<DashboardViewModel?>();
+    final dashClass =
+        dashVm?.classes.where((c) => c.classCode == classCode).firstOrNull;
+    final slotCode = (dashClass?.slotCode.isNotEmpty == true)
+        ? dashClass!.slotCode
+        : (vm.summary?.slotCodes.firstOrNull ?? '1');
+
+    final result = await vm.repository
+        .startSession(classCode, slotCode, '', ipCheck: false);
+    if (result is ApiSuccess<SessionModel>) {
+      final session = result.data;
+      setState(() {
+        _selectedSessionId = session.sessionId;
+      });
+      await vm.refreshSummary();
+      await _loadSessionDetail(classCode, session.sessionId);
+      return session.sessionId;
+    }
+    return null;
+  }
+
   // Điểm danh thủ công cho 1 sinh viên và lưu thẳng lên Firebase
   Future<void> _handleManualCheckin(StudentAttendanceModel student) async {
     final vm = context.read<AttendanceHistoryViewModel>();
     final classCode = vm.selectedClassCode;
-    final sessionId = _selectedSessionId;
+    if (classCode == null) return;
+
+    var sessionId = _selectedSessionId;
+    if (sessionId == null) {
+      sessionId = await _ensureSession(classCode);
+    }
 
     setState(() {
       _pendingEdits[student.rollNumber] = _PendingEdit(
@@ -313,7 +360,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       );
     });
 
-    if (classCode != null && sessionId != null) {
+    if (sessionId != null) {
       await _commitChangesToFirestore([
         {
           'rollNumber': student.rollNumber,
@@ -627,19 +674,22 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
   Future<void> _handleSave(int sessionNumber) async {
     final vm = context.read<AttendanceHistoryViewModel>();
     final classCode = vm.selectedClassCode;
-    final sessionId = _selectedSessionId;
 
     if (classCode == null) return;
 
+    var sessionId = _selectedSessionId;
     if (sessionId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Lớp chưa có phiên điểm danh. Hãy mở phiên điểm danh trước khi lưu.',
-          ),
-        ),
-      );
-      return;
+      sessionId = await _ensureSession(classCode);
+      if (sessionId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không thể khởi tạo buổi học để lưu điểm danh.'),
+            ),
+          );
+        }
+        return;
+      }
     }
 
     if (_pendingEdits.isNotEmpty) {
@@ -808,25 +858,32 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         _detail?.selectedSession ??
         sessions.where((s) => s.sessionId == _selectedSessionId).firstOrNull;
 
+    final dashVm = context.read<DashboardViewModel?>();
+    final dashClass =
+        dashVm?.classes.where((c) => c.classCode == info.classCode).firstOrNull;
+
     final subject = info.subjectCode.isNotEmpty
         ? info.subjectCode
-        : info.classCode;
+        : (dashClass?.subjectCode ?? info.classCode);
     final classCode = info.classCode;
     final fallbackSlot =
+        dashClass?.slotCode ??
         info.latestSession?.slotCode ??
         (_detail?.slotCodes.firstOrNull ?? vm.summary?.slotCodes.firstOrNull) ??
         '';
     final slot =
         (selectedSession != null && selectedSession.slotCode.isNotEmpty)
-        ? selectedSession.slotCode
-        : (fallbackSlot.isNotEmpty ? fallbackSlot : '—');
-    final room = info.room.isNotEmpty ? 'Phòng ${info.room}' : '';
+            ? selectedSession.slotCode
+            : (fallbackSlot.isNotEmpty ? fallbackSlot : '1');
+    final roomName =
+        info.room.isNotEmpty ? info.room : (dashClass?.room ?? '');
+    final room = roomName.isNotEmpty ? 'Phòng $roomName' : '';
 
     final parts = <String>[
       subject,
       if (classCode != subject) classCode,
-      if (sessions.isNotEmpty) 'Buổi $sessionNumber',
-      if (slot.isNotEmpty) 'Ca $slot${room.isNotEmpty ? ' ($room)' : ''}',
+      if (sessions.isNotEmpty && sessionNumber > 0) 'Buổi $sessionNumber',
+      'Ca $slot${room.isNotEmpty ? ' ($room)' : ''}',
     ];
     return parts.join(' · ');
   }
@@ -876,6 +933,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             if (vm.loadingClasses ||
@@ -900,7 +958,6 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 onExport: vm.busy || vm.summary == null
                     ? null
                     : () => exportHistory(context),
-                onOptions: () => _showMoreOptions(vm),
               ),
             ),
 
@@ -938,59 +995,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
-                    // Thanh chọn lớp nhanh nếu giảng viên dạy nhiều lớp
-                    if (vm.classes.length > 1) ...[
-                      SizedBox(
-                        height: 34,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: vm.classes.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final cls = vm.classes[index];
-                            final selected =
-                                cls.classCode == vm.selectedClassCode;
-                            return InkWell(
-                              onTap: () => vm.selectClass(cls.classCode),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: selected
-                                      ? const Color(0xFF0F172A)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: selected
-                                        ? const Color(0xFF0F172A)
-                                        : const Color(0xFFE2E8F0),
-                                  ),
-                                ),
-                                child: Text(
-                                  '${cls.subjectCode} · ${cls.classCode}',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: selected
-                                        ? Colors.white
-                                        : const Color(0xFF334155),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-
-                    // Thanh trượt chọn buổi học thực tế
+                    // Thanh trượt chọn buổi học thực tế (khi lớp có nhiều buổi)
                     if (sessions.isNotEmpty) ...[
                       AttendanceSessionSelector(
                         sessions: sessions,
@@ -1010,43 +1017,6 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                         },
                       ),
                       const SizedBox(height: 12),
-                    ] else if (vm.summary != null) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFFEDD5)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              size: 18,
-                              color: AttendanceHistoryColors.orangePrimary,
-                            ),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Lớp chưa có phiên điểm danh. Nhấn Mở phiên để bắt đầu.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF9A3412),
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => openHistorySession(context),
-                              child: const Text('Mở phiên'),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
 
                     // Thẻ thống kê tóm tắt
