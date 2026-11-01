@@ -113,3 +113,14 @@ test('runScan maps OCR failures to business error codes', async () => {
   await assert.rejects(runScan(fakeDeps({ visionError: 'Cloud Vision API has not been used' }).deps, ok), { code: 'OCR_NOT_CONFIGURED' });
   await assert.rejects(runScan(fakeDeps({ visionError: 'boom' }).deps, ok), (e) => e instanceof ScanError && e.code === 'OCR_UNAVAILABLE');
 });
+
+test('CR-03: rejects malformed size metadata and oversized downloaded image before OCR', async () => {
+ for (const size of ['invalid', null, -1, 0, Infinity]) {
+  await assert.rejects(runScan(fakeDeps({size}).deps, ok), {code:'IMAGE_TOO_LARGE'});
+ }
+ const {deps,deleted}=fakeDeps(); let ocrCalled=false;
+ deps.bucket.file=()=>({getMetadata:async()=>[{contentType:'image/png',size:100}], download:async()=>[Buffer.alloc(10*1024*1024+1)],delete:async()=>deleted.push(ok.storagePath)});
+ deps.vision.documentTextDetection=async()=>{ocrCalled=true;return [];};
+ await assert.rejects(runScan(deps,ok),{code:'IMAGE_TOO_LARGE'});
+ assert.equal(ocrCalled,false); assert.deepEqual(deleted,[ok.storagePath]);
+});

@@ -1,0 +1,56 @@
+{
+  "server": "http://127.0.0.1:4723",
+  "capabilities": {
+    "platformName": "Android",
+    "appium:automationName": "UiAutomator2",
+    "appium:udid": "REPLACE_WITH_ADB_SERIAL",
+    "appium:appPackage": "com.example.fapcheckin",
+    "appium:appActivity": ".MainActivity",
+    "appium:noReset": true,
+    "appium:autoGrantPermissions": true
+  },
+  "flows": {
+    "TC01_google_signin": {
+      "clearAppData": true,
+      "steps": [
+        {
+          "action": "tap",
+          "by": "accessibility id",
+          "value": "Đăng nhập bằng Google"
+        },
+        {
+          "action": "tap",
+          "by": "xpath",
+          "value": "//*[@resource-id='com.google.android.gms:id/account_name' and @text='${TEST_GOOGLE_EMAIL}']/ancestor::*[@resource-id='com.google.android.gms:id/container'][1]"
+        }
+      ],
+      "expected": {
+        "by": "accessibility id",
+        "value": "TỔNG QUAN LỚP HỌC",
+        "attribute": "content-desc",
+        "contains": "TỔNG QUAN LỚP HỌC"
+      }
+    },
+    "TC02_invalid_role": {
+      "clearAppData": true,
+      "steps": [
+        {
+          "action": "tap",
+          "by": "accessibility id",
+          "value": "Đăng nhập bằng Google"
+        },
+        {
+          "action": "tap",
+          "by": "xpath",
+          "value": "//*[@resource-id='com.google.android.gms:id/account_name' and @text='${TEST_INVALID_ROLE_EMAIL}']/ancestor::*[@resource-id='com.google.android.gms:id/container'][1]"
+        }
+      ],
+      "expected": {
+        "by": "accessibility id",
+        "value": "Tài khoản này không có quyền giảng viên. Sinh viên điểm danh bằng cách quét mã QR của giảng viên.",
+        "attribute": "content-desc",
+        "contains": "không có quyền giảng viên"
+      }
+    }
+  }
+}

@@ -5,7 +5,6 @@
 export const STALE_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
   'messaging/invalid-registration-token',
-  'messaging/invalid-argument',
 ]);
 
 /** Id tài liệu an toàn (Firestore cấm '/', giới hạn độ dài). */
@@ -46,19 +45,22 @@ export async function pushToUser(deps, uid, { title, body, data = {} }) {
   if (tokens.length === 0) return result;
 
   const stringData = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v ?? '')]));
-  const response = await deps.messaging.sendEachForMulticast({
-    tokens: tokens.map((t) => t.token),
-    notification: { title, body },
-    data: stringData,
-    android: { priority: 'high' },
-  });
-  await Promise.all(response.responses.map(async (r, i) => {
-    if (r.success) { result.sent++; return; }
-    result.failed++;
-    if (STALE_TOKEN_CODES.has(r.error?.code)) {
-      await tokens[i].ref.delete().catch(() => {});
-      result.removed++;
-    }
-  }));
+  // FCM accepts at most 500 tokens per multicast request.
+  for (let offset = 0; offset < tokens.length; offset += 500) {
+    const chunk = tokens.slice(offset, offset + 500);
+    const response = await deps.messaging.sendEachForMulticast({
+      tokens: chunk.map((t) => t.token),
+      notification: { title, body }, data: stringData,
+      android: { priority: 'high' },
+    });
+    await Promise.all(response.responses.map(async (r, i) => {
+      if (r.success) { result.sent++; return; }
+      result.failed++;
+      if (STALE_TOKEN_CODES.has(r.error?.code)) {
+        try { await chunk[i].ref.delete(); result.removed++; }
+        catch (error) { deps.log?.('token cleanup failed', error); }
+      }
+    }));
+  }
   return result;
 }
