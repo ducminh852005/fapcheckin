@@ -73,6 +73,9 @@ ui-debug.log
 # Node (firebase/, firebase/functions/, e2e_test/)
 node_modules/
 
+# Python virtual environments (e2e_test/)
+.venv/
+
 # Package nội bộ không cần khóa phiên bản riêng
 packages/core/pubspec.lock
 
