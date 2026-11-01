@@ -56,12 +56,15 @@ export async function runScan(deps, { uid, storagePath }) {
     if (!ALLOWED_MIME.includes(String(meta.contentType).toLowerCase())) {
       throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Chỉ hỗ trợ ảnh JPG, PNG, GIF hoặc BMP.');
     }
-    if (Number(meta.size) > MAX_FILE_BYTES) {
+    if (!Number.isFinite(Number(meta.size)) || Number(meta.size) <= 0 || Number(meta.size) > MAX_FILE_BYTES) {
       throw new ScanError('invalid-argument', 'IMAGE_TOO_LARGE', 'Ảnh vượt quá 10 MB. Vui lòng cắt gọn hoặc nén ảnh rồi thử lại.');
     }
     const [bytes] = await file.download();
     if (!bytes?.length) throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Ảnh thời khóa biểu đang trống.');
 
+    if (bytes.length > MAX_FILE_BYTES) {
+      throw new ScanError('invalid-argument', 'IMAGE_TOO_LARGE', 'Ảnh vượt quá 10 MB.');
+    }
     let extracted = '';
     try {
       const [result] = await vision.documentTextDetection({ image: { content: bytes } });
