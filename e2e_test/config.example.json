@@ -1,0 +1,25 @@
+{
+  "server": "http://127.0.0.1:4723",
+  "capabilities": {
+    "platformName": "Android",
+    "appium:automationName": "UiAutomator2",
+    "appium:udid": "REPLACE_WITH_ADB_SERIAL",
+    "appium:app": "REPLACE_WITH_ABSOLUTE_APK"
+  },
+  "flows": {
+    "TC01_google_signin": {
+      "steps": [
+        {
+          "action": "tap",
+          "by": "accessibility id",
+          "value": "REPLACE_WITH_VERIFIED_GOOGLE_BUTTON"
+        }
+      ],
+      "expected": {
+        "by": "accessibility id",
+        "value": "REPLACE_WITH_VERIFIED_DASHBOARD",
+        "text": "REPLACE_WITH_EXPECTED_TEXT"
+      }
+    }
+  }
+}
