@@ -23,4 +23,4 @@ Chưa thực hiện phiên tương tác 15–30 phút. Static review không đư
 Charter đề xuất 20 phút: 0–5 phút login/role/cancel; 5–10 phút mở/đóng/QR hết hạn; 10–15 phút offline, empty và retry; 15–20 phút export, thông báo và đổi tài khoản. Ghi start/end, device/build, từng thao tác, kết quả, screenshot và bug ID.
 
 ## Đánh giá và phần còn thiếu
-Chưa đạt Definition of Done. Đã có branch và ba commit sửa finding. Còn cần Android chạy thật 10 case ×3, exploratory, commit bộ QA/tài liệu, final report PDF theo mẫu trường, slide PDF và video 8–12 phút. Chưa nhận mẫu trường hoặc minh chứng từ TV1–TV4. Không tạo video/link/số liệu giả.
+Chưa đạt phạm vi TV5 đã thống nhất. Đã có branch và ba commit sửa finding. Còn cần Android chạy thật 10 case ×3, exploratory, commit minh chứng QA, final report PDF theo mẫu trường và slide PDF. Phần quay video đã được loại khỏi phạm vi theo quyết định ngày 01/11/2026. Chưa nhận mẫu trường hoặc minh chứng từ TV1–TV4.
