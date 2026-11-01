@@ -1,3 +1,6 @@
+import os
+from string import Template
+
 import pytest
 
 CASES = ['TC01_google_signin', 'TC02_invalid_role', 'TC03_create_session',
@@ -17,7 +20,9 @@ def test_android_flow(android, case_id):
     by = {'id': AppiumBy.ID, 'accessibility id': AppiumBy.ACCESSIBILITY_ID, 'xpath': AppiumBy.XPATH}
     wait = WebDriverWait(driver, config.get('timeout', 20))
     for step in flow['steps']:
-        locator = (by[step['by']], step['value'])
+        value = Template(step['value']).safe_substitute(os.environ)
+        assert '${' not in value, f'Missing environment variable in selector: {step["value"]}'
+        locator = (by[step['by']], value)
         action = step['action']
         if action == 'tap': wait.until(EC.element_to_be_clickable(locator)).click()
         elif action == 'type':
@@ -26,4 +31,6 @@ def test_android_flow(android, case_id):
         else: raise ValueError('Unsupported action: ' + action)
     expected = flow['expected']
     el = wait.until(EC.visibility_of_element_located((by[expected['by']], expected['value'])))
-    assert expected['text'] in el.text
+    attribute = expected.get('attribute', 'text')
+    actual = el.text if attribute == 'text' else el.get_attribute(attribute)
+    assert expected.get('contains', expected.get('text', '')) in (actual or '')
