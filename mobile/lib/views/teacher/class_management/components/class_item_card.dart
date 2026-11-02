@@ -7,7 +7,7 @@ enum ClassCardStatus { active, next, normal }
 /// - Bên trái: Khối giờ học (Thứ/Hôm nay, Giờ bắt đầu, Số slot)
 /// - Ở giữa: Mã môn, Mã lớp, Tên môn, Giờ chi tiết, Phòng, Sĩ số, Tỉ lệ có mặt
 /// - Bên phải: Badge trạng thái (Đang dạy / Tiếp theo / Mũi tên >)
-/// - Viền cam nổi bật khi đến khung giờ dạy của lớp đó
+/// - Viền cam nổi bật kèm thanh thao tác nhanh khi lớp đang trong ca dạy
 class ClassItemCard extends StatelessWidget {
   final String dayLabel; // "Hôm nay", "Thứ 6", "Thứ 2"
   final String startTime; // "07:30", "12:50"
@@ -16,7 +16,7 @@ class ClassItemCard extends StatelessWidget {
   final String classCode; // "SE1801"
   final String subjectName; // "Lập trình ứng dụng .NET"
   final String timeDetail; // "07:30–09:50 • AL-204 • 32 SV"
-  final String attendanceRate; // "92,5%"
+  final String attendanceRate; // "92.5%" hoặc "0.0%"
   final ClassCardStatus status;
   final String? activeScannedInfo; // "28/32 có mặt"
   final VoidCallback? onOpenCheckin;
@@ -38,31 +38,46 @@ class ClassItemCard extends StatelessWidget {
     this.onTap,
   });
 
+  Color _resolveRateColor(String rateText) {
+    final cleaned = rateText.replaceAll('%', '').replaceAll(',', '.').trim();
+    final val = double.tryParse(cleaned);
+    if (val == null || val <= 0) {
+      return ClassManagementColors.textMuted;
+    }
+    if (val < 80) {
+      return ClassManagementColors.orangePrimary;
+    }
+    return ClassManagementColors.statusGreen;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isActive = status == ClassCardStatus.active;
     final isNext = status == ClassCardStatus.next;
+    final rateColor = _resolveRateColor(attendanceRate);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
+      child: Material(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isActive
-                  ? ClassManagementColors.orangePrimary
-                  : ClassManagementColors.cardBorder,
-              width: isActive ? 1.5 : 1,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isActive
+                    ? ClassManagementColors.orangePrimary
+                    : ClassManagementColors.cardBorder,
+                width: isActive ? 1.5 : 1,
+              ),
+              boxShadow: isActive
+                  ? ClassManagementColors.activeCardShadow
+                  : ClassManagementColors.cardShadow,
             ),
-            boxShadow: isActive
-                ? ClassManagementColors.activeCardShadow
-                : ClassManagementColors.cardShadow,
-          ),
           child: Column(
             children: [
               Row(
@@ -202,8 +217,8 @@ class ClassItemCard extends StatelessWidget {
                               ),
                               TextSpan(
                                 text: attendanceRate,
-                                style: const TextStyle(
-                                  color: ClassManagementColors.statusGreen,
+                                style: TextStyle(
+                                  color: rateColor,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -279,11 +294,64 @@ class ClassItemCard extends StatelessWidget {
                     ),
                 ],
               ),
+              if (isActive && onOpenCheckin != null) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (activeScannedInfo != null)
+                      Flexible(
+                        child: Text(
+                          activeScannedInfo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: ClassManagementColors.textMuted,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox.shrink(),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 38,
+                      child: ElevatedButton.icon(
+                        onPressed: onOpenCheckin,
+                        icon: const Icon(
+                          Icons.qr_code_scanner_rounded,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Điểm danh QR',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ClassManagementColors.orangePrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       ),
+      ),
     );
   }
 }
-

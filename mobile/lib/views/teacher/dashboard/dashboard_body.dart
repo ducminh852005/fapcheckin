@@ -109,8 +109,8 @@ class _DashboardBodyState extends State<DashboardBody> {
                           SizedBox(height: 24),
 
                           // 4. Ca dạy kế tiếp
-                          UpcomingSessionsList(),
-                          SizedBox(height: 36),
+                          const UpcomingSessionsList(),
+                          SizedBox(height: context.isMobile ? 108 : 36),
                         ],
                       ),
                     ),

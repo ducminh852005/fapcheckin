@@ -90,7 +90,7 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
           horizontalPadding,
           context.isMobile ? 16.0 : 24.0,
           horizontalPadding,
-          context.isMobile ? 32.0 : 40.0,
+          context.isMobile ? 108.0 : 40.0,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -152,60 +152,42 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
     );
   }
 
-  /// 1. Header: Back button + Title + Orange Gear icon
+  /// 1. Header: Back button + Title
   Widget _buildHeader(BuildContext context, DashboardViewModel dashboardVm) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Nút quay lại & Tiêu đề
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            InkWell(
-              onTap: () => dashboardVm.navigate('cai-dat'),
+        InkWell(
+          onTap: () => dashboardVm.navigate('cai-dat'),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: ProfileColors.borderSubtle),
-                  boxShadow: ProfileColors.cardShadow,
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Color(0xFF334155),
-                ),
-              ),
+              border: Border.all(color: ProfileColors.borderSubtle),
+              boxShadow: ProfileColors.cardShadow,
             ),
-            const SizedBox(width: 14),
-            const Text(
-              'Cài đặt & Trợ giúp',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: ProfileColors.textDark,
-                letterSpacing: -0.4,
-              ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 18,
+              color: Color(0xFF334155),
             ),
-          ],
-        ),
-
-        // Icon bánh răng cưa màu cam đặc trưng
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: ProfileColors.orangeLight,
-            borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
-            Icons.settings_rounded,
-            size: 22,
-            color: ProfileColors.orangePrimary,
+        ),
+        const SizedBox(width: 14),
+        const Expanded(
+          child: Text(
+            'Cài đặt & Trợ giúp',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: ProfileColors.textDark,
+              letterSpacing: -0.4,
+            ),
           ),
         ),
       ],

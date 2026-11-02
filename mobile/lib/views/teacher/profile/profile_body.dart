@@ -65,7 +65,7 @@ class ProfileBody extends StatelessWidget {
                 horizontalPadding,
                 context.isMobile ? 16.0 : 24.0,
                 horizontalPadding,
-                context.isMobile ? 32.0 : 40.0,
+                context.isMobile ? 108.0 : 40.0,
               ),
               child: Center(
                 child: ConstrainedBox(

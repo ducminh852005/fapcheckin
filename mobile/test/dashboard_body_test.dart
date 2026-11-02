@@ -59,5 +59,16 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    // Verify Empty State card in UpcomingSessionsList is rendered
+    expect(find.text('Chưa có lớp học được phân công'), findsOneWidget);
+    expect(find.text('Mở Lịch dạy & Quét TKB'), findsOneWidget);
+
+    // Verify WeeklyOverviewCards keeps 0.0% and navigates to lich-su-diem-danh on tap
+    expect(find.text('Chuyên cần'), findsOneWidget);
+    expect(find.text('0.0%'), findsOneWidget);
+    await tester.tap(find.text('Lịch sử'));
+    await tester.pump();
+    expect(dashboardVm.currentRoute, 'lich-su-diem-danh');
   });
 }

@@ -16,8 +16,8 @@ class SubjectAttendanceSummary {
 }
 
 /// Thẻ "Tổng hợp theo môn":
-/// - Danh sách các môn giảng dạy kèm số lượt điểm danh, tỷ lệ % màu xanh lá
-/// - Thanh tiến độ ngang màu cam
+/// - Danh sách các môn giảng dạy kèm số lượt điểm danh, tỷ lệ % theo ngưỡng chuyên cần
+/// - Thanh tiến độ ngang đồng bộ màu trạng thái
 class ReportSubjectSummary extends StatelessWidget {
   final List<SubjectAttendanceSummary> subjects;
 
@@ -73,10 +73,22 @@ class ReportSubjectSummary extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          for (int i = 0; i < subjects.length; i++) ...[
-            if (i > 0) const SizedBox(height: 14),
-            _SubjectItem(summary: subjects[i]),
-          ],
+          if (subjects.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Chưa có dữ liệu môn học trong phạm vi đã chọn.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: ReportColors.textMuted,
+                ),
+              ),
+            )
+          else
+            for (int i = 0; i < subjects.length; i++) ...[
+              if (i > 0) const SizedBox(height: 14),
+              _SubjectItem(summary: subjects[i]),
+            ],
         ],
       ),
     );
@@ -90,59 +102,71 @@ class _SubjectItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isZero = summary.rate <= 0;
+    final isWarning = summary.rate > 0 && summary.rate < 0.8;
+    final rateColor = isZero
+        ? ReportColors.textMuted
+        : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
+    final barColor = isZero
+        ? const Color(0xFFCBD5E1)
+        : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              summary.code,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: ReportColors.textDark,
-              ),
-            ),
-            const SizedBox(width: 8),
             Expanded(
-              child: FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  summary.checkinCountText,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: ReportColors.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
+              child: Text(
+                summary.code,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: ReportColors.textDark,
+                  height: 1.25,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Text(
               summary.rateText,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: ReportColors.statusGreen,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: rateColor,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: summary.rate.clamp(0.0, 1.0),
-            minHeight: 5,
-            backgroundColor: const Color(0xFFF1F5F9),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              ReportColors.orangePrimary,
+        const SizedBox(height: 5),
+        Row(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: summary.rate.clamp(0.0, 1.0),
+                  minHeight: 5,
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Text(
+              summary.checkinCountText,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: ReportColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
-

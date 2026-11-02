@@ -259,63 +259,48 @@ class ActiveSessionCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 2 nút thao tác chính: [Mở Live QR] và [Điểm danh tay]
+          // 2 nút thao tác chính: [Mở điểm danh QR] và [Điểm danh tay]
           Row(
             children: [
-              // Nút 1: Mở Live QR (Chính - Cam nổi bật)
+              // Nút 1: Mở điểm danh QR (Chính - Cam nổi bật)
               Expanded(
                 flex: 6,
-                child: InkWell(
-                  onTap: () async {
-                    final ok = await startSessionWithOptions(
-                      context,
-                      classSection: activeClass!,
-                      slotCode: activeClass.slotCode,
-                    );
-                    if (context.mounted && ok) {
-                      dashboardVm.navigate('diem-danh-qr');
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      gradient: DashboardColors.primaryButtonGradient,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: DashboardColors.orangePrimary.withValues(
-                            alpha: 0.28,
-                          ),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final ok = await startSessionWithOptions(
+                        context,
+                        classSection: activeClass!,
+                        slotCode: activeClass.slotCode,
+                      );
+                      if (context.mounted && ok) {
+                        dashboardVm.navigate('diem-danh-qr');
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
-                    child: const Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.qr_code_scanner_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Mở Live QR',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
+                    label: const Text(
+                      'Mở điểm danh QR',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: DashboardColors.orangePrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      shadowColor:
+                          DashboardColors.orangePrimary.withValues(alpha: 0.28),
                     ),
                   ),
                 ),
@@ -325,51 +310,42 @@ class ActiveSessionCard extends StatelessWidget {
               // Nút 2: Điểm danh tay (Phụ - Viền xám)
               Expanded(
                 flex: 5,
-                child: InkWell(
-                  onTap: () async {
-                    final ok = await startSessionWithOptions(
-                      context,
-                      classSection: activeClass!,
-                      slotCode: activeClass.slotCode,
-                    );
-                    if (context.mounted && ok) {
-                      await ManualAttendanceBottomSheet.show(context);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1.2,
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await startSessionWithOptions(
+                        context,
+                        classSection: activeClass!,
+                        slotCode: activeClass.slotCode,
+                      );
+                      if (context.mounted && ok) {
+                        await ManualAttendanceBottomSheet.show(context);
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.how_to_reg_outlined,
+                      color: DashboardColors.textBody,
+                      size: 20,
+                    ),
+                    label: const Text(
+                      'Điểm danh tay',
+                      style: TextStyle(
+                        color: DashboardColors.textDark,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    child: const Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.how_to_reg_outlined,
-                              color: DashboardColors.textBody,
-                              size: 20,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Điểm danh tay',
-                              style: TextStyle(
-                                color: DashboardColors.textDark,
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: DashboardColors.textDark,
+                      side: const BorderSide(
+                        color: Color(0xFFE2E8F0),
+                        width: 1.2,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),

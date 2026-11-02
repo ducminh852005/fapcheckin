@@ -31,33 +31,174 @@ class LiveSessionBody extends StatelessWidget {
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
     if (liveVm.session == null || liveVm.isClosed) {
-      return ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Text(
-            'Chọn lớp để mở điểm danh',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      return Scaffold(
+        backgroundColor: LiveSessionColors.pageBg,
+        body: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            context.isMobile ? 16.0 : 24.0,
+            horizontalPadding,
+            context.isMobile ? 108.0 : 40.0,
           ),
-          if (liveVm.isLoading) const LinearProgressIndicator(),
-          if (liveVm.errorMessage != null) Text(liveVm.errorMessage!),
-          if (dashboardVm.classes.isEmpty)
-            const Text('Chưa có lớp được phân công.'),
-          for (final c in dashboardVm.classes)
-            ListTile(
-              title: Text('${c.subjectCode} · ${c.classCode}'),
-              subtitle: Text('${c.timeLabel} · ${c.room}'),
-              trailing: const Icon(Icons.qr_code),
-              onTap: liveVm.isLoading
-                  ? null
-                  : () async {
-                      await startSessionWithOptions(
-                        context,
-                        classSection: c,
-                        slotCode: c.slotCode,
-                      );
-                    },
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => dashboardVm.navigate('lich-hoc'),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: LiveSessionColors.borderSubtle,
+                            ),
+                            boxShadow: LiveSessionColors.cardShadow,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 17,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Chọn lớp để mở điểm danh',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: LiveSessionColors.textDark,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (liveVm.isLoading) const LinearProgressIndicator(),
+                  if (liveVm.errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      liveVm.errorMessage!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
+                  ],
+                  if (dashboardVm.classes.isEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 28,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: LiveSessionColors.borderSubtle,
+                        ),
+                        boxShadow: LiveSessionColors.cardShadow,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: LiveSessionColors.orangeLight,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.qr_code_scanner_rounded,
+                              color: LiveSessionColors.orangePrimary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Chưa có lớp được phân công.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              color: LiveSessionColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Hãy quét thời khóa biểu FAP trong mục Lịch dạy để chọn lớp mở phiên QR.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: LiveSessionColors.textMuted,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    for (final c in dashboardVm.classes)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: LiveSessionColors.borderSubtle,
+                          ),
+                          boxShadow: LiveSessionColors.cardShadow,
+                        ),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: Text(
+                            '${c.subjectCode} · ${c.classCode}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: LiveSessionColors.textDark,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${c.timeLabel} · ${c.room}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: LiveSessionColors.textMuted,
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.qr_code_rounded,
+                            color: LiveSessionColors.orangePrimary,
+                          ),
+                          onTap: liveVm.isLoading
+                              ? null
+                              : () async {
+                                  await startSessionWithOptions(
+                                    context,
+                                    classSection: c,
+                                    slotCode: c.slotCode,
+                                  );
+                                },
+                        ),
+                      ),
+                ],
+              ),
             ),
-        ],
+          ),
+        ),
       );
     }
     final classTitle =
@@ -95,7 +236,7 @@ class LiveSessionBody extends StatelessWidget {
           horizontalPadding,
           context.isMobile ? 16.0 : 24.0,
           horizontalPadding,
-          context.isMobile ? 32.0 : 40.0,
+          context.isMobile ? 108.0 : 40.0,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -114,6 +255,7 @@ class LiveSessionBody extends StatelessWidget {
                   sessionSubtitle: 'Ca ${liveVm.slot} · ${liveVm.dateLabel}',
                   classTitle: classTitle,
                   timeAndRoom: timeAndRoom,
+                  onBackTap: () => dashboardVm.navigate('lich-hoc'),
                   onMoreTap: () => _showMoreOptions(context, dashboardVm),
                 ),
                 const SizedBox(height: 16),
@@ -218,6 +360,40 @@ class LiveSessionBody extends StatelessWidget {
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dCtx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      title: const Text(
+                        'Đóng phiên điểm danh?',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      content: const Text(
+                        'Sau khi đóng phiên, sinh viên sẽ không thể tiếp tục quét mã QR của buổi học này.',
+                        style: TextStyle(fontSize: 13.5, height: 1.4),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dCtx, false),
+                          child: const Text('Hủy'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(dCtx, true),
+                          child: const Text('Đóng phiên'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true || !context.mounted) return;
                   final ok = await context
                       .read<LiveSessionViewModel>()
                       .closeCurrentSession();

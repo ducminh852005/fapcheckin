@@ -72,15 +72,20 @@ class LiveSessionQrCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              InkWell(
-                onTap: onFullscreen,
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.crop_free_rounded,
-                    size: 20,
-                    color: LiveSessionColors.textMuted,
+              Tooltip(
+                message: 'Trình chiếu toàn màn hình',
+                child: InkWell(
+                  onTap: onFullscreen,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.crop_free_rounded,
+                      size: 22,
+                      color: LiveSessionColors.textDark,
+                    ),
                   ),
                 ),
               ),
@@ -199,15 +204,20 @@ class LiveSessionQrCard extends StatelessWidget {
                 ),
 
                 // Nút xoay làm mới ngay
-                InkWell(
-                  onTap: onRefresh,
-                  borderRadius: BorderRadius.circular(10),
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.refresh_rounded,
-                      size: 22,
-                      color: LiveSessionColors.textMuted,
+                Tooltip(
+                  message: 'Làm mới mã QR ngay',
+                  child: InkWell(
+                    onTap: onRefresh,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.refresh_rounded,
+                        size: 24,
+                        color: LiveSessionColors.orangePrimary,
+                      ),
                     ),
                   ),
                 ),

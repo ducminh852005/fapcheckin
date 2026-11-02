@@ -119,16 +119,108 @@ class UpcomingSessionsList extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // Danh sách các ca học
-        Column(
-          children: [
-            for (int i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(height: 10),
-              _buildSessionCard(context, items[i], dashboardVm),
+        // Danh sách các ca học hoặc Empty State
+        if (items.isEmpty)
+          _buildEmptyState(context, dashboardVm)
+        else
+          Column(
+            children: [
+              for (int i = 0; i < items.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _buildSessionCard(context, items[i], dashboardVm),
+              ],
             ],
-          ],
-        ),
+          ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, DashboardViewModel vm) {
+    final hasNoClasses = vm.classes.isEmpty;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: DashboardColors.cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: DashboardColors.cardBorder, width: 1),
+        boxShadow: DashboardColors.cardShadow,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: DashboardColors.orangeLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              hasNoClasses
+                  ? Icons.calendar_month_outlined
+                  : Icons.event_available_rounded,
+              color: DashboardColors.orangePrimary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hasNoClasses
+                ? 'Chưa có lớp học được phân công'
+                : 'Không còn ca dạy kế tiếp hôm nay',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: DashboardColors.textDark,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            hasNoClasses
+                ? 'Vào mục Lịch dạy để quét thời khóa biểu FAP hoặc kiểm tra lịch phân công.'
+                : 'Bạn đã hoàn thành các ca dạy trong ngày hoặc có thể xem toàn bộ lịch tuần.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: DashboardColors.textMuted,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 38,
+            child: OutlinedButton.icon(
+              onPressed: () => vm.navigate('lich-hoc'),
+              icon: const Icon(
+                Icons.calendar_today_rounded,
+                size: 15,
+                color: DashboardColors.orangePrimary,
+              ),
+              label: Text(
+                hasNoClasses ? 'Mở Lịch dạy & Quét TKB' : 'Xem lịch dạy tuần',
+                style: const TextStyle(
+                  color: DashboardColors.orangePrimary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(
+                  color: Color(0xFFFED7AA),
+                  width: 1.2,
+                ),
+                backgroundColor: const Color(0xFFFFF7ED),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

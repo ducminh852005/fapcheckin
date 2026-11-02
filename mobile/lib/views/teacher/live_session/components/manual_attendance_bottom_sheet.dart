@@ -155,18 +155,23 @@ class _ManualAttendanceBottomSheetState
                   ),
                   InkWell(
                     onTap: () => Navigator.pop(context),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 20,
-                        color: Color(0xFF475569),
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 20,
+                          color: Color(0xFF475569),
+                        ),
                       ),
                     ),
                   ),
@@ -377,83 +382,100 @@ class _ManualAttendanceBottomSheetState
               ),
               const SizedBox(height: 12),
 
-              // Nút xác nhận chính
-              InkWell(
-                onTap: _selectedIds.isEmpty
-                    ? null
-                    : () => _handleConfirmAttendance(context),
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: _selectedIds.isEmpty
-                        ? const Color(0xFFCBD5E1)
-                        : LiveSessionColors.orangePrimary,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: _selectedIds.isEmpty
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: LiveSessionColors.orangePrimary.withValues(
-                                alpha: 0.3,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                  ),
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.check_rounded,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _selectedIds.isEmpty
-                                ? 'Chọn sinh viên để xác nhận'
-                                : 'Xác nhận ${_selectedIds.length} sinh viên có mặt',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+              // Nút xác nhận chính & Hủy (Row ngang nhất quán với các Modal khác trong ứng dụng)
+              Row(
+                children: [
+                  SizedBox(
+                    width: 90,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _saving ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: LiveSessionColors.textDark,
+                        side: const BorderSide(
+                          color: Color(0xFFE2E8F0),
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Hủy',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: LiveSessionColors.textDark,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Nút Hủy
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: LiveSessionColors.borderSubtle),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: LiveSessionColors.textDark,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _selectedIds.isEmpty || _saving
+                            ? null
+                            : () => _handleConfirmAttendance(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: LiveSessionColors.orangePrimary,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(0xFFCBD5E1),
+                          disabledForegroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_saving) ...[
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Đang lưu...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ] else ...[
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _selectedIds.isEmpty
+                                      ? 'Chọn sinh viên để xác nhận'
+                                      : 'Xác nhận ${_selectedIds.length} sinh viên có mặt',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -522,7 +544,7 @@ class _ManualAttendanceBottomSheetState
   bool _saving = false;
   Future<void> _handleConfirmAttendance(BuildContext context) async {
     if (_saving || _selectedIds.isEmpty) return;
-    _saving = true;
+    setState(() => _saving = true);
     final vm = context.read<LiveSessionViewModel>();
     final changes = vm.roster
         .where((r) => _selectedIds.contains(r.rollNumber) && !r.hasCheckedIn)
@@ -535,7 +557,7 @@ class _ManualAttendanceBottomSheetState
         .toList();
     await vm.manualCheckinBulk(changes);
     if (!context.mounted) return;
-    _saving = false;
+    setState(() => _saving = false);
     if (vm.errorMessage != null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(vm.errorMessage!)));

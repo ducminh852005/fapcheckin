@@ -39,22 +39,28 @@ class ProfileHeader extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         // Nút icon răng cưa (Cài đặt & Trợ giúp)
-        InkWell(
-          onTap: onSettings,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
+        Tooltip(
+          message: 'Cài đặt & Trợ giúp',
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: onSettings,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: ProfileColors.borderSubtle),
-              boxShadow: ProfileColors.cardShadow,
-            ),
-            child: const Icon(
-              Icons.settings_outlined,
-              size: 21,
-              color: Color(0xFF334155),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: ProfileColors.borderSubtle),
+                  boxShadow: ProfileColors.cardShadow,
+                ),
+                child: const Icon(
+                  Icons.settings_outlined,
+                  size: 21,
+                  color: Color(0xFF334155),
+                ),
+              ),
             ),
           ),
         ),

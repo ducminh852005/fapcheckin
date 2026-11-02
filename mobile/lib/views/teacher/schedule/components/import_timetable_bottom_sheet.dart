@@ -258,7 +258,7 @@ class _ImportTimetableBottomSheetState
                         ),
                         const SizedBox(height: 3),
                         const Text(
-                          'FAP Student Portal • FPT University',
+                          'FAP Lecturer Portal • FPT University',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -272,18 +272,23 @@ class _ImportTimetableBottomSheetState
                     onTap: _step == _ScanStep.scanning || _step == _ScanStep.importing
                         ? null
                         : () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF1F5F9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: Color(0xFF64748B),
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF1F5F9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                     ),
                   ),
@@ -373,7 +378,7 @@ class _ImportTimetableBottomSheetState
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEA580C),
+                            backgroundColor: const Color(0xFFFA5A1E),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(

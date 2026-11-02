@@ -54,38 +54,79 @@ class LiveSessionNetworkCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Segmented switch Tắt / Bật
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
+              // Nếu onToggle != null hiển thị switch tương tác; nếu chỉ đọc (trong phiên đang mở) hiển thị badge trạng thái rõ ràng
+              if (onToggle != null)
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _SwitchSegment(
+                        title: 'Tắt',
+                        isSelected: !isEnforced,
+                        onTap: () => onToggle?.call(false),
+                      ),
+                      _SwitchSegment(
+                        title: 'Bật',
+                        isSelected: isEnforced,
+                        onTap: () => onToggle?.call(true),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isEnforced
+                        ? LiveSessionColors.orangeLight
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isEnforced
+                            ? Icons.lock_outline_rounded
+                            : Icons.lock_open_rounded,
+                        size: 13,
+                        color: isEnforced
+                            ? LiveSessionColors.orangePrimary
+                            : LiveSessionColors.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isEnforced ? 'Đang bật' : 'Đang tắt',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: isEnforced
+                              ? LiveSessionColors.orangePrimary
+                              : LiveSessionColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                padding: const EdgeInsets.all(3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _SwitchSegment(
-                      title: 'Tắt',
-                      isSelected: !isEnforced,
-                      onTap: () => onToggle?.call(false),
-                    ),
-                    _SwitchSegment(
-                      title: 'Bật',
-                      isSelected: isEnforced,
-                      onTap: () => onToggle?.call(true),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 8),
-          const FittedBox(
+          FittedBox(
             alignment: Alignment.centerLeft,
             fit: BoxFit.scaleDown,
             child: Text(
-              'Sinh viên cần dùng cùng IP công khai với giảng viên',
-              style: TextStyle(
+              isEnforced
+                  ? 'Sinh viên cần dùng cùng IP công khai với giảng viên (cố định trong phiên)'
+                  : 'Không giới hạn IP mạng trong phiên điểm danh này',
+              style: const TextStyle(
                 fontSize: 11,
                 color: LiveSessionColors.textMuted,
                 fontWeight: FontWeight.w500,
@@ -111,10 +152,11 @@ class _SwitchSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected
               ? LiveSessionColors.orangePrimary
@@ -135,7 +177,7 @@ class _SwitchSegment extends StatelessWidget {
         child: Text(
           title,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 12.5,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? Colors.white : LiveSessionColors.textMuted,
           ),

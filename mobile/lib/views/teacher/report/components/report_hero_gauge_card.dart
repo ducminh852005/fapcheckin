@@ -27,6 +27,12 @@ class ReportHeroGaugeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isZero = attendanceRate <= 0;
+    final isWarning = attendanceRate > 0 && attendanceRate < 80;
+    final semanticAccent = isZero
+        ? ReportColors.textMuted
+        : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -61,8 +67,10 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   size: const Size(96, 96),
                   painter: _GaugePainter(
                     percentage: (attendanceRate / 100.0).clamp(0.0, 1.0),
-                    trackColor: const Color(0xFFFFF0EB),
-                    progressColor: ReportColors.orangePrimary,
+                    trackColor: const Color(0xFFF1F5F9),
+                    progressColor: isZero
+                        ? ReportColors.textSubtle
+                        : ReportColors.orangePrimary,
                     strokeWidth: 9.0,
                   ),
                 ),
@@ -73,8 +81,10 @@ class ReportHeroGaugeCard extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         attendanceRateText,
-                        style: const TextStyle(
-                          color: ReportColors.textDark,
+                        style: TextStyle(
+                          color: isZero
+                              ? ReportColors.textMuted
+                              : ReportColors.textDark,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
@@ -82,10 +92,12 @@ class ReportHeroGaugeCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 1),
-                    const Text(
+                    Text(
                       'CÓ MẶT',
                       style: TextStyle(
-                        color: ReportColors.orangePrimary,
+                        color: isZero
+                            ? ReportColors.textSubtle
+                            : ReportColors.orangePrimary,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
@@ -134,8 +146,8 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     trendText,
-                    style: const TextStyle(
-                      color: ReportColors.statusGreen,
+                    style: TextStyle(
+                      color: semanticAccent,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),

@@ -20,10 +20,14 @@ class WeeklyOverviewCards extends StatelessWidget {
         ? dashboardVm.totalStudents
         : 0;
 
-    // Tỉ lệ chuyên cần
-    final attendanceRate = dashboardVm.avgAttendance > 0
-        ? '${(dashboardVm.avgAttendance * 100).toStringAsFixed(1)}%'
-        : '—';
+    // Tỉ lệ chuyên cần (giữ 0.0% khi chưa có dữ liệu điểm danh)
+    final rateValue = dashboardVm.avgAttendance * 100;
+    final attendanceRate = '${rateValue.toStringAsFixed(1)}%';
+    final rateColor = rateValue <= 0
+        ? DashboardColors.textMuted
+        : (rateValue < 80
+              ? DashboardColors.orangePrimary
+              : DashboardColors.statusGreen);
 
     // Giờ cập nhật hiện tại (format HH:mm)
     final now = DateTime.now();
@@ -148,74 +152,92 @@ class WeeklyOverviewCards extends StatelessWidget {
             ),
             const SizedBox(width: 10),
 
-            // Thẻ 2: Chuyên cần TB
+            // Thẻ 2: Chuyên cần (nhấn để mở Lịch sử điểm danh)
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: DashboardColors.cardBg,
+              child: Material(
+                color: DashboardColors.cardBg,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: () => dashboardVm.navigate('lich-su-diem-danh'),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: DashboardColors.cardBorder,
-                    width: 1,
-                  ),
-                  boxShadow: DashboardColors.cardShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: DashboardColors.cardBorder,
+                        width: 1,
+                      ),
+                      boxShadow: DashboardColors.cardShadow,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Flexible(
-                          child: Text(
-                            'Chuyên cần TB',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: DashboardColors.textMuted,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Flexible(
+                              child: Text(
+                                'Chuyên cần',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: DashboardColors.textMuted,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            // Chip điều hướng Lịch sử
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DashboardColors.orangeLight,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Lịch sử',
+                                    style: TextStyle(
+                                      color: DashboardColors.orangePrimary,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 1),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 12,
+                                    color: DashboardColors.orangePrimary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        // Badge tăng trưởng xanh lá +2.3%
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: DashboardColors.statusGreenBg,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            'Lịch sử',
+                        const SizedBox(height: 10),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            attendanceRate,
                             style: TextStyle(
-                              color: DashboardColors.statusGreen,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
+                              color: rateColor,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        attendanceRate,
-                        style: const TextStyle(
-                          color: DashboardColors.orangePrimary,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

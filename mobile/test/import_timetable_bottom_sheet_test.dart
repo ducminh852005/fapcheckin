@@ -41,7 +41,7 @@ void main() {
     // 1. Header elements
     expect(find.text('Quét thời khóa biểu'), findsOneWidget);
     expect(find.text('AI OCR'), findsOneWidget);
-    expect(find.text('FAP Student Portal • FPT University'), findsOneWidget);
+    expect(find.text('FAP Lecturer Portal • FPT University'), findsOneWidget);
     expect(find.byIcon(Icons.document_scanner_rounded), findsOneWidget);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
