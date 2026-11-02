@@ -58,7 +58,7 @@ class AuthViewModel extends ChangeNotifier {
       _status = ViewStatus.idle;
       if (result is ApiSuccess<AuthSessionModel?>) {
         final data = result.data;
-        if (data != null && data.user.isTeacher) {
+        if (data != null && (data.user.isTeacher || data.user.role == 'user')) {
           _session = data;
           _status = ViewStatus.success;
         } else if (data != null) {
@@ -129,9 +129,9 @@ class AuthViewModel extends ChangeNotifier {
 
     if (result is ApiSuccess<AuthSessionModel>) {
       final data = result.data;
-      if (!data.user.isTeacher) {
+      if (!data.user.isTeacher && data.user.role != 'user') {
         _status = ViewStatus.error;
-        _errorMessage = 'Tài khoản này không có quyền giảng viên. Sinh viên điểm danh bằng cách quét mã QR của giảng viên.';
+        _errorMessage = 'Tài khoản này không có quyền sử dụng ứng dụng.';
         await _repository.signOut();
         notifyListeners();
         return false;

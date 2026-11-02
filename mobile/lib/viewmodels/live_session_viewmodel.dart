@@ -631,7 +631,6 @@ class LiveSessionViewModel extends ChangeNotifier {
       return true;
     }
 
-    _stopPolling();
     final generation = _generation;
     final sId = _session!.sessionId;
     _status = ViewStatus.loading;
@@ -711,8 +710,41 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 
+  StreamSubscription<SessionModel?>? _sessionSubscription;
+
   void _startPolling() {
     _stopPolling();
+    final generation = _generation;
+    final id = _session?.sessionId;
+    if (id != null) {
+      _sessionSubscription = _repository
+          .watchSession(id)
+          .listen(
+            (session) {
+              if (_disposed ||
+                  generation != _generation ||
+                  _session?.sessionId != id) {
+                return;
+              }
+              if (session == null) {
+                resetSession();
+                return;
+              }
+              _session = session;
+              if (!session.isOpen) {
+                _pollTimer?.cancel();
+                _pollTimer = null;
+                loadRoster();
+              }
+              notifyListeners();
+            },
+            onError: (Object error) {
+              if (_disposed || generation != _generation) return;
+              _errorMessage = 'Không thể cập nhật phiên: $error';
+              notifyListeners();
+            },
+          );
+    }
     // Initial load
     loadRoster();
     _pollTimer = Timer.periodic(_pollInterval, (_) {
@@ -721,6 +753,8 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   void _stopPolling() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = null;
     _pollTimer?.cancel();
     _pollTimer = null;
   }

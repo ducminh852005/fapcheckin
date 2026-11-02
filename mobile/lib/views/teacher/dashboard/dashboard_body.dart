@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../viewmodels/live_session_viewmodel.dart' show ViewStatus;
 import 'dashboard_colors.dart';
 import 'components/dashboard_header.dart';
 import 'components/active_session_card.dart';
@@ -23,50 +24,16 @@ class DashboardBody extends StatefulWidget {
 }
 
 class _DashboardBodyState extends State<DashboardBody> {
-  bool _hasShownEmptyToast = false;
-
-  void _checkAndShowEmptyToast(DashboardViewModel dashboardVm) {
-    if (!_hasShownEmptyToast &&
-        !dashboardVm.isLoading &&
-        dashboardVm.classes.isEmpty) {
-      _hasShownEmptyToast = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Chưa có lớp được phân công.'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      });
-    } else if (dashboardVm.classes.isNotEmpty) {
-      _hasShownEmptyToast = false;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final dashboardVm = context.watch<DashboardViewModel>();
-    _checkAndShowEmptyToast(dashboardVm);
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
     return Scaffold(
       backgroundColor: DashboardColors.pageBg,
       body: RefreshIndicator(
         color: DashboardColors.orangePrimary,
-        onRefresh: () async {
-          await dashboardVm.loadClasses();
-          if (mounted && dashboardVm.classes.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Chưa có lớp được phân công.'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-        },
+        onRefresh: dashboardVm.loadClasses,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Stack(
@@ -100,16 +67,44 @@ class _DashboardBodyState extends State<DashboardBody> {
                           DashboardHeader(),
                           SizedBox(height: 18),
 
-                          // 2. Ca đang diễn ra
-                          ActiveSessionCard(),
-                          SizedBox(height: 24),
+                          if (dashboardVm.errorMessage != null)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    const Icon(Icons.wifi_off),
+                                    const Text(
+                                      'Không tải được dữ liệu. Kiểm tra kết nối mạng và thử lại.',
+                                    ),
+                                    Text(dashboardVm.errorMessage!),
+                                    TextButton(
+                                      onPressed: dashboardVm.loadClasses,
+                                      child: const Text('Thử lại'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (dashboardVm.status == ViewStatus.success &&
+                              dashboardVm.classes.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text('Chưa có lớp được phân công.'),
+                            ),
+                          if (dashboardVm.status == ViewStatus.success ||
+                              dashboardVm.classes.isNotEmpty) ...[
+                            // 2. Ca đang diễn ra
+                            ActiveSessionCard(),
+                            SizedBox(height: 24),
 
-                          // 3. Tổng quan tuần này
-                          WeeklyOverviewCards(),
-                          SizedBox(height: 24),
+                            // 3. Tổng quan tuần này
+                            WeeklyOverviewCards(),
+                            SizedBox(height: 24),
 
-                          // 4. Ca dạy kế tiếp
-                          const UpcomingSessionsList(),
+                            // 4. Ca dạy kế tiếp
+                            const UpcomingSessionsList(),
+                          ],
                           SizedBox(height: context.isMobile ? 108 : 36),
                         ],
                       ),

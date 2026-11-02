@@ -201,7 +201,7 @@ class _NotificationModalState extends State<NotificationModal> {
             child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _stream,
           builder: (context, snapshot) {
-            final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+            final rows = [...?snapshot.data]..sort((a, b) => (b['pinToTop'] == true ? 1 : 0).compareTo(a['pinToTop'] == true ? 1 : 0));
             final unreadCount = rows
                 .asMap()
                 .entries

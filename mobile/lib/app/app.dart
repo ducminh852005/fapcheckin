@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -101,8 +102,8 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         .then((settings) {
           if (mounted) {
             _liveSessionViewModel.applyRemoteSettings(
-              qrCycleSeconds: settings.qrRefreshSeconds,
-              ipCheckDefault: settings.ipCheckDefault,
+              qrCycleSeconds: (_systemSettings['qrRefreshRate'] as num?)?.toInt() ?? settings.qrRefreshSeconds,
+              ipCheckDefault: _systemSettings['requireCampusIp'] as bool? ?? settings.ipCheckDefault,
             );
           }
         })
@@ -111,6 +112,8 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         });
   }
 
+  StreamSubscription<Map<String, dynamic>>? _systemSettingsSubscription;
+  Map<String, dynamic> _systemSettings = {};
   String? _accountId;
   String? _liveSessionKey;
   void _syncLiveSession() {
@@ -127,6 +130,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     if (_liveSessionKey != key) {
       _liveSessionKey = key;
       if (_accountId != null) _dashboardViewModel.loadClasses();
+      if (_accountId != null) _attendanceHistoryViewModel.refreshSummary();
     }
   }
 
@@ -134,23 +138,39 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     final session = _authViewModel.session;
     if (_accountId != session?.token) {
       _accountId = session?.token;
+      _systemSettingsSubscription?.cancel();
+      _systemSettings = {};
+      if (session != null) {
+        final uid = session.token;
+        _systemSettingsSubscription = _accountFeaturesRepo.systemSettings().listen((data) {
+          if (!mounted || _accountId != uid) return;
+          _systemSettings = data;
+          _liveSessionViewModel.applyRemoteSettings(
+            qrCycleSeconds: data['qrRefreshRate'] is num ? (data['qrRefreshRate'] as num).toInt() : null,
+            ipCheckDefault: data['requireCampusIp'] is bool ? data['requireCampusIp'] as bool : null,
+          );
+        }, onError: (Object error) { debugPrint('Không cập nhật được cấu hình hệ thống: $error'); });
+      }
       _dashboardViewModel.clearTeacherInfo();
       _liveSessionViewModel.resetSession();
       _reportViewModel.reset();
     }
-    if (session != null) {
+    if (session != null && session.user.isTeacher) {
       _dashboardViewModel.setTeacherInfo(
         name: session.user.fullName,
         email: session.user.email,
         memberCode: session.user.memberCode,
       );
     }
-    _attendanceHistoryViewModel.bindAccount(_authViewModel.session?.token);
+    _attendanceHistoryViewModel.bindAccount(
+      session?.user.isTeacher == true ? session?.token : null,
+    );
     _preferencesViewModel.bindAccount(_authViewModel.session?.token);
   }
 
   @override
   void dispose() {
+    _systemSettingsSubscription?.cancel();
     _authViewModel.removeListener(_syncHistoryAccount);
     _liveSessionViewModel.removeListener(_syncLiveSession);
     _router.dispose();
