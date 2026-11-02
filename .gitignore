@@ -26,16 +26,26 @@ migrate_working_dir/
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
+**/flutter/ephemeral/
+**/.plugin_symlinks/
 .dart_tool/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+**/build/
 
-# Local OAuth credentials used for desktop builds
+# Accidental Flutter scaffold generated at the monorepo root.
+# The maintained Flutter application lives under mobile/.
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+
+# Local OAuth credentials used for desktop builds (đặt trong mobile/)
 desktop_oauth.json
 desktop_oauth.local.json
-/coverage/
+**/coverage/
 
 # Symbolication related
 app.*.symbols
@@ -44,9 +54,9 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+/mobile/android/app/debug
+/mobile/android/app/profile
+/mobile/android/app/release
 
 # Widget Preview related
 .widget_preview/
@@ -57,6 +67,15 @@ docs/assets/*
 .firebase/
 firebase-debug.log*
 firestore-debug.log
+ui-debug.log
+*-debug.log
+
+# Node (firebase/, firebase/functions/, e2e_test/)
+node_modules/
+
+# Package nội bộ không cần khóa phiên bản riêng
+packages/core/pubspec.lock
+
 
 # GCP service account keys
 *-[0-9a-f]*.json.key
