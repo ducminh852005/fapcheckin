@@ -15,12 +15,40 @@ import 'components/upcoming_sessions_list.dart';
 /// 2. Ca đang diễn ra (ActiveSessionCard - Tiến độ & Thao tác nhanh)
 /// 3. Tổng quan tuần này (WeeklyOverviewCards - Lớp phụ trách & Chuyên cần)
 /// 4. Ca dạy kế tiếp (UpcomingSessionsList - Danh sách ca học tiếp theo)
-class DashboardBody extends StatelessWidget {
+class DashboardBody extends StatefulWidget {
   const DashboardBody({super.key});
+
+  @override
+  State<DashboardBody> createState() => _DashboardBodyState();
+}
+
+class _DashboardBodyState extends State<DashboardBody> {
+  bool _hasShownEmptyToast = false;
+
+  void _checkAndShowEmptyToast(DashboardViewModel dashboardVm) {
+    if (!_hasShownEmptyToast &&
+        !dashboardVm.isLoading &&
+        dashboardVm.classes.isEmpty) {
+      _hasShownEmptyToast = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa có lớp được phân công.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    } else if (dashboardVm.classes.isNotEmpty) {
+      _hasShownEmptyToast = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final dashboardVm = context.watch<DashboardViewModel>();
+    _checkAndShowEmptyToast(dashboardVm);
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
     return Scaffold(
@@ -29,6 +57,15 @@ class DashboardBody extends StatelessWidget {
         color: DashboardColors.orangePrimary,
         onRefresh: () async {
           await dashboardVm.loadClasses();
+          if (mounted && dashboardVm.classes.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Chưa có lớp được phân công.'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -59,11 +96,6 @@ class DashboardBody extends StatelessWidget {
                         children: [
                           if (dashboardVm.isLoading)
                             const LinearProgressIndicator(),
-                          if (dashboardVm.errorMessage != null)
-                            Text(dashboardVm.errorMessage!),
-                          if (!dashboardVm.isLoading &&
-                              dashboardVm.classes.isEmpty)
-                            const Text('Chưa có lớp được phân công.'),
                           // 1. Header
                           DashboardHeader(),
                           SizedBox(height: 18),

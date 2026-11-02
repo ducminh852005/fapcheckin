@@ -4,6 +4,8 @@
 //  - Nếu có cấu hình endpoint FAP bên ngoài (`FAP_SYNC_URL`), đẩy payload qua HTTP POST;
 //    sau đó đánh dấu `syncedToFap = true`, `syncedAt`, `updatedAt`, `updatedBy` trên Firestore.
 
+export const FAP_REQUEST_TIMEOUT_MS = 15_000;
+
 export class FapSyncError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -87,14 +89,28 @@ export async function runFapSync(deps, { uid, classCode = '', sessionId = '' } =
         note: data.note ?? '',
       };
     });
-    const res = await fetchImpl(fapUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(fapToken ? { authorization: `Bearer ${fapToken}` } : {}),
-      },
-      body: JSON.stringify({ teacherMemberCode: memberCode, records }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FAP_REQUEST_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetchImpl(fapUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(fapToken ? { authorization: `Bearer ${fapToken}` } : {}),
+        },
+        body: JSON.stringify({ teacherMemberCode: memberCode, records }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new FapSyncError('deadline-exceeded', 'UPSTREAM_TIMEOUT',
+          'Cổng FAP phản hồi quá chậm. Vui lòng thử lại sau.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!res.ok) {
       throw new FapSyncError('unavailable', 'UPSTREAM_ERROR', `Cổng FAP phản hồi mã lỗi ${res.status}.`);
     }

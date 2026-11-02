@@ -15,9 +15,14 @@ class RemoteSettings {
   final bool maintenanceMode;
 
   static Future<RemoteSettings> load({FirebaseRemoteConfig? config}) async {
-    return loadFrom(
-      FirebaseRemoteSettingsSource(config ?? FirebaseRemoteConfig.instance),
-    );
+    try {
+      return await loadFrom(
+        FirebaseRemoteSettingsSource(config ?? FirebaseRemoteConfig.instance),
+      );
+    } catch (e) {
+      debugPrint('Remote Config không khả dụng, dùng giá trị mặc định: $e');
+      return const RemoteSettings();
+    }
   }
 
   @visibleForTesting

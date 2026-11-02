@@ -3,6 +3,18 @@ import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'CR-04: returns safe defaults when Firebase is not initialized',
+    () async {
+      final settings = await RemoteSettings.load();
+      expect(settings.qrRefreshSeconds, 60);
+      expect(settings.ipCheckDefault, isFalse);
+      expect(settings.maintenanceMode, isFalse);
+    },
+  );
+
   test('returns fetched Remote Config values', () async {
     final source = FakeRemoteSettingsSource(
       values: {
@@ -39,6 +51,17 @@ void main() {
     expect(settings.ipCheckDefault, isFalse);
     expect(settings.maintenanceMode, isFalse);
   });
+
+  for (final stage in ['settings', 'fetch']) {
+    test('CR-04: returns safe defaults when $stage fails', () async {
+      final settings = await RemoteSettings.loadFrom(
+        FakeRemoteSettingsSource(failAt: stage),
+      );
+      expect(settings.qrRefreshSeconds, 60);
+      expect(settings.ipCheckDefault, isFalse);
+      expect(settings.maintenanceMode, isFalse);
+    });
+  }
 }
 
 class FakeRemoteSettingsSource implements RemoteSettingsSource {
@@ -46,11 +69,13 @@ class FakeRemoteSettingsSource implements RemoteSettingsSource {
     this.values = const {},
     this.failDuringConfiguration = false,
     this.failDuringRead = false,
+    this.failAt,
   });
 
   final Map<String, Object> values;
   final bool failDuringConfiguration;
   final bool failDuringRead;
+  final String? failAt;
   Map<String, dynamic>? defaults;
 
   @override
@@ -60,10 +85,15 @@ class FakeRemoteSettingsSource implements RemoteSettingsSource {
   }
 
   @override
-  Future<void> setConfigSettings(RemoteConfigSettings settings) async {}
+  Future<void> setConfigSettings(RemoteConfigSettings settings) async {
+    if (failAt == 'settings') throw StateError('settings failed');
+  }
 
   @override
-  Future<bool> fetchAndActivate() async => true;
+  Future<bool> fetchAndActivate() async {
+    if (failAt == 'fetch') throw StateError('fetch failed');
+    return true;
+  }
 
   @override
   int getInt(String key) {
