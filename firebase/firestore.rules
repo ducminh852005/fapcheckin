@@ -92,7 +92,7 @@ service cloud.firestore {
                             || (request.resource.data.get('avatarPath', '') is string
                                 && (request.resource.data.get('avatarPath', '').matches('^https://res\\.cloudinary\\.com/.*')
                                     || request.resource.data.get('avatarPath', '').matches('^https?://.*')
-                                    || request.resource.data.get('avatarPath', '').matches('^data:image/.*'))))
+                                    || request.resource.data.get('avatarPath', '').matches('^data:image/.*')))))
                     || isAdmin();
       allow delete: if isAdmin();
     }

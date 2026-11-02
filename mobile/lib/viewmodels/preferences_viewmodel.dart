@@ -32,7 +32,7 @@ class PreferencesViewModel extends ChangeNotifier {
       theme = result.data['theme'] as String? ?? 'light';
       language = result.data['language'] as String? ?? 'vi';
       reminders = result.data['reminders'] == true;
-    } else if (result is ApiFailure<Map<String, dynamic>>) { error = result.error.message; }
+    }
     notifyListeners();
     if (reminders) {
       try {

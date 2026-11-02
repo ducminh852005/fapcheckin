@@ -19,7 +19,7 @@ test('CR-02: splits 501 tokens and removes stale token from the correct chunk', 
  assert.deepEqual(result,{sent:500,failed:1,removed:1});
  assert.equal(db.store.has('device_tokens/u/tokens/500'),false);
 });
-test('CR-02: failed token deletion is not counted as removed', async () => {
+test('CR-06: failed token deletion is not counted as removed', async () => {
  const db=fakeDb({'device_tokens/u/tokens/a':{token:'a'}});
  db.collection=()=>({get:async()=>({docs:[{data:()=>({token:'a'}),ref:{delete:async()=>{throw Error('offline');}}}]})});
  const result=await pushToUser(deps(db,fakeMessaging({'a':'messaging/registration-token-not-registered'})),'u',{title:'x',body:'y'});

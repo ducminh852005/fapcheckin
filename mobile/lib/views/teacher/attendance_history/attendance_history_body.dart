@@ -67,10 +67,12 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final historyVm = context.read<AttendanceHistoryViewModel>();
-        final dashVm = context.read<DashboardViewModel>();
+        final dashVm = context.read<DashboardViewModel?>();
 
         // Nếu chưa có lớp nào được chọn, ưu tiên lớp đang học/diễn ra từ Dashboard
-        if (historyVm.selectedClassCode == null && dashVm.classes.isNotEmpty) {
+        if (historyVm.selectedClassCode == null &&
+            dashVm != null &&
+            dashVm.classes.isNotEmpty) {
           final activeClass = dashVm.classes.where((c) => c.isActive).firstOrNull ??
               dashVm.classes.first;
           historyVm.selectClass(activeClass.classCode);
