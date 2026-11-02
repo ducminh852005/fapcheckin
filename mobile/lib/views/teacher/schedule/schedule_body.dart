@@ -177,39 +177,56 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                           if (dashboardVm.errorMessage != null)
                             Text(dashboardVm.errorMessage!),
                           if (_error != null) Text(_error!),
-                          TextButton.icon(
-                            icon: const Icon(
-                              Icons.add_circle_outline_rounded,
-                              size: 18,
-                              color: ScheduleColors.orangePrimary,
-                            ),
-                            label: const Text(
-                              'Thêm lịch học bù / workshop',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(
+                                Icons.add_circle_outline_rounded,
+                                size: 18,
                                 color: ScheduleColors.orangePrimary,
                               ),
+                              label: const Text(
+                                'Thêm lịch học bù / workshop',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: ScheduleColors.orangePrimary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFFED7AA),
+                                  width: 1.2,
+                                ),
+                                backgroundColor: const Color(0xFFFFF7ED),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final created =
+                                    await showCreateScheduleBottomSheet(context);
+                                if (created != null && mounted) {
+                                  await _loadPlans();
+                                  if (!context.mounted) return;
+                                  context.read<LiveSessionViewModel>().triggerToast(
+                                        type: ToastType.custom,
+                                        title: 'Đã tạo lịch học bổ sung',
+                                        message:
+                                            'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
+                                        icon: Icons.check_circle_outline,
+                                        accentColor: AppColors.statusPresent,
+                                        duration: const Duration(seconds: 4),
+                                      );
+                                }
+                              },
                             ),
-                            onPressed: () async {
-                              final created =
-                                  await showCreateScheduleBottomSheet(context);
-                              if (created != null && mounted) {
-                                await _loadPlans();
-                                if (!context.mounted) return;
-                                context.read<LiveSessionViewModel>().triggerToast(
-                                      type: ToastType.custom,
-                                      title: 'Đã tạo lịch học bổ sung',
-                                      message:
-                                          'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
-                                      icon: Icons.check_circle_outline,
-                                      accentColor: AppColors.statusPresent,
-                                      duration: const Duration(seconds: 4),
-                                    );
-                              }
-                            },
                           ),
-                          if (sessions.isEmpty)
-                            const Text('Không có lịch dạy trong ngày đã chọn.'),
+                          const SizedBox(height: 12),
                           // 2. Thẻ chọn tuần và ngày
                           ScheduleWeekPicker(
                             selectedDate: _selectedDate,
@@ -231,33 +248,87 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                           ),
                           const SizedBox(height: 16),
 
-                          // 4. Trục Timeline các ca dạy
-                          Column(
-                            children: [
-                              for (int i = 0; i < sessions.length; i++) ...[
-                                ScheduleTimelineItem(
-                                  slot: sessions[i].slot,
-                                  timeRange: sessions[i].timeRange,
-                                  subjectCode: sessions[i].subjectCode,
-                                  classCode: sessions[i].classCode,
-                                  subjectName: sessions[i].subjectName,
-                                  room: sessions[i].room,
-                                  subtext: sessions[i].subtext,
-                                  status: sessions[i].status,
-                                  isFirst: i == 0,
-                                  isLast: i == sessions.length - 1,
-                                  onOpenAttendance: () => _open(sessions[i]),
-                                  onTap: () {
-                                    if (sessions[i].status ==
-                                        ScheduleSessionStatus.active) {
-                                      _open(sessions[i]);
-                                    }
-                                  },
+                          // 4. Trục Timeline các ca dạy hoặc Empty State
+                          if (sessions.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 28,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
                                 ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF7ED),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(
+                                      Icons.event_busy_rounded,
+                                      color: ScheduleColors.orangePrimary,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Không có lịch dạy trong ngày đã chọn.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Hãy chọn một ngày khác trên thanh lịch tuần hoặc quét ảnh thời khóa biểu FAP.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
+                              children: [
+                                for (int i = 0; i < sessions.length; i++) ...[
+                                  ScheduleTimelineItem(
+                                    slot: sessions[i].slot,
+                                    timeRange: sessions[i].timeRange,
+                                    subjectCode: sessions[i].subjectCode,
+                                    classCode: sessions[i].classCode,
+                                    subjectName: sessions[i].subjectName,
+                                    room: sessions[i].room,
+                                    subtext: sessions[i].subtext,
+                                    status: sessions[i].status,
+                                    isFirst: i == 0,
+                                    isLast: i == sessions.length - 1,
+                                    onOpenAttendance: () => _open(sessions[i]),
+                                    onTap: () {
+                                      if (sessions[i].status ==
+                                          ScheduleSessionStatus.active) {
+                                        _open(sessions[i]);
+                                      }
+                                    },
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 36),
+                            ),
+                          SizedBox(height: context.isMobile ? 108 : 36),
                         ],
                       ),
                     ),

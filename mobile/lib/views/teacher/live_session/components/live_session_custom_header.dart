@@ -10,6 +10,7 @@ class LiveSessionCustomHeader extends StatelessWidget {
   final String sessionSubtitle;
   final String classTitle;
   final String timeAndRoom;
+  final VoidCallback? onBackTap;
   final VoidCallback? onMoreTap;
 
   const LiveSessionCustomHeader({
@@ -17,6 +18,7 @@ class LiveSessionCustomHeader extends StatelessWidget {
     this.sessionSubtitle = '',
     this.classTitle = '',
     this.timeAndRoom = '',
+    this.onBackTap,
     this.onMoreTap,
   });
 
@@ -37,12 +39,34 @@ class LiveSessionCustomHeader extends StatelessWidget {
         ),
         const SizedBox(height: 4),
 
-        // Tiêu đề chính + Nút 3 chấm
+        // Tiêu đề chính + Nút Back (nếu có) + Nút 3 chấm
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Flexible(
+            if (onBackTap != null) ...[
+              InkWell(
+                onTap: onBackTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: LiveSessionColors.borderSubtle),
+                    boxShadow: LiveSessionColors.cardShadow,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 17,
+                    color: Color(0xFF334155),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            const Expanded(
               child: FittedBox(
                 alignment: Alignment.centerLeft,
                 fit: BoxFit.scaleDown,

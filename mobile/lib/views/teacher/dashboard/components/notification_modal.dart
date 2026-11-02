@@ -317,18 +317,23 @@ class _NotificationModalState extends State<NotificationModal> {
                       ),
                       InkWell(
                         onTap: () => Navigator.of(context).pop(),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
                         child: Container(
-                          width: 34,
-                          height: 34,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F5F9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            size: 18,
-                            color: Color(0xFF475569),
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: Color(0xFF475569),
+                            ),
                           ),
                         ),
                       ),
@@ -346,10 +351,10 @@ class _NotificationModalState extends State<NotificationModal> {
                     child: InkWell(
                       onTap: rows.isEmpty ? null : () => _markAllAsRead(rows),
                       borderRadius: BorderRadius.circular(8),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -357,15 +362,19 @@ class _NotificationModalState extends State<NotificationModal> {
                             Icon(
                               Icons.done_all_rounded,
                               size: 15,
-                              color: Color(0xFFC2410C),
+                              color: rows.isEmpty
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFFC2410C),
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               'Đánh dấu đã đọc tất cả',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFFC2410C),
+                                color: rows.isEmpty
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFFC2410C),
                               ),
                             ),
                           ],

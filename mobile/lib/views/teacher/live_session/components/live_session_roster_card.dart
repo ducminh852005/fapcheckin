@@ -218,41 +218,45 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
 
   Widget _buildTab({required int index, required String label}) {
     final isSelected = _selectedTab == index;
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         setState(() {
           _selectedTab = index;
         });
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FittedBox(
-            alignment: Alignment.centerLeft,
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? LiveSessionColors.orangePrimary
-                    : LiveSessionColors.textMuted,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? LiveSessionColors.orangePrimary
+                      : LiveSessionColors.textMuted,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            height: 2.5,
-            width: isSelected ? 48 : 0,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? LiveSessionColors.orangePrimary
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(2),
+            const SizedBox(height: 6),
+            Container(
+              height: 2.5,
+              width: isSelected ? 48 : 0,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? LiveSessionColors.orangePrimary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

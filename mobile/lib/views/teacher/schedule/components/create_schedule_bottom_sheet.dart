@@ -497,18 +497,23 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
         ),
         InkWell(
           onTap: _saving ? null : () => Navigator.pop(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           child: Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.close_rounded,
-              size: 18,
-              color: Color(0xFF64748B),
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: Color(0xFF64748B),
+              ),
             ),
           ),
         ),
@@ -1232,10 +1237,10 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEA580C),
+                  backgroundColor: const Color(0xFFFA5A1E),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor:
-                      const Color(0xFFEA580C).withValues(alpha: 0.5),
+                      const Color(0xFFFA5A1E).withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),

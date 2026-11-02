@@ -86,7 +86,7 @@ class _ReportBodyState extends State<ReportBody> {
                   horizontalPadding,
                   context.isMobile ? 16.0 : 24.0,
                   horizontalPadding,
-                  context.isMobile ? 32.0 : 40.0,
+                  context.isMobile ? 108.0 : 40.0,
                 ),
                 child: Center(
                   child: ConstrainedBox(
@@ -107,7 +107,7 @@ class _ReportBodyState extends State<ReportBody> {
                         ReportWeekSelector(
                           weekLabel: _formatWeekLabel(reportVm.from, reportVm.to),
                           subtitle:
-                              'Tất cả ${report?.classCount ?? 0} lớp • Đã kết thúc: ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
+                              'Tất cả ${report?.classCount ?? 0} lớp • ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
                           onTap: () async {
                             final range = await showReportScopeBottomSheet(
                               context: context,
@@ -166,7 +166,7 @@ class _ReportBodyState extends State<ReportBody> {
                           child: Text(
                             report == null
                                 ? 'Chưa có báo cáo.'
-                                : 'Cập nhật: ${DateTime.tryParse(report.generatedAt)?.toLocal() ?? report.generatedAt}',
+                                : 'Cập nhật: ${_formatGeneratedAt(report.generatedAt)}',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 11,
@@ -185,6 +185,16 @@ class _ReportBodyState extends State<ReportBody> {
         ),
       ),
     );
+  }
+
+  String _formatGeneratedAt(String raw) {
+    final dt = DateTime.tryParse(raw)?.toLocal();
+    if (dt == null) return raw;
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    final dd = dt.day.toString().padLeft(2, '0');
+    final mo = dt.month.toString().padLeft(2, '0');
+    return '$hh:$mm · $dd/$mo/${dt.year}';
   }
 
   String _formatWeekLabel(DateTime? from, DateTime? to) {
