@@ -1,3 +1,4 @@
+import './teacher/requests/requests_body.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -99,6 +100,9 @@ class _MainScreenState extends State<MainScreen> {
         break;
       case 'thong-tin-cong-tac':
         body = const WorkInfoBody();
+        break;
+      case 'yeu-cau':
+        body = const RequestsBody();
         break;
       case 'bao-cao':
         body = ReportBody();

@@ -41,6 +41,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   String? _loadedClassCode;
   String? _selectedSessionId;
+  String? _loadedSessionStatus;
   HistoryDetail? _detail;
   bool _loadingDetail = false;
   bool _savingSession = false;
@@ -125,9 +126,12 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 ? _selectedSessionId!
                 : sessions.first.sessionId);
 
-    if (_loadedClassCode != classCode || _selectedSessionId != targetSessionId) {
+    final targetStatus = sessions.firstWhere((s) => s.sessionId == targetSessionId).sessionStatus;
+    if (_loadedClassCode != classCode || _selectedSessionId != targetSessionId ||
+        _loadedSessionStatus != targetStatus) {
       _loadedClassCode = classCode;
       _selectedSessionId = targetSessionId;
+      _loadedSessionStatus = targetStatus;
       _pendingEdits.clear();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {

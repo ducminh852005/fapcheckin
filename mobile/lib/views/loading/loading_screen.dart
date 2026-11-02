@@ -52,6 +52,11 @@ class _LoadingScreenState extends State<LoadingScreen> {
       return;
     }
 
+    if (authVm.session?.user.role == 'user') {
+      context.go(AppRoutes.teacher);
+      return;
+    }
+
     // 1. Nạp hồ sơ Giảng viên từ session đăng nhập
     if (authVm.session != null && dashboardVm.teacherMemberCode.isEmpty) {
       dashboardVm.setTeacherInfo(

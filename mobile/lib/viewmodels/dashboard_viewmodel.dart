@@ -206,7 +206,7 @@ class DashboardViewModel extends ChangeNotifier {
           _classes = _sortClassesByCheckinPriority(
             data.where((c) => !c.isMakeup).toList(),
           );
-          _status = data.isEmpty ? ViewStatus.idle : ViewStatus.success;
+          _status = ViewStatus.success;
         case ApiFailure<List<ClassSectionModel>>(:final error):
           _status = ViewStatus.error;
           _errorMessage = error.message;
