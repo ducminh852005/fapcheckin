@@ -27,7 +27,10 @@ Future<SessionModel> createSession(
   final classSnap = await db.collection('classes').doc(classCode).get();
   final cls = classSnap.data();
   if (cls == null || text(cls['teacherMemberCode']) != memberCode) {
-    throw ApiException('FORBIDDEN', 'Lớp không thuộc giảng viên đang đăng nhập.');
+    throw ApiException(
+      'FORBIDDEN',
+      'Lớp không thuộc giảng viên đang đăng nhập.',
+    );
   }
   if (slot.isEmpty) slot = text(cls['slotCode']);
   if (classCode.isEmpty || slot.isEmpty) {
@@ -37,6 +40,22 @@ Future<SessionModel> createSession(
     throw ApiException(
       'VALIDATION_ERROR',
       'Thiếu IP mạng giảng viên để bật kiểm tra IP.',
+    );
+  }
+
+  final slots = await loadSlots(db);
+  final range = sessionSlotRange(vnDate(now), slot, slots);
+  if (range == null) {
+    throw ApiException(
+      'VALIDATION_ERROR',
+      'Ca học không tồn tại hoặc chưa có giờ bắt đầu/kết thúc hợp lệ.',
+    );
+  }
+  final instant = now.toUtc();
+  if (instant.isBefore(range.start) || !instant.isBefore(range.end)) {
+    throw ApiException(
+      'SESSION_OUTSIDE_SLOT_TIME',
+      'Chỉ có thể mở phiên trong khung giờ của ca học.',
     );
   }
 
@@ -56,6 +75,12 @@ Future<SessionModel> createSession(
   final ref = db.collection('sessions').doc();
   final secret = randomSecret();
   final date = vnDate(now);
+  final vietnamNow = now.toUtc().add(const Duration(hours: 7));
+  final manualAttendanceDeadline = DateTime.utc(
+    vietnamNow.year,
+    vietnamNow.month,
+    vietnamNow.day + 1,
+  ).subtract(const Duration(hours: 7));
   final batch = db.batch();
   for (final doc in open.docs) {
     batch.update(doc.reference, {'sessionStatus': 'closed'});
@@ -69,6 +94,9 @@ Future<SessionModel> createSession(
     'qrSecret': secret,
     'ipCheck': ipCheck,
     'teacherIp': ip,
+    'startsAt': Timestamp.fromDate(range.start),
+    'endsAt': Timestamp.fromDate(range.end),
+    'manualAttendanceDeadline': Timestamp.fromDate(manualAttendanceDeadline),
     'createdAt': FieldValue.serverTimestamp(),
   });
   await batch.commit();

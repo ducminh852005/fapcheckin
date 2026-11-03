@@ -30,6 +30,8 @@ class LiveSessionRosterCard extends StatefulWidget {
   final int totalCount;
   final List<StudentAttendanceItem> presentStudents;
   final List<StudentAttendanceItem> absentStudents;
+  final ValueChanged<String>? onManualCheckin;
+  final VoidCallback? onOpenManualSheet;
 
   const LiveSessionRosterCard({
     super.key,
@@ -37,6 +39,8 @@ class LiveSessionRosterCard extends StatefulWidget {
     this.totalCount = 0,
     this.presentStudents = const [],
     this.absentStudents = const [],
+    this.onManualCheckin,
+    this.onOpenManualSheet,
   });
 
   @override
@@ -75,36 +79,77 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Flexible(
-              child: FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'Sinh viên điểm danh',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: LiveSessionColors.textDark,
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Flexible(
+                    child: FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Sinh viên điểm danh',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: LiveSessionColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: LiveSessionColors.orangeLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${widget.presentCount}/${widget.totalCount}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: LiveSessionColors.orangePrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (widget.onOpenManualSheet != null)
+              InkWell(
+                onTap: widget.onOpenManualSheet,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: LiveSessionColors.orangeLight,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: LiveSessionColors.orangePrimary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.person_add_outlined,
+                        size: 15,
+                        color: LiveSessionColors.orangePrimary,
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Điểm danh tay',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: LiveSessionColors.orangePrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: LiveSessionColors.orangeLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${widget.presentCount}/${widget.totalCount}',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: LiveSessionColors.orangePrimary,
-                ),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -208,7 +253,12 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
             children: [
               for (int i = 0; i < filteredList.length; i++) ...[
                 if (i > 0) const SizedBox(height: 8),
-                _StudentItemTile(student: filteredList[i]),
+                _StudentItemTile(
+                  student: filteredList[i],
+                  onCheckin: filteredList[i].isPresent
+                      ? null
+                      : () => widget.onManualCheckin?.call(filteredList[i].rollNumber),
+                ),
               ],
             ],
           ),
@@ -264,8 +314,12 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
 
 class _StudentItemTile extends StatelessWidget {
   final StudentAttendanceItem student;
+  final VoidCallback? onCheckin;
 
-  const _StudentItemTile({required this.student});
+  const _StudentItemTile({
+    required this.student,
+    this.onCheckin,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -345,6 +399,40 @@ class _StudentItemTile extends StatelessWidget {
               Icons.check_circle_outline_rounded,
               size: 18,
               color: LiveSessionColors.statusGreen,
+            ),
+          ] else if (onCheckin != null) ...[
+            InkWell(
+              onTap: onCheckin,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: LiveSessionColors.orangeLight,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: LiveSessionColors.orangePrimary.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: LiveSessionColors.orangePrimary,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Điểm danh',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: LiveSessionColors.orangePrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ] else
             const Text(

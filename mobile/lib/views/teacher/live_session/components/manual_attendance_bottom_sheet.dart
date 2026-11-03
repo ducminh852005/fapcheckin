@@ -555,12 +555,15 @@ class _ManualAttendanceBottomSheetState
           },
         )
         .toList();
-    await vm.manualCheckinBulk(changes);
+    final success = await vm.manualCheckinBulk(changes);
     if (!context.mounted) return;
     setState(() => _saving = false);
-    if (vm.errorMessage != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(vm.errorMessage ?? 'Không thể điểm danh tay. Vui lòng thử lại.'),
+        ),
+      );
       return;
     }
     final count = changes.length;

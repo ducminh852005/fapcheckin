@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -78,14 +78,20 @@ export async function seed(env) {
     await put('classes/MAD101_SE1700', { subjectCode: 'MAD101', teacherMemberCode: '', slotCode: 'A1', room: '202' });
 
     await put('enrollments/PRN232_SE1917_SE1001', { classCode: 'PRN232_SE1917', rollNumber: 'SE1001', teacherMemberCode: 'GV001', fullName: 'SV Một' });
+    // Enrollment legacy có ID tự sinh: roster vẫn đọc được theo field và GV
+    // phải có thể điểm danh tay cho sinh viên này.
+    await put('enrollments/legacy-random-enrollment', { classCode: 'PRN232_SE1917', rollNumber: 'SE1003', teacherMemberCode: 'GV001', fullName: 'SV Ba' });
     await put('enrollments/SWD392_SE1801_SE1002', { classCode: 'SWD392_SE1801', rollNumber: 'SE1002', teacherMemberCode: 'GV002', fullName: 'SV Hai' });
     await put('enrollments/MAD101_SE1700_SE1001', { classCode: 'MAD101_SE1700', rollNumber: 'SE1001', teacherMemberCode: '', fullName: 'SV Một' });
 
-    const base = { classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-20', slotCode: 'A1' };
+    const futureDeadline = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+    const pastDeadline = Timestamp.fromMillis(Date.now() - 60 * 1000);
+    const base = { classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-20', slotCode: 'A1', manualAttendanceDeadline: futureDeadline };
     await put('sessions/sess-open', { ...base, sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
     await put('sessions/sess-ip', { ...base, sessionStatus: 'open', qrSecret: SECRET, ipCheck: true, teacherIp: TEACHER_IP });
     await put('sessions/sess-closed', { ...base, sessionStatus: 'closed', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
-    await put('sessions/sess-other', { classCode: 'SWD392_SE1801', teacherMemberCode: 'GV002', sessionDate: '2026-10-20', slotCode: 'A1', sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
+    await put('sessions/sess-expired', { ...base, manualAttendanceDeadline: pastDeadline, sessionStatus: 'closed', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
+    await put('sessions/sess-other', { classCode: 'SWD392_SE1801', teacherMemberCode: 'GV002', sessionDate: '2026-10-20', slotCode: 'A1', manualAttendanceDeadline: futureDeadline, sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
 
     await put('attendance_records/sess-closed_SE1001', {
       sessionId: 'sess-closed', rollNumber: 'SE1001', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',

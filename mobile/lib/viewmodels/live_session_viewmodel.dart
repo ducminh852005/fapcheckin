@@ -544,9 +544,10 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   /// Manually mark a student present (manualCheckin API)
-  Future<void> manualCheckin(String rollNumber) async {
+  Future<bool> manualCheckin(String rollNumber) async {
     final generation = _generation;
-    if (_session == null) return;
+    if (_session == null) return false;
+    _errorMessage = null;
 
     final result = await _repository.manualCheckin(
       sessionId: _session!.sessionId,
@@ -554,15 +555,18 @@ class LiveSessionViewModel extends ChangeNotifier {
       status: 'ManualByGV',
     );
 
-    if (_disposed || generation != _generation) return;
+    if (_disposed || generation != _generation) return false;
     switch (result) {
       case ApiSuccess<void>():
         // Immediately refresh the roster
         await loadRoster();
+        return true;
       case ApiFailure<void>(:final error):
         _errorMessage = error.message;
         notifyListeners();
+        return false;
     }
+    return false;
   }
 
   Future<void> _rotateQr() async {
@@ -586,9 +590,9 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   /// Manually mark multiple students
-  Future<void> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
+  Future<bool> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
     final generation = _generation;
-    if (_session == null || isClosed) return;
+    if (_session == null || isClosed) return false;
     _errorMessage = null;
     _status = ViewStatus.loading;
     notifyListeners();
@@ -598,16 +602,19 @@ class LiveSessionViewModel extends ChangeNotifier {
       changes: changes,
     );
 
-    if (_disposed || generation != _generation) return;
+    if (_disposed || generation != _generation) return false;
     switch (result) {
       case ApiSuccess<void>():
         _status = ViewStatus.success;
         await loadRoster();
+        return true;
       case ApiFailure<void>(:final error):
         _errorMessage = error.message;
         _status = ViewStatus.error;
         notifyListeners();
+        return false;
     }
+    return false;
   }
 
   /// Load stats for a given class
@@ -740,8 +747,7 @@ class LiveSessionViewModel extends ChangeNotifier {
             },
             onError: (Object error) {
               if (_disposed || generation != _generation) return;
-              _errorMessage = 'Không thể cập nhật phiên: $error';
-              notifyListeners();
+              debugPrint('Không thể cập nhật phiên realtime: $error');
             },
           );
     }

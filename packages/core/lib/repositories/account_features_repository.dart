@@ -27,7 +27,17 @@ class AccountFeaturesRepository {
   });
   Future<ApiResult<Map<String, dynamic>>> support() => guardApi(() async =>
     (await _db.collection('support_config').doc('public').get()).data() ?? {});
-  Future<ApiResult<String>> sendFeedback(String category, String message, {required String requestId}) => guardApi(() async {
+  Stream<Map<String, dynamic>> systemSettings() =>
+      _db.collection('system_settings').doc('global_config').snapshots().map((s) => s.data() ?? {});
+  Future<ApiResult<String>> uploadFeedbackAttachment(Uint8List bytes, String mime) => guardApi(() async {
+    if (bytes.length > 10 * 1024 * 1024) throw ApiException('VALIDATION_ERROR', 'Tệp đính kèm tối đa 10 MB.');
+    final ext = mime == 'image/png' ? 'png' : (mime == 'image/jpeg' || mime == 'image/jpg') ? 'jpg' : mime == 'application/pdf' ? 'pdf' : 'bin';
+    final path = 'feedback/$_uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final ref = _storage.ref(path);
+    await ref.putData(bytes, SettableMetadata(contentType: mime));
+    return await ref.getDownloadURL();
+  });
+  Future<ApiResult<String>> sendFeedback(String category, String message, {required String requestId, List<String>? attachments}) => guardApi(() async {
     final body = message.trim();
     if (!['bug', 'suggestion', 'other'].contains(category) || body.isEmpty || body.length > 2000 || !RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(requestId)) throw ApiException('VALIDATION_ERROR', 'Nội dung phải có 1–2000 ký tự.');
     final ref = _db.collection('feedback').doc('${_uid}_$requestId');
@@ -38,7 +48,14 @@ class AccountFeaturesRepository {
         if (prior.data()?['message'] != body || prior.data()?['category'] != category) throw ApiException('CONFLICT', 'Yêu cầu đã được dùng cho nội dung khác.');
         return;
       }
-      tx.set(ref, {'authorUid': _uid, 'category': category, 'message': body, 'status': 'pending', 'createdAt': FieldValue.serverTimestamp()});
+      tx.set(ref, {
+        'authorUid': _uid,
+        'category': category,
+        'message': body,
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        if (attachments != null && attachments.isNotEmpty) 'attachments': attachments,
+      });
     });
     return ref.id;
   });

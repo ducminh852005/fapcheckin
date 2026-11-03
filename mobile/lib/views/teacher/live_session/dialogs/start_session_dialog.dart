@@ -109,10 +109,77 @@ Future<bool> startSessionWithOptions(
   }
 
   if (!context.mounted) return false;
-  await liveVm.startSession(
-    classSection: classSection,
-    slotCode: slotCode,
-    ipCheck: ipCheck,
+
+  // Hiển thị modal loading để người dùng biết hệ thống đang kết nối và mở phiên
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => PopScope(
+      canPop: false,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text(
+                'Đang mở phiên điểm danh...',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
   );
-  return liveVm.session?.isOpen == true && liveVm.errorMessage == null;
+
+  try {
+    await liveVm.startSession(
+      classSection: classSection,
+      slotCode: slotCode,
+      ipCheck: ipCheck,
+    );
+  } finally {
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
+  final ok = liveVm.session?.isOpen == true && liveVm.errorMessage == null;
+  if (!ok && context.mounted) {
+    final msg = liveVm.errorMessage ??
+        'Không thể mở phiên điểm danh. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red.shade800,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+  return ok;
 }

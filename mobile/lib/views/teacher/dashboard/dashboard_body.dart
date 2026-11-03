@@ -68,22 +68,75 @@ class _DashboardBodyState extends State<DashboardBody> {
                           SizedBox(height: 18),
 
                           if (dashboardVm.errorMessage != null)
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    const Icon(Icons.wifi_off),
-                                    const Text(
-                                      'Không tải được dữ liệu. Kiểm tra kết nối mạng và thử lại.',
-                                    ),
-                                    Text(dashboardVm.errorMessage!),
-                                    TextButton(
-                                      onPressed: dashboardVm.loadClasses,
-                                      child: const Text('Thử lại'),
-                                    ),
-                                  ],
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                                        dashboardVm.errorMessage!.contains('quyền')
+                                    ? const Color(0xFFFEF2F2)
+                                    : DashboardColors.cardBg,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                                          dashboardVm.errorMessage!.contains('quyền')
+                                      ? const Color(0xFFFECACA)
+                                      : DashboardColors.cardBorder,
                                 ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    dashboardVm.errorCode == 'FORBIDDEN' ||
+                                            dashboardVm.errorMessage!.contains('quyền')
+                                        ? Icons.lock_person_outlined
+                                        : Icons.wifi_off_rounded,
+                                    size: 40,
+                                    color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                                            dashboardVm.errorMessage!.contains('quyền')
+                                        ? const Color(0xFFDC2626)
+                                        : DashboardColors.orangePrimary,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    dashboardVm.errorCode == 'FORBIDDEN' ||
+                                            dashboardVm.errorMessage!.contains('quyền')
+                                        ? 'Chưa được cấp quyền giảng viên'
+                                        : 'Không tải được dữ liệu',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: DashboardColors.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    dashboardVm.errorMessage!,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                                              dashboardVm.errorMessage!.contains('quyền')
+                                          ? const Color(0xFFB91C1C)
+                                          : DashboardColors.textMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ElevatedButton.icon(
+                                    onPressed: dashboardVm.loadClasses,
+                                    icon: const Icon(Icons.refresh, size: 18),
+                                    label: const Text('Thử lại'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: DashboardColors.orangePrimary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           if (dashboardVm.status == ViewStatus.success &&

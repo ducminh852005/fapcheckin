@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/repositories/schedule_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import '../../dashboard/components/weekly_timetable.dart';
 
 /// Hiển thị Modal Bottom Sheet Tạo lịch học bổ sung (Học bù / Workshop / Ôn tập)
@@ -178,8 +179,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
       return parsed.slot;
     }
 
-    final repoSlot =
-        repoSlots.where((s) => s['slotCode'] == selectedSlotCode).firstOrNull;
+    final repoSlot = repoSlots
+        .where((s) => s['slotCode'] == selectedSlotCode)
+        .firstOrNull;
     if (repoSlot != null) {
       final start = repoSlot['startTime']?.toString();
       for (final std in _kStandardSlots) {
@@ -190,6 +192,62 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
     }
 
     return 2;
+  }
+
+  int? _minutes(String? value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value ?? '');
+    if (match == null) return null;
+    final hour = int.tryParse(match[1]!);
+    final minute = int.tryParse(match[2]!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) {
+      return null;
+    }
+    return hour * 60 + minute;
+  }
+
+  Map<String, dynamic>? _regularClassConflict() {
+    final day = DateTime.tryParse(_day ?? '');
+    final selectedCode = _slotCode;
+    if (day == null || selectedCode == null) return null;
+
+    final slots = _rows('slots');
+    Map<String, dynamic>? slotOf(String code) =>
+        slots.where((slot) => slot['slotCode'] == code).firstOrNull;
+    final selected = slotOf(selectedCode);
+    if (selected == null) return null;
+    final selectedStart = _minutes(selected['startTime']?.toString());
+    final selectedEnd = _minutes(selected['endTime']?.toString());
+    if (selectedStart == null || selectedEnd == null) return null;
+
+    // Firestore dùng 2 = Thứ Hai ... 7 = Thứ Bảy, 8 = Chủ Nhật.
+    final firestoreWeekday = day.weekday + 1;
+    for (final regularClass in _rows('classes')) {
+      final regularSlot = slotOf(regularClass['slotCode']?.toString() ?? '');
+      if (regularSlot == null) continue;
+      final weekdays =
+          (regularSlot['weekdays'] as List?)?.whereType<num>().map(
+            (value) => value.toInt(),
+          ) ??
+          const Iterable<int>.empty();
+      if (!weekdays.contains(firestoreWeekday)) continue;
+      final start = _minutes(regularSlot['startTime']?.toString());
+      final end = _minutes(regularSlot['endTime']?.toString());
+      if (start != null &&
+          end != null &&
+          start < selectedEnd &&
+          end > selectedStart) {
+        return regularClass;
+      }
+    }
+    return null;
+  }
+
+  String? get _regularConflictMessage {
+    final conflict = _regularClassConflict();
+    if (conflict == null) return null;
+    final classCode = conflict['classCode']?.toString() ?? '';
+    final slotCode = conflict['slotCode']?.toString() ?? '';
+    return 'Giảng viên đã có lịch chính khóa $classCode ($slotCode) trong ngày và khung giờ này. Vui lòng chọn ngày hoặc ca khác.';
   }
 
   String _formatVnDate(DateTime date) {
@@ -230,6 +288,16 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final regularConflict = _regularConflictMessage;
+    if (regularConflict != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(regularConflict),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     if (_classCode == null || _slotCode == null || _room == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -294,6 +362,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
       (s) => s.number == selectedSlotNum,
       orElse: () => _kStandardSlots[1],
     );
+    final visibleError = _regularConflictMessage ?? _error;
 
     return Container(
       constraints: BoxConstraints(
@@ -377,7 +446,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                       const SizedBox(height: 12),
                     ],
 
-                    if (_error != null) ...[
+                    if (visibleError != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -395,7 +464,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _error!,
+                                visibleError,
                                 style: const TextStyle(
                                   color: Color(0xFFDC2626),
                                   fontSize: 12.5,
@@ -564,8 +633,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                     ),
                   ),
                   TextSpan(
-                    text:
-                        'Lịch học bổ sung sẽ được đồng bộ tự động lên cổng FAP và gửi thông báo push đến toàn bộ sinh viên trong lớp sau khi xác nhận.',
+                    text: 'Lịch học bổ sung sẽ được đồng bộ tự động lên cổng FAP và gửi thông báo push đến toàn bộ sinh viên trong lớp sau khi xác nhận.',
                   ),
                 ],
               ),
@@ -730,8 +798,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
               : (v) {
                   setState(() {
                     _classCode = v;
-                    final match =
-                        classes.where((c) => c['classCode'] == v).firstOrNull;
+                    final match = classes
+                        .where((c) => c['classCode'] == v)
+                        .firstOrNull;
                     if (match != null) {
                       final r = match['room']?.toString();
                       if (r != null && r.isNotEmpty) _room = r;
@@ -1109,11 +1178,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           ),
           child: const Row(
             children: [
-              Icon(
-                Icons.domain_rounded,
-                size: 17,
-                color: Color(0xFFEA580C),
-              ),
+              Icon(Icons.domain_rounded, size: 17, color: Color(0xFFEA580C)),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1174,6 +1239,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   // ── 10. Chân trang cố định ─────────────────────────────────────────────────
   Widget _buildFooter(double bottomPadding) {
+    final hasRegularConflict = _regularConflictMessage != null;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 10, 20, 14 + bottomPadding),
       decoration: const BoxDecoration(
@@ -1209,7 +1275,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: _saving || _options == null ? null : _save,
+                onPressed: _saving || _options == null || hasRegularConflict
+                    ? null
+                    : _save,
                 icon: _saving
                     ? const SizedBox(
                         width: 18,
@@ -1228,8 +1296,8 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                   _saving
                       ? 'Đang lưu…'
                       : _pending == null
-                          ? 'Xác nhận tạo lịch'
-                          : 'Thử lại cùng yêu cầu',
+                      ? 'Xác nhận tạo lịch'
+                      : 'Thử lại cùng yêu cầu',
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
@@ -1239,8 +1307,8 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFA5A1E),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      const Color(0xFFFA5A1E).withValues(alpha: 0.5),
+                  disabledBackgroundColor: const Color(0xFFFA5A1E)
+                      .withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
