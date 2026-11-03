@@ -1,0 +1,26 @@
+{
+  "scope": "Node unit/regression, NOT Android E2E",
+  "runs": [
+    {
+      "run": 1,
+      "exitCode": 0,
+      "pass": 26,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "run": 2,
+      "exitCode": 0,
+      "pass": 26,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "run": 3,
+      "exitCode": 0,
+      "pass": 26,
+      "fail": 0,
+      "skipped": 0
+    }
+  ]
+}

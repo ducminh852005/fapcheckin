@@ -1,0 +1,147 @@
+{
+  "scope": "Android E2E on API 36 emulator",
+  "device": "emulator-5554",
+  "cases": {
+    "TC01_google_signin": {
+      "runs": [
+        { "run": 1, "result": "pass", "durationSeconds": 26.06 },
+        { "run": 2, "result": "pass", "durationSeconds": 26.57 },
+        { "run": 3, "result": "pass", "durationSeconds": 25.02 }
+      ],
+      "pass": 3,
+      "fail": 0,
+      "passRatePercent": 100
+    },
+    "TC02_invalid_role": {
+      "runs": [
+        { "run": 1, "result": "pass", "durationSeconds": 31.01 },
+        { "run": 2, "result": "pass", "durationSeconds": 25.91 },
+        { "run": 3, "result": "pass", "durationSeconds": 26.26 }
+      ],
+      "pass": 3,
+      "fail": 0,
+      "passRatePercent": 100
+    },
+    "TC03_create_session": {
+      "runs": [
+        {
+          "run": 1,
+          "result": "fail",
+          "createSession": "pass",
+          "qrVisible": true,
+          "closeSession": "fail",
+          "firebaseCode": "PERMISSION_DENIED",
+          "failedWritePattern": "attendance_records/{sessionId}_{rollNumber}"
+        }
+      ],
+      "pass": 0,
+      "fail": 1,
+      "passRatePercent": 0,
+      "defects": ["DEF-TC03-01", "DEF-TC03-02"]
+    },
+    "TC04_display_qr": {
+      "precondition": "An attendance session is open and the QR screen is active",
+      "assertions": ["qr code is visible", "ĐANG MỞ ĐIỂM DANH is visible"],
+      "runs": [
+        { "run": 1, "result": "pass", "durationSeconds": 3.18 },
+        { "run": 2, "result": "pass", "durationSeconds": 3.14 },
+        { "run": 3, "result": "pass", "durationSeconds": 3.19 }
+      ],
+      "pass": 3,
+      "fail": 0,
+      "passRatePercent": 100,
+      "overallStatus": "partial",
+      "coverageGap": "Old QR rejection and new QR check-in require a student device/account"
+    },
+    "TC05_history": {
+      "assertions": [
+        "history title is visible",
+        "selected class code is visible",
+        "three session entries are visible",
+        "all and absent filters are visible"
+      ],
+      "runs": [
+        { "run": 1, "result": "pass", "durationSeconds": 6.74 },
+        { "run": 2, "result": "pass", "durationSeconds": 7.04 },
+        { "run": 3, "result": "pass", "durationSeconds": 7.00 }
+      ],
+      "pass": 3,
+      "fail": 0,
+      "passRatePercent": 100,
+      "overallStatus": "partial",
+      "coverageGap": "Cross-teacher isolation needs a seeded class owned by another lecturer"
+    },
+    "TC06_filter_subject": {
+      "assertions": [
+        "selecting PRN232 shows the PRN232 detail header and one session",
+        "selecting PRM392 shows the PRM392 detail header and three sessions"
+      ],
+      "runs": [
+        { "run": 1, "result": "pass", "durationSeconds": 10.72 },
+        { "run": 2, "result": "pass", "durationSeconds": 11.16 },
+        { "run": 3, "result": "pass", "durationSeconds": 11.16 }
+      ],
+      "pass": 3,
+      "fail": 0,
+      "passRatePercent": 100
+    },
+    "TC07_export_report": {
+      "expectedFormat": "XLSX",
+      "runs": [
+        { "run": 1, "result": "fail", "durationSeconds": 4.58, "privateCache": true },
+        { "run": 2, "result": "fail", "durationSeconds": 5.02, "privateCache": true },
+        { "run": 3, "result": "fail", "durationSeconds": 4.98, "privateCache": true }
+      ],
+      "pass": 0,
+      "fail": 3,
+      "passRatePercent": 0,
+      "defect": "DEF-TC07-01",
+      "failure": "The generated XLSX is stored only in app-private code_cache and cannot be opened or shared by the user"
+    },
+    "TC08_pending_request": {
+      "runs": [],
+      "pass": 0,
+      "fail": 0,
+      "overallStatus": "blocked",
+      "blocker": "No mobile attendance-fix/leave request UI or repository flow is implemented; only Firestore Rules for the requests collection exist"
+    },
+    "TC09_error_state": {
+      "assertions": [
+        "the Present (0) filter shows a clear empty-state message",
+        "the app remains alive after an offline cold start",
+        "the app shows an offline/error indication",
+        "the dashboard recovers after connectivity is restored"
+      ],
+      "runs": [
+        { "run": 1, "result": "fail", "emptyState": "pass", "emptyDurationSeconds": 4.05, "appAliveOffline": true, "offlineNotice": false, "recovery": "pass" },
+        { "run": 2, "result": "fail", "emptyState": "pass", "emptyDurationSeconds": 4.06, "appAliveOffline": true, "offlineNotice": false, "recovery": "pass" },
+        { "run": 3, "result": "fail", "emptyState": "pass", "emptyDurationSeconds": 4.06, "appAliveOffline": true, "offlineNotice": false, "recovery": "pass" }
+      ],
+      "pass": 0,
+      "fail": 3,
+      "passRatePercent": 0,
+      "defect": "DEF-TC09-01",
+      "failure": "The app does not crash and later recovers, but shows neither offline nor retry feedback while data is unavailable"
+    },
+    "TC10_native_popup": {
+      "assertions": [
+        "canceling the Google account chooser returns to login without a crash",
+        "the Android notification permission dialog reflects deny/allow",
+        "the app remains usable after the native popup"
+      ],
+      "runs": [
+        { "run": 1, "result": "pass", "accountChooserCancel": "pass", "notificationDecision": "deny", "appAlive": true, "switchChecked": false },
+        { "run": 2, "result": "fail", "durationSeconds": 36.99, "accountChooserCancel": "pass", "notificationDecision": "allow", "osPermissionGranted": true, "appAlive": true, "switchChecked": false },
+        { "run": 3, "result": "pass", "durationSeconds": 34.47, "accountChooserCancel": "pass", "notificationDecision": "deny", "appAlive": true, "switchChecked": false }
+      ],
+      "pass": 2,
+      "fail": 1,
+      "passRatePercent": 66.67,
+      "defect": "DEF-TC10-01",
+      "failure": "After Android grants POST_NOTIFICATIONS, device registration is rejected with a permission error and the reminder switch remains off"
+    }
+  },
+  "completedRuns": 25,
+  "plannedRuns": 30,
+  "note": "Raw screenshots, UI XML and filtered logcat remain local because they can contain account data. A setup error before the invalid-role account was added to the emulator is excluded from test results. TC03, TC07 and TC09 failed; TC10 passed 2/3; TC04 and TC05 retain documented coverage gaps; TC08 is blocked because its mobile flow is not implemented."
+}

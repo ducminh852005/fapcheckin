@@ -73,6 +73,21 @@ ui-debug.log
 # Node (firebase/, firebase/functions/, e2e_test/)
 node_modules/
 
+# Python virtual environments (e2e_test/)
+.venv/
+.pytest_cache/
+
+# Local Android E2E configuration and raw UI evidence may contain account data.
+e2e_test/config.local.json
+e2e_test/.env.local
+e2e_test/results/**/*.xml
+e2e_test/results/manual-run-*/
+e2e_test/results/smoke-*/
+e2e_test/results/local-*/
+
+# Evidence written by older QA runner versions before the output-path fix.
+/results/
+
 # Package nội bộ không cần khóa phiên bản riêng
 packages/core/pubspec.lock
 

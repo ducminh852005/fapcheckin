@@ -1,5 +1,4 @@
-export const campusPhoto =
-  "https://images.unsplash.com/photo-1709949906671-de1000f3d9c8?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=88&w=1600"
+export const campusPhoto = "/fpt_campus.jpg"
 
 export const classRows = [
   {

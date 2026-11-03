@@ -28,6 +28,33 @@ src/
 > Trang điểm danh của sinh viên nằm ở [`../checkin/`](../checkin/) (Firebase Hosting).
 > App giảng viên (staff) nằm ở [`../../mobile/`](../../mobile/).
 
+## Phạm vi giao diện quản trị hiện tại
+
+Admin Web tập trung vào bốn khu vực có dữ liệu và trách nhiệm quản trị rõ ràng:
+
+1. **Tổng quan vận hành** — tài khoản hoạt động, lớp, phiên đang mở và bản ghi chưa đồng bộ.
+2. **Tài khoản** — `users`, `user_invites`, vai trò và trạng thái hoạt động.
+3. **Dữ liệu học vụ** — `classes`, `subjects`, `enrollments`, `slots`, `timeSlots`.
+4. **Giám sát điểm danh** — `sessions`, `attendance_records`, tìm dữ liệu lỗi và chưa đồng bộ.
+
+Các phần sau đã được bỏ khỏi navigation cho đến khi có schema/backend thật:
+
+- Duyệt yêu cầu (`requests` chưa tồn tại trên project đã kiểm tra).
+- Gửi/lên lịch thông báo (`announcements`, FCM và device token chưa tồn tại).
+- Biểu đồ chuyên cần, top môn vắng, học kỳ và activity realtime dùng số liệu mẫu.
+- Trạng thái/lưu trữ lớp vì `classes` chưa có `status`, `semester` hay `archivedAt`.
+
+Giao diện mới không hiển thị số liệu giả và không giả lập thao tác ghi thành công. Chi tiết đối chiếu dữ liệu: [`../../docs/firestore-admin-audit-notes.md`](../../docs/firestore-admin-audit-notes.md).
+
+### Kết nối Firestore đã triển khai
+
+- Dashboard dùng aggregate count trực tiếp trên `users`, `classes`, `sessions`, `attendance_records`.
+- Tài khoản đọc `users`/`user_invites`, cấp/thu hồi quyền đăng nhập, xem chi tiết, khóa/mở hồ sơ canonical và đổi role `user`/`staff` có kiểm soát.
+- Hồ sơ legacy có thể tạo quyền đăng nhập từ dữ liệu sẵn có; không bị sửa trực tiếp trước migration.
+- Học vụ đọc `classes`, `subjects`, `slots`, `timeSlots` và join tên giảng viên theo `memberCode`.
+- Điểm danh đọc 100 phiên gần nhất, lọc phiên và tải bản ghi theo `sessionId`; không đưa `qrSecret` hay IP lên UI.
+- Repository học vụ có batch đổi giảng viên để đồng bộ `classes` và `enrollments`; UI ghi học vụ chưa bật cho tới khi migration được xác nhận hoàn tất.
+
 ## Vai trò & chức năng dự kiến
 
 | Chức năng | Collection | Quyền (xem `firebase/firestore.rules`) |
@@ -42,8 +69,8 @@ src/
 
 ## Việc cần làm tiếp theo
 
-1. Nối Firebase JS SDK và đăng nhập Google; chỉ cho phép `role == 'admin'`.
-2. Thay dữ liệu trong `src/data/mock-data.ts` bằng service/repository Firestore.
+1. Đăng nhập Google đã được nối; cần duy trì hồ sơ `users/{uid}` với `role == 'admin'` và `active == true`.
+2. Nối repository Firestore cho bốn khu vực quản trị đang hiển thị.
 3. Thêm một **site Hosting thứ hai** (vd. `fapcheckin-admin`): `firebase hosting:sites:create fapcheckin-admin`,
    gán target (`firebase target:apply hosting admin fapcheckin-admin`) và chuyển `hosting` trong `firebase.json`
    thành mảng hai phần tử (`checkin` → `web/checkin`, `admin` → `web/admin/build/web`).

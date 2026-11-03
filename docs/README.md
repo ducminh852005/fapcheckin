@@ -8,7 +8,7 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 |---|---|
 | **Nhóm** | 5 thành viên |
 | **Thời hạn** | 14 ngày |
-| **Nền tảng** | Flutter (GV, `mobile/`) · Web check-in (SV, `web/checkin/`) · Web Admin (`web/admin/`, chưa code) |
+| **Nền tảng** | Flutter (GV, `mobile/`) · Web check-in (SV, `web/checkin/`) · Web Admin (`web/admin/`, React + Vite, UI prototype) |
 | **Kiến trúc app GV** | MVVM; model/Repository/design system dùng chung ở `packages/core/` |
 | **Backend** | Firebase: Auth (Google) · Firestore + Rules · Storage · Remote Config · Hosting · Cloud Functions (chỉ OCR) |
 | **Phân quyền** | RBAC `user` (SV) · `staff` (GV) · `admin` bằng Security Rules, có test trên Emulator |
@@ -45,8 +45,7 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | — | [Thiết lập & deploy Firebase, migrate dữ liệu cũ](deploy-firebase.md) |
 | — | [Thiết lập đăng nhập Google (Firebase Auth)](google-oauth-setup.md) |
 | — | [ERD (Mermaid)](db-erd.mermaid) |
-| — | [Luồng cross-role](cross-role-flow.md) |
-| — | [Kế hoạch kiểm thử](test-plan.md) |
-| — | [Rà soát dữ liệu cá nhân (PII)](pii-review.md) |
+| — | [Data model — đặc tả collection, quyền và rule](data-model.md) |
+| — | [Gap review — khoảng cách Lab 2/3 so với Final](gap-review.md) |
 
 Mã nguồn tương ứng: [`firebase/`](../firebase) (rules, test, script, function) · [`packages/core/`](../packages/core) · [`mobile/`](../mobile) · [`web/`](../web) · [`e2e_test/`](../e2e_test).

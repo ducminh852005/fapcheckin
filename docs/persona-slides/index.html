@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAP Check-in · Persona Presentation</title>
+<meta name="description" content="Slide thuyết trình Persona cho dự án FAP Check-in – hệ thống điểm danh QR động FPTU, theo Persona Guideline PRM393.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#071417; --panel:rgba(255,255,255,.05); --line:rgba(255,255,255,.12);
+  --teal:#0aa5b3; --teal2:#087C87; --orange:#F2A51D; --pink:#ef6b8a; --violet:#8b7cf6;
+  --text:#e8f3f4; --muted:#93acb0; --green:#3ddc97;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:Inter,sans-serif;overflow:hidden}
+body::before{content:"";position:fixed;inset:-20%;background:
+  radial-gradient(40% 40% at 15% 20%,rgba(10,165,179,.28),transparent 70%),
+  radial-gradient(35% 35% at 85% 80%,rgba(242,165,29,.18),transparent 70%),
+  radial-gradient(30% 30% at 80% 10%,rgba(139,124,246,.15),transparent 70%);
+  animation:drift 18s ease-in-out infinite alternate;z-index:0}
+@keyframes drift{to{transform:translate(3%,-3%) rotate(4deg)}}
+.deck{position:relative;z-index:1;height:100%}
+.slide{position:absolute;inset:0;padding:5vh 6vw 9vh;display:flex;flex-direction:column;
+  opacity:0;transform:translateX(40px);transition:opacity .5s,transform .5s;pointer-events:none;overflow:auto}
+.slide.active{opacity:1;transform:none;pointer-events:auto}
+.slide.active .anim>*{animation:up .6s both}
+.slide.active .anim>*:nth-child(2){animation-delay:.08s}.slide.active .anim>*:nth-child(3){animation-delay:.16s}
+.slide.active .anim>*:nth-child(4){animation-delay:.24s}.slide.active .anim>*:nth-child(5){animation-delay:.32s}
+.slide.active .anim>*:nth-child(6){animation-delay:.4s}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+h1,h2,h3{font-family:Outfit,sans-serif}
+h1{font-size:clamp(2.4rem,5vw,4.4rem);font-weight:800;line-height:1.05}
+h2{font-size:clamp(1.6rem,2.8vw,2.5rem);font-weight:800;margin-bottom:.4rem}
+h3{font-size:1.05rem;font-weight:600;margin-bottom:.35rem}
+.kicker{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:.5rem}
+.sub{color:var(--muted);margin-bottom:1.4rem;max-width:70ch}
+.grad{background:linear-gradient(90deg,var(--teal),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent}
+.grid{display:grid;gap:1rem}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:1rem 1.1rem;backdrop-filter:blur(12px);
+  transition:transform .25s,border-color .25s}
+.card:hover{transform:translateY(-3px);border-color:rgba(10,165,179,.6)}
+.card p,.card li{font-size:.88rem;color:#cfe0e2;line-height:1.5}
+ul{padding-left:1.1rem}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:99px;margin:0 .3rem .3rem 0}
+.t-teal{background:rgba(10,165,179,.18);color:#6fe3ee}.t-or{background:rgba(242,165,29,.18);color:#ffc965}
+.t-pk{background:rgba(239,107,138,.18);color:#ff9fb6}.t-vi{background:rgba(139,124,246,.18);color:#b9afff}
+.t-gr{background:rgba(61,220,151,.15);color:#7ff0bd}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--orange);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+tr:hover td{background:rgba(255,255,255,.03)}
+.quote{border-left:3px solid var(--orange);padding:.5rem 1rem;font-style:italic;color:#f5e3c0;margin:.6rem 0 1rem}
+.f12{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+.f12 .card{padding:.7rem .85rem}
+.f12 .n{font-family:Outfit;font-weight:800;color:var(--teal);font-size:.75rem}
+.f12 p{font-size:.78rem}
+.title-slide{justify-content:center}
+.big{font-size:3rem;font-family:Outfit;font-weight:800}
+.note{font-size:.75rem;color:var(--muted);margin-top:.8rem}
+.map{display:flex;align-items:center;justify-content:center;gap:2rem;flex:1}
+.ring{position:relative;width:min(60vh,520px);aspect-ratio:1;border-radius:50%;border:1px dashed var(--line);display:grid;place-items:center}
+.ring::before{content:"";position:absolute;inset:18%;border-radius:50%;border:1px dashed rgba(10,165,179,.4)}
+.core{width:30%;aspect-ratio:1;border-radius:50%;background:linear-gradient(135deg,var(--teal2),var(--teal));display:grid;place-items:center;text-align:center;font-family:Outfit;font-weight:800;box-shadow:0 0 60px rgba(10,165,179,.5)}
+.node{position:absolute;font-size:.75rem;padding:.35rem .6rem;border-radius:10px;background:#0e2a2f;border:1px solid var(--line);white-space:nowrap}
+.sticky{padding:.45rem .6rem;border-radius:6px;font-size:.75rem;color:#1a1a1a;margin-bottom:.4rem;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.y{background:#ffe08a}.b{background:#9fe7ee}.p{background:#ffc2d1}
+.src{font-size:.62rem;opacity:.7;display:block}
+.timeline{display:grid;grid-template-columns:repeat(8,1fr);gap:.5rem}
+.step{border-top:3px solid var(--teal);padding-top:.5rem}
+.step b{font-family:Outfit;color:var(--orange);font-size:.8rem}
+.step p{font-size:.78rem;color:#cfe0e2}
+.score{font-size:4rem;font-family:Outfit;font-weight:800}
+nav{position:fixed;bottom:2.5vh;left:6vw;right:6vw;display:flex;align-items:center;gap:1rem;z-index:5}
+.bar{flex:1;height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--orange));transition:width .4s}
+nav button{background:var(--panel);border:1px solid var(--line);color:var(--text);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:1rem}
+nav button:hover{border-color:var(--teal)}
+#count{font-size:.8rem;color:var(--muted);min-width:52px;text-align:right}
+@media print{html,body{overflow:visible}.slide{position:relative;opacity:1;transform:none;page-break-after:always;height:100vh}nav{display:none}}
+</style>
+</head>
+<body>
+<main class="deck" id="deck">
+
+<!-- 01 TITLE -->
+<section class="slide title-slide active">
+  <div class="anim">
+    <p class="kicker">PRM393 · Persona Deliverable · Gate G2</p>
+    <h1>FAP Check-in<br><span class="grad">Persona có căn cứ</span></h1>
+    <p class="sub" style="margin-top:1rem">Hệ thống điểm danh QR động cho Đại học FPT — Giảng viên chiếu QR từ app Flutter, sinh viên quét bằng Web không cần cài app.</p>
+    <div><span class="tag t-teal">Problem & Scope</span><span class="tag t-or">User Map</span><span class="tag t-pk">Affinity</span><span class="tag t-vi">4 Proto-Persona</span><span class="tag t-gr">Persona → UI → Test</span></div>
+  </div>
+</section>
+
+<!-- 02 PROBLEM -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">01 · Frame the challenge</p>
+    <h2>Problem Statement & Phạm vi</h2>
+    <p class="quote">“Giảng viên FPTU mất 5–10 phút đầu giờ để gọi tên điểm danh trên FAP và lo ngại điểm danh hộ, trong khi sinh viên cần check-in thật nhanh, không phải cài app và biết chắc mình đã được ghi nhận.”</p>
+    <div class="grid g3">
+      <div class="card"><h3>🎯 Tác vụ trọng tâm</h3><ul><li>Mở phiên & chiếu QR động</li><li>Sinh viên quét & nhận xác nhận</li><li>Xử lý ngoại lệ (điểm danh thủ công)</li><li>Theo dõi nguy cơ cấm thi</li></ul></div>
+      <div class="card"><h3>📦 Trong phạm vi</h3><ul><li>App giảng viên (Flutter desktop/mobile)</li><li>Web check-in (Firebase Hosting)</li><li>Đồng bộ Google Sheets / báo cáo</li></ul><h3 style="margin-top:.6rem">🚫 Ngoài phạm vi</h3><ul><li>Thay thế hệ thống FAP chính thức</li></ul></div>
+      <div class="card"><h3>📏 Tiêu chí thành công đo được</h3><ul><li>Điểm danh lớp 30 SV &lt; 45 giây</li><li>100% SV không cần cài app</li><li>Phản hồi xác nhận &lt; 300 ms</li><li>Lỗi thao tác GV &lt; 2%</li></ul><p class="note">Các con số là <b>target</b> — cần đo trong usability test.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 USER MAP -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">02 · List people & situations</p>
+    <h2>Stakeholder / User Map</h2>
+    <p class="sub">Vòng trong: người dùng trực tiếp · Vòng ngoài: gián tiếp & dễ bị bỏ sót.</p>
+  </div>
+  <div class="map">
+    <div class="ring">
+      <div class="core">FAP<br>Check-in</div>
+      <span class="node" style="top:22%;left:26%;border-color:var(--teal)">👨‍🏫 GV thành thạo</span>
+      <span class="node" style="top:22%;right:20%;border-color:var(--teal)">🧑‍🏫 GV mới / dạy thay</span>
+      <span class="node" style="bottom:22%;left:24%;border-color:var(--teal)">📱 Sinh viên</span>
+      <span class="node" style="bottom:22%;right:22%;border-color:var(--teal)">🗂️ Phòng Khảo thí/CTSV</span>
+      <span class="node" style="top:2%;left:40%">🏫 Ban đào tạo</span>
+      <span class="node" style="top:48%;left:-6%">♿ SV khiếm thị / mù màu</span>
+      <span class="node" style="top:48%;right:-8%">📶 SV mạng yếu / hết pin</span>
+      <span class="node" style="bottom:1%;left:38%">👪 Phụ huynh (gián tiếp)</span>
+    </div>
+    <div class="card" style="max-width:320px">
+      <h3>Người dễ bị bỏ sót</h3>
+      <ul><li>SV điện thoại cũ, camera hỏng</li><li>SV mù màu → trạng thái không chỉ dựa vào màu</li><li>GV dạy thay chưa quen lớp</li><li>Phòng học có Wi-Fi quá tải ca 1/ca 3</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 04 WORKSHOP -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">03 · Quy trình</p>
+    <h2>Workshop Persona 100 phút</h2>
+    <p class="sub">Diverge → Cluster → Converge, sau đó đi thu thập bằng chứng. Không bắt đầu từ màn hình.</p>
+    <div class="timeline">
+      <div class="step"><b>00–10'</b><h3>Frame</h3><p>Ai điểm danh, trong hoàn cảnh nào?</p></div>
+      <div class="step"><b>10–25'</b><h3>List</h3><p>GV, SV, khảo thí; máy chiếu, 4G, Wi-Fi.</p></div>
+      <div class="step"><b>25–40'</b><h3>Brainwrite</h3><p>Mỗi ghi chú = 1 ý, viết độc lập.</p></div>
+      <div class="step"><b>40–60'</b><h3>Affinity</h3><p>Nhóm theo goals / behaviors / pains.</p></div>
+      <div class="step"><b>60–75'</b><h3>Segments</h3><p>Chọn Primary / Secondary.</p></div>
+      <div class="step"><b>75–90'</b><h3>Draft</h3><p>Điền 12 trường + Evidence.</p></div>
+      <div class="step"><b>90–100'</b><h3>Research</h3><p>Lên kế hoạch phỏng vấn.</p></div>
+      <div class="step" style="border-color:var(--orange)"><b>Sau</b><h3>Validate</h3><p>Tách/gộp Persona, sửa giả định.</p></div>
+    </div>
+    <div class="grid g2" style="margin-top:1.4rem">
+      <div class="card"><h3>Câu hỏi khởi động</h3><p>Ai cần làm gì? Khi nào khó? Hiện họ làm thế nào khi chưa có app? Người mới khác người thành thạo ở đâu?</p></div>
+      <div class="card"><h3>Tranh luận phân khúc</h3><p>GV thành thạo vs GV mới có goals/pains khác nhau không? Khác biệt đó có dẫn tới quyết định UI khác? Gộp lại thì mất gì?</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 AFFINITY -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">04 · Affinity clustering</p>
+    <h2>Affinity Board — gắn nguồn bằng chứng</h2>
+    <p class="sub">Nhãn theo mẫu hành vi, không theo tuổi/giới. <span class="tag t-or">A = Assumed</span><span class="tag t-teal">R = Reported</span><span class="tag t-gr">O = Observed</span></p>
+    <div class="grid g4">
+      <div class="card"><h3>⚡ “Muốn vào bài ngay”</h3>
+        <div class="sticky y">Gọi tên 30–40 SV mất 5–10'<span class="src">R · GV phản ánh (cần ID)</span></div>
+        <div class="sticky y">Mở phiên từ thời khóa biểu<span class="src">A</span></div>
+        <div class="sticky y">Dạy 4–5 ca/ngày, ít thời gian chuẩn bị<span class="src">A</span></div></div>
+      <div class="card"><h3>🛡️ “Sợ gian lận”</h3>
+        <div class="sticky p">SV chụp QR gửi Zalo cho bạn<span class="src">R · cần xác minh</span></div>
+        <div class="sticky p">Nhầm Attended / Absent trên FAP<span class="src">A</span></div>
+        <div class="sticky p">Cần kiểm soát danh sách realtime<span class="src">A</span></div></div>
+      <div class="card"><h3>📱 “Nhanh & chắc chắn”</h3>
+        <div class="sticky b">Ngại cài app chỉ để điểm danh<span class="src">A</span></div>
+        <div class="sticky b">Không biết đã được ghi nhận chưa<span class="src">A</span></div>
+        <div class="sticky b">Wi-Fi nghẽn khi cả lớp cùng quét<span class="src">O · cần ghi bối cảnh</span></div></div>
+      <div class="card"><h3>🧭 “Cần hướng dẫn / ngoại lệ”</h3>
+        <div class="sticky y">GV dạy thay không biết setup<span class="src">A</span></div>
+        <div class="sticky b">SV hỏng camera / hết pin<span class="src">A</span></div>
+        <div class="sticky p">Khảo thí cần số liệu vắng &gt;20%<span class="src">A</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 COVERAGE MATRIX -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">05 · Select segments</p>
+    <h2>Persona Coverage Matrix</h2>
+    <p class="sub">4 Persona khác nhau bởi tác vụ, bối cảnh và rào cản — không chỉ đổi tên/tuổi.</p>
+    <table>
+      <tr><th>Archetype</th><th>Ưu tiên</th><th>Tác vụ chính</th><th>Thiết bị / rào cản</th><th>Khác biệt cần thiết kế</th><th>Evidence</th></tr>
+      <tr><td><b>P01 · GV thành thạo, cần tốc độ</b></td><td><span class="tag t-teal">Primary</span></td><td>Mở phiên, chiếu QR, theo dõi lớp</td><td>Laptop + máy chiếu, vừa nói vừa thao tác</td><td>1–2 click, QR đọc rõ từ cuối lớp</td><td><span class="tag t-or">Proto</span></td></tr>
+      <tr><td><b>P02 · SV check-in bằng điện thoại</b></td><td><span class="tag t-vi">Secondary</span></td><td>Quét QR, nhận xác nhận</td><td>Màn nhỏ, 4G/Wi-Fi nghẽn</td><td>Web nhẹ, phản hồi rõ, phục hồi lỗi</td><td><span class="tag t-or">Proto</span></td></tr>
+      <tr><td><b>P03 · GV mới / dạy thay</b></td><td><span class="tag t-vi">Secondary</span></td><td>Bắt đầu buổi học lần đầu</td><td>Chưa quen lớp, chưa đăng nhập/sync</td><td>Hướng dẫn, phòng lỗi, trạng thái rõ</td><td><span class="tag t-or">Proto</span></td></tr>
+      <tr><td><b>P04 · Cán bộ Khảo thí / CTSV</b></td><td><span class="tag t-pk">Supporting</span></td><td>Tổng hợp vắng, cảnh báo cấm thi</td><td>Làm việc với Excel/Sheets</td><td>Báo cáo, xuất dữ liệu đúng chuẩn</td><td><span class="tag t-or">Proto</span></td></tr>
+    </table>
+    <p class="note">P01 và P03 đều là giảng viên nhưng hành vi & trở ngại khác nhau (tốc độ trong buổi học vs. tự tin trước buổi học) → tách thành 2 Persona.</p>
+  </div>
+</section>
+
+<!-- 07 P01 -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">P01 · Primary Persona · 12 trường lõi</p>
+    <h2>Thầy Anh — <span class="grad">giảng viên thao tác nhanh</span></h2>
+    <p class="sub" style="margin-bottom:.5rem">35 tuổi · GV Software Engineering · Laptop Windows + máy chiếu, điện thoại Android · Accessibility: đứng xa màn hình, cần chữ/nút lớn khi thao tác nhanh.</p>
+    <div class="f12">
+      <div class="card"><span class="n">01 IDENTITY</span><p>GV dạy nhiều ca, ưu tiên tốc độ và kiểm soát lớp.</p></div>
+      <div class="card"><span class="n">02 PRIORITY</span><p>Primary — người khởi tạo mọi phiên điểm danh.</p></div>
+      <div class="card"><span class="n">03 CONTEXT</span><p>Đầu giờ trên bục giảng, laptop nối máy chiếu, 30–40 SV ồn ào, chú ý bị phân tán.</p></div>
+      <div class="card"><span class="n">04 GOALS</span><p>Bắt đầu bài giảng đúng giờ · Danh sách chính xác, không bị điểm hộ · Biết sớm SV có nguy cơ.</p></div>
+      <div class="card" style="grid-column:span 2"><span class="n">05 JOB TO BE DONE</span><p>“Khi bắt đầu ca học, tôi muốn ghi nhận sự có mặt của cả lớp mà không gọi tên, để dành thời gian cho bài giảng và tin rằng dữ liệu là thật.”</p></div>
+      <div class="card"><span class="n">06 BEHAVIORS</span><p>Gọi tên trên FAP mỗi ca; đôi khi điểm danh cuối giờ; ghi chú tay SV vắng.</p></div>
+      <div class="card"><span class="n">07 PAIN POINTS</span><p>Mất 5–10'/ca · Bấm nhầm Attended/Absent · QR tĩnh bị chụp gửi đi.</p></div>
+      <div class="card"><span class="n">08 MOTIVATIONS</span><p>Nhanh, chính xác, kiểm soát, ít thao tác lặp.</p></div>
+      <div class="card"><span class="n">09 CONSTRAINTS</span><p>Wi-Fi phòng học không ổn định; không có quyền sửa FAP; thời gian chuyển ca ngắn.</p></div>
+      <div class="card"><span class="n">10 SCENARIO</span><p>Ca 1, 7h30: mở lịch → chọn lớp → chiếu QR; 1 SV hỏng camera cần điểm danh thủ công.</p></div>
+      <div class="card"><span class="n">11 SUCCESS</span><p>Lớp 30 SV xong &lt; 45s, 0 lỗi thao tác, không cần hỏi trợ giúp (đo bằng task test).</p></div>
+      <div class="card" style="grid-column:span 4;border-color:rgba(242,165,29,.5)"><span class="n" style="color:var(--orange)">12 EVIDENCE & STATUS</span><p><b>Proto-Persona.</b> Bối cảnh dựa trên trải nghiệm học tập của nhóm (Assumed). Chưa có mã phỏng vấn — cần xác minh tần suất ca dạy, tỉ lệ điểm danh hộ và thiết bị thực tế qua phỏng vấn T01–T03.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 P02 -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">P02 · Secondary Persona · 12 trường lõi</p>
+    <h2>Bảo — <span class="grad">sinh viên check-in bằng điện thoại</span></h2>
+    <p class="sub" style="margin-bottom:.5rem">20 tuổi · SV K18 · Android tầm trung, 4G/Wi-Fi trường · Accessibility: dùng 1 tay, ánh sáng phòng chói, có thể mù màu → cần icon + chữ.</p>
+    <div class="f12">
+      <div class="card"><span class="n">01 IDENTITY</span><p>SV muốn “quét xong là xong”, không muốn cài thêm app.</p></div>
+      <div class="card"><span class="n">02 PRIORITY</span><p>Secondary — hoàn tất vòng điểm danh, không quản lý phiên.</p></div>
+      <div class="card"><span class="n">03 CONTEXT</span><p>Vừa vào lớp, đứng/ngồi xa máy chiếu, cả lớp cùng quét một lúc.</p></div>
+      <div class="card"><span class="n">04 GOALS</span><p>Được ghi nhận có mặt nhanh · Chắc chắn kết quả · Không mất tập trung vào bài.</p></div>
+      <div class="card" style="grid-column:span 2"><span class="n">05 JOB TO BE DONE</span><p>“Khi vào lớp, tôi muốn xác nhận mình có mặt chỉ bằng một lần quét, để yên tâm không bị tính vắng và bắt đầu học ngay.”</p></div>
+      <div class="card"><span class="n">06 BEHAVIORS</span><p>Chờ GV gọi tên; hỏi lại bạn nếu không nghe; kiểm tra FAP sau giờ học.</p></div>
+      <div class="card"><span class="n">07 PAIN POINTS</span><p>Ngại cài app nặng · Lag khi mạng nghẽn · Không có xác nhận → lo lắng.</p></div>
+      <div class="card"><span class="n">08 MOTIVATIONS</span><p>Tiện, nhanh, minh bạch về trạng thái điểm danh.</p></div>
+      <div class="card"><span class="n">09 CONSTRAINTS</span><p>Máy cũ, pin yếu, camera mờ, kết nối chập chờn.</p></div>
+      <div class="card"><span class="n">10 SCENARIO</span><p>Ca 3, Wi-Fi quá tải: quét QR → loading lâu → cần retry mà không bị ghi trùng.</p></div>
+      <div class="card"><span class="n">11 SUCCESS</span><p>Từ mở camera đến thấy “Đã điểm danh” ≤ 5s; 0 lần phải hỏi GV.</p></div>
+      <div class="card" style="grid-column:span 4;border-color:rgba(242,165,29,.5)"><span class="n" style="color:var(--orange)">12 EVIDENCE & STATUS</span><p><b>Proto-Persona.</b> Một phần dựa trên quan sát của nhóm trong lớp (cần ghi mã O01 và ngày). Giả định “ngại cài app” chưa kiểm chứng — xác minh bằng khảo sát nhanh S01–S05.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 P03 + P04 -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">Persona bổ sung</p>
+    <h2>P03 & P04 — vì sao cần tách riêng?</h2>
+    <div class="grid g2" style="margin-top:1rem">
+      <div class="card"><span class="tag t-vi">P03 · SECONDARY</span><h3 style="font-size:1.4rem">Cô Linh — GV mới / dạy thay</h3>
+        <ul><li><b>Mục tiêu:</b> Bắt đầu buổi học tự tin mà không cần hỏi kỹ thuật.</li><li><b>Trở ngại:</b> Chưa đăng nhập Google, chưa sync lịch, không biết lớp nào đang diễn ra.</li><li><b>JTBD:</b> Khi dạy lớp lạ, tôi muốn biết chính xác cần bấm gì để mở điểm danh, để không làm lớp chờ.</li><li><b>Khác P01:</b> Cần hướng dẫn & kiểm tra trước; P01 cần tốc độ trong buổi học.</li></ul></div>
+      <div class="card"><span class="tag t-pk">P04 · SUPPORTING</span><h3 style="font-size:1.4rem">Anh Tuấn — cán bộ Khảo thí</h3>
+        <ul><li><b>Mục tiêu:</b> Có danh sách SV vắng &gt;20% đúng hạn trước kỳ thi.</li><li><b>Trở ngại:</b> Dữ liệu rải rác từng GV, định dạng Excel khác nhau.</li><li><b>JTBD:</b> Khi chốt danh sách dự thi, tôi muốn số liệu vắng thống nhất, để ra quyết định cấm thi chính xác.</li><li><b>Khác P01:</b> Không vận hành phiên; cần báo cáo & xuất dữ liệu.</li></ul></div>
+    </div>
+    <p class="note">Cả 2 đều ở trạng thái Proto-Persona · Assumed — ưu tiên phỏng vấn sau P01/P02.</p>
+  </div>
+</section>
+
+<!-- 10 SCENARIOS -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">Scenario cho Primary Persona</p>
+    <h2>Key Scenarios & Success Criteria</h2>
+    <div class="grid g3" style="margin-top:1rem">
+      <div class="card"><span class="tag t-gr">Happy path</span><h3>Ca sáng bình thường</h3><p><b>Trigger:</b> 7h30 vào lớp.<br><b>Luồng:</b> Lịch dạy → chọn lớp → QR động 5s → danh sách realtime.<br><b>Thành công:</b> 30 SV &lt; 45s, không cần gọi tên.</p></div>
+      <div class="card"><span class="tag t-or">Alternate</span><h3>SV hỏng camera</h3><p><b>Trigger:</b> SV báo không quét được.<br><b>Luồng:</b> Mở Manual Attendance → chọn SV → đánh dấu, có nhãn [Manual].<br><b>Thành công:</b> ≤ 3 thao tác, không rời màn hình phiên.</p></div>
+      <div class="card"><span class="tag t-pk">Error / Recovery</span><h3>Mất mạng giữa phiên</h3><p><b>Trigger:</b> Wi-Fi rớt.<br><b>Luồng:</b> Banner báo lỗi → Retry → khôi phục token & QR, không mất dữ liệu.<br><b>Thành công:</b> GV tự xử lý, không phải mở lại phiên.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 PERSONA -> UI -> TEST -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">Milestone B · Validation & Design</p>
+    <h2>Persona → Need → UI decision → Test</h2>
+    <p class="sub">Ý tưởng UI là <b>giả thuyết</b>, chưa phải user need đã xác thực.</p>
+    <table>
+      <tr><th>Persona</th><th>User need</th><th>Giả thuyết UI</th><th>Cách kiểm chứng</th></tr>
+      <tr><td>P01 · Thầy Anh</td><td>Bắt đầu buổi học không gián đoạn</td><td>Mở phiên 1-click từ lịch; QR lớn chiếm 50% màn hình chiếu</td><td>Task test: thời gian từ mở app → QR hiển thị; đọc QR từ hàng cuối</td></tr>
+      <tr><td>P01 · Thầy Anh</td><td>Tin dữ liệu là thật</td><td>QR đổi token mỗi 5s + vòng đếm ngược</td><td>Thử chụp QR gửi bạn ngoài lớp → đo tỉ lệ bị chặn</td></tr>
+      <tr><td>P02 · Bảo</td><td>Biết chắc đã được ghi nhận</td><td>Màn hình xác nhận icon + chữ + giờ, không chỉ màu xanh</td><td>5 SV thử, hỏi “bạn đã điểm danh chưa?”; test với filter mù màu</td></tr>
+      <tr><td>P02 · Bảo</td><td>Check-in khi mạng yếu</td><td>Web nhẹ, retry không ghi trùng</td><td>Throttle 3G trên DevTools, đo thời gian & lỗi</td></tr>
+      <tr><td>P03 · Cô Linh</td><td>Tự tin lần đầu</td><td>Checklist trạng thái: đăng nhập / đồng bộ / lớp hiện tại</td><td>Quan sát GV mới setup không cần trợ giúp</td></tr>
+      <tr><td>P04 · Anh Tuấn</td><td>Số liệu vắng thống nhất</td><td>Báo cáo cảnh báo &gt;20% + xuất Sheets</td><td>So khớp báo cáo với dữ liệu gốc của 1 lớp</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 12 BACKLOG -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">07 · Decide next research</p>
+    <h2>Assumption & Research Backlog</h2>
+    <div class="grid g2" style="margin-top:.6rem">
+      <div class="card"><h3>Giả định cần xác minh trước</h3>
+        <table>
+          <tr><th>#</th><th>Giả định</th><th>Loại</th><th>Phương pháp</th></tr>
+          <tr><td>A1</td><td>Điểm danh tốn 5–10'/ca</td><td><span class="tag t-teal">Reported</span></td><td>Quan sát 3 lớp, bấm giờ</td></tr>
+          <tr><td>A2</td><td>Có điểm danh hộ bằng QR tĩnh</td><td><span class="tag t-or">Assumed</span></td><td>Phỏng vấn 3 GV</td></tr>
+          <tr><td>A3</td><td>SV ngại cài app</td><td><span class="tag t-or">Assumed</span></td><td>Phỏng vấn/khảo sát 5 SV</td></tr>
+          <tr><td>A4</td><td>Wi-Fi nghẽn khi cả lớp quét</td><td><span class="tag t-gr">Observed</span></td><td>Đo tải thực tế ca 1/ca 3</td></tr>
+          <tr><td>A5</td><td>GV dạy thay gặp khó khi setup</td><td><span class="tag t-or">Assumed</span></td><td>Phỏng vấn 1–2 GV mới</td></tr>
+        </table>
+        <p class="note">Kế hoạch: 6–12 phỏng vấn/quan sát, ẩn danh, không lưu thông tin định danh.</p></div>
+      <div class="card"><h3>Câu hỏi phỏng vấn hành vi</h3>
+        <ol style="padding-left:1.2rem"><li>Lần gần nhất thầy/cô điểm danh là khi nào?</li><li>Hãy kể lại từng bước đã làm.</li><li>Đoạn nào mất thời gian hoặc dễ sai?</li><li>Khi gặp trở ngại, thầy/cô xử lý thế nào?</li><li>Đang dùng thiết bị/công cụ nào? Vì sao?</li><li>Thế nào là “điểm danh xong tốt”?</li></ol>
+        <p class="note">Phân loại dữ liệu: Observed · Reported · Inferred · Assumed.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 CHECKLIST -->
+<section class="slide">
+  <div class="anim">
+    <p class="kicker">Self-review · Rubric 100 điểm</p>
+    <h2>Checklist chấm Persona</h2>
+    <div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">
+      <table>
+        <tr><th>Tiêu chí</th><th>Minh chứng</th><th>Tự chấm</th></tr>
+        <tr><td>Phạm vi, tác vụ trọng tâm, nhóm người dùng</td><td>Slide 2</td><td>10</td></tr>
+        <tr><td>User/Stakeholder Map, người dễ bỏ sót</td><td>Slide 3</td><td>10</td></tr>
+        <tr><td>Số Persona phù hợp phạm vi</td><td>Slide 6</td><td>10</td></tr>
+        <tr><td>Phân biệt bằng goals/behaviors/constraints</td><td>Slide 6, 9</td><td>10</td></tr>
+        <tr><td>Đủ 12 trường lõi</td><td>Slide 7, 8</td><td>10</td></tr>
+        <tr><td>Nhu cầu = kết quả, không phải tính năng</td><td>JTBD</td><td>10</td></tr>
+        <tr><td>Bằng chứng / gắn nhãn giả định</td><td>Slide 5, 12</td><td>5</td></tr>
+        <tr><td>Affinity Board hình thành phân khúc</td><td>Slide 5</td><td>10</td></tr>
+        <tr><td>Scenario + success criteria cho Primary</td><td>Slide 10</td><td>10</td></tr>
+        <tr><td>Quyết định UI + phương pháp kiểm chứng</td><td>Slide 11</td><td>10</td></tr>
+      </table>
+      <div class="card" style="text-align:center"><p class="kicker">Self-review score</p><div class="score grad">95</div><p>/100 · <b style="color:var(--green)">Đạt</b></p><p class="note">Trừ 5đ vì phần lớn còn là Proto-Persona; điểm cao không thay thế usability testing.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 14 THANKS -->
+<section class="slide title-slide">
+  <div class="anim" style="text-align:center">
+    <p class="kicker">Q&A</p>
+    <h1>Cảm ơn thầy/cô <span class="grad">& các bạn</span></h1>
+    <p class="sub" style="margin:1rem auto">Bước tiếp theo: phỏng vấn T01–T03, S01–S05 → cập nhật Persona có evidence IDs → usability test trên Figma prototype.</p>
+  </div>
+</section>
+
+</main>
+<nav>
+  <button id="prev" aria-label="Slide trước">‹</button>
+  <div class="bar"><i id="prog"></i></div>
+  <span id="count"></span>
+  <button id="next" aria-label="Slide sau">›</button>
+</nav>
+<script>
+const s=[...document.querySelectorAll('.slide')];let i=0;
+const go=n=>{i=Math.max(0,Math.min(s.length-1,n));s.forEach((e,k)=>e.classList.toggle('active',k===i));
+  prog.style.width=((i+1)/s.length*100)+'%';count.textContent=(i+1)+' / '+s.length;location.hash=i+1};
+prev.onclick=()=>go(i-1);next.onclick=()=>go(i+1);
+addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key))go(i+1);if(['ArrowLeft','PageUp'].includes(e.key))go(i-1);
+  if(e.key==='f')document.documentElement.requestFullscreen?.()});
+go((parseInt(location.hash.slice(1))||1)-1);
+</script>
+</body>
+</html>

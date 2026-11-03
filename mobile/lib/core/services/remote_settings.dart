@@ -15,14 +15,25 @@ class RemoteSettings {
   final bool maintenanceMode;
 
   static Future<RemoteSettings> load({FirebaseRemoteConfig? config}) async {
-    final rc = config ?? FirebaseRemoteConfig.instance;
     try {
-      await rc.setDefaults(const {
+      return await loadFrom(
+        FirebaseRemoteSettingsSource(config ?? FirebaseRemoteConfig.instance),
+      );
+    } catch (e) {
+      debugPrint('Remote Config không khả dụng, dùng giá trị mặc định: $e');
+      return const RemoteSettings();
+    }
+  }
+
+  @visibleForTesting
+  static Future<RemoteSettings> loadFrom(RemoteSettingsSource source) async {
+    try {
+      await source.setDefaults(const {
         'qr_refresh_seconds': 60,
         'ip_check_default': false,
         'maintenance_mode': false,
       });
-      await rc.setConfigSettings(
+      await source.setConfigSettings(
         RemoteConfigSettings(
           fetchTimeout: const Duration(seconds: 10),
           minimumFetchInterval: kDebugMode
@@ -30,14 +41,47 @@ class RemoteSettings {
               : const Duration(hours: 1),
         ),
       );
-      await rc.fetchAndActivate();
+      await source.fetchAndActivate();
+      return RemoteSettings(
+        qrRefreshSeconds: source.getInt('qr_refresh_seconds'),
+        ipCheckDefault: source.getBool('ip_check_default'),
+        maintenanceMode: source.getBool('maintenance_mode'),
+      );
     } catch (e) {
       debugPrint('Remote Config không khả dụng, dùng giá trị mặc định: $e');
+      return const RemoteSettings();
     }
-    return RemoteSettings(
-      qrRefreshSeconds: rc.getInt('qr_refresh_seconds'),
-      ipCheckDefault: rc.getBool('ip_check_default'),
-      maintenanceMode: rc.getBool('maintenance_mode'),
-    );
   }
+}
+
+@visibleForTesting
+abstract interface class RemoteSettingsSource {
+  Future<void> setDefaults(Map<String, dynamic> defaults);
+  Future<void> setConfigSettings(RemoteConfigSettings settings);
+  Future<bool> fetchAndActivate();
+  int getInt(String key);
+  bool getBool(String key);
+}
+
+class FirebaseRemoteSettingsSource implements RemoteSettingsSource {
+  const FirebaseRemoteSettingsSource(this._config);
+
+  final FirebaseRemoteConfig _config;
+
+  @override
+  Future<void> setDefaults(Map<String, dynamic> defaults) =>
+      _config.setDefaults(defaults);
+
+  @override
+  Future<void> setConfigSettings(RemoteConfigSettings settings) =>
+      _config.setConfigSettings(settings);
+
+  @override
+  Future<bool> fetchAndActivate() => _config.fetchAndActivate();
+
+  @override
+  int getInt(String key) => _config.getInt(key);
+
+  @override
+  bool getBool(String key) => _config.getBool(key);
 }

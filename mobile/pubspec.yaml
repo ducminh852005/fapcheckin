@@ -53,6 +53,7 @@ dependencies:
   firebase_analytics: ^13.0.1
   firebase_crashlytics: ^6.0.1
   dio: ^5.11.1
+  firebase_messaging: ^17.0.1
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +78,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/logos/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

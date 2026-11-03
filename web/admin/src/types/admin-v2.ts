@@ -1,0 +1,10 @@
+export type AdminPage =
+  | "dashboard"
+  | "accounts"
+  | "academic"
+  | "attendance"
+  | "announcements"
+  | "feedback"
+  | "feedback-history"
+  | "reports"
+  | "settings"

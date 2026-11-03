@@ -27,7 +27,10 @@ service cloud.firestore {
       return get(profilePath()).data;
     }
     function isActive() {
-      return profile().get('active', true) == true;
+      // Dữ liệu cũ có một số hồ sơ lưu active dưới dạng chuỗi "true".
+      // Admin web cũng chấp nhận định dạng này, nên rules cần xử lý nhất quán.
+      return profile().get('active', true) == true
+        || profile().get('active', true) == 'true';
     }
     function isRole(r) {
       return hasProfile() && isActive() && profile().role == r;
@@ -80,7 +83,19 @@ service cloud.firestore {
       // Người dùng chỉ được sửa tên hiển thị của chính mình.
       allow update: if (signedIn() && request.auth.uid == uid
                         && resource.data.role == profile().role
-                        && onlyChanges(['fullName']))
+                        && isActive()
+                        && onlyChanges(['fullName', 'phone', 'birthDate', 'avatarPath'])
+                        && request.resource.data.fullName is string
+                        && request.resource.data.fullName.size() > 0
+                        && request.resource.data.fullName.size() <= 200
+                        && request.resource.data.get('phone', '') is string
+                        && request.resource.data.get('phone', '').matches('^[+0-9 ()-]{0,25}$')
+                        && request.resource.data.get('birthDate', '').matches('^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+                        && (request.resource.data.get('avatarPath', '') in ['', 'avatars/' + uid + '/profile.jpg', 'avatars/' + uid + '/profile.png']
+                            || (request.resource.data.get('avatarPath', '') is string
+                                && (request.resource.data.get('avatarPath', '').matches('^https://res\\.cloudinary\\.com/.*')
+                                    || request.resource.data.get('avatarPath', '').matches('^https?://.*')
+                                    || request.resource.data.get('avatarPath', '').matches('^data:image/.*')))))
                     || isAdmin();
       allow delete: if isAdmin();
     }
@@ -268,6 +283,72 @@ service cloud.firestore {
             || resource.data.audience == profile().role
             || profile().role == 'admin');
       allow write: if isAdmin();
+    }
+
+    match /user_preferences/{uid} {
+      allow read: if hasProfile() && request.auth.uid == uid;
+      allow create, update: if hasProfile() && isActive() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['theme', 'language', 'reminders', 'updatedAt'])
+        && request.resource.data.theme in ['light', 'dark', 'system']
+        && request.resource.data.language in ['vi', 'en']
+        && request.resource.data.reminders is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+    // Liên hệ hỗ trợ (hotline/email chính thức) — admin cấu hình, mọi tài khoản đọc.
+    // Ghi bằng scripts/seed-support.mjs hoặc Console.
+    match /support_config/{id} {
+      allow read: if hasProfile();
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['phone', 'email', 'address', 'hours', 'updatedAt'])
+        && request.resource.data.get('phone', '') is string
+        && request.resource.data.get('phone', '').matches('^[+0-9 ()-]{0,25}$')
+        && request.resource.data.get('email', '') is string
+        && request.resource.data.get('email', '').size() <= 200
+        && request.resource.data.get('address', '') is string
+        && request.resource.data.get('address', '').size() <= 300
+        && request.resource.data.get('hours', '') is string
+        && request.resource.data.get('hours', '').size() <= 200;
+    }
+    match /feedback/{id} {
+      allow get: if isAdmin() || (hasProfile() && id.matches('^' + request.auth.uid + '_.*'));
+      allow list: if isAdmin() || (hasProfile() && resource.data.authorUid == request.auth.uid);
+      allow create: if hasProfile() && isActive()
+        && request.resource.data.keys().hasOnly(['authorUid', 'category', 'message', 'attachments', 'status', 'createdAt'])
+        && request.resource.data.authorUid == request.auth.uid
+        && id.matches('^' + request.auth.uid + '_.*')
+        && request.resource.data.category in ['bug', 'suggestion', 'other']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.get('attachments', []) is list
+        && request.resource.data.get('attachments', []).size() <= 3
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() && onlyChanges(['status', 'reply', 'resolvedAt'])
+        && request.resource.data.status in ['pending', 'resolved']
+        && request.resource.data.get('reply', '') is string
+        && request.resource.data.get('reply', '').size() <= 4000;
+    }
+    match /user_notifications/{uid}/items/{id} {
+      allow read: if hasProfile() && request.auth.uid == uid;
+      allow update: if hasProfile() && isActive() && request.auth.uid == uid
+        && onlyChanges(['read']) && request.resource.data.read is bool;
+      // Only the trusted reminder worker creates notifications.
+    }
+    match /device_tokens/{uid}/tokens/{id} {
+      allow read, delete: if hasProfile() && request.auth.uid == uid;
+      allow create, update: if hasProfile() && isActive() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['token', 'updatedAt'])
+        && request.resource.data.token is string && request.resource.data.token.size() <= 4096
+        && request.resource.data.token.size() > 0 && request.resource.data.updatedAt == request.time;
+    }
+
+    match /system_settings/{id} {
+      allow read: if hasProfile();
+      allow write: if isAdmin();
+    }
+    match /audit_logs/{id} {
+      allow read, write: if isAdmin();
     }
 
     // ------------------------------------------------------- deny by default
