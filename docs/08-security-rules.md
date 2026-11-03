@@ -1,6 +1,6 @@
 [← Mục lục](README.md)
 
-# 12 · Security Rules & kiểm thử
+# 08 · Security Rules & kiểm thử
 
 Nguồn chuẩn: [`firebase/firestore.rules`](../firebase/firestore.rules) và [`firebase/storage.rules`](../firebase/storage.rules). Nguyên tắc:
 

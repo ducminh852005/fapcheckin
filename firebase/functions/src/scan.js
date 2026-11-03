@@ -51,17 +51,37 @@ export async function runScan(deps, { uid, storagePath }) {
   }
 
   const file = bucket.file(storagePath);
+  let scannedFile;
   try {
     const [meta] = await file.getMetadata();
+    // Pin both reading and cleanup to the version whose metadata was checked.
+    const generation = String(meta.generation ?? '');
+    if (!/^[1-9]\d*$/.test(generation) || !Number.isSafeInteger(Number(generation))) {
+      throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Phiên bản ảnh không hợp lệ. Vui lòng tải lại ảnh.');
+    }
+    scannedFile = bucket.file(storagePath, { generation });
     if (!ALLOWED_MIME.includes(String(meta.contentType).toLowerCase())) {
       throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Chỉ hỗ trợ ảnh JPG, PNG, GIF hoặc BMP.');
     }
-    if (Number(meta.size) > MAX_FILE_BYTES) {
+    if (!/^\d+$/.test(String(meta.size ?? '')) || !Number.isSafeInteger(Number(meta.size)) || Number(meta.size) <= 0 || Number(meta.size) > MAX_FILE_BYTES) {
       throw new ScanError('invalid-argument', 'IMAGE_TOO_LARGE', 'Ảnh vượt quá 10 MB. Vui lòng cắt gọn hoặc nén ảnh rồi thử lại.');
     }
-    const [bytes] = await file.download();
-    if (!bytes?.length) throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Ảnh thời khóa biểu đang trống.');
-
+    const stream = scannedFile.createReadStream();
+    const chunks = [];
+    let byteLength = 0;
+    try {
+      for await (const chunk of stream) {
+        byteLength += chunk.length;
+        if (byteLength > MAX_FILE_BYTES) {
+          throw new ScanError('invalid-argument', 'IMAGE_TOO_LARGE', 'Ảnh vượt quá 10 MB.');
+        }
+        chunks.push(chunk);
+      }
+    } finally {
+      stream.destroy();
+    }
+    if (!byteLength) throw new ScanError('invalid-argument', 'INVALID_IMAGE', 'Ảnh thời khóa biểu đang trống.');
+    const bytes = Buffer.concat(chunks, byteLength);
     let extracted = '';
     try {
       const [result] = await vision.documentTextDetection({ image: { content: bytes } });
@@ -84,6 +104,6 @@ export async function runScan(deps, { uid, storagePath }) {
     return { scanToken: newId(), entries, detectedDates: parsed.detectedDates };
   } finally {
     // Ảnh chỉ là dữ liệu tạm cho OCR.
-    await file.delete({ ignoreNotFound: true }).catch(() => {});
+    if (scannedFile) await scannedFile.delete({ ignoreNotFound: true }).catch(() => {});
   }
 }

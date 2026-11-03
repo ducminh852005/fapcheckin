@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { Readable } from 'node:stream';
 import { parseText, matchEntries } from '../src/timetable.js';
-import { runScan, ScanError } from '../src/scan.js';
+import { runScan, ScanError, MAX_FILE_BYTES } from '../src/scan.js';
 
 const classes = () => [
   { classCode: 'PRN232_SE1917', teacherMemberCode: '' },
@@ -75,8 +76,8 @@ function fakeDeps({ role = 'staff', contentType = 'image/png', size = 1000, ocrT
   };
   const bucket = {
     file: (path) => ({
-      getMetadata: async () => [{ contentType, size }],
-      download: async () => [Buffer.from('img')],
+      getMetadata: async () => [{ contentType, size, generation: '123' }],
+      createReadStream: () => Readable.from([Buffer.from('img')]),
       delete: async () => { deleted.push(path); },
     }),
   };
@@ -112,4 +113,94 @@ test('runScan maps OCR failures to business error codes', async () => {
   await assert.rejects(runScan(fakeDeps({ visionError: 'Quota exceeded' }).deps, ok), { code: 'OCR_BUSY' });
   await assert.rejects(runScan(fakeDeps({ visionError: 'Cloud Vision API has not been used' }).deps, ok), { code: 'OCR_NOT_CONFIGURED' });
   await assert.rejects(runScan(fakeDeps({ visionError: 'boom' }).deps, ok), (e) => e instanceof ScanError && e.code === 'OCR_UNAVAILABLE');
+});
+
+test('CR-03: rejects malformed size metadata and oversized downloaded image before OCR', async () => {
+ for (const size of ['invalid', null, -1, 0, Infinity, true, 1.5, ' ']) {
+  await assert.rejects(runScan(fakeDeps({size}).deps, ok), {code:'IMAGE_TOO_LARGE'});
+ }
+ const {deps,deleted}=fakeDeps(); let ocrCalled=false;
+ deps.bucket.file=()=>({getMetadata:async()=>[{contentType:'image/png',size:100,generation:'123'}], createReadStream:()=>Readable.from([Buffer.alloc(MAX_FILE_BYTES+1)]),delete:async()=>deleted.push(ok.storagePath)});
+ deps.vision.documentTextDetection=async()=>{ocrCalled=true;return [];};
+ await assert.rejects(runScan(deps,ok),{code:'IMAGE_TOO_LARGE'});
+ assert.equal(ocrCalled,false); assert.deepEqual(deleted,[ok.storagePath]);
+});
+
+test('CR-03: stops an oversized stream early and never calls OCR', async () => {
+  const { deps, deleted } = fakeDeps();
+  let produced = 0;
+  const stream = Readable.from((function* () {
+    for (let i = 0; i < 100; i++) {
+      produced++;
+      yield Buffer.alloc(1024 * 1024);
+    }
+  })(), { highWaterMark: 1 });
+  const file = deps.bucket.file(ok.storagePath);
+  deps.bucket.file = () => ({ ...file, createReadStream: () => stream });
+  deps.vision.documentTextDetection = async () => assert.fail('must not call OCR');
+  await assert.rejects(runScan(deps, ok), { code: 'IMAGE_TOO_LARGE' });
+  assert.equal(stream.destroyed, true);
+  assert.ok(produced <= 12, 'at most one chunk is prefetched beyond the overflow');
+  assert.deepEqual(deleted, [ok.storagePath]);
+});
+
+test('CR-03: accepts exactly 10 MB and rejects empty or failed streams', async () => {
+  for (const scenario of ['limit', 'empty', 'error']) {
+    const { deps, deleted } = fakeDeps({ size: MAX_FILE_BYTES });
+    const file = deps.bucket.file(ok.storagePath);
+    const failure = new Error('storage connection failed');
+    const stream = scenario === 'error'
+      ? Readable.from((async function* () { yield Buffer.from('partial'); throw failure; })())
+      : Readable.from(scenario === 'empty' ? [] : [Buffer.alloc(MAX_FILE_BYTES)]);
+    deps.bucket.file = () => ({ ...file, createReadStream: () => stream });
+    if (scenario === 'limit') {
+      const detect = deps.vision.documentTextDetection;
+      deps.vision.documentTextDetection = async ({ image }) => {
+        assert.equal(image.content.length, MAX_FILE_BYTES);
+        return detect();
+      };
+      await runScan(deps, ok);
+    } else {
+      deps.vision.documentTextDetection = async () => assert.fail('must not call OCR');
+      await assert.rejects(runScan(deps, ok), scenario === 'empty' ? { code: 'INVALID_IMAGE' } : failure);
+    }
+    assert.equal(stream.destroyed, true);
+    assert.deepEqual(deleted, [ok.storagePath]);
+  }
+});
+
+test('CR-03: reads and deletes only the inspected generation when the image is replaced', async () => {
+  const { deps } = fakeDeps();
+  const versions = new Map([['123', Buffer.from('original')], ['124', Buffer.from('replacement')]]);
+  deps.bucket.file = (_path, options = {}) => ({
+    getMetadata: async () => [{ contentType: 'image/png', size: 8, generation: '123' }],
+    createReadStream: () => {
+      assert.equal(options.generation, '123');
+      return Readable.from([versions.get(options.generation)]);
+    },
+    delete: async () => {
+      assert.equal(options.generation, '123');
+      versions.delete(options.generation);
+    },
+  });
+  const detect = deps.vision.documentTextDetection;
+  deps.vision.documentTextDetection = async ({ image }) => {
+    assert.equal(image.content.toString(), 'original');
+    return detect();
+  };
+  await runScan(deps, ok);
+  assert.equal(versions.has('123'), false);
+  assert.equal(versions.get('124').toString(), 'replacement');
+});
+
+test('CR-03: fails closed when metadata has no usable generation', async () => {
+  for (const generation of [undefined, '', 'invalid', '0', '9007199254740993']) {
+    const { deps } = fakeDeps();
+    deps.bucket.file = () => ({
+      getMetadata: async () => [{ contentType: 'image/png', size: 100, generation }],
+      createReadStream: () => assert.fail('must not read an unpinned image'),
+      delete: async () => assert.fail('must not delete an unpinned image'),
+    });
+    await assert.rejects(runScan(deps, ok), { code: 'INVALID_IMAGE' });
+  }
 });

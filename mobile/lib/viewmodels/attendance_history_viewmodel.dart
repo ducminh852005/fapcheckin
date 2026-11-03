@@ -151,6 +151,7 @@ class AttendanceHistoryViewModel extends ChangeNotifier {
     // stale response instead of this call being silently dropped.
     if (saving || working) return;
     selectedClassCode = code;
+    summary = null;
     searchQuery = '';
     riskFilter = 'all';
     _markDerivedDirty();

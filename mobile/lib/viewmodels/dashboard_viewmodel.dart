@@ -5,6 +5,7 @@ import 'package:fapcheckin_core/models/class_section_model.dart';
 import 'package:fapcheckin_core/models/sync_result_model.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import './live_session_viewmodel.dart';
 
 class DashboardViewModel extends ChangeNotifier {
@@ -28,14 +29,16 @@ class DashboardViewModel extends ChangeNotifier {
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
-    return _teacherName.substring(0, 2).toUpperCase();
+    return _teacherName
+        .substring(0, _teacherName.length < 2 ? 1 : 2)
+        .toUpperCase();
   }
 
   String _teacherMemberCode = '';
   String get teacherMemberCode => _teacherMemberCode;
 
-  String semester = 'Fall 2023';
-  String campus = 'Hòa Lạc';
+  String semester = '';
+  String campus = '';
 
   String get todayLabel {
     final now = _now();
@@ -68,6 +71,8 @@ class DashboardViewModel extends ChangeNotifier {
     _teacherName = '';
     _teacherEmail = '';
     _teacherMemberCode = '';
+    _generation++;
+    _currentRoute = 'tong-quan';
     _classes = [];
     _status = ViewStatus.idle;
     _errorMessage = null;
@@ -95,7 +100,8 @@ class DashboardViewModel extends ChangeNotifier {
 
   // These come from LiveSessionViewModel in reality, but kept here for the
   // dashboard summary card
-  final int _completedSessions = 0;
+  int get _completedSessions =>
+      _classes.fold(0, (sum, c) => sum + c.completedSessions);
   int get completedSessions => _completedSessions;
   int get totalSessions => totalClassesToday;
   double get sessionProgress =>
@@ -107,7 +113,11 @@ class DashboardViewModel extends ChangeNotifier {
   int get totalStudents => _classes.fold(0, (sum, c) => sum + c.studentCount);
   double get presentRate =>
       totalStudents == 0 ? 0 : presentStudents / totalStudents;
-  double get avgAttendance => 0.0; // requires historical data not in MVP
+  double get avgAttendance => _classes.isEmpty
+      ? 0
+      : _classes.fold<double>(0, (sum, c) => sum + c.averageAttendance) /
+            _classes.length /
+            100;
   double get prevWeekAttendance => 0.0;
 
   // Active session info (pass-through from LiveSessionViewModel if active)
@@ -140,7 +150,7 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   // Countdown timer (kept for UI compat — ticks via MainScreen)
-  int _remainingSeconds = 18 * 60 + 42;
+  int _remainingSeconds = 0;
   int get remainingSeconds => _remainingSeconds;
 
   String get countdownDisplay {
@@ -158,14 +168,7 @@ class DashboardViewModel extends ChangeNotifier {
 
   // ── Weekly chart (static for now — requires historical API not in MVP) ──────
 
-  final List<WeeklyData> weeklyAttendance = const [
-    WeeklyData('T2', 0.92, false),
-    WeeklyData('T3', 0.89, true),
-    WeeklyData('T4', 0.94, false),
-    WeeklyData('T5', 0.91, false),
-    WeeklyData('T6', 0.88, false),
-    WeeklyData('T7', 0.95, false),
-  ];
+  final List<WeeklyData> weeklyAttendance = const [];
 
   // ── Activity logs (static for now — no dedicated API endpoint in MVP) ───────
 
@@ -184,8 +187,10 @@ class DashboardViewModel extends ChangeNotifier {
 
   // ── Load classes from API ────────────────────────────────────────────────────
 
+  int _generation = 0;
   Future<void> loadClasses() async {
     if (_teacherMemberCode.isEmpty) return;
+    final generation = ++_generation;
     _status = ViewStatus.loading;
     _errorMessage = null;
     notifyListeners();
@@ -195,15 +200,19 @@ class DashboardViewModel extends ChangeNotifier {
         teacherMemberCode: _teacherMemberCode,
       );
 
+      if (generation != _generation) return;
       switch (result) {
         case ApiSuccess<List<ClassSectionModel>>(:final data):
-          _classes = _sortClassesByCheckinPriority(data);
-          _status = data.isEmpty ? ViewStatus.idle : ViewStatus.success;
+          _classes = _sortClassesByCheckinPriority(
+            data.where((c) => !c.isMakeup).toList(),
+          );
+          _status = ViewStatus.success;
         case ApiFailure<List<ClassSectionModel>>(:final error):
           _status = ViewStatus.error;
           _errorMessage = error.message;
       }
     } catch (e) {
+      if (generation != _generation) return;
       _status = ViewStatus.error;
       _errorMessage = e.toString();
     }
@@ -281,6 +290,7 @@ class DashboardViewModel extends ChangeNotifier {
   }
 
   int _checkinPriority(ClassSectionModel c, DateTime now) {
+    if (c.isActive) return 0;
     final startMinute = _startMinute(c);
     var endMinute = _endMinute(c);
     if (startMinute != null && endMinute != null && endMinute <= startMinute) {
@@ -288,7 +298,6 @@ class DashboardViewModel extends ChangeNotifier {
     }
     final nowMinute = now.hour * 60 + now.minute;
     if (endMinute != null && nowMinute > endMinute) return 2;
-    if (c.isActive) return 0;
     return 1;
   }
 

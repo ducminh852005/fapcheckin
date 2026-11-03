@@ -1,4 +1,5 @@
 import 'package:fapcheckin_core/session/current_user.dart';
+import 'package:fapcheckin_core/repositories/schedule_repository.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import 'package:fapcheckin_core/responsive/responsive_dialog.dart';
 import 'package:fapcheckin/core/services/google_auth_service.dart';
@@ -41,7 +42,10 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   // Chưa khởi tạo Firebase: mọi lời gọi repository trả ApiFailure (như khi mất mạng).
   final user = CurrentUser();
   final teacherRepo = TeacherRepository(currentUser: user);
-  final auth = AuthViewModel(AuthRepository(currentUser: user), GoogleAuthService());
+  final auth = AuthViewModel(
+    AuthRepository(currentUser: user),
+    GoogleAuthService(),
+  );
   final dashboard = DashboardViewModel(teacherRepo);
   final live = LiveSessionViewModel(teacherRepo);
   final history = AttendanceHistoryViewModel(
@@ -52,6 +56,7 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   await tester.pumpWidget(
     MultiProvider(
       providers: [
+        Provider(create: (_) => ScheduleRepository(currentUser: user)),
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider.value(value: dashboard),
         ChangeNotifierProvider.value(value: live),
@@ -64,11 +69,7 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   await tester.pump(const Duration(milliseconds: 100));
 }
 
-Future<void> _pumpWidth(
-  WidgetTester tester,
-  Size size,
-  Widget child,
-) async {
+Future<void> _pumpWidth(WidgetTester tester, Size size, Widget child) async {
   _setSize(tester, size);
   await tester.pumpWidget(
     MaterialApp(
@@ -91,7 +92,7 @@ void main() {
   group('MainScreen shell', () {
     testWidgets('phone: bottom NavigationBar, no sidebar', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Trang chủ'), findsOneWidget);
       expect(find.byType(Sidebar), findsNothing);
       _expectNoErrors(tester);
     });
@@ -99,7 +100,6 @@ void main() {
     testWidgets('desktop: sidebar, no NavigationBar', (tester) async {
       await _pumpMainScreen(tester, const Size(1280, 800));
       expect(find.byType(Sidebar), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
       _expectNoErrors(tester);
     });
 
@@ -108,6 +108,10 @@ void main() {
         'tong-quan',
         'lich-hoc',
         'lop-hoc',
+        'bao-cao',
+        'cai-dat',
+        'thong-tin-ca-nhan',
+        'thong-tin-cong-tac',
         'lich-su-diem-danh',
         'diem-danh-qr',
       ]) {
@@ -125,7 +129,7 @@ void main() {
 
     testWidgets('phone: switching tab updates route', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
-      await tester.tap(find.text('Tiết học'));
+      await tester.tap(find.text('Quản lý lớp'));
       await tester.pump(const Duration(milliseconds: 100));
       final ctx = tester.element(find.byType(MainScreen));
       expect(ctx.read<DashboardViewModel>().currentRoute, 'lop-hoc');

@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+import '../services/timetable_parser.dart';
 
 import '../firebase/firestore_json.dart';
 import '../models/timetable_scan_model.dart';
@@ -11,38 +11,31 @@ import '../result/api_result.dart';
 import '../result/guard.dart';
 import '../session/current_user.dart';
 
-/// Import thời khóa biểu từ ảnh: ảnh -> Storage -> Cloud Function `scanTimetable` (OCR)
+/// Import thời khóa biểu từ ảnh: OCR trên thiết bị -> đối chiếu lớp được phép đọc.
 /// -> GV chọn lớp -> nhận lớp bằng cách ghi `teacherMemberCode` (Security Rules chỉ cho nhận lớp
 /// chưa có giảng viên).
 class TimetableRepository {
   TimetableRepository({
     required this.currentUser,
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
-    FirebaseFunctions? functions,
+    this.recognizeText,
     FirebaseAuth? auth,
   }) : _injectedDb = firestore,
-       _injectedStorage = storage,
-       _injectedFunctions = functions,
        _injectedAuth = auth;
-
-  /// Phải trùng `region` trong `firebase/functions/index.js`.
-  static const functionsRegion = 'asia-southeast1';
 
   final CurrentUser currentUser;
   final FirebaseFirestore? _injectedDb;
-  final FirebaseStorage? _injectedStorage;
-  final FirebaseFunctions? _injectedFunctions;
+  final Future<String> Function(Uint8List bytes)? recognizeText;
   final FirebaseAuth? _injectedAuth;
 
   FirebaseFirestore get _db => _injectedDb ?? FirebaseFirestore.instance;
-  FirebaseStorage get _storage => _injectedStorage ?? FirebaseStorage.instance;
-  FirebaseFunctions get _functions =>
-      _injectedFunctions ?? FirebaseFunctions.instanceFor(region: functionsRegion);
   FirebaseAuth get _auth => _injectedAuth ?? FirebaseAuth.instance;
 
   /// Lớp được phép nhận theo từng lần quét (thay cho scanToken lưu cache ở backend cũ).
   final Map<String, Set<String>> _scans = {};
+  List<Map<String, dynamic>>? _classCache;
+  String? _cacheAccount;
+  DateTime? _cacheTime;
 
   Future<ApiResult<TimetableScanResult>> scanImage({
     required Uint8List bytes,
@@ -51,19 +44,62 @@ class TimetableRepository {
   }) => guardApi(() async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
-      throw ApiException('UNAUTHORIZED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      throw ApiException(
+        'UNAUTHORIZED',
+        'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+      );
     }
-    final safe = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9_.-]'), '_');
-    final path = 'timetable_scans/$uid/${DateTime.now().millisecondsSinceEpoch}_$safe';
-    await _storage
-        .ref(path)
-        .putData(bytes, SettableMetadata(contentType: mimeType));
-
-    final response = await _functions
-        .httpsCallable('scanTimetable')
-        .call<Map<Object?, Object?>>({'storagePath': path});
-    final data = Map<String, dynamic>.from(response.data);
-    final result = TimetableScanResult.fromJson(data);
+    if (bytes.isEmpty ||
+        bytes.length > 5 * 1024 * 1024 ||
+        !{'image/jpeg', 'image/png'}.contains(mimeType)) {
+      throw ApiException('INVALID_IMAGE', 'Chọn ảnh JPG/PNG không quá 5 MB.');
+    }
+    final recognize = recognizeText;
+    if (recognize == null) {
+      throw ApiException(
+        'OCR_UNSUPPORTED',
+        'OCR offline chưa hỗ trợ nền tảng này.',
+      );
+    }
+    final extracted = await recognize(bytes);
+    final parsed = parseTimetable(extracted);
+    if (parsed.entries.isEmpty) {
+      throw ApiException(
+        'OCR_EMPTY',
+        'Không nhận ra mã lớp–môn. Hãy chọn ảnh rõ hơn (ví dụ SE1917-PRN232).',
+      );
+    }
+    final me = currentUser.memberCode;
+    if (me.isEmpty) {
+      throw ApiException('UNAUTHORIZED', 'Vui lòng đăng nhập lại.');
+    }
+    // Match only classes permitted by existing Firestore rules. Never widen access.
+    final account = '$uid|$me';
+    if (_cacheAccount != account ||
+        _classCache == null ||
+        DateTime.now().difference(_cacheTime!) > const Duration(minutes: 2)) {
+      final docs = await _db
+          .collection('classes')
+          .where('teacherMemberCode', whereIn: ['', me])
+          .get();
+      _classCache = docs.docs
+          .map((d) => {
+            ...d.data(),
+            'classCode': text(d.data()['classCode']).isEmpty
+                ? d.id
+                : text(d.data()['classCode']),
+            'documentId': d.id,
+          })
+          .toList();
+      _cacheAccount = account;
+      _cacheTime = DateTime.now();
+    }
+    final result = TimetableScanResult(
+      scanToken: '${DateTime.now().microsecondsSinceEpoch}',
+      entries: matchTimetable(parsed, _classCache!, me),
+      detectedDates: parsed.dates,
+    );
+    _scans.clear();
     _scans[result.scanToken] = {
       for (final e in result.entries)
         if (e.canImport && e.matchedClassCode != null) e.matchedClassCode!,
@@ -76,9 +112,18 @@ class TimetableRepository {
     required List<String> classCodes,
   }) => guardApi(() async {
     final me = currentUser.memberCode;
+    if (_cacheAccount != '${_auth.currentUser?.uid}|$me' || me.isEmpty) {
+      throw ApiException(
+        'SCAN_EXPIRED',
+        'Phiên đăng nhập đã thay đổi. Hãy quét lại.',
+      );
+    }
     final allowed = _scans[scanToken];
     if (allowed == null) {
-      throw ApiException('SCAN_EXPIRED', 'Kết quả quét đã hết hạn. Vui lòng quét lại ảnh.');
+      throw ApiException(
+        'SCAN_EXPIRED',
+        'Kết quả quét đã hết hạn. Vui lòng quét lại ảnh.',
+      );
     }
     final requested = {
       for (final c in classCodes)
@@ -88,7 +133,10 @@ class TimetableRepository {
       throw ApiException('VALIDATION_ERROR', 'Chưa chọn lớp nào để thêm.');
     }
     if (requested.any((c) => !allowed.contains(c))) {
-      throw ApiException('FORBIDDEN', 'Danh sách lớp không khớp với kết quả quét đã xác thực.');
+      throw ApiException(
+        'FORBIDDEN',
+        'Danh sách lớp không khớp với kết quả quét đã xác thực.',
+      );
     }
 
     // Kiểm tra toàn bộ lô trước khi ghi để không nhận dở dang.
@@ -101,7 +149,10 @@ class TimetableRepository {
       }
       final owner = text(snap.data()!['teacherMemberCode']);
       if (owner.isNotEmpty && owner != me) {
-        throw ApiException('ASSIGNMENT_CONFLICT', 'Lớp $code vừa được phân công cho giáo viên khác.');
+        throw ApiException(
+          'ASSIGNMENT_CONFLICT',
+          'Lớp $code vừa được phân công cho giáo viên khác.',
+        );
       }
       if (owner == me) {
         already++;
@@ -122,7 +173,9 @@ class TimetableRepository {
         for (var i = 0; i < docs.length || i == 0; i += 450) {
           final batch = _db.batch();
           if (i == 0) {
-            batch.update(_db.collection('classes').doc(code), {'teacherMemberCode': me});
+            batch.update(_db.collection('classes').doc(code), {
+              'teacherMemberCode': me,
+            });
           }
           for (final e in docs.skip(i).take(450)) {
             batch.update(e.reference, {'teacherMemberCode': me});
@@ -132,12 +185,16 @@ class TimetableRepository {
       }
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
-        throw ApiException('ASSIGNMENT_CONFLICT', 'Lớp vừa được phân công cho giáo viên khác. Hãy quét lại.');
+        throw ApiException(
+          'ASSIGNMENT_CONFLICT',
+          'Lớp vừa được phân công cho giáo viên khác. Hãy quét lại.',
+        );
       }
       rethrow;
     }
 
     _scans.remove(scanToken);
+    _classCache = null;
     return TimetableImportResult(
       assignedCount: toAssign.length,
       alreadyAssignedCount: already,

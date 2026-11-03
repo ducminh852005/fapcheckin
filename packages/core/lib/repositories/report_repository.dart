@@ -29,6 +29,15 @@ class ReportRepository {
     return ReportData.fromJson(buildReport(tables, now: _now()));
   });
 
+  Future<ApiResult<ReportData>> getReportForRange(DateTime from, DateTime to) => guardApi(() async {
+    if (to.isBefore(from) || to.difference(from).inDays > 366) throw ApiException('VALIDATION_ERROR', 'Chọn khoảng thời gian tối đa 366 ngày.');
+    final tables = await TeacherTables.load(_db, currentUser.memberCode);
+    final start = from.toIso8601String().substring(0, 10), end = to.toIso8601String().substring(0, 10);
+    final sessions = tables.sessions.where((s) { final day = fmtDate(s['sessionDate']); return day.compareTo(start) >= 0 && day.compareTo(end) <= 0; }).toList();
+    final ids = sessions.map((s) => text(s['sessionId'])).toSet();
+    return ReportData.fromJson(buildReport(TeacherTables(classes: tables.classes, enrollments: tables.enrollments, sessions: sessions, records: tables.records.where((r) => ids.contains(text(r['sessionId']))).toList()), now: _now()));
+  });
+
   /// Tách riêng (hàm thuần) để test không cần Firestore.
   static Json buildReport(TeacherTables tables, {required DateTime now}) {
     final classes = tables.classes;
@@ -37,17 +46,27 @@ class ReportRepository {
     final sessions =
         tables.sessions.where((s) {
           final status = text(s['sessionStatus']);
-          final target = status == 'closed' || status == 'open' || status == 'active' || status.isEmpty;
+          final target =
+              status == 'closed' ||
+              status == 'open' ||
+              status == 'active' ||
+              status.isEmpty;
           return target && ownedCodes.contains(text(s['classCode']));
         }).toList()..sort(
-          (a, b) => fmtDate(a['sessionDate']).compareTo(fmtDate(b['sessionDate'])),
+          (a, b) =>
+              fmtDate(a['sessionDate']).compareTo(fmtDate(b['sessionDate'])),
         );
     final closedSessionCount = tables.sessions
-        .where((s) => s['sessionStatus'] == 'closed' && ownedCodes.contains(text(s['classCode'])))
+        .where(
+          (s) =>
+              s['sessionStatus'] == 'closed' &&
+              ownedCodes.contains(text(s['classCode'])),
+        )
         .length;
 
     final recordMap = {
-      for (final r in tables.records) '${text(r['sessionId'])}|${text(r['rollNumber'])}': r,
+      for (final r in tables.records)
+        '${text(r['sessionId'])}|${text(r['rollNumber'])}': r,
     };
 
     final studentsByClass = <String, List<Json>>{};
@@ -88,8 +107,11 @@ class ReportRepository {
     }
 
     String statusOf(Json session, Json student) {
-      final record = recordMap['${text(session['sessionId'])}|${student['rollNumber']}'];
-      if (record != null && text(record['status']).isNotEmpty) return text(record['status']);
+      final record =
+          recordMap['${text(session['sessionId'])}|${student['rollNumber']}'];
+      if (record != null && text(record['status']).isNotEmpty) {
+        return text(record['status']);
+      }
       return session['sessionStatus'] == 'closed' ? 'Absent' : 'Unchecked';
     }
 
@@ -97,7 +119,8 @@ class ReportRepository {
       final code = text(session['classCode']);
       final stats = classStats[code]!;
       for (final student in studentsByClass[code]!) {
-        final record = recordMap['${text(session['sessionId'])}|${student['rollNumber']}'];
+        final record =
+            recordMap['${text(session['sessionId'])}|${student['rollNumber']}'];
         final status = statusOf(session, student);
         final warning = warningMap['$code|${student['rollNumber']}']!;
         if (status == 'Absent') {
@@ -137,6 +160,8 @@ class ReportRepository {
             'attendanceRate': exp > 0 ? stat['present']! / exp : 0.0,
             'absentRate': exp > 0 ? stat['absent']! / exp : 0.0,
             'studentCount': studentsByClass[code]!.length,
+            'presentCount': stat['present'],
+            'expectedCount': exp,
           };
         }(),
     ];
@@ -150,7 +175,13 @@ class ReportRepository {
         final week = date.difference(first).inDays ~/ 7 + 1;
         final bucket = weeks.putIfAbsent(
           week,
-          () => {'label': 'W$week', 'present': 0, 'late': 0, 'absent': 0, 'total': 0},
+          () => {
+            'label': 'W$week',
+            'present': 0,
+            'late': 0,
+            'absent': 0,
+            'total': 0,
+          },
         );
         for (final student in studentsByClass[text(session['classCode'])]!) {
           final status = statusOf(session, student);
@@ -179,7 +210,11 @@ class ReportRepository {
             })
             .where((item) => (item['absenceRate'] as double) > 0.15)
             .toList()
-          ..sort((a, b) => (b['absenceRate'] as double).compareTo(a['absenceRate'] as double));
+          ..sort(
+            (a, b) => (b['absenceRate'] as double).compareTo(
+              a['absenceRate'] as double,
+            ),
+          );
     final topWarnings = warnings.take(50).toList();
 
     final methodTotal = methods.values.fold<int>(0, (a, b) => a + b);
@@ -190,14 +225,32 @@ class ReportRepository {
       'kpis': {
         'attendanceRate': expected > 0 ? presentCount / expected : 0.0,
         'totalCheckins': presentCount,
-        'atRiskCount': topWarnings.where((w) => (w['absenceRate'] as double) > 0.2).length,
+        'absentCount': expected - presentCount,
+        'atRiskCount': topWarnings
+            .where((w) => (w['absenceRate'] as double) > 0.2)
+            .length,
         'studentCount': warningMap.length,
         'lateRate': expected > 0 ? lateCount / expected : 0.0,
       },
       'methods': [
-        {'key': 'qr', 'label': 'Điểm danh QR', 'count': methods['qr'], 'rate': rate(methods['qr']!)},
-        {'key': 'other', 'label': 'Khác / chưa xác định', 'count': methods['other'], 'rate': rate(methods['other']!)},
-        {'key': 'manual', 'label': 'GV xác nhận thủ công', 'count': methods['manual'], 'rate': rate(methods['manual']!)},
+        {
+          'key': 'qr',
+          'label': 'Điểm danh QR',
+          'count': methods['qr'],
+          'rate': rate(methods['qr']!),
+        },
+        {
+          'key': 'other',
+          'label': 'Khác / chưa xác định',
+          'count': methods['other'],
+          'rate': rate(methods['other']!),
+        },
+        {
+          'key': 'manual',
+          'label': 'GV xác nhận thủ công',
+          'count': methods['manual'],
+          'rate': rate(methods['manual']!),
+        },
       ],
       'weekly': [
         for (final k in (weeks.keys.toList()..sort()))
@@ -220,18 +273,28 @@ class ReportRepository {
     };
   }
 
-  static String _semesterLabel(List<Json> classes, List<Json> sessions, DateTime now) {
+  static String _semesterLabel(
+    List<Json> classes,
+    List<Json> sessions,
+    DateTime now,
+  ) {
     for (final source in [...classes, ...sessions]) {
-      final value = source['semester'] ?? source['semesterName'] ?? source['term'];
+      final value =
+          source['semester'] ?? source['semesterName'] ?? source['term'];
       if (value != null && value.toString().trim().isNotEmpty) {
         return value.toString().trim();
       }
     }
-    final dated = sessions.where((s) => text(s['sessionDate']).isNotEmpty).toList()
-      ..sort((a, b) => fmtDate(b['sessionDate']).compareTo(fmtDate(a['sessionDate'])));
+    final dated =
+        sessions.where((s) => text(s['sessionDate']).isNotEmpty).toList()..sort(
+          (a, b) =>
+              fmtDate(b['sessionDate']).compareTo(fmtDate(a['sessionDate'])),
+        );
     if (dated.isEmpty) return 'Fall ${now.year}';
     final date = DateTime.parse(fmtDate(dated.first['sessionDate']));
-    final season = date.month <= 5 ? 'Spring' : (date.month <= 8 ? 'Summer' : 'Fall');
+    final season = date.month <= 5
+        ? 'Spring'
+        : (date.month <= 8 ? 'Summer' : 'Fall');
     return '$season ${date.year}';
   }
 }

@@ -1,15 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
-import 'package:fapcheckin_core/constants/app_spacing.dart';
-import 'package:fapcheckin_core/constants/app_text_styles.dart';
-import 'package:fapcheckin_core/models/timetable_scan_model.dart';
-import '../../../viewmodels/dashboard_viewmodel.dart';
-import '../../../viewmodels/live_session_viewmodel.dart';
-import '../class_management/dialogs/import_timetable_dialog.dart';
-import '../dashboard/components/weekly_timetable.dart';
+import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
+import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../viewmodels/live_session_viewmodel.dart';
+import 'components/import_timetable_bottom_sheet.dart';
+import '../dashboard/components/weekly_timetable.dart';
+import 'schedule_colors.dart';
+
+import 'package:fapcheckin_core/repositories/schedule_repository.dart';
+import 'package:fapcheckin_core/result/api_result.dart';
+
+import '../live_session/dialogs/start_session_dialog.dart';
+import 'components/create_schedule_bottom_sheet.dart';
+import 'components/schedule_header.dart';
+import 'components/schedule_week_picker.dart';
+import 'components/schedule_day_summary.dart';
+import 'components/schedule_timeline_item.dart';
+
+/// Màn hình Lịch dạy của tôi (Teaching Schedule):
+/// 1. Header chào hỏi + Tiêu đề lớn + Sub-nav 5 phím tắt
+/// 2. Thẻ chọn tuần và ngày trong tuần (Tháng 10, 2026; T2..CN)
+/// 3. Dòng tóm tắt ngày đang chọn và tổng số ca dạy
+/// 4. Trục Timeline nối các ca dạy trong ngày (Đã xong, Đang dạy, Chưa bắt đầu)
 class ScheduleBody extends StatefulWidget {
   const ScheduleBody({super.key});
 
@@ -18,41 +33,80 @@ class ScheduleBody extends StatefulWidget {
 }
 
 class _ScheduleBodyState extends State<ScheduleBody> {
+  List<Map<String, dynamic>> _plans = [];
+  String? _error;
+  Future<void> _loadPlans() async {
+    final result = await context.read<ScheduleRepository>().list();
+    if (!mounted) return;
+    setState(() {
+      if (result is ApiSuccess<List<Map<String, dynamic>>>) {
+        _plans = result.data;
+        _error = null;
+      }
+      if (result is ApiFailure<List<Map<String, dynamic>>>) {
+        _error = result.error.message;
+      }
+    });
+  }
+
+  Future<void> _open(_TimelineSessionData item) async {
+    if (!DateUtils.isSameDay(_selectedDate, DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chỉ mở điểm danh cho ngày hôm nay.')),
+      );
+      return;
+    }
+    final vm = context.read<DashboardViewModel>();
+    final cls = vm.classes
+        .where((c) => c.classCode == item.classCode)
+        .firstOrNull;
+    if (cls == null) return;
+    final ok = await startSessionWithOptions(
+      context,
+      classSection: cls,
+      slotCode: item.slotCode,
+    );
+    if (mounted && ok) vm.navigate('diem-danh-qr');
+  }
+
+  late DateTime _selectedDate;
   late DateTime _weekStart;
 
   @override
   void initState() {
     super.initState();
-    _resetToCurrentWeek();
-  }
-
-  void _resetToCurrentWeek() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadPlans();
+    });
     final now = DateTime.now();
-    _weekStart = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    _weekStart = _selectedDate.subtract(
+      Duration(days: _selectedDate.weekday - 1),
+    );
   }
 
   void _prevWeek() {
     setState(() {
-      _weekStart = _weekStart.subtract(Duration(days: 7));
+      _weekStart = _weekStart.subtract(const Duration(days: 7));
+      _selectedDate = _weekStart.add(Duration(days: _selectedDate.weekday - 1));
     });
   }
 
   void _nextWeek() {
     setState(() {
-      _weekStart = _weekStart.add(Duration(days: 7));
+      _weekStart = _weekStart.add(const Duration(days: 7));
+      _selectedDate = _weekStart.add(Duration(days: _selectedDate.weekday - 1));
+    });
+  }
+
+  void _onDaySelected(DateTime date) {
+    setState(() {
+      _selectedDate = date;
     });
   }
 
   Future<void> _scanTimetable(BuildContext context) async {
-    final result = await showDialog<TimetableImportResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => ImportTimetableDialog(),
-    );
+    final result = await showImportTimetableBottomSheet(context);
     if (!context.mounted || result == null) return;
 
     await context.read<DashboardViewModel>().loadClasses();
@@ -64,172 +118,342 @@ class _ScheduleBodyState extends State<ScheduleBody> {
       message: 'Đã thêm giáo viên vào ${result.assignedCount} lớp.',
       icon: Icons.check_circle_outline,
       accentColor: AppColors.statusPresent,
-      duration: Duration(seconds: 4),
+      duration: const Duration(seconds: 4),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final weekEnd = _weekStart.add(Duration(days: 6));
-    final weekRangeText =
-        '${_weekStart.day.toString().padLeft(2, '0')}/${_weekStart.month.toString().padLeft(2, '0')} - '
-        '${weekEnd.day.toString().padLeft(2, '0')}/${weekEnd.month.toString().padLeft(2, '0')}/${weekEnd.year}';
+    final dashboardVm = context.watch<DashboardViewModel>();
+    final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.all(context.isMobile ? 12 : AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top action bar
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.md,
-              children: [
-                // Week navigation
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    IconButton.outlined(
-                      icon: Icon(Icons.chevron_left, size: 20),
-                      tooltip: 'Tuần trước',
-                      onPressed: _prevWeek,
-                      style: IconButton.styleFrom(
-                        side: BorderSide(color: AppColors.surfaceContainerHigh),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusMd,
-                          ),
-                        ),
-                      ),
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _resetToCurrentWeek();
-                        });
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.surfaceContainerHigh),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusMd,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'Hiện tại',
-                        style: AppTextStyles.labelMd.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    IconButton.outlined(
-                      icon: Icon(Icons.chevron_right, size: 20),
-                      tooltip: 'Tuần sau',
-                      onPressed: _nextWeek,
-                      style: IconButton.styleFrom(
-                        side: BorderSide(color: AppColors.surfaceContainerHigh),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusMd,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'Tuần: $weekRangeText',
-                      style: AppTextStyles.headlineSm.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
+    // Lấy các ca học cho ngày đang chọn
+    final sessions = _getSessionsForDate(_selectedDate, dashboardVm);
+
+    // Xác định các ngày trong tuần có ca dạy (để hiển thị dấu chấm cam)
+    final daysWithClasses = _getDaysWithClasses(dashboardVm);
+
+    return Scaffold(
+      backgroundColor: ScheduleColors.pageBg,
+      body: RefreshIndicator(
+        color: ScheduleColors.orangePrimary,
+        onRefresh: () async {
+          await dashboardVm.loadClasses();
+          if (mounted) await _loadPlans();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Stack(
+            children: [
+              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ, Báo cáo & Quản lý lớp
+              Container(
+                height: 240,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: AppPalette.headerGradient,
                 ),
-                // Scan timetable button
-                Tooltip(
-                  message: 'Quét thời khóa biểu',
-                  child: Material(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    child: InkWell(
-                      onTap: () => _scanTimetable(context),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      child: Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(
-                            AppSpacing.radiusMd,
+              ),
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 14,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 1. Header (Lời chào, Tiêu đề, Chuông, Sub-nav 5 mục)
+                          ScheduleHeader(
+                            onScanTimetable: () => _scanTimetable(context),
                           ),
-                        ),
-                        child: Icon(
-                          Icons.document_scanner_outlined,
-                          size: 20,
-                          color: AppColors.onPrimary,
-                        ),
+                          const SizedBox(height: 18),
+
+                          if (dashboardVm.isLoading)
+                            const LinearProgressIndicator(),
+                          if (dashboardVm.errorMessage != null)
+                            Text(dashboardVm.errorMessage!),
+                          if (_error != null) Text(_error!),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(
+                                Icons.add_circle_outline_rounded,
+                                size: 18,
+                                color: ScheduleColors.orangePrimary,
+                              ),
+                              label: const Text(
+                                'Thêm lịch học bù / workshop',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: ScheduleColors.orangePrimary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFFED7AA),
+                                  width: 1.2,
+                                ),
+                                backgroundColor: const Color(0xFFFFF7ED),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final created =
+                                    await showCreateScheduleBottomSheet(context);
+                                if (created != null && mounted) {
+                                  await _loadPlans();
+                                  if (!context.mounted) return;
+                                  context.read<LiveSessionViewModel>().triggerToast(
+                                        type: ToastType.custom,
+                                        title: 'Đã tạo lịch học bổ sung',
+                                        message:
+                                            'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
+                                        icon: Icons.check_circle_outline,
+                                        accentColor: AppColors.statusPresent,
+                                        duration: const Duration(seconds: 4),
+                                      );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // 2. Thẻ chọn tuần và ngày
+                          ScheduleWeekPicker(
+                            selectedDate: _selectedDate,
+                            weekStart: _weekStart,
+                            onDaySelected: _onDaySelected,
+                            onPrevWeek: _prevWeek,
+                            onNextWeek: _nextWeek,
+                            daysWithClasses: daysWithClasses,
+                          ),
+                          const SizedBox(height: 18),
+
+                          // 3. Dòng tóm tắt ngày
+                          ScheduleDaySummary(
+                            date: _selectedDate,
+                            sessionCount: sessions.length,
+                            semester: dashboardVm.semester.isNotEmpty
+                                ? 'Học kỳ ${dashboardVm.semester}'
+                                : '',
+                          ),
+                          const SizedBox(height: 16),
+
+                          // 4. Trục Timeline các ca dạy hoặc Empty State
+                          if (sessions.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 28,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF7ED),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(
+                                      Icons.event_busy_rounded,
+                                      color: ScheduleColors.orangePrimary,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Không có lịch dạy trong ngày đã chọn.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Hãy chọn một ngày khác trên thanh lịch tuần hoặc quét ảnh thời khóa biểu FAP.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
+                              children: [
+                                for (int i = 0; i < sessions.length; i++) ...[
+                                  ScheduleTimelineItem(
+                                    slot: sessions[i].slot,
+                                    timeRange: sessions[i].timeRange,
+                                    subjectCode: sessions[i].subjectCode,
+                                    classCode: sessions[i].classCode,
+                                    subjectName: sessions[i].subjectName,
+                                    room: sessions[i].room,
+                                    subtext: sessions[i].subtext,
+                                    status: sessions[i].status,
+                                    isFirst: i == 0,
+                                    isLast: i == sessions.length - 1,
+                                    onOpenAttendance: () => _open(sessions[i]),
+                                    onTap: () {
+                                      if (sessions[i].status ==
+                                          ScheduleSessionStatus.active) {
+                                        _open(sessions[i]);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ],
+                            ),
+                          SizedBox(height: context.isMobile ? 108 : 36),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: AppSpacing.md),
-
-            // Timetable Table
-            Consumer<DashboardViewModel>(
-              builder: (context, vm, _) {
-                final entries = <TimetableEntry>[];
-
-                for (final c in vm.classes) {
-                  final info = SlotCodeParser.parse(c.slotCode);
-                  final timeRange = (c.startTime != null && c.endTime != null)
-                      ? '${c.startTime}-${c.endTime}'
-                      : c.timeLabel;
-
-                  if (info != null) {
-                    for (final day in info.weekdays) {
-                      entries.add(
-                        TimetableEntry(
-                          dayOfWeek: day,
-                          slot: info.slot,
-                          courseCode: c.classCode,
-                          room: c.room,
-                          timeRange: timeRange,
-                        ),
-                      );
-                    }
-                  } else {
-                    entries.add(
-                      TimetableEntry(
-                        dayOfWeek: DateTime.now().weekday,
-                        slot:
-                            int.tryParse(
-                              c.slotCode.replaceAll(RegExp(r'[^0-9]'), ''),
-                            ) ??
-                            1,
-                        courseCode: c.classCode,
-                        room: c.room,
-                        timeRange: timeRange,
-                      ),
-                    );
-                  }
-                }
-
-                return WeeklyTimetable(weekStart: _weekStart, entries: entries);
-              },
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  Set<int> _getDaysWithClasses(DashboardViewModel vm) {
+    final days = <int>{};
+    for (final c in vm.classes) {
+      final info = SlotCodeParser.parse(c.slotCode);
+      if (info != null) {
+        days.addAll(info.weekdays);
+      }
+    }
+    for (final p in _plans) {
+      final date = DateTime.tryParse(p['scheduleDate']?.toString() ?? '');
+      if (date != null &&
+          p['status'] != 'cancelled' &&
+          !date.isBefore(_weekStart) &&
+          date.isBefore(_weekStart.add(const Duration(days: 7)))) {
+        days.add(date.weekday);
+      }
+    }
+    return days;
+  }
+
+  List<_TimelineSessionData> _getSessionsForDate(
+    DateTime date,
+    DashboardViewModel vm,
+  ) {
+    final List<_TimelineSessionData> result = [];
+
+    for (final c in vm.classes) {
+      final info = SlotCodeParser.parse(c.slotCode);
+      final isToday = info != null
+          ? info.weekdays.contains(date.weekday)
+          : false;
+
+      if (isToday) {
+        final slotNum = info.slot;
+
+        ScheduleSessionStatus status = ScheduleSessionStatus.upcoming;
+        String subtext = '${c.studentCount} sinh viên • Điểm danh QR';
+
+        if (c.isActive && DateUtils.isSameDay(date, DateTime.now())) {
+          status = ScheduleSessionStatus.active;
+          final scanned = vm.activeSessionScanned;
+          subtext = '$scanned/${c.studentCount} sinh viên đã điểm danh';
+        }
+
+        result.add(
+          _TimelineSessionData(
+            slot: slotNum,
+            slotCode: c.slotCode,
+            timeRange: (c.startTime != null && c.endTime != null)
+                ? '${c.startTime}–${c.endTime}'
+                : c.timeLabel,
+            subjectCode: c.subjectCode,
+            classCode: c.classCode,
+            subjectName: c.subjectName,
+            room: c.room,
+            subtext: subtext,
+            status: status,
+          ),
+        );
+      }
+    }
+
+    final dateKey =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    for (final p in _plans.where(
+      (p) => p['scheduleDate'] == dateKey && p['status'] != 'cancelled',
+    )) {
+      final cls = vm.classes
+          .where((c) => c.classCode == p['classCode'])
+          .firstOrNull;
+      if (cls == null) continue;
+      final code = p['slotCode']?.toString() ?? '';
+      result.add(
+        _TimelineSessionData(
+          slot: SlotCodeParser.parse(code)?.slot ?? 0,
+          slotCode: code,
+          timeRange: code,
+          subjectCode: cls.subjectCode,
+          classCode: cls.classCode,
+          subjectName: cls.subjectName,
+          room: p['room']?.toString() ?? cls.room,
+          subtext: 'Lịch bổ sung · ${p['note'] ?? ''}',
+          status: ScheduleSessionStatus.upcoming,
+        ),
+      );
+    }
+    // Sắp xếp các ca theo thứ tự số ca tăng dần (1 -> 6)
+    result.sort((a, b) => a.slot.compareTo(b.slot));
+    return result;
+  }
+}
+
+class _TimelineSessionData {
+  final int slot;
+  final String slotCode;
+  final String timeRange;
+  final String subjectCode;
+  final String classCode;
+  final String subjectName;
+  final String room;
+  final String subtext;
+  final ScheduleSessionStatus status;
+
+  const _TimelineSessionData({
+    required this.slot,
+    required this.slotCode,
+    required this.timeRange,
+    required this.subjectCode,
+    required this.classCode,
+    required this.subjectName,
+    required this.room,
+    required this.subtext,
+    required this.status,
+  });
 }

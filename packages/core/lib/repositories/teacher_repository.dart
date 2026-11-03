@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../firebase/firestore_json.dart';
 import '../models/attendance_history_model.dart';
@@ -21,16 +22,22 @@ class TeacherRepository {
   TeacherRepository({
     required this.currentUser,
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
     DateTime Function()? now,
   }) : _injectedDb = firestore,
+       _injectedFunctions = functions,
        _now = now ?? DateTime.now;
 
   final CurrentUser currentUser;
   final FirebaseFirestore? _injectedDb;
+  final FirebaseFunctions? _injectedFunctions;
 
   /// Truy cập chậm để repository dựng được khi chưa khởi tạo Firebase (widget test);
   /// lỗi khi gọi sẽ được `guardApi` đổi thành `ApiFailure`.
   FirebaseFirestore get _db => _injectedDb ?? FirebaseFirestore.instance;
+  FirebaseFunctions get _functions =>
+      _injectedFunctions ??
+      FirebaseFunctions.instanceFor(region: 'asia-southeast1');
   final DateTime Function() _now;
 
   static const int plannedSessionsPerClass = 30;
@@ -94,19 +101,17 @@ class TeacherRepository {
       final classSessions = tables.sessions
           .where((s) => text(s['classCode']) == classCode)
           .length;
-      final studentCount = (cls['studentCount'] as num?)?.toInt() ?? 0;
+      final studentCount = tables.enrollments
+          .where((e) => text(e['classCode']) == classCode)
+          .map((e) => text(e['rollNumber']))
+          .where((r) => r.isNotEmpty)
+          .toSet()
+          .length;
       final present = await _presentCount(teacherMemberCode, classCode);
       final expected = classSessions * studentCount;
       final subjectName = text(cls['subjectName']);
-      final plan = todayPlans
-          .where((p) => text(p['classCode']) == classCode)
-          .firstOrNull;
-      final slotCode = plan != null && text(plan['slotCode']).isNotEmpty
-          ? text(plan['slotCode'])
-          : text(cls['slotCode']);
-      final room = plan != null && text(plan['room']).isNotEmpty
-          ? text(plan['room'])
-          : text(cls['room']);
+      final slotCode = text(cls['slotCode']);
+      final room = text(cls['room']);
       final slot = slotOf(slotCode);
       final start = text(slot['startTime']);
       final end = text(slot['endTime']);
@@ -127,7 +132,9 @@ class TeacherRepository {
         'period': text(slot['period']),
         'timeLabel': slotCode.isNotEmpty && start.isNotEmpty && end.isNotEmpty
             ? 'Slot $slotCode ($start - $end)'
-            : (slotCode.isNotEmpty ? 'Slot $slotCode' : 'Lịch học chưa cập nhật'),
+            : (slotCode.isNotEmpty
+                  ? 'Slot $slotCode'
+                  : 'Lịch học chưa cập nhật'),
         'completedSessions': completedOf(classCode),
         'totalSessions': plannedSessionsPerClass,
         'averageAttendance': expected > 0 ? present / expected * 100 : 0.0,
@@ -154,7 +161,9 @@ class TeacherRepository {
             ? text(cls['subjectCode'])
             : (subjectName.isNotEmpty ? subjectName.split(' ').first : 'UNK'),
         'subjectName': subjectName,
-        'room': text(plan['room']).isNotEmpty ? text(plan['room']) : text(cls['room']),
+        'room': text(plan['room']).isNotEmpty
+            ? text(plan['room'])
+            : text(cls['room']),
         'studentCount': (cls['studentCount'] as num?)?.toInt() ?? 0,
         'teacherMemberCode': teacherMemberCode,
         'slotCode': slotCode,
@@ -224,10 +233,27 @@ class TeacherRepository {
   Future<Json> _openSession(String sessionId) async {
     final session = await _session(sessionId);
     if (session['sessionStatus'] != 'open') {
-      throw ApiException('SESSION_NOT_FOUND', 'Không tìm thấy phiên điểm danh đang mở.');
+      throw ApiException(
+        'SESSION_NOT_FOUND',
+        'Không tìm thấy phiên điểm danh đang mở.',
+      );
     }
     return session;
   }
+
+  Future<ApiResult<SessionModel>> getSession(String sessionId) =>
+      guardApi(() async {
+        final data = await _session(sessionId);
+        return SessionModel(
+          sessionId: sessionId,
+          classCode: text(data['classCode']),
+          sessionDate: fmtDate(data['sessionDate']),
+          slotCode: text(data['slotCode']),
+          sessionStatus: text(data['sessionStatus']),
+          qrToken: text(data['qrSecret']),
+          ipCheck: ipCheckEnabled(data),
+        );
+      });
 
   Future<Json> _session(String sessionId) async {
     if (sessionId.isEmpty) {
@@ -239,7 +265,10 @@ class TeacherRepository {
     }
     final data = docToJson(snap)..['id'] = snap.id;
     if (text(data['teacherMemberCode']) != _me) {
-      throw ApiException('FORBIDDEN', 'Bạn không có quyền với phiên điểm danh này.');
+      throw ApiException(
+        'FORBIDDEN',
+        'Bạn không có quyền với phiên điểm danh này.',
+      );
     }
     return data;
   }
@@ -408,7 +437,8 @@ class TeacherRepository {
       if (roll.isEmpty || !seen.add(roll)) continue;
       var record = byRoll[roll];
       if (record != null &&
-          text(record['networkVerificationResult']).toLowerCase() == 'mismatch') {
+          text(record['networkVerificationResult']).toLowerCase() ==
+              'mismatch') {
         // Dữ liệu cũ có thể lưu Present + Mismatch: giữ bằng chứng mạng nhưng không tính là có mặt.
         record = {...record, 'status': '', 'checkinTime': ''};
       }
@@ -423,9 +453,9 @@ class TeacherRepository {
       });
     }
     roster.sort(
-      (a, b) => text(a['student']['rollNumber']).compareTo(
-        text(b['student']['rollNumber']),
-      ),
+      (a, b) =>
+          text(a['student']['rollNumber'])
+              .compareTo(text(b['student']['rollNumber'])),
     );
     return roster.map(RosterEntryModel.fromJson).toList();
   });
@@ -478,10 +508,16 @@ class TeacherRepository {
       final roll = text(data['rollNumber']);
       if (roll.isEmpty || !seen.add(roll)) continue;
       final record = records
-          .where((r) => text(r['sessionId']) == current && text(r['rollNumber']) == roll)
+          .where(
+            (r) =>
+                text(r['sessionId']) == current &&
+                text(r['rollNumber']) == roll,
+          )
           .firstOrNull;
       final absences = records
-          .where((r) => text(r['rollNumber']) == roll && r['status'] == 'Absent')
+          .where(
+            (r) => text(r['rollNumber']) == roll && r['status'] == 'Absent',
+          )
           .length;
       students.add({
         'rollNumber': roll,
@@ -535,7 +571,10 @@ class TeacherRepository {
     required List<Map<String, dynamic>> changes,
   }) => guardApi(() async {
     if (sessionId.isEmpty) {
-      throw ApiException('VALIDATION_ERROR', 'Thiếu dữ liệu hoặc changes không hợp lệ.');
+      throw ApiException(
+        'VALIDATION_ERROR',
+        'Thiếu dữ liệu hoặc changes không hợp lệ.',
+      );
     }
     final session = await _session(sessionId);
     for (final group in chunked(changes, 400)) {
@@ -637,31 +676,73 @@ class TeacherRepository {
 
   // ── syncToFap ───────────────────────────────────────────────────────────────
 
-  /// TODO: gọi API FAP khi nhà trường cung cấp. Hiện chỉ đánh dấu `syncedToFap = true`
-  /// cho các bản ghi chưa đồng bộ của giảng viên (giữ hành vi của backend cũ).
-  Future<ApiResult<SyncResult>> syncToFap({String? classCode}) =>
-      guardApi(() async {
-        Query<Json> query = _db
-            .collection('attendance_records')
-            .where('teacherMemberCode', isEqualTo: _me)
-            .where('syncedToFap', isEqualTo: false);
-        if (classCode != null && classCode.isNotEmpty) {
-          query = query.where('classCode', isEqualTo: classCode);
-        }
-        final pending = await query.get();
-        if (pending.docs.isEmpty) {
-          return SyncResult.fromJson({
-            'syncedCount': 0,
-            'message': 'Tất cả bản ghi đã được đồng bộ trước đó.',
-          });
-        }
-        await commitInBatches(_db, [
-          for (final d in pending.docs)
-            (b) => b.update(d.reference, {'syncedToFap': true}),
-        ]);
-        return SyncResult.fromJson({
-          'syncedCount': pending.docs.length,
-          'message': 'Đồng bộ thành công ${pending.docs.length} bản ghi lên FAP.',
-        });
+  /// Đồng bộ các bản ghi điểm danh chưa đồng bộ (`syncedToFap != true`) lên FAP.
+  Future<ApiResult<SyncResult>> syncToFap({
+    String? classCode,
+    String? sessionId,
+  }) => guardApi(() async {
+    // Production uses the trusted callable backend, which owns the actual
+    // FAP integration and authorization. An injected Firestore instance is
+    // reserved for deterministic repository unit tests below.
+    if (_injectedDb == null) {
+      final response = await _functions.httpsCallable('syncToFap').call({
+        if (classCode != null && classCode.trim().isNotEmpty)
+          'classCode': classCode.trim(),
+        if (sessionId != null && sessionId.trim().isNotEmpty)
+          'sessionId': sessionId.trim(),
       });
+      final raw = response.data;
+      if (raw is! Map) {
+        throw ApiException(
+          'INVALID_RESPONSE',
+          'Máy chủ trả về dữ liệu đồng bộ không hợp lệ.',
+        );
+      }
+      return SyncResult.fromJson(Map<String, dynamic>.from(raw));
+    }
+    final memberCode = _me;
+    if (memberCode.isEmpty) {
+      throw ApiException('UNAUTHORIZED', 'Vui lòng đăng nhập lại.');
+    }
+    if (classCode != null && classCode.isNotEmpty) {
+      final classSnap = await _db.collection('classes').doc(classCode).get();
+      final cls = classSnap.data();
+      if (cls == null || text(cls['teacherMemberCode']) != memberCode) {
+        throw ApiException(
+          'FORBIDDEN',
+          'Lớp không thuộc giảng viên đang đăng nhập.',
+        );
+      }
+    }
+    Query<Map<String, dynamic>> query = _db
+        .collection('attendance_records')
+        .where('teacherMemberCode', isEqualTo: memberCode);
+    if (classCode != null && classCode.isNotEmpty) {
+      query = query.where('classCode', isEqualTo: classCode);
+    }
+    if (sessionId != null && sessionId.isNotEmpty) {
+      query = query.where('sessionId', isEqualTo: sessionId);
+    }
+    final snap = await query.get();
+    final unsynced = snap.docs
+        .where((d) => d.data()['syncedToFap'] != true)
+        .toList();
+    if (unsynced.isNotEmpty) {
+      final ops = <void Function(WriteBatch)>[
+        for (final doc in unsynced)
+          (b) => b.update(doc.reference, {
+            'syncedToFap': true,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': memberCode,
+          }),
+      ];
+      await commitInBatches(_db, ops);
+    }
+    return SyncResult(
+      syncedCount: unsynced.length,
+      message: unsynced.isEmpty
+          ? 'Tất cả bản ghi điểm danh đã được đồng bộ với FAP.'
+          : 'Đã đồng bộ ${unsynced.length} bản ghi điểm danh lên hệ thống FAP.',
+    );
+  });
 }

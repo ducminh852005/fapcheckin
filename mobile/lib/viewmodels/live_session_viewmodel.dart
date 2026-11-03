@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:fapcheckin_core/constants/app_colors.dart';
+
 import '../core/services/ip_service.dart';
+
 import 'package:fapcheckin_core/models/class_section_model.dart';
 import 'package:fapcheckin_core/models/close_session_model.dart';
 import 'package:fapcheckin_core/models/roster_entry_model.dart';
@@ -12,6 +14,7 @@ import 'package:fapcheckin_core/models/stats_entry_model.dart';
 import 'package:fapcheckin_core/models/student_checkin.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import '../views/teacher/live_session/components/qr_panel.dart';
 
 // ---------------------------------------------------------------------------
@@ -48,6 +51,8 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   // ── Session metadata ────────────────────────────────────────────────────────
 
+  int _generation = 0;
+  bool _disposed = false;
   SessionModel? _session;
   SessionModel? get session => _session;
 
@@ -83,7 +88,9 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   void applyRemoteSettings({int? qrCycleSeconds, bool? ipCheckDefault}) {
     if (ipCheckDefault != null) _ipCheckDefault = ipCheckDefault;
-    if (qrCycleSeconds != null && qrCycleSeconds >= 10 && qrCycleSeconds <= 600) {
+    if (qrCycleSeconds != null &&
+        qrCycleSeconds >= 10 &&
+        qrCycleSeconds <= 600) {
       _qrCycleSeconds = qrCycleSeconds;
       _qrRefreshSeconds = qrCycleSeconds;
     }
@@ -120,8 +127,7 @@ class LiveSessionViewModel extends ChangeNotifier {
   /// Whether the open session requires students to be on the teacher's network.
   bool get ipCheck => _session?.ipCheck ?? false;
 
-  String get checkinUrl =>
-      qrToken.isEmpty
+  String get checkinUrl => qrToken.isEmpty
       ? ''
       : '$kCheckinBaseUrl?s=$sessionId&t=$qrToken&ic=${ipCheck ? 1 : 0}';
 
@@ -314,8 +320,14 @@ class LiveSessionViewModel extends ChangeNotifier {
     bool forceNew = false,
     bool ipCheck = false,
   }) async {
+    final generation = ++_generation;
+    _stopPolling();
     _status = ViewStatus.loading;
     _errorMessage = null;
+    if (_session?.classCode != classSection.classCode || isClosed) {
+      _session = null;
+      _roster = [];
+    }
     _classInfo = classSection;
 
     // Will this session check the students' network? A brand new session uses the
@@ -356,6 +368,7 @@ class LiveSessionViewModel extends ChangeNotifier {
         return;
       }
     }
+    if (_disposed || generation != _generation) return;
     _teacherIp = realIp;
     notifyListeners();
 
@@ -373,15 +386,21 @@ class LiveSessionViewModel extends ChangeNotifier {
 
     // 2. Check if classSection is active and has an activeSessionId on backend
     if (backendResume) {
-      _session = SessionModel(
-        sessionId: activeId,
-        classCode: classSection.classCode,
-        sessionDate: classSection.timeLabel,
-        slotCode: slotCode.isNotEmpty ? slotCode : classSection.slotCode,
-        sessionStatus: 'open',
-        qrToken: '',
-        ipCheck: checkIp,
-      );
+      final result = await _repository.getSession(activeId);
+      if (_disposed || generation != _generation) return;
+      if (result is ApiFailure<SessionModel>) {
+        _errorMessage = result.error.message;
+        _status = ViewStatus.error;
+        notifyListeners();
+        return;
+      }
+      _session = (result as ApiSuccess<SessionModel>).data;
+      if (!_session!.isOpen) {
+        _errorMessage = 'Phiên đã đóng. Vui lòng tải lại danh sách lớp.';
+        _status = ViewStatus.error;
+        notifyListeners();
+        return;
+      }
       if (checkIp && !await _syncSessionTeacherIp(activeId, realIp)) return;
       _status = ViewStatus.success;
       _startPolling();
@@ -399,6 +418,7 @@ class LiveSessionViewModel extends ChangeNotifier {
         ipCheck: checkIp,
       );
 
+      if (_disposed || generation != _generation) return;
       switch (result) {
         case ApiSuccess<SessionModel>(:final data):
           _session = data;
@@ -435,10 +455,12 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   Future<bool> _syncSessionTeacherIp(String sessionId, String teacherIp) async {
+    final generation = _generation;
     final result = await _repository.syncSessionTeacherIp(
       sessionId: sessionId,
       teacherIp: teacherIp,
     );
+    if (_disposed || generation != _generation) return false;
     switch (result) {
       case ApiSuccess<String>():
         _teacherIp = teacherIp;
@@ -469,14 +491,16 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   Future<void> loadRoster() async {
+    final generation = _generation;
     if (_session == null) return;
 
     final result = await _repository.getRoster(sessionId: _session!.sessionId);
+    if (_disposed || generation != _generation) return;
     switch (result) {
       case ApiSuccess<List<RosterEntryModel>>(:final data):
         final prevChecked = checkedInCount;
 
-        if (checkedInCount > prevChecked ||
+        if (data.where((s) => s.hasCheckedIn).length > prevChecked ||
             (_roster.isEmpty && data.where((s) => s.hasCheckedIn).isNotEmpty)) {
           // Find newly checked in student
           final newPresent = data
@@ -513,14 +537,15 @@ class LiveSessionViewModel extends ChangeNotifier {
         }
         _roster = data;
         notifyListeners();
-      case ApiFailure<List<RosterEntryModel>>():
-        // Silently fail on background polls to avoid disrupting UI
-        break;
+      case ApiFailure<List<RosterEntryModel>>(:final error):
+        _errorMessage = error.message;
+        notifyListeners();
     }
   }
 
   /// Manually mark a student present (manualCheckin API)
   Future<void> manualCheckin(String rollNumber) async {
+    final generation = _generation;
     if (_session == null) return;
 
     final result = await _repository.manualCheckin(
@@ -529,6 +554,7 @@ class LiveSessionViewModel extends ChangeNotifier {
       status: 'ManualByGV',
     );
 
+    if (_disposed || generation != _generation) return;
     switch (result) {
       case ApiSuccess<void>():
         // Immediately refresh the roster
@@ -540,15 +566,17 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   Future<void> _rotateQr() async {
+    final generation = _generation;
     if (_session == null || isClosed) return;
     final result = await _repository.rotateQr(sessionId: _session!.sessionId);
+    if (_disposed || generation != _generation) return;
     switch (result) {
       case ApiSuccess<String>(:final data):
         _session = _session!.copyWith(qrToken: data);
         notifyListeners();
-      case ApiFailure<String>():
-        // Keep the current QR when a background rotation request fails.
-        break;
+      case ApiFailure<String>(:final error):
+        _errorMessage = error.message;
+        notifyListeners();
     }
   }
 
@@ -559,7 +587,9 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   /// Manually mark multiple students
   Future<void> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
-    if (_session == null) return;
+    final generation = _generation;
+    if (_session == null || isClosed) return;
+    _errorMessage = null;
     _status = ViewStatus.loading;
     notifyListeners();
 
@@ -568,6 +598,7 @@ class LiveSessionViewModel extends ChangeNotifier {
       changes: changes,
     );
 
+    if (_disposed || generation != _generation) return;
     switch (result) {
       case ApiSuccess<void>():
         _status = ViewStatus.success;
@@ -581,7 +612,9 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   /// Load stats for a given class
   Future<void> loadStats(String classCode) async {
+    final generation = _generation;
     final result = await _repository.getStats(classCode: classCode);
+    if (_disposed || generation != _generation) return;
     switch (result) {
       case ApiSuccess<List<StatsEntryModel>>(:final data):
         _stats = data;
@@ -598,13 +631,14 @@ class LiveSessionViewModel extends ChangeNotifier {
       return true;
     }
 
-    _stopPolling();
+    final generation = _generation;
     final sId = _session!.sessionId;
     _status = ViewStatus.loading;
     notifyListeners();
 
     try {
       final result = await _repository.closeSession(sessionId: sId);
+      if (_disposed || generation != _generation) return false;
       switch (result) {
         case ApiSuccess<CloseSessionResult>():
           if (_session != null) {
@@ -660,6 +694,7 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   /// Reset session state (e.g. when navigating away)
   void resetSession() {
+    _generation++;
     _stopPolling();
     _session = null;
     _classInfo = null;
@@ -675,8 +710,41 @@ class LiveSessionViewModel extends ChangeNotifier {
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 
+  StreamSubscription<SessionModel?>? _sessionSubscription;
+
   void _startPolling() {
     _stopPolling();
+    final generation = _generation;
+    final id = _session?.sessionId;
+    if (id != null) {
+      _sessionSubscription = _repository
+          .watchSession(id)
+          .listen(
+            (session) {
+              if (_disposed ||
+                  generation != _generation ||
+                  _session?.sessionId != id) {
+                return;
+              }
+              if (session == null) {
+                resetSession();
+                return;
+              }
+              _session = session;
+              if (!session.isOpen) {
+                _pollTimer?.cancel();
+                _pollTimer = null;
+                loadRoster();
+              }
+              notifyListeners();
+            },
+            onError: (Object error) {
+              if (_disposed || generation != _generation) return;
+              _errorMessage = 'Không thể cập nhật phiên: $error';
+              notifyListeners();
+            },
+          );
+    }
     // Initial load
     loadRoster();
     _pollTimer = Timer.periodic(_pollInterval, (_) {
@@ -685,12 +753,16 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   void _stopPolling() {
+    _sessionSubscription?.cancel();
+    _sessionSubscription = null;
     _pollTimer?.cancel();
     _pollTimer = null;
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _generation++;
     _stopPolling();
     super.dispose();
   }

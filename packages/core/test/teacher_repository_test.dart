@@ -70,14 +70,23 @@ void main() {
         'VALIDATION_ERROR',
       );
       final id = await open(ipCheck: true, ip: '1.2.3.4');
-      expect((await db.collection('sessions').doc(id).get())['teacherIp'], '1.2.3.4');
+      expect(
+        (await db.collection('sessions').doc(id).get())['teacherIp'],
+        '1.2.3.4',
+      );
     });
 
     test('tự đóng phiên đang mở của cùng lớp', () async {
       final first = await open();
       final second = await open();
-      expect((await db.collection('sessions').doc(first).get())['sessionStatus'], 'closed');
-      expect((await db.collection('sessions').doc(second).get())['sessionStatus'], 'open');
+      expect(
+        (await db.collection('sessions').doc(first).get())['sessionStatus'],
+        'closed',
+      );
+      expect(
+        (await db.collection('sessions').doc(second).get())['sessionStatus'],
+        'open',
+      );
     });
 
     test('từ chối lớp của giảng viên khác', () async {
@@ -100,10 +109,16 @@ void main() {
   group('rotateQr / syncSessionTeacherIp', () {
     test('rotateQr đổi secret của phiên đang mở', () async {
       final id = await open();
-      final before = (await db.collection('sessions').doc(id).get())['qrSecret'];
+      final before = (await db
+          .collection('sessions')
+          .doc(id)
+          .get())['qrSecret'];
       final token = ok(await repo.rotateQr(sessionId: id));
       expect(token, isNot(before));
-      expect((await db.collection('sessions').doc(id).get())['qrSecret'], token);
+      expect(
+        (await db.collection('sessions').doc(id).get())['qrSecret'],
+        token,
+      );
     });
 
     test('rotateQr báo lỗi khi phiên đã đóng', () async {
@@ -120,16 +135,24 @@ void main() {
         'qrSecret': 'x' * 20,
       });
       expect(failCode(await repo.rotateQr(sessionId: 'other')), 'FORBIDDEN');
-      expect(failCode(await repo.closeSession(sessionId: 'other')), 'FORBIDDEN');
+      expect(
+        failCode(await repo.closeSession(sessionId: 'other')),
+        'FORBIDDEN',
+      );
     });
 
     test('syncSessionTeacherIp cập nhật IP', () async {
       final id = await open(ipCheck: true, ip: '1.1.1.1');
       expect(
-        ok(await repo.syncSessionTeacherIp(sessionId: id, teacherIp: '2.2.2.2')),
+        ok(
+          await repo.syncSessionTeacherIp(sessionId: id, teacherIp: '2.2.2.2'),
+        ),
         '2.2.2.2',
       );
-      expect((await db.collection('sessions').doc(id).get())['teacherIp'], '2.2.2.2');
+      expect(
+        (await db.collection('sessions').doc(id).get())['teacherIp'],
+        '2.2.2.2',
+      );
     });
   });
 
@@ -144,35 +167,55 @@ void main() {
           .where('sessionId', isEqualTo: id)
           .get();
       expect(records.docs.length, 3);
-      final absent = records.docs.where((d) => d['status'] == 'Absent').toList();
+      final absent = records.docs
+          .where((d) => d['status'] == 'Absent')
+          .toList();
       expect(absent.map((d) => d['rollNumber']).toSet(), {'SE1002', 'SE1003'});
-      expect(absent.every((d) => d['networkVerificationResult'] == 'AutoAbsent'), true);
-      expect((await db.collection('sessions').doc(id).get())['sessionStatus'], 'closed');
+      expect(
+        absent.every((d) => d['networkVerificationResult'] == 'AutoAbsent'),
+        true,
+      );
+      expect(
+        (await db.collection('sessions').doc(id).get())['sessionStatus'],
+        'closed',
+      );
     });
   });
 
   group('roster & điểm danh tay', () {
-    test('getRoster ghép ghi danh với bản ghi; chặn Present+Mismatch cũ', () async {
-      final id = await open();
-      await putRecord(db, id, 'SE1001', 'Present');
-      await putRecord(db, id, 'SE1002', 'Present', network: 'Mismatch');
-      final roster = ok(await repo.getRoster(sessionId: id));
-      expect(roster.map((r) => r.rollNumber), ['SE1001', 'SE1002', 'SE1003']);
-      expect(roster[0].status, 'Present');
-      expect(roster[0].fullName, 'SV SE1001');
-      expect(roster[1].status, '');
-      expect(roster[2].isUnchecked, true);
-    });
+    test(
+      'getRoster ghép ghi danh với bản ghi; chặn Present+Mismatch cũ',
+      () async {
+        final id = await open();
+        await putRecord(db, id, 'SE1001', 'Present');
+        await putRecord(db, id, 'SE1002', 'Present', network: 'Mismatch');
+        final roster = ok(await repo.getRoster(sessionId: id));
+        expect(roster.map((r) => r.rollNumber), ['SE1001', 'SE1002', 'SE1003']);
+        expect(roster[0].status, 'Present');
+        expect(roster[0].fullName, 'SV SE1001');
+        expect(roster[1].status, '');
+        expect(roster[2].isUnchecked, true);
+      },
+    );
 
     test('manualCheckin tạo mới rồi cập nhật cùng một bản ghi', () async {
       final id = await open();
       ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1003'));
-      var doc = await db.collection('attendance_records').doc('${id}_SE1003').get();
+      var doc = await db
+          .collection('attendance_records')
+          .doc('${id}_SE1003')
+          .get();
       expect(doc['status'], 'ManualByGV');
       expect(doc['networkVerificationResult'], 'Manual');
       expect(doc['teacherMemberCode'], 'GV001');
       expect(doc['classCode'], 'PRN232_SE1917');
-      ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1003', status: 'Late'));
+      ok(
+        await repo.manualCheckin(
+          sessionId: id,
+          rollNumber: 'SE1003',
+          status: 'Late',
+        ),
+      );
       doc = await db.collection('attendance_records').doc('${id}_SE1003').get();
       expect(doc['status'], 'Late');
       expect((await db.collection('attendance_records').get()).docs.length, 1);
@@ -189,7 +232,10 @@ void main() {
           ],
         ),
       );
-      final doc = await db.collection('attendance_records').doc('${id}_SE1002').get();
+      final doc = await db
+          .collection('attendance_records')
+          .doc('${id}_SE1002')
+          .get();
       expect(doc['status'], 'Absent');
       expect(doc['note'], 'Nghỉ');
     });
@@ -233,7 +279,8 @@ void main() {
       final makeup = classes.firstWhere((c) => c.isMakeup);
       expect(makeup.timeLabel, contains('07:00'));
       expect(makeup.room, '404');
-      expect(classes.firstWhere((c) => !c.isMakeup).room, '404');
+      // A one-off makeup must not overwrite the recurring class room.
+      expect(classes.firstWhere((c) => !c.isMakeup).room, '303');
     });
   });
 
@@ -274,23 +321,69 @@ void main() {
       expect(stats['SE1003'], 0);
     });
 
-    test('getAttendanceHistory lấy phiên mới nhất khi không truyền sessionId', () async {
-      final id = await open();
-      ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1001', status: 'Present'));
-      final h = ok(await repo.getAttendanceHistory(classCode: 'PRN232_SE1917'));
-      expect(h.sessionId, id);
-      expect(h.totalSessions, 1);
-      expect(h.students.firstWhere((x) => x.rollNumber == 'SE1001').status, 'Present');
-      expect(h.students.firstWhere((x) => x.rollNumber == 'SE1002').status, 'Absent');
-    });
+    test(
+      'getAttendanceHistory lấy phiên mới nhất khi không truyền sessionId',
+      () async {
+        final id = await open();
+        ok(
+          await repo.manualCheckin(
+            sessionId: id,
+            rollNumber: 'SE1001',
+            status: 'Present',
+          ),
+        );
+        final h = ok(
+          await repo.getAttendanceHistory(classCode: 'PRN232_SE1917'),
+        );
+        expect(h.sessionId, id);
+        expect(h.totalSessions, 1);
+        expect(
+          h.students.firstWhere((x) => x.rollNumber == 'SE1001').status,
+          'Present',
+        );
+        expect(
+          h.students.firstWhere((x) => x.rollNumber == 'SE1002').status,
+          'Absent',
+        );
+      },
+    );
   });
 
-  test('syncToFap đánh dấu các bản ghi chưa đồng bộ', () async {
+  test('syncToFap đồng bộ các bản ghi chưa đẩy lên FAP và đánh dấu syncedToFap', () async {
     final id = await open();
     ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1001'));
-    expect(ok(await repo.syncToFap(classCode: 'PRN232_SE1917')).syncedCount, 1);
-    expect(ok(await repo.syncToFap()).syncedCount, 0);
+    final first = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
+    expect(first.syncedCount, 1);
+    final record = await db
+        .collection('attendance_records')
+        .doc('${id}_SE1001')
+        .get();
+    expect(record.data()!['syncedToFap'], true);
+    expect(record.data()!['updatedBy'], 'GV001');
+
+    // Gọi lại lần 2 khi tất cả đã đồng bộ -> syncedCount = 0
+    final second = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
+    expect(second.syncedCount, 0);
+
+    // Từ chối lớp của giảng viên khác
+    expect(
+      failCode(await repo.syncToFap(classCode: 'SWD392_SE1801')),
+      'FORBIDDEN',
+    );
   });
+
+  test(
+    'getSession resumes persisted date and token and rejects other owners',
+    () async {
+      final id = await open();
+      final session = ok(await repo.getSession(id));
+      expect(session.sessionId, id);
+      expect(session.sessionDate, '2026-10-21');
+      expect(session.qrToken, isNotEmpty);
+      expect(session.isOpen, true);
+      expect(failCode(await repo.getSession('missing')), 'SESSION_NOT_FOUND');
+    },
+  );
 
   test('chưa đăng nhập → UNAUTHORIZED', () async {
     final anon = TeacherRepository(
@@ -299,7 +392,9 @@ void main() {
       now: () => now,
     );
     expect(
-      failCode(await anon.startSession(classCode: 'PRN232_SE1917', slotCode: 'A1')),
+      failCode(
+        await anon.startSession(classCode: 'PRN232_SE1917', slotCode: 'A1'),
+      ),
       'UNAUTHORIZED',
     );
   });
