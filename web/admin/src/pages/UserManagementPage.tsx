@@ -37,7 +37,7 @@ export function UserManagement({ currentAdmin }: { currentAdmin: AdminProfile })
   return (
     <>
       <PageHeader eyebrow="QUYỀN TRUY CẬP" title="Tài khoản" description="Quản lý hồ sơ canonical, trạng thái hoạt động và lời mời đăng nhập." actions={<Button icon={<UserPlus size={18} />} onClick={() => setInviteOpen(true)}>Tạo lời mời</Button>} />
-      <section className="scope-note"><ShieldCheck size={18} /><div><b>Dữ liệu legacy được đánh dấu riêng</b><p>Document dùng memberCode làm ID hoặc role SV/GV chỉ được xem; cần migrate trước khi khóa/mở.</p></div></section>
+      <section className="scope-note"><ShieldCheck size={18} /><div><b>Dữ liệu legacy được đánh dấu riêng</b><p>Document dùng memberCode làm ID (có legacyRole SV/GV) chỉ được xem; cần migrate trước khi khóa/mở.</p></div></section>
       {(error || actionError) && <section className="data-error"><b>Thao tác chưa hoàn tất</b><span>{actionError ?? error}</span></section>}
       <div className="tabs"><button className={tab === "users" ? "active" : ""} onClick={() => { setTab("users"); setPage(1) }}>Tài khoản <span>{data?.accounts.length ?? 0}</span></button><button className={tab === "invites" ? "active" : ""} onClick={() => { setTab("invites"); setPage(1) }}>Lời mời <span>{data?.invites.length ?? 0}</span></button></div>
       <article className="card table-card">
@@ -59,6 +59,6 @@ function InvitesTable({ rows }: { rows: Array<{ id: string; fullName: string; em
   return <div className="table-scroll"><table className="admin-data-table"><thead><tr><th>Người được mời</th><th>Mã thành viên</th><th>Vai trò</th><th>Roll number</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><b>{row.fullName}</b><small className="cell-note">{row.email}</small></td><td>{row.memberCode}</td><td>{roleLabel(row.role)}</td><td>{row.rollNumber || "—"}</td></tr>)}</tbody></table></div>
 }
 
-function roleLabel(role: string) { return ({ user: "Sinh viên", SV: "Sinh viên (legacy)", staff: "Giảng viên", GV: "Giảng viên (legacy)", admin: "Admin" } as Record<string, string>)[role] ?? role }
+function roleLabel(role: string) { return ({ user: "Sinh viên", staff: "Giảng viên", admin: "Admin" } as Record<string, string>)[role] ?? role }
 function LoadingRows() { return <div className="data-loading"><LoaderCircle className="spin" size={24} /><span>Đang tải dữ liệu...</span></div> }
 function Empty({ label }: { label: string }) { return <div className="empty-state compact-empty"><span><ShieldCheck size={28} /></span><h3>{label}</h3></div> }

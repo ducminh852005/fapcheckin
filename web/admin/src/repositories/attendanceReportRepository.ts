@@ -114,7 +114,7 @@ export async function getAttendanceReportStats(): Promise<AttendanceReportStats>
     const memberCode = String(d.memberCode ?? "").trim()
     const rollNumber = String(d.rollNumber ?? d.memberCode ?? "").trim()
     const fullName = String(d.fullName ?? "").trim()
-    if (["staff", "GV"].includes(role) && memberCode) {
+    if (["staff"].includes(role) && memberCode) {
       teacherNames.set(memberCode, fullName || memberCode)
     }
     if (rollNumber) {

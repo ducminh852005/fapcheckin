@@ -67,8 +67,8 @@ function formatTargetAudienceLabel(targetAudience: string, audience?: string, se
 
 export async function getAnnouncementTargets(): Promise<AnnouncementTargetsData> {
   const [staffSnap, staffUsersSnap] = await Promise.all([
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]))).catch(() => null),
-    getDocs(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]), limit(500))).catch(() => null),
+    getCountFromServer(query(collection(firestore, "users"), where("role", "==", "staff"))).catch(() => null),
+    getDocs(query(collection(firestore, "users"), where("role", "==", "staff"), limit(500))).catch(() => null),
   ])
 
   const teacherCount = staffSnap ? staffSnap.data().count : staffUsersSnap?.size ?? 0
@@ -149,7 +149,7 @@ export async function getAnnouncementHistory(options?: {
     getDocs(
       query(collection(firestore, "announcements"), orderBy("createdAt", "desc"), limit(fetchLimit))
     ).catch(async () => getDocs(query(collection(firestore, "announcements"), limit(fetchLimit)))),
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]))).catch(() => null),
+    getCountFromServer(query(collection(firestore, "users"), where("role", "==", "staff"))).catch(() => null),
   ])
 
   const defaultRecipientCount = usersCountSnap ? usersCountSnap.data().count : 0

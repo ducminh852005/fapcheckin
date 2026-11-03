@@ -162,7 +162,7 @@ export function AccountControl({
 
   const openAccount = (account: AccountRow) => {
     setSelected(account)
-    setSelectedRole(account.role === "staff" || account.role === "GV" ? "staff" : "user")
+    setSelectedRole(account.role === "staff" ? "staff" : "user")
     setActionError(null)
     setMessage(null)
   }
@@ -198,8 +198,8 @@ export function AccountControl({
           email: account.email,
           fullName: account.fullName,
           memberCode: account.memberCode,
-          role: account.role === "GV" ? "staff" : "user",
-          ...(account.role === "GV" ? {} : { rollNumber: account.rollNumber }),
+          role: account.role === "staff" ? "staff" : "user",
+          ...(account.role === "staff" ? {} : { rollNumber: account.rollNumber }),
         }),
       "Đã tạo quyền đăng nhập từ hồ sơ dữ liệu cũ."
     )
@@ -209,7 +209,7 @@ export function AccountControl({
       email: account.email,
       fullName: account.fullName,
       memberCode: account.memberCode,
-      role: account.role === "staff" || account.role === "GV" ? "staff" : "user",
+      role: account.role === "staff" ? "staff" : "user",
       rollNumber: account.rollNumber,
     })
 
@@ -705,12 +705,12 @@ export function AccountControl({
                             Admin
                           </span>
                         )}
-                        {(row.role === "staff" || row.role === "GV") && (
+                        {row.role === "staff" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             Giảng viên
                           </span>
                         )}
-                        {(row.role === "user" || row.role === "SV") && (
+                        {row.role === "user" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                             Sinh viên
                           </span>
