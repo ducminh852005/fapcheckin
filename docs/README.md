@@ -45,5 +45,8 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | — | [Thiết lập & deploy Firebase, migrate dữ liệu cũ](deploy-firebase.md) |
 | — | [Thiết lập đăng nhập Google (Firebase Auth)](google-oauth-setup.md) |
 | — | [ERD (Mermaid)](db-erd.mermaid) |
+| — | [Luồng cross-role](cross-role-flow.md) |
+| — | [Kế hoạch kiểm thử](test-plan.md) |
+| — | [Rà soát dữ liệu cá nhân (PII)](pii-review.md) |
 
 Mã nguồn tương ứng: [`firebase/`](../firebase) (rules, test, script, function) · [`packages/core/`](../packages/core) · [`mobile/`](../mobile) · [`web/`](../web) · [`e2e_test/`](../e2e_test).

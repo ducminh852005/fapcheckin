@@ -7,9 +7,11 @@ import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_spacing.dart';
 import 'package:fapcheckin_core/constants/app_text_styles.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
+
 import '../../../../core/config/app_config.dart';
 import '../../../../viewmodels/live_session_viewmodel.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
+
 import 'package:flutter/services.dart';
 
 String kCheckinBaseUrl = AppConfig.checkinBaseUrl;
@@ -775,43 +777,48 @@ class _ControlBtnState extends State<_ControlBtn> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: context.isMobile ? 14 : 10,
-          ),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? AppColors.surfaceContainerHigh
-                : AppColors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A142433),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon, size: 18, color: widget.iconColor),
-              SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  widget.label,
-                  style: AppTextStyles.labelMd.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      child: Semantics(
+        button: true,
+        enabled: widget.onTap != null,
+        label: widget.label,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: context.isMobile ? 14 : 10,
+            ),
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? AppColors.surfaceContainerHigh
+                  : AppColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x0A142433),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(widget.icon, size: 18, color: widget.iconColor),
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -835,109 +842,119 @@ class _EndSessionButtonState extends State<_EndSessionButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: isClosed
+      child: Semantics(
+        button: true,
+        enabled: !isClosed,
+        label: isClosed
+            ? 'Phiên điểm danh đã kết thúc'
+            : 'Kết thúc phiên điểm danh',
+        hint: isClosed
             ? null
-            : () async {
-                final dashVm = context.read<DashboardViewModel>();
+            : 'Đóng phiên và ghi nhận vắng mặt cho sinh viên chưa điểm danh',
+        child: GestureDetector(
+          onTap: isClosed
+              ? null
+              : () async {
+                  final dashVm = context.read<DashboardViewModel>();
 
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Text('Kết thúc phiên điểm danh?'),
-                    content: Text(
-                      'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: Text('Hủy'),
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text('Kết thúc phiên điểm danh?'),
+                      content: Text(
+                        'Hệ thống sẽ tự động chuyển trạng thái phiên thành Đã đóng và ghi nhận Vắng mặt cho các sinh viên chưa quét QR.',
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.statusAbsent,
-                          foregroundColor: Colors.white,
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text('Hủy'),
                         ),
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: Text('Kết thúc phiên'),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (confirmed == true && context.mounted) {
-                  final classCode = liveVm.classInfo?.classCode;
-                  final success = await liveVm.closeCurrentSession();
-                  if (context.mounted) {
-                    if (success) {
-                      if (classCode != null) {
-                        dashVm.markClassInactive(classCode);
-                      }
-                      dashVm.loadClasses();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            liveVm.errorMessage ??
-                                'Không thể kết thúc phiên điểm danh',
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.statusAbsent,
+                            foregroundColor: Colors.white,
                           ),
-                          backgroundColor: AppColors.statusAbsent,
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: Text('Kết thúc phiên'),
                         ),
-                      );
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true && context.mounted) {
+                    final classCode = liveVm.classInfo?.classCode;
+                    final success = await liveVm.closeCurrentSession();
+                    if (context.mounted) {
+                      if (success) {
+                        if (classCode != null) {
+                          dashVm.markClassInactive(classCode);
+                        }
+                        dashVm.loadClasses();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              liveVm.errorMessage ??
+                                  'Không thể kết thúc phiên điểm danh',
+                            ),
+                            backgroundColor: AppColors.statusAbsent,
+                          ),
+                        );
+                      }
                     }
                   }
-                }
-              },
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: context.isMobile ? 14 : 10),
-          decoration: BoxDecoration(
-            color: isClosed
-                ? AppColors.surfaceMuted
-                : (_hovered
-                      ? AppColors.statusAbsent
-                      : AppColors.statusAbsentBg),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A142433),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isClosed
-                    ? Icons.check_circle_outline
-                    : Icons.stop_circle_outlined,
-                size: 20,
-                color: isClosed
-                    ? AppColors.textSecondary
-                    : (_hovered ? AppColors.onError : AppColors.statusAbsent),
-              ),
-              SizedBox(width: 8),
-              Flexible(
-                child: Text(
+                },
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: context.isMobile ? 14 : 10),
+            decoration: BoxDecoration(
+              color: isClosed
+                  ? AppColors.surfaceMuted
+                  : (_hovered
+                        ? AppColors.statusAbsent
+                        : AppColors.statusAbsentBg),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x0A142433),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
                   isClosed
-                      ? 'Phiên điểm danh đã kết thúc'
-                      : 'Kết thúc phiên điểm danh',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelMd.copyWith(
-                    color: isClosed
-                        ? AppColors.textSecondary
-                        : (_hovered
-                              ? AppColors.onError
-                              : AppColors.statusAbsent),
-                    fontWeight: FontWeight.w600,
+                      ? Icons.check_circle_outline
+                      : Icons.stop_circle_outlined,
+                  size: 20,
+                  color: isClosed
+                      ? AppColors.textSecondary
+                      : (_hovered ? AppColors.onError : AppColors.statusAbsent),
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    isClosed
+                        ? 'Phiên điểm danh đã kết thúc'
+                        : 'Kết thúc phiên điểm danh',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: isClosed
+                          ? AppColors.textSecondary
+                          : (_hovered
+                                ? AppColors.onError
+                                : AppColors.statusAbsent),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
