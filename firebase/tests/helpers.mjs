@@ -86,11 +86,15 @@ export async function seed(env) {
 
     const futureDeadline = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
     const pastDeadline = Timestamp.fromMillis(Date.now() - 60 * 1000);
+    const currentCreatedAt = Timestamp.fromMillis(Date.now() - 60 * 1000);
+    const oldCreatedAt = Timestamp.fromMillis(Date.now() - 48 * 60 * 60 * 1000);
     const base = { classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-20', slotCode: 'A1', manualAttendanceDeadline: futureDeadline };
     await put('sessions/sess-open', { ...base, sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
     await put('sessions/sess-ip', { ...base, sessionStatus: 'open', qrSecret: SECRET, ipCheck: true, teacherIp: TEACHER_IP });
     await put('sessions/sess-closed', { ...base, sessionStatus: 'closed', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
     await put('sessions/sess-expired', { ...base, manualAttendanceDeadline: pastDeadline, sessionStatus: 'closed', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
+    await put('sessions/sess-legacy-current', { classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-20', slotCode: 'A1', createdAt: currentCreatedAt, sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
+    await put('sessions/sess-legacy-old', { classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-20', slotCode: 'A1', createdAt: oldCreatedAt, sessionStatus: 'closed', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
     await put('sessions/sess-other', { classCode: 'SWD392_SE1801', teacherMemberCode: 'GV002', sessionDate: '2026-10-20', slotCode: 'A1', manualAttendanceDeadline: futureDeadline, sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '' });
 
     await put('attendance_records/sess-closed_SE1001', {

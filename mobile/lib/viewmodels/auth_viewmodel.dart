@@ -75,6 +75,30 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  /// Reloads profile data without entering the app-startup loading state.
+  /// Use this after an in-session profile update so GoRouter does not replace
+  /// the current screen with LoadingScreen.
+  Future<bool> refreshProfile() async {
+    final account = _session?.token;
+    if (account == null) return false;
+
+    final result = await _repository.restoreSession();
+    if (account != _session?.token) return false;
+    switch (result) {
+      case ApiSuccess<AuthSessionModel?>(:final data):
+        if (data == null) return false;
+        _session = data;
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      case ApiFailure<AuthSessionModel?>(:final error):
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
+  }
+
   Future<bool> loginWithGoogle() async {
     _status = ViewStatus.loading;
     _errorMessage = null;
@@ -173,12 +197,27 @@ class AuthViewModel extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> updateProfile(String name, String phone, String birthDate) async {
+  Future<bool> updateProfile(
+    String name,
+    String phone,
+    String birthDate,
+  ) async {
     final account = _session?.token;
-    final result = await _repository.updateProfile(name: name, phone: phone, birthDate: birthDate);
+    final result = await _repository.updateProfile(
+      name: name,
+      phone: phone,
+      birthDate: birthDate,
+    );
     if (account != _session?.token) return false;
-    if (result is ApiSuccess<AuthSessionModel>) { _session = result.data; _errorMessage = null; notifyListeners(); return true; }
-    if (result is ApiFailure<AuthSessionModel>) _errorMessage = result.error.message;
+    if (result is ApiSuccess<AuthSessionModel>) {
+      _session = result.data;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    }
+    if (result is ApiFailure<AuthSessionModel>) {
+      _errorMessage = result.error.message;
+    }
     notifyListeners();
     return false;
   }

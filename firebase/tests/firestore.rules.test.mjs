@@ -377,6 +377,22 @@ describe('attendance_records — đọc & GV chỉnh sửa', () => {
       updatedBy: 'GV001', syncedToFap: false,
     }));
   });
+  it('GV được điểm danh tay cho phiên legacy thiếu deadline nếu được tạo trong hôm nay', async () => {
+    await assertSucceeds(setDoc(rec(as(env, 't1'), 'sess-legacy-current_SE1003'), {
+      sessionId: 'sess-legacy-current', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Xác nhận phiên legacy', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
+  it('GV không được điểm danh tay cho phiên legacy thiếu deadline từ ngày cũ', async () => {
+    await assertFails(setDoc(rec(as(env, 't1'), 'sess-legacy-old_SE1003'), {
+      sessionId: 'sess-legacy-old', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Không được bổ sung muộn', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
   it('GV không tạo bản ghi cho phiên của GV khác', async () => {
     await assertFails(setDoc(rec(as(env, 't1'), 'sess-other_SE1002'), {
       sessionId: 'sess-other', rollNumber: 'SE1002', classCode: 'SWD392_SE1801', teacherMemberCode: 'GV001',

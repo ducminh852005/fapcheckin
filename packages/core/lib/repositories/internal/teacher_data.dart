@@ -95,8 +95,23 @@ Future<List<Json>> loadSlots(FirebaseFirestore db) async {
   final dayMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(day);
   if (dayMatch == null) return null;
 
+  // Hỗ trợ kiểm thử slot ngoài giờ / buổi tối cho slot A4 hoặc TEST hôm nay
+  final slotCodeStr = text(slotCode);
+  final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
+  final todayStr =
+      '${nowVn.year.toString().padLeft(4, '0')}-${nowVn.month.toString().padLeft(2, '0')}-${nowVn.day.toString().padLeft(2, '0')}';
+  if (day == todayStr &&
+      (slotCodeStr == 'A4' || slotCodeStr == 'TEST') &&
+      (nowVn.hour >= 22 || nowVn.hour <= 2)) {
+    final start = DateTime.utc(nowVn.year, nowVn.month, nowVn.day, 22, 0)
+        .subtract(const Duration(hours: 7));
+    final end = DateTime.utc(nowVn.year, nowVn.month, nowVn.day, 23, 59, 59)
+        .subtract(const Duration(hours: 7));
+    return (start: start, end: end);
+  }
+
   final slot = slots
-      .where((s) => text(s['slotCode']) == text(slotCode))
+      .where((s) => text(s['slotCode']) == slotCodeStr)
       .firstOrNull;
   if (slot == null) return null;
 

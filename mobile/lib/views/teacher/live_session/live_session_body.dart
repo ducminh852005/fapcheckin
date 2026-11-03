@@ -32,7 +32,7 @@ class LiveSessionBody extends StatelessWidget {
 
     if (liveVm.session == null || liveVm.isClosed) {
       return Scaffold(
-        backgroundColor: LiveSessionColors.pageBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -49,28 +49,39 @@ class LiveSessionBody extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      InkWell(
-                        onTap: () => dashboardVm.navigate('lich-hoc'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: LiveSessionColors.borderSubtle,
+                      Tooltip(
+                        message: 'Quay lại',
+                        child: InkWell(
+                          onTap: () => dashboardVm.navigateBack('lich-hoc'),
+                          borderRadius: BorderRadius.circular(12),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
                             ),
-                            boxShadow: LiveSessionColors.cardShadow,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 17,
-                            color: Color(0xFF334155),
+                            child: Center(
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: LiveSessionColors.borderSubtle,
+                                  ),
+                                  boxShadow: LiveSessionColors.cardShadow,
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 17,
+                                  color: Color(0xFF334155),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
                           'Chọn lớp để mở điểm danh',
@@ -229,7 +240,7 @@ class LiveSessionBody extends StatelessWidget {
         .toList();
     final presentStudents = students.where((s) => s.isPresent).toList();
     return Scaffold(
-      backgroundColor: LiveSessionColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
@@ -255,7 +266,7 @@ class LiveSessionBody extends StatelessWidget {
                   sessionSubtitle: 'Ca ${liveVm.slot} · ${liveVm.dateLabel}',
                   classTitle: classTitle,
                   timeAndRoom: timeAndRoom,
-                  onBackTap: () => dashboardVm.navigate('lich-hoc'),
+                  onBackTap: () => dashboardVm.navigateBack('lich-hoc'),
                   onMoreTap: () => _showMoreOptions(context, dashboardVm),
                 ),
                 const SizedBox(height: 16),
@@ -271,7 +282,25 @@ class LiveSessionBody extends StatelessWidget {
                 const SizedBox(height: 14),
 
                 // 4. Thẻ Kiểm tra IP mạng
-                LiveSessionNetworkCard(isEnforced: liveVm.ipCheck),
+                LiveSessionNetworkCard(
+                  isEnforced: liveVm.ipCheck,
+                  onToggle: liveVm.isLoading
+                      ? null
+                      : (enabled) async {
+                          final ok = await liveVm.setIpCheck(enabled);
+                          if (!ok && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  liveVm.errorMessage ??
+                                      'Không thể cập nhật kiểm tra IP mạng.',
+                                ),
+                                backgroundColor: Colors.red.shade800,
+                              ),
+                            );
+                          }
+                        },
+                ),
                 const SizedBox(height: 18),
 
                 // 5. Thẻ danh sách sinh viên điểm danh
@@ -280,7 +309,8 @@ class LiveSessionBody extends StatelessWidget {
                   totalCount: totalCount,
                   presentStudents: presentStudents,
                   absentStudents: students.where((s) => !s.isPresent).toList(),
-                  onOpenManualSheet: () => ManualAttendanceBottomSheet.show(context),
+                  onOpenManualSheet: () =>
+                      ManualAttendanceBottomSheet.show(context),
                   onManualCheckin: (rollNumber) async {
                     final student = students.firstWhere(
                       (s) => s.rollNumber == rollNumber,
@@ -295,7 +325,9 @@ class LiveSessionBody extends StatelessWidget {
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Đã điểm danh cho ${student.fullName} ($rollNumber)'),
+                          content: Text(
+                            'Đã điểm danh cho ${student.fullName} ($rollNumber)',
+                          ),
                           duration: const Duration(seconds: 2),
                           backgroundColor: LiveSessionColors.statusGreen,
                         ),

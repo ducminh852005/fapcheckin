@@ -475,6 +475,56 @@ class LiveSessionViewModel extends ChangeNotifier {
     return false;
   }
 
+  /// Changes IP enforcement for the currently open session.
+  /// Enabling first resolves the teacher's public IP, then persists the flag
+  /// and IP together. The QR URL reacts to [_session.ipCheck] (`ic=1`).
+  Future<bool> setIpCheck(bool enabled) async {
+    if (_session == null || isClosed || _status == ViewStatus.loading) {
+      return false;
+    }
+    if (_session!.ipCheck == enabled) return true;
+
+    final generation = _generation;
+    _status = ViewStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    var ip = '';
+    if (enabled) {
+      ip = await IpService.getPublicIp(forceRefresh: true);
+      if (_disposed || generation != _generation) return false;
+      if (_isPlaceholderIp(ip)) {
+        _status = ViewStatus.error;
+        _errorMessage =
+            'Không thể xác định IP công khai của mạng giảng viên. '
+            'Hãy kiểm tra Internet/VPN rồi thử lại.';
+        notifyListeners();
+        return false;
+      }
+    }
+
+    final result = await _repository.updateSessionIpCheck(
+      sessionId: _session!.sessionId,
+      enabled: enabled,
+      teacherIp: ip,
+    );
+    if (_disposed || generation != _generation) return false;
+    switch (result) {
+      case ApiSuccess<bool>():
+        _teacherIp = ip;
+        _session = _session!.copyWith(ipCheck: enabled);
+        _status = ViewStatus.success;
+        notifyListeners();
+        return true;
+      case ApiFailure<bool>(:final error):
+        _status = ViewStatus.error;
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
+  }
+
   /// Loads roster once (call manually or let polling handle it)
   void adoptSession(
     SessionModel session,

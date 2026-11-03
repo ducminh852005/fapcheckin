@@ -37,29 +37,31 @@ class ProfileBody extends StatelessWidget {
         : 'Giảng viên';
 
     final initials = _extractInitials(fullName);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: ProfileColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Stack(
           children: [
-            // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
-            Container(
-              height: 220,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFFFFEDE3),
-                    Color(0xFFFFF8F5),
-                    Color(0xFFF8FAFC),
-                  ],
+            if (!isDark)
+              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
+              Container(
+                height: 220,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFFFEDE3),
+                      Color(0xFFFFF8F5),
+                      Color(0xFFF8FAFC),
+                    ],
+                  ),
                 ),
               ),
-            ),
             Padding(
               padding: EdgeInsets.fromLTRB(
                 horizontalPadding,

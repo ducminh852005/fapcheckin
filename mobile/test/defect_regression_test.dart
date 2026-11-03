@@ -53,6 +53,25 @@ class _Repository extends TeacherRepository {
 }
 
 void main() {
+  test('DEF-EXP-01: Back returns to the previous in-app route', () async {
+    final repo = _Repository();
+    final dashboard = DashboardViewModel(repo);
+
+    dashboard.navigate('lop-hoc');
+    dashboard.navigate('diem-danh-qr');
+
+    expect(dashboard.canNavigateBack, isTrue);
+    expect(dashboard.navigateBack(), isTrue);
+    expect(dashboard.currentRoute, 'lop-hoc');
+    expect(dashboard.navigateBack(), isTrue);
+    expect(dashboard.currentRoute, 'tong-quan');
+    expect(dashboard.canNavigateBack, isFalse);
+    expect(dashboard.navigateBack(), isFalse);
+
+    dashboard.dispose();
+    await repo.sessions.close();
+  });
+
   test('manual attendance trả kết quả thành công/thất bại cho UI', () async {
     final repo = _Repository();
     final vm = LiveSessionViewModel(repo);

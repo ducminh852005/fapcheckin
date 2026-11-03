@@ -14,6 +14,7 @@ import {
 import {
   collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, query, serverTimestamp, setDoc, where,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import { isStudentProfile } from './profile.js';
 
 const params = new URLSearchParams(location.search);
 const sessionId = params.get('s') || '';
@@ -156,7 +157,7 @@ async function loadProfile(db, user) {
   }
   const profile = snap.data();
   if (profile.active === false) throw new CheckinError('ACCOUNT_DISABLED');
-  if (profile.role !== 'user' || !profile.rollNumber) throw new CheckinError('WRONG_ROLE');
+  if (!isStudentProfile(profile)) throw new CheckinError('WRONG_ROLE');
   return profile;
 }
 

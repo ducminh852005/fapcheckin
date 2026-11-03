@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fapcheckin_core/repositories/account_features_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import '../../../cloudary/cloudary.dart';
 import '../../../viewmodels/auth_viewmodel.dart';
 
@@ -20,9 +22,8 @@ Future<void> showAccountSecurity(BuildContext context) async {
   final result = await repo.security();
   if (!context.mounted) return;
   if (result is ApiFailure<Map<String, dynamic>>) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result.error.message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.error.message)));
     return;
   }
   final data = (result as ApiSuccess<Map<String, dynamic>>).data;
@@ -101,7 +102,23 @@ class AccountAvatar extends StatefulWidget {
 
 class _AccountAvatarState extends State<AccountAvatar> {
   Future<Uint8List?>? _image;
+  Uint8List? _inlineBytes;
+
   void _load() {
+    _inlineBytes = null;
+    if (widget.path.startsWith('data:image/')) {
+      try {
+        final commaIdx = widget.path.indexOf(',');
+        final base64Part = commaIdx >= 0
+            ? widget.path.substring(commaIdx + 1)
+            : widget.path;
+        _inlineBytes = base64Decode(base64Part);
+      } catch (_) {
+        _inlineBytes = null;
+      }
+      _image = null;
+      return;
+    }
     final repo = context.read<AccountFeaturesRepository?>();
     _image = (widget.path.isEmpty || repo == null)
         ? null
@@ -135,18 +152,16 @@ class _AccountAvatarState extends State<AccountAvatar> {
       );
     }
     if (widget.path.startsWith('data:image/')) {
-      try {
-        final commaIdx = widget.path.indexOf(',');
-        final base64Part =
-            commaIdx >= 0 ? widget.path.substring(commaIdx + 1) : widget.path;
-        final decodedBytes = base64Decode(base64Part);
-        return CircleAvatar(
-          radius: widget.radius,
-          backgroundColor: widget.backgroundColor,
-          backgroundImage: MemoryImage(decodedBytes),
-          child: null,
-        );
-      } catch (_) {}
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: widget.backgroundColor,
+        backgroundImage: _inlineBytes == null
+            ? null
+            : MemoryImage(_inlineBytes!),
+        child: _inlineBytes == null
+            ? Text(widget.initials, style: widget.textStyle)
+            : null,
+      );
     }
     return FutureBuilder<Uint8List?>(
       future: _image,
@@ -265,8 +280,9 @@ Future<void> chooseAvatar(BuildContext context) async {
   if (picked == null || !context.mounted) return;
   final file = picked.files.single;
   if (file.bytes == null) return;
-  final mime =
-      file.extension?.toLowerCase() == 'png' ? 'image/png' : 'image/jpeg';
+  final mime = file.extension?.toLowerCase() == 'png'
+      ? 'image/png'
+      : 'image/jpeg';
 
   // 1. Cố gắng tải ảnh lên Cloudinary vào thư mục cloudary
   String? cloudaryUrl;
@@ -289,7 +305,8 @@ Future<void> chooseAvatar(BuildContext context) async {
   // 2. Nếu Cloudinary chưa được cấu hình key riêng hoặc upload thất bại,
   // lưu trực tiếp dạng Base64 Data URI vào hồ sơ (đảm bảo không bị lỗi 404
   // Firebase Storage do bucket chưa tạo).
-  final targetAvatarPath = cloudaryUrl ?? 'data:$mime;base64,${base64Encode(file.bytes!)}';
+  final targetAvatarPath =
+      cloudaryUrl ?? 'data:$mime;base64,${base64Encode(file.bytes!)}';
 
   // 3. Cập nhật đường dẫn avatar vào hồ sơ người dùng
   final result = await repo.uploadAvatar(
@@ -299,12 +316,11 @@ Future<void> chooseAvatar(BuildContext context) async {
   );
   if (!context.mounted) return;
   if (result is ApiFailure<String>) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result.error.message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.error.message)));
     return;
   }
-  await auth.restoreSession();
+  await auth.refreshProfile();
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

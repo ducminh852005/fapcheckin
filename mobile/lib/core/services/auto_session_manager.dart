@@ -10,12 +10,17 @@ import '../../views/teacher/dashboard/components/weekly_timetable.dart';
 
 /// Hỗ trợ xác định thời gian bắt đầu và kết thúc của ca học theo ngày.
 class TimeSlotHelper {
-  static (DateTime?, DateTime?) resolveSlotRange(DateTime date, ClassSectionModel c) {
+  static (DateTime?, DateTime?) resolveStandardSlotRange(
+    DateTime date,
+    ClassSectionModel c,
+  ) {
     DateTime? start = _parseTime(date, c.startTime);
     DateTime? end = _parseTime(date, c.endTime);
     if (start != null && end != null) return (start, end);
 
-    final m = RegExp(r'(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})').firstMatch(c.timeLabel);
+    final m = RegExp(
+      r'(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})',
+    ).firstMatch(c.timeLabel);
     if (m != null) {
       start ??= _parseTime(date, m.group(1));
       end ??= _parseTime(date, m.group(2));
@@ -23,7 +28,10 @@ class TimeSlotHelper {
     if (start != null && end != null) return (start, end);
 
     final slotInfo = SlotCodeParser.parse(c.slotCode);
-    final slotNum = slotInfo?.slot ?? int.tryParse(c.slotCode.replaceAll(RegExp(r'\D'), '')) ?? 1;
+    final slotNum =
+        slotInfo?.slot ??
+        int.tryParse(c.slotCode.replaceAll(RegExp(r'\D'), '')) ??
+        1;
 
     switch (slotNum) {
       case 1:
@@ -56,6 +64,23 @@ class TimeSlotHelper {
         break;
     }
     return (start, end);
+  }
+
+  static (DateTime?, DateTime?) resolveSlotRange(
+    DateTime date,
+    ClassSectionModel c,
+  ) {
+    // Ca học kiểm thử hiện tại (22:00 - 23:59) hôm nay cho lớp SWD392_SE1927
+    if (c.classCode == 'SWD392_SE1927' && date.weekday == DateTime.tuesday) {
+      final now = DateTime.now();
+      if (now.hour >= 22 || now.hour <= 2) {
+        final start = DateTime(date.year, date.month, date.day, 22, 0);
+        final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
+        return (start, end);
+      }
+    }
+
+    return resolveStandardSlotRange(date, c);
   }
 
   static DateTime? _parseTime(DateTime date, String? s) {

@@ -174,6 +174,39 @@ void main() {
         '2.2.2.2',
       );
     });
+
+    test('updateSessionIpCheck bật/tắt đồng bộ cờ và IP', () async {
+      final id = await open();
+      expect(
+        ok(
+          await repo.updateSessionIpCheck(
+            sessionId: id,
+            enabled: true,
+            teacherIp: '203.0.113.7',
+          ),
+        ),
+        isTrue,
+      );
+      var session = (await db.collection('sessions').doc(id).get()).data()!;
+      expect(session['ipCheck'], isTrue);
+      expect(session['teacherIp'], '203.0.113.7');
+
+      expect(
+        ok(await repo.updateSessionIpCheck(sessionId: id, enabled: false)),
+        isFalse,
+      );
+      session = (await db.collection('sessions').doc(id).get()).data()!;
+      expect(session['ipCheck'], isFalse);
+      expect(session['teacherIp'], isEmpty);
+    });
+
+    test('updateSessionIpCheck không bật khi thiếu IP giảng viên', () async {
+      final id = await open();
+      expect(
+        failCode(await repo.updateSessionIpCheck(sessionId: id, enabled: true)),
+        'VALIDATION_ERROR',
+      );
+    });
   });
 
   group('closeSession', () {

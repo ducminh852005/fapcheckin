@@ -4,17 +4,17 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary
-  static const Color primary = Color(0xFF9A3412);
-  static const Color primaryContainer = Color(0xFFC2410C);
+  // Primary (Unified with AppPalette FPT Orange)
+  static const Color primary = Color(0xFFFA5A1E);
+  static const Color primaryContainer = Color(0xFFFA5A1E);
   static const Color primaryFixed = Color(0xFFFFDBCE);
   static const Color primaryFixedDim = Color(0xFFFFB598);
-  static const Color primaryLight = Color(0xFFFFEDD5);
-  static const Color primaryDark = Color(0xFF7C2D12);
+  static const Color primaryLight = Color(0xFFFFF0EB);
+  static const Color primaryDark = Color(0xFFE04408);
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onPrimaryFixed = Color(0xFF380D00);
   static const Color onPrimaryFixedVariant = Color(0xFF772300);
-  static const Color onPrimaryContainer = Color(0xFFFFEDD5);
+  static const Color onPrimaryContainer = Color(0xFFFFFFFF);
   static const Color inversePrimary = Color(0xFFFFB598);
 
   // Secondary

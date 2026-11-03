@@ -59,6 +59,13 @@ service cloud.firestore {
     function emailKey() {
       return request.auth.token.email.lower();
     }
+    function sameVietnamDay(left, right) {
+      let leftVn = left + duration.value(7, 'h');
+      let rightVn = right + duration.value(7, 'h');
+      return leftVn.year() == rightVn.year()
+        && leftVn.month() == rightVn.month()
+        && leftVn.day() == rightVn.day();
+    }
 
     // --------------------------------------------------------------- users
     // Tài khoản được tạo ở lần đăng nhập đầu tiên, và chỉ khi khớp user_invites
@@ -274,9 +281,15 @@ service cloud.firestore {
 
       function manualAttendanceWithinDeadline(d) {
         let s = get(/databases/$(database)/documents/sessions/$(d.sessionId)).data;
-        return s.keys().hasAll(['manualAttendanceDeadline'])
-          && s.manualAttendanceDeadline is timestamp
-          && request.time < s.manualAttendanceDeadline;
+        return (s.keys().hasAll(['manualAttendanceDeadline'])
+            && s.manualAttendanceDeadline is timestamp
+            && request.time < s.manualAttendanceDeadline)
+          // Tương thích phiên được tạo trước khi manualAttendanceDeadline ra đời.
+          // Chỉ cho phép trong đúng ngày tạo phiên theo múi giờ Việt Nam.
+          || (!s.keys().hasAny(['manualAttendanceDeadline'])
+            && s.keys().hasAll(['createdAt'])
+            && s.createdAt is timestamp
+            && sameVietnamDay(s.createdAt, request.time));
       }
     }
 

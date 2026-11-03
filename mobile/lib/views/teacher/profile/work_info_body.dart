@@ -4,7 +4,6 @@ import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/auth_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
-import 'profile_colors.dart';
 import 'components/profile_sub_header.dart';
 import 'components/work_summary_card.dart';
 import 'components/work_details_card.dart';
@@ -33,14 +32,14 @@ class WorkInfoBody extends StatelessWidget {
         : '—';
 
     return Scaffold(
-      backgroundColor: ProfileColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
           context.isMobile ? 16.0 : 24.0,
           horizontalPadding,
-          context.isMobile ? 32.0 : 40.0,
+          context.isMobile ? 108.0 : 40.0,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -51,7 +50,7 @@ class WorkInfoBody extends StatelessWidget {
                 // 1. Header có nút quay lại
                 ProfileSubHeader(
                   title: 'Thông tin công tác',
-                  onBack: () => dashboardVm.navigate('cai-dat'),
+                  onBack: () => dashboardVm.navigateBack('ho-so'),
                 ),
                 const SizedBox(height: 16),
 

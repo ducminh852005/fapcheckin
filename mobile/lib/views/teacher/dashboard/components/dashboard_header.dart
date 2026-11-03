@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../viewmodels/auth_viewmodel.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
+import '../../profile/account_dialogs.dart';
 import '../dashboard_colors.dart';
 import 'notification_modal.dart';
 
@@ -18,6 +19,7 @@ class DashboardHeader extends StatelessWidget {
     // Lấy thông tin giảng viên (Ưu tiên auth session -> dashboardVm -> Mặc định theo mockup)
     String teacherName = 'Giảng viên';
     String initials = 'GV';
+    final avatarPath = authVm.session?.user.avatarPath ?? '';
 
     final sessionName = authVm.session?.user.fullName;
     if (sessionName != null && sessionName.trim().isNotEmpty) {
@@ -51,28 +53,42 @@ class DashboardHeader extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFF7235), Color(0xFFFA5A1E)],
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
+              avatarPath.isNotEmpty
+                  ? AccountAvatar(
+                      key: ValueKey(avatarPath),
+                      path: avatarPath,
+                      initials: initials,
+                      radius: 24,
+                      backgroundColor: const Color(0xFFFA5A1E),
+                      textStyle: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    )
+                  : Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFF7235), Color(0xFFFA5A1E)],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -137,7 +153,10 @@ class DashboardHeader extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: DashboardColors.cardBorder, width: 1),
+                  border: Border.all(
+                    color: DashboardColors.cardBorder,
+                    width: 1,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFF0F172A).withValues(alpha: 0.05),

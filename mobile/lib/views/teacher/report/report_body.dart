@@ -12,8 +12,7 @@ import '../../../core/services/history_download.dart';
 import 'components/report_custom_header.dart';
 import 'components/report_week_selector.dart';
 import 'components/report_scope_bottom_sheet.dart';
-import 'components/report_hero_gauge_card.dart';
-import 'components/report_stat_cards.dart';
+import 'components/report_mini_kpi_bar.dart';
 import 'components/report_daily_chart.dart';
 import 'components/report_subject_summary.dart';
 
@@ -55,17 +54,15 @@ class _ReportBodyState extends State<ReportBody> {
     final presentCount = _getPresentCount(report);
     final absentCount = _getAbsentCount(report, presentCount);
     final subjects = _getSubjects(report);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isShortScreen = MediaQuery.sizeOf(context).height < 500;
 
-    return Scaffold(
-      backgroundColor: ReportColors.pageBg,
-      body: RefreshIndicator(
-        color: ReportColors.orangePrimary,
-        onRefresh: () => reportVm.load(force: true),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Stack(
-            children: [
-              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
+    if (isShortScreen) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            if (!isDark)
               Container(
                 height: 220,
                 width: double.infinity,
@@ -81,97 +78,131 @@ class _ReportBodyState extends State<ReportBody> {
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  context.isMobile ? 16.0 : 24.0,
-                  horizontalPadding,
-                  context.isMobile ? 108.0 : 40.0,
+            SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                color: ReportColors.orangePrimary,
+                onRefresh: () => reportVm.load(force: true),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    16,
+                    horizontalPadding,
+                    context.isMobile ? 108.0 : 40.0,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 680),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildTopControls(
+                            context: context,
+                            reportVm: reportVm,
+                            report: report,
+                            attendanceRate: attendanceRate,
+                            attendanceRateText: attendanceRateText,
+                            presentCount: presentCount,
+                            absentCount: absentCount,
+                          ),
+                          const SizedBox(height: 12),
+                          ..._buildScrollableItems(
+                            context: context,
+                            reportVm: reportVm,
+                            report: report,
+                            subjects: subjects,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 680),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          if (!isDark)
+            Container(
+              height: 220,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFEDE3),
+                    Color(0xFFFFF8F5),
+                    Color(0xFFF8FAFC),
+                  ],
+                ),
+              ),
+            ),
+          SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── 1. Khung cố định: Header + Chọn tuần + Mini KPI Bar ──
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    16,
+                    horizontalPadding,
+                    8,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 680),
+                      child: _buildTopControls(
+                        context: context,
+                        reportVm: reportVm,
+                        report: report,
+                        attendanceRate: attendanceRate,
+                        attendanceRateText: attendanceRateText,
+                        presentCount: presentCount,
+                        absentCount: absentCount,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── 2. Vùng cuộn chi tiết: Biểu đồ cột, Tổng hợp theo môn ──
+                Expanded(
+                  child: RefreshIndicator(
+                    color: ReportColors.orangePrimary,
+                    onRefresh: () => reportVm.load(force: true),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        6,
+                        horizontalPadding,
+                        context.isMobile ? 108.0 : 40.0,
+                      ),
                       children: [
-                        if (reportVm.loading) const LinearProgressIndicator(),
-                        if (reportVm.errorMessage != null)
-                          Text(reportVm.errorMessage!),
-                        // 1. Header có nút xuất Excel ở góc phải
-                        ReportCustomHeader(
-                          onDownload: () => _handleExportExcel(context),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 2. Chọn tuần / Phạm vi báo cáo
-                        ReportWeekSelector(
-                          weekLabel: _formatWeekLabel(reportVm.from, reportVm.to),
-                          subtitle:
-                              'Tất cả ${report?.classCount ?? 0} lớp • ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
-                          onTap: () async {
-                            final range = await showReportScopeBottomSheet(
-                              context: context,
-                              currentFrom: reportVm.from,
-                              currentTo: reportVm.to,
-                              totalClosedSessions: report?.closedSessionCount ?? 0,
-                            );
-                            if (!context.mounted || range == null) return;
-                            await reportVm.setRange(range['start'], range['end']);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 3. Hero Gauge Card (Dark Navy)
-                        ReportHeroGaugeCard(
-                          attendanceRate: attendanceRate,
-                          attendanceRateText: attendanceRateText,
-                          statusHeadline: report == null
-                              ? 'Chưa có dữ liệu'
-                              : 'Chuyên cần\ncác lớp phụ trách',
-                          detailText:
-                              '$presentCount/${presentCount + absentCount} lượt có mặt\ntrong ${report?.closedSessionCount ?? 0} buổi học',
-                          trendText: 'Tính trên các lượt đã ghi nhận',
-                        ),
-                        const SizedBox(height: 14),
-
-                        // 4. Hai thẻ thống kê nhanh: Lượt có mặt & Lượt vắng mặt
-                        ReportStatCards(
-                          presentCount: presentCount,
-                          absentCount: absentCount,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 5. Thẻ chuyên cần theo ngày (Biểu đồ cột)
-                        ReportDailyChart(
-                          items: [
-                            for (final w in report?.weekly ?? <ReportWeek>[])
-                              DailyAttendanceItem(
-                                dayLabel: w.label,
-                                rate: w.presentRate * 100,
-                                rateText: (w.presentRate * 100).toStringAsFixed(
-                                   1,
-                                ),
-                              ),
-                          ],
-                          note: 'Tuần tính từ buổi học đầu tiên. Chỉ tính lượt đã ghi nhận.',
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 6. Tổng hợp theo môn
-                        ReportSubjectSummary(subjects: subjects),
-                        const SizedBox(height: 18),
-
-                        // 7. Chân trang thông tin cập nhật
                         Center(
-                          child: Text(
-                            report == null
-                                ? 'Chưa có báo cáo.'
-                                : 'Cập nhật: ${_formatGeneratedAt(report.generatedAt)}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: ReportColors.textSubtle,
-                              height: 1.45,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 680),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _buildScrollableItems(
+                                context: context,
+                                reportVm: reportVm,
+                                report: report,
+                                subjects: subjects,
+                              ),
                             ),
                           ),
                         ),
@@ -179,12 +210,191 @@ class _ReportBodyState extends State<ReportBody> {
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopControls({
+    required BuildContext context,
+    required ReportViewModel reportVm,
+    required ReportData? report,
+    required double attendanceRate,
+    required String attendanceRateText,
+    required int presentCount,
+    required int absentCount,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Header có nút xuất Excel ở góc phải
+        ReportCustomHeader(
+          onDownload: () => _handleExportExcel(context),
+        ),
+        const SizedBox(height: 12),
+
+        // 2. Chọn tuần / Phạm vi báo cáo
+        ReportWeekSelector(
+          weekLabel: _formatWeekLabel(reportVm.from, reportVm.to),
+          subtitle:
+              'Tất cả ${report?.classCount ?? 0} lớp • ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
+          onTap: () async {
+            final range = await showReportScopeBottomSheet(
+              context: context,
+              currentFrom: reportVm.from,
+              currentTo: reportVm.to,
+              totalClosedSessions: report?.closedSessionCount ?? 0,
+            );
+            if (!context.mounted || range == null) return;
+            await reportVm.setRange(range['start'], range['end']);
+          },
+        ),
+        const SizedBox(height: 10),
+
+        // 3. Mini KPI Bar (Tỉ lệ % & Lượt có mặt/vắng)
+        ReportMiniKpiBar(
+          attendanceRate: attendanceRate,
+          attendanceRateText: attendanceRateText,
+          presentCount: presentCount,
+          absentCount: absentCount,
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildScrollableItems({
+    required BuildContext context,
+    required ReportViewModel reportVm,
+    required ReportData? report,
+    required List<SubjectAttendanceSummary> subjects,
+  }) {
+    return [
+      if (reportVm.loading)
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFFED7AA),
+            ),
+          ),
+          child: const Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: ReportColors.orangePrimary,
+                ),
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Đang cập nhật dữ liệu báo cáo...',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: ReportColors.orangePrimary,
+                ),
               ),
             ],
           ),
         ),
+      if (reportVm.errorMessage != null)
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFFECACA),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFDC2626),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  reportVm.errorMessage!,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFFB91C1C),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => reportVm.load(force: true),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  size: 16,
+                ),
+                label: const Text('Thử lại'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+      // 4. Thẻ chuyên cần theo ngày (Biểu đồ cột)
+      ReportDailyChart(
+        items: [
+          for (final w in report?.weekly ?? <ReportWeek>[])
+            DailyAttendanceItem(
+              dayLabel: w.label,
+              rate: w.presentRate * 100,
+              rateText: (w.presentRate * 100).toStringAsFixed(1),
+            ),
+        ],
+        note: 'Tuần tính từ buổi học đầu tiên. Chỉ tính lượt đã ghi nhận.',
       ),
-    );
+      const SizedBox(height: 16),
+
+      // 5. Tổng hợp theo môn
+      ReportSubjectSummary(subjects: subjects),
+      const SizedBox(height: 18),
+
+      // 6. Chân trang thông tin cập nhật
+      Center(
+        child: Text(
+          report == null
+              ? 'Chưa có báo cáo.'
+              : 'Cập nhật: ${_formatGeneratedAt(report.generatedAt)}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11,
+            color: ReportColors.textSubtle,
+            height: 1.45,
+          ),
+        ),
+      ),
+      const SizedBox(height: 24),
+    ];
   }
 
   String _formatGeneratedAt(String raw) {
