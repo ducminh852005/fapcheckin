@@ -17,14 +17,17 @@ import {
 } from "firebase/firestore"
 import { auth, firestore } from "../firebase/client"
 
-export type AccountRole = "user" | "staff" | "admin" | "SV" | "GV" | string
+/** Role chuẩn, khớp firestore.rules: user (sinh viên) | staff (giảng viên) | admin. */
+export type AccountRole = "user" | "staff" | "admin"
+/** Giá trị role cũ của bản ghi legacy (id = memberCode), lưu ở trường `legacyRole`; `role` luôn là AccountRole. */
+export type LegacyAccountRole = "SV" | "GV"
 
 export type AccountRow = {
   id: string
   memberCode: string
   fullName: string
   email: string
-  role: AccountRole
+  role: AccountRole | string
   rollNumber: string
   active: boolean | null
   canonical: boolean
@@ -126,8 +129,8 @@ function formatFirestoreTime(val: unknown): { text: string; ms: number } {
 
 function mapRoleLabel(role: string): string {
   if (role === "admin") return "Admin"
-  if (role === "staff" || role === "GV") return "Giảng viên"
-  if (role === "user" || role === "SV") return "Sinh viên"
+  if (role === "staff") return "Giảng viên"
+  if (role === "user") return "Sinh viên"
   return role || "Hệ thống"
 }
 
@@ -160,7 +163,7 @@ export async function getAccountMetrics(): Promise<AccountMetrics> {
   const [totalSnap, lockedSnap, legacyUsersSnap, invitesSnap] = await Promise.all([
     getCountFromServer(collection(firestore, "users")),
     getCountFromServer(query(collection(firestore, "users"), where("active", "==", false))),
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["SV", "GV"]))),
+    getCountFromServer(query(collection(firestore, "users"), where("legacyRole", "in", ["SV", "GV"]))),
     getCountFromServer(collection(firestore, "user_invites")),
   ])
 
@@ -200,9 +203,9 @@ export async function listAccountsPaginated(options: {
 
   const constraints: any[] = []
   if (roleFilter === "user") {
-    constraints.push(where("role", "in", ["user", "SV"]))
+    constraints.push(where("role", "==", "user"))
   } else if (roleFilter === "staff") {
-    constraints.push(where("role", "in", ["staff", "GV"]))
+    constraints.push(where("role", "==", "staff"))
   } else if (roleFilter === "admin") {
     constraints.push(where("role", "==", "admin"))
   }
@@ -461,6 +464,26 @@ export async function listAccountData(): Promise<AccountData> {
   }
 }
 
+export async function listAllAccountsForExport(): Promise<AccountRow[]> {
+  const snapshot = await getDocs(collection(firestore, "users"))
+  return snapshot.docs
+    .map((item) => {
+      const data = item.data()
+      const memberCode = String(data.memberCode ?? "")
+      return {
+        id: item.id,
+        memberCode,
+        fullName: String(data.fullName ?? ""),
+        email: String(data.email ?? ""),
+        role: String(data.role ?? ""),
+        rollNumber: String(data.rollNumber ?? ""),
+        active: typeof data.active === "boolean" ? data.active : null,
+        canonical: item.id !== memberCode && typeof data.active === "boolean",
+      } satisfies AccountRow
+    })
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"))
+}
+
 export async function createInvite(input: {
   email: string
   fullName: string
@@ -526,7 +549,9 @@ export async function updateAccount(account: AccountRow, input: {
   await updateDoc(doc(firestore, "users", account.id), {
     fullName,
     memberCode,
-    role: account.canonical ? input.role : input.role === "staff" ? "GV" : "SV",
+    role: input.role,
+    // Bản ghi legacy giữ dấu vết SV/GV ở legacyRole để vẫn nhận diện được.
+    ...(account.canonical ? {} : { legacyRole: input.role === "staff" ? "GV" : "SV" }),
     rollNumber: input.role === "user" ? rollNumber : deleteField(),
     updatedAt: serverTimestamp(),
   })

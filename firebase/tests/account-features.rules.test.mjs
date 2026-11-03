@@ -100,6 +100,7 @@ describe('feedback', () => {
   it('gửi góp ý của mình với id {uid}_{requestId}', async () => {
     await assertSucceeds(setDoc(doc(as(env, 't1'), 'feedback/u-t1_req-00000001'), fb()));
     await assertSucceeds(setDoc(doc(as(env, 's1'), 'feedback/u-s1_req-00000001'), fb({ authorUid: 'u-s1', category: 'suggestion' })));
+    await assertSucceeds(setDoc(doc(as(env, 't1'), 'feedback/u-t1_req-00000008'), fb({ attachments: ['feedback_attachments/u-t1/req-00000008_0.jpg'] })));
   });
   it('chặn mạo danh, id sai, trạng thái sai, nội dung rỗng/quá dài, trường thừa', async () => {
     const db = as(env, 't1');
@@ -110,6 +111,7 @@ describe('feedback', () => {
     await assertFails(setDoc(doc(db, 'feedback/u-t1_req-00000005'), fb({ message: 'x'.repeat(2001) })));
     await assertFails(setDoc(doc(db, 'feedback/u-t1_req-00000006'), fb({ category: 'spam' })));
     await assertFails(setDoc(doc(db, 'feedback/u-t1_req-00000007'), fb({ reply: 'tự trả lời' })));
+    await assertFails(setDoc(doc(db, 'feedback/u-t1_req-00000009'), fb({ attachments: ['1', '2', '3', '4'] })));
     await assertFails(setDoc(doc(as(env, 's3'), 'feedback/u-s3_req-00000001'), fb({ authorUid: 'u-s3' })));
   });
   it('người gửi đọc/list góp ý của mình, không đọc của người khác', async () => {

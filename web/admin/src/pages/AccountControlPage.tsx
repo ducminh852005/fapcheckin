@@ -35,7 +35,7 @@ import { readError, useAsyncData } from "../hooks/useAsyncData"
 import { Pagination } from "../components/Pagination"
 import {
   createInvite,
-  listAccountData,
+  listAllAccountsForExport,
   listAccountsPaginated,
   listAuditLogsPaginated,
   listInvitesPaginated,
@@ -162,7 +162,7 @@ export function AccountControl({
 
   const openAccount = (account: AccountRow) => {
     setSelected(account)
-    setSelectedRole(account.role === "staff" || account.role === "GV" ? "staff" : "user")
+    setSelectedRole(account.role === "staff" ? "staff" : "user")
     setActionError(null)
     setMessage(null)
   }
@@ -189,7 +189,7 @@ export function AccountControl({
       await createInvite(invite)
       setInvite(emptyInvite)
       setInviteOpen(false)
-    }, "Đã cấp quyền đăng nhập thành công.")
+    }, "Đã tạo lời mời đăng nhập. Người dùng sẽ liên kết tài khoản khi đăng nhập Google lần đầu.")
 
   const grantLegacy = (account: AccountRow) =>
     run(
@@ -198,8 +198,8 @@ export function AccountControl({
           email: account.email,
           fullName: account.fullName,
           memberCode: account.memberCode,
-          role: account.role === "GV" ? "staff" : "user",
-          ...(account.role === "GV" ? {} : { rollNumber: account.rollNumber }),
+          role: account.role === "staff" ? "staff" : "user",
+          ...(account.role === "staff" ? {} : { rollNumber: account.rollNumber }),
         }),
       "Đã tạo quyền đăng nhập từ hồ sơ dữ liệu cũ."
     )
@@ -209,7 +209,7 @@ export function AccountControl({
       email: account.email,
       fullName: account.fullName,
       memberCode: account.memberCode,
-      role: account.role === "staff" || account.role === "GV" ? "staff" : "user",
+      role: account.role === "staff" ? "staff" : "user",
       rollNumber: account.rollNumber,
     })
 
@@ -225,11 +225,12 @@ export function AccountControl({
     )
   }
 
-  const handleExportExcel = () => {
-    showToast("Đang kết xuất và tải xuống danh sách tài khoản (CSV/Excel)...")
+  const handleExportExcel = async () => {
+    showToast("Đang tạo tệp danh sách tài khoản CSV...")
+    const exportAccounts = await listAllAccountsForExport()
     const rows = [
       ["MemberCode", "RollNumber", "FullName", "Email", "Role", "Active", "Canonical"],
-      ...(data?.accounts ?? []).map((a) => [
+      ...exportAccounts.map((a) => [
         a.memberCode,
         a.rollNumber,
         a.fullName,
@@ -240,7 +241,7 @@ export function AccountControl({
       ]),
     ]
     const csvContent =
-      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.join(",")).join("\n")
+      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.map(csvCell).join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
@@ -299,7 +300,7 @@ export function AccountControl({
             className="h-9 flex items-center gap-2 px-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <Download size={14} className="text-slate-500" />
-            <span>Xuất Excel</span>
+            <span>Tải CSV</span>
           </button>
 
           <button
@@ -308,7 +309,7 @@ export function AccountControl({
             className="h-9 flex items-center gap-2 px-4 bg-[#C2410C] hover:bg-[#9A3412] text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <KeyRound size={14} />
-            <span>+ Cấp quyền tài khoản</span>
+            <span>+ Tạo lời mời đăng nhập</span>
           </button>
         </div>
       </div>
@@ -704,12 +705,12 @@ export function AccountControl({
                             Admin
                           </span>
                         )}
-                        {(row.role === "staff" || row.role === "GV") && (
+                        {row.role === "staff" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             Giảng viên
                           </span>
                         )}
-                        {(row.role === "user" || row.role === "SV") && (
+                        {row.role === "user" && (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                             Sinh viên
                           </span>
@@ -929,7 +930,7 @@ export function AccountControl({
             pageSize={10}
             onPageChange={setAuditPage}
             itemLabel="nhật ký truy cập"
-            syncNote="Firestore Audit Log Realtime"
+            syncNote="Nhật ký từ Cloud Firestore"
           />
         )}
       </section>
@@ -1148,10 +1149,10 @@ export function AccountControl({
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div>
                 <span className="text-[11px] font-bold text-[#EA580C] uppercase tracking-wider">
-                  Cấp quyền truy cập mới
+                  Lời mời đăng nhập mới
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                  Cấp quyền đăng nhập tài khoản
+                  Tạo dữ liệu để liên kết khi người dùng đăng nhập Google lần đầu
                 </h3>
               </div>
               <button
@@ -1252,7 +1253,7 @@ export function AccountControl({
                   onClick={saveInvite}
                   className="h-9 px-4 bg-[#C2410C] hover:bg-[#9A3412] text-white rounded-xl font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
                 >
-                  {busy ? "Đang cấp..." : "Xác nhận cấp quyền"}
+                  {busy ? "Đang tạo..." : "Tạo lời mời"}
                 </button>
               </div>
             </div>
@@ -1396,4 +1397,9 @@ function initials(name: string) {
       .map((word) => word[0]?.toUpperCase())
       .join("") || "?"
   )
+}
+
+function csvCell(value: string | number | boolean) {
+  const text = String(value)
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }

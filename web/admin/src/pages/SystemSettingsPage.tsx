@@ -26,7 +26,6 @@ import {
   DEFAULT_SETTINGS,
   getSystemSettings,
   saveSystemSettings,
-  triggerFapSyncNow,
   type SystemSettings,
 } from "../repositories/settingsRepository"
 
@@ -41,12 +40,8 @@ export function SystemSettingsPage({
   // Local editable settings state
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS)
   const [isDirty, setIsDirty] = useState(false)
-  const [activeTab, setActiveTab] = useState<
-    "qr" | "security" | "slots" | "sync" | "logs"
-  >("qr")
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
-  const [lastSyncText, setLastSyncText] = useState<string | null>(null)
 
   // Sync state once data loaded
   const currentSettings = isDirty ? settings : data ?? DEFAULT_SETTINGS
@@ -81,23 +76,13 @@ export function SystemSettingsPage({
   const handleReset = () => {
     setSettings(DEFAULT_SETTINGS)
     setIsDirty(true)
-    showToast("Đã khôi phục các tham số mặc định theo tiêu chuẩn FPT Edu.")
+    showToast("Đã nạp lại bộ giá trị mặc định của ứng dụng. Bấm Lưu thay đổi để áp dụng.")
   }
 
   const handleSyncNow = async () => {
     setIsSyncing(true)
-    try {
-      const result = await triggerFapSyncNow(adminEmail)
-      setLastSyncText(result.lastSyncAt)
-      reload()
-      showToast(
-        `Đồng bộ dữ liệu thời gian thực thành công (${result.syncedCount} bản ghi điểm danh)!`
-      )
-    } catch {
-      showToast("Không thể đồng bộ dữ liệu lúc này. Vui lòng kiểm tra quyền quản trị.")
-    } finally {
-      setIsSyncing(false)
-    }
+    showToast("Tích hợp FAP Core chưa được triển khai vì chưa có API kết nối.")
+    setIsSyncing(false)
   }
 
   return (
@@ -128,7 +113,7 @@ export function SystemSettingsPage({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Điều phối các giao thức quét mã QR, bán kính Geofencing, ràng buộc dải IP Hòa Lạc và tích hợp Core FAP.
+            Cấu hình các tham số đang được ứng dụng hỗ trợ. Tích hợp FAP Core hiện chưa được triển khai.
           </p>
         </div>
 
@@ -152,74 +137,6 @@ export function SystemSettingsPage({
             <span>Lưu thay đổi</span>
           </button>
         </div>
-      </div>
-
-      {/* Tab Navigation Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-200/80 text-xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab("qr")}
-          className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === "qr"
-              ? "bg-[#FFF0E6] text-[#C2410C] border border-[#FDBA74]"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          <QrCode size={15} />
-          <span>Quy chế Điểm danh QR</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("security")}
-          className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === "security"
-              ? "bg-[#FFF0E6] text-[#C2410C] border border-[#FDBA74]"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          <Shield size={15} />
-          <span>Bảo mật &amp; Giới hạn IP</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("slots")}
-          className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === "slots"
-              ? "bg-[#FFF0E6] text-[#C2410C] border border-[#FDBA74]"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          <Clock size={15} />
-          <span>Khung giờ Ca học (Slots)</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("sync")}
-          className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === "sync"
-              ? "bg-[#FFF0E6] text-[#C2410C] border border-[#FDBA74]"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          <Network size={15} />
-          <span>Tích hợp FAP Core &amp; Firestore</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("logs")}
-          className={`px-3.5 py-2 rounded-lg font-semibold flex items-center gap-2 transition whitespace-nowrap cursor-pointer ${
-            activeTab === "logs"
-              ? "bg-[#FFF0E6] text-[#C2410C] border border-[#FDBA74]"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          <Database size={15} />
-          <span>Giám sát &amp; Logs</span>
-        </button>
       </div>
 
       {/* Main Settings Grid: 2 Columns */}
@@ -350,8 +267,8 @@ export function SystemSettingsPage({
           </div>
         </div>
 
-        {/* CARD 2: Bảo mật Campus & Địa lý */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        {/* Chưa hiển thị: mobile chưa áp dụng các cấu hình IP/geofence/fingerprint. */}
+        <div className="hidden">
           <div className="space-y-6">
             {/* Card Header */}
             <div className="flex items-start justify-between pb-4 border-b border-slate-100">
@@ -477,8 +394,8 @@ export function SystemSettingsPage({
           </div>
         </div>
 
-        {/* CARD 3: Ngưỡng Cảnh báo & Khóa môn */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+        {/* Chưa hiển thị: chưa có quy chế/backend tự động áp dụng quyết định học vụ. */}
+        <div className="hidden">
           <div className="space-y-6">
             {/* Card Header */}
             <div className="flex items-start justify-between pb-4 border-b border-slate-100">
@@ -593,16 +510,7 @@ export function SystemSettingsPage({
           {/* Footer note */}
           <div className="pt-4 mt-6 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span>Áp dụng toàn bộ sinh viên Đại học chính quy</span>
-            <a
-              href="#policy"
-              onClick={(e) => {
-                e.preventDefault()
-                showToast("Đang mở quy chế đào tạo Đại học FPT...")
-              }}
-              className="text-[#C2410C] font-semibold hover:underline flex items-center gap-1"
-            >
-              Chi tiết Quy chế Học vụ &rarr;
-            </a>
+            <span>Ngưỡng này chỉ được lưu cấu hình; chưa tự động áp dụng quyết định học vụ.</span>
           </div>
         </div>
 
@@ -626,7 +534,7 @@ export function SystemSettingsPage({
               </div>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Connected
+                Firestore đã tải
               </span>
             </div>
 
@@ -640,7 +548,7 @@ export function SystemSettingsPage({
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900">Firebase Firestore</span>
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
-                      Online
+                      Đã tải dữ liệu
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
@@ -661,27 +569,22 @@ export function SystemSettingsPage({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-900">FAP Core Portal</span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
-                      Kết nối thành công
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">
+                      Chưa triển khai
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Lần đồng bộ gần nhất:{" "}
-                    <b>{lastSyncText ?? data?.lastSyncAt ?? data?.lastUpdated ?? "Trực tuyến"}</b> •
-                    Chờ đồng bộ: <b>{data?.unsyncedRecordsCount ?? 0}</b> bản ghi
+                    Chưa có API kết nối với FAP Core. Nút bên dưới chỉ hiển thị trạng thái triển khai.
                   </p>
                 </div>
               </div>
-              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+              <AlertTriangle size={18} className="text-amber-600 shrink-0" />
             </div>
           </div>
 
           {/* Card Footer: Manual Sync Button */}
           <div className="pt-4 mt-6 border-t border-slate-100 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-              <Clock size={13} />
-              <span>Tự động đồng bộ mỗi 15 phút</span>
-            </div>
+            <span className="text-[11px] text-slate-400">Tính năng dự kiến</span>
 
             <button
               type="button"
@@ -693,7 +596,7 @@ export function SystemSettingsPage({
                 size={13}
                 className={isSyncing ? "animate-spin text-[#C2410C]" : ""}
               />
-              <span>{isSyncing ? "Đang đồng bộ..." : "Đồng bộ dữ liệu ngay lập tức"}</span>
+              <span>{isSyncing ? "Đang kiểm tra..." : "Kiểm tra tích hợp FAP"}</span>
             </button>
           </div>
         </div>
@@ -704,38 +607,11 @@ export function SystemSettingsPage({
         <div className="flex items-center gap-2">
           <ShieldCheck size={16} className="text-[#EA580C] shrink-0" />
           <span>
-            Phiên đăng nhập quản trị gần nhất: <b>08:14 Hôm nay</b> bởi <b>{adminEmail}</b> (IP: 10.22.4.15)
+            Quản trị viên hiện tại: <b>{adminEmail}</b>
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
-          <a
-            href="#audit"
-            onClick={(e) => {
-              e.preventDefault()
-              showToast("Đang mở nhật ký Audit Log...")
-            }}
-            className="hover:text-slate-800 transition"
-          >
-            Nhật ký Audit Log
-          </a>
-          <span>•</span>
-          <a
-            href="#api"
-            onClick={(e) => {
-              e.preventDefault()
-              showToast("Đang mở tài liệu FAP API Gateway...")
-            }}
-            className="hover:text-slate-800 transition"
-          >
-            Tài liệu API FAP
-          </a>
-          <span>•</span>
-          <span className="flex items-center gap-1 text-slate-600">
-            <Lock size={12} className="text-emerald-600" />
-            Bảo mật SSL 256-bit
-          </span>
-        </div>
+        <span className="text-[11px] text-slate-400">Cấu hình được lưu trong Cloud Firestore.</span>
       </div>
     </div>
   )

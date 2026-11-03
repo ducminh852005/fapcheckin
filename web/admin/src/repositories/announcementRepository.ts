@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  Timestamp,
   where,
 } from "firebase/firestore"
 import { firestore } from "../firebase/client"
@@ -14,17 +15,9 @@ import { firestore } from "../firebase/client"
 export type AnnouncementPayload = {
   title: string
   content: string
-  targetAudience: "all" | "teachers" | "students" | "specific_class"
-  selectedClasses?: string[]
+  richContent?: string
+  targetAudience: "teachers"
   priority: "normal" | "important" | "urgent"
-  channels: {
-    fcmPush: boolean
-    inAppInbox: boolean
-    kioskPopup: boolean
-  }
-  scheduleType: "immediate" | "scheduled"
-  scheduledTime?: string
-  enableSoundAndVibration: boolean
   pinToTop: boolean
   recipientCount?: number
   createdBy?: string
@@ -43,16 +36,8 @@ export type AnnouncementHistoryItem = {
 }
 
 export type AnnouncementTargetsData = {
-  totalUsers: number
   teacherCount: number
-  studentCount: number
-  linkedUsers: number
-  classChips: Array<{
-    label: string
-    classCode: string
-    subjectCode: string
-    studentCount: number
-  }>
+  linkedTeachers: number
 }
 
 function formatFirestoreDate(val: unknown): string {
@@ -70,12 +55,6 @@ function formatFirestoreDate(val: unknown): string {
   return "Vừa xong"
 }
 
-function mapAudienceToCanonical(targetAudience: AnnouncementPayload["targetAudience"]): "all" | "staff" | "user" {
-  if (targetAudience === "teachers") return "staff"
-  if (targetAudience === "students") return "user"
-  return "all"
-}
-
 function formatTargetAudienceLabel(targetAudience: string, audience?: string, selectedClasses?: unknown): string {
   if (targetAudience === "specific_class" && Array.isArray(selectedClasses) && selectedClasses.length > 0) {
     return `Lớp: ${selectedClasses.join(", ")}`
@@ -87,76 +66,51 @@ function formatTargetAudienceLabel(targetAudience: string, audience?: string, se
 }
 
 export async function getAnnouncementTargets(): Promise<AnnouncementTargetsData> {
-  const [totalSnap, staffSnap, studentSnap, classesSnap, usersSnap] = await Promise.all([
-    getCountFromServer(collection(firestore, "users")).catch(() => null),
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]))).catch(() => null),
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["user", "SV"]))).catch(() => null),
-    getDocs(query(collection(firestore, "classes"), limit(20))).catch(() => null),
-    getDocs(query(collection(firestore, "users"), limit(500))).catch(() => null),
+  const [staffSnap, staffUsersSnap] = await Promise.all([
+    getCountFromServer(query(collection(firestore, "users"), where("role", "==", "staff"))).catch(() => null),
+    getDocs(query(collection(firestore, "users"), where("role", "==", "staff"), limit(500))).catch(() => null),
   ])
 
-  const totalUsers = totalSnap ? totalSnap.data().count : usersSnap?.size ?? 0
-  const teacherCount = staffSnap ? staffSnap.data().count : 0
-  const studentCount = studentSnap ? studentSnap.data().count : Math.max(0, totalUsers - teacherCount)
-
-  let linkedUsers = totalUsers
-  if (usersSnap && !usersSnap.empty) {
-    const linkedInSample = usersSnap.docs.filter((docSnap) => {
+  const teacherCount = staffSnap ? staffSnap.data().count : staffUsersSnap?.size ?? 0
+  let linkedTeachers = teacherCount
+  if (staffUsersSnap && !staffUsersSnap.empty) {
+    linkedTeachers = staffUsersSnap.docs.filter((docSnap) => {
       const d = docSnap.data()
       return !docSnap.id.startsWith("legacy_") || Boolean(d.authUid ?? d.uid)
     }).length
-    linkedUsers = usersSnap.size === totalUsers ? linkedInSample : Math.min(totalUsers, linkedInSample)
   }
 
-  const classChips = (classesSnap?.docs ?? []).map((docSnap) => {
-    const d = docSnap.data()
-    const classCode = String(d.classCode ?? docSnap.id)
-    const subjectCode = String(d.subjectCode ?? "")
-    const studentCnt = Number(d.studentCount ?? 0)
-    return {
-      label: subjectCode ? `${classCode} (${subjectCode})` : classCode,
-      classCode,
-      subjectCode,
-      studentCount: studentCnt,
-    }
-  })
-
   return {
-    totalUsers,
     teacherCount,
-    studentCount,
-    linkedUsers,
-    classChips,
+    linkedTeachers,
   }
 }
 
 export async function sendAnnouncement(payload: AnnouncementPayload): Promise<string> {
-  const audience = mapAudienceToCanonical(payload.targetAudience)
+  const audience = "staff"
   const docRef = await addDoc(collection(firestore, "announcements"), {
     title: payload.title.trim(),
     body: payload.content.trim(),
     content: payload.content.trim(),
+    richContent: payload.richContent ?? null,
     audience,
     targetAudience: payload.targetAudience,
-    selectedClasses: payload.selectedClasses ?? [],
     priority: payload.priority,
-    channels: payload.channels,
-    scheduleType: payload.scheduleType,
-    scheduledTime: payload.scheduledTime ?? null,
-    enableSoundAndVibration: payload.enableSoundAndVibration,
+    deliveryChannel: "teacher_app",
     pinToTop: payload.pinToTop,
+    pinnedUntil: payload.pinToTop ? Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000) : null,
     recipientCount: payload.recipientCount ?? 0,
     createdBy: payload.createdBy ?? "admin",
-    status: payload.scheduleType === "immediate" ? "sent" : "scheduled",
+    status: "sent",
     createdAt: serverTimestamp(),
   })
 
   await addDoc(collection(firestore, "audit_logs"), {
     actionType: "create",
-    actionLabel: "Phát sóng thông báo",
+    actionLabel: "Đăng thông báo cho giảng viên",
     actor: payload.createdBy ?? "admin",
-    targetEmail: formatTargetAudienceLabel(payload.targetAudience, audience, payload.selectedClasses),
-    detail: `Đã phát thông báo "${payload.title.trim()}" (Mức độ: ${payload.priority}).`,
+    targetEmail: formatTargetAudienceLabel(payload.targetAudience, audience),
+    detail: `Đã đăng thông báo "${payload.title.trim()}" cho giảng viên (Mức độ: ${payload.priority}).`,
     createdAt: serverTimestamp(),
   }).catch(() => {})
 
@@ -168,14 +122,13 @@ export async function saveAnnouncementDraft(payload: AnnouncementPayload): Promi
     title: payload.title.trim() || "(Bản nháp chưa đặt tiêu đề)",
     body: payload.content.trim(),
     content: payload.content.trim(),
+    richContent: payload.richContent ?? null,
     audience: "admin",
     targetAudience: payload.targetAudience,
-    selectedClasses: payload.selectedClasses ?? [],
     priority: payload.priority,
-    channels: payload.channels,
-    scheduleType: payload.scheduleType,
-    enableSoundAndVibration: payload.enableSoundAndVibration,
+    deliveryChannel: "teacher_app",
     pinToTop: payload.pinToTop,
+    pinnedUntil: null,
     recipientCount: payload.recipientCount ?? 0,
     createdBy: payload.createdBy ?? "admin",
     status: "draft",
@@ -196,7 +149,7 @@ export async function getAnnouncementHistory(options?: {
     getDocs(
       query(collection(firestore, "announcements"), orderBy("createdAt", "desc"), limit(fetchLimit))
     ).catch(async () => getDocs(query(collection(firestore, "announcements"), limit(fetchLimit)))),
-    getCountFromServer(collection(firestore, "users")).catch(() => null),
+    getCountFromServer(query(collection(firestore, "users"), where("role", "==", "staff"))).catch(() => null),
   ])
 
   const defaultRecipientCount = usersCountSnap ? usersCountSnap.data().count : 0

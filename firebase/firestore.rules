@@ -356,6 +356,8 @@ service cloud.firestore {
         && request.resource.data.category in ['bug', 'suggestion', 'other']
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.get('attachments', []) is list
+        && request.resource.data.get('attachments', []).size() <= 3
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time;
       allow update: if isAdmin() && onlyChanges(['status', 'reply', 'resolvedAt'])
