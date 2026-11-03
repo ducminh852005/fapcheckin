@@ -52,14 +52,10 @@ class UserModel {
     );
   }
 
+  /// Role chuẩn (khớp firestore.rules): `user` | `staff` | `admin`.
   bool get isTeacher {
-    final normalized = role.trim().toUpperCase();
-    return normalized == 'STAFF' ||
-        normalized == 'ADMIN' ||
-        normalized == 'TEACHER' ||
-        normalized == 'GV' ||
-        normalized == 'GIANG_VIEN' ||
-        normalized == 'GIẢNG VIÊN';
+    final normalized = role.trim().toLowerCase();
+    return normalized == 'staff' || normalized == 'admin';
   }
 
   /// Hồ sơ `users/{uid}`.

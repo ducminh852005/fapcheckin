@@ -50,7 +50,7 @@ void main() {
           fullName: 'Nguyen Van A',
           memberCode: 'GV001',
           rollNumber: 'GV001',
-          role: 'teacher',
+          role: 'staff',
         ),
       ),
     );

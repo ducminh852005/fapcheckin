@@ -39,7 +39,7 @@ export async function listAcademicData(): Promise<AcademicData> {
     getDocs(collection(firestore, "subjects")),
     getDocs(collection(firestore, "slots")),
     getDocs(collection(firestore, "timeSlots")),
-    getDocs(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]))),
+    getDocs(query(collection(firestore, "users"), where("role", "==", "staff"))),
   ])
   const teachers = new Map(usersSnapshot.docs.map((item) => [String(item.data().memberCode ?? ""), String(item.data().fullName ?? "")]))
   const times = new Map(timesSnapshot.docs.map((item) => [item.id, item.data()]))
@@ -124,7 +124,7 @@ export async function listAcademicDataPaginated(options: {
   if (tab === "classes") {
     const [classesSnapshot, usersSnapshot] = await Promise.all([
       getDocs(query(collection(firestore, "classes"), limit(fetchLimit))),
-      getDocs(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]), limit(100))),
+      getDocs(query(collection(firestore, "users"), where("role", "==", "staff"), limit(100))),
     ])
     const teachers = new Map(
       usersSnapshot.docs.map((item) => [String(item.data().memberCode ?? ""), String(item.data().fullName ?? "")])
@@ -227,7 +227,7 @@ export async function listClassAssignmentData(classCode: string) {
     getDocs(query(collection(firestore, "enrollments"), where("classCode", "==", classCode))),
   ])
   const students: StudentOption[] = studentsSnapshot.docs
-    .filter((item) => ["user", "SV"].includes(String(item.data().role ?? "")))
+    .filter((item) => ["user"].includes(String(item.data().role ?? "")))
     .map((item) => ({
       id: item.id,
       memberCode: String(item.data().memberCode ?? ""),
@@ -311,7 +311,7 @@ export async function assignStudentToClass(classCode: string, student: StudentOp
 export async function listClassTeachers() {
   const snapshot = await getDocs(query(collection(firestore, "users"), limit(500)))
   return snapshot.docs
-    .filter((item) => ["staff", "GV"].includes(String(item.data().role ?? "")))
+    .filter((item) => ["staff"].includes(String(item.data().role ?? "")))
     .map((item): TeacherOption => ({
       id: item.id,
       memberCode: String(item.data().memberCode ?? ""),
@@ -340,7 +340,7 @@ export async function createClass(input: CreateClassInput) {
   if (classSnapshot.exists()) throw new Error("Mã lớp đã tồn tại.")
   const subjectDoc = subjectsSnapshot.docs.find((item) => String(item.data().subjectCode ?? item.id) === input.subjectCode)
   if (!subjectDoc) throw new Error("Môn học không tồn tại.")
-  const teacherDoc = teachersSnapshot.docs.find((item) => String(item.data().memberCode ?? "") === input.teacherMemberCode && ["staff", "GV"].includes(String(item.data().role ?? "")))
+  const teacherDoc = teachersSnapshot.docs.find((item) => String(item.data().memberCode ?? "") === input.teacherMemberCode && ["staff"].includes(String(item.data().role ?? "")))
   if (!teacherDoc) throw new Error("Giảng viên không tồn tại hoặc sai vai trò.")
   if (teacherDoc.data().active === false) throw new Error("Tài khoản giảng viên đang bị khóa.")
 
