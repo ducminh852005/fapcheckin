@@ -67,56 +67,119 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
 
     // Dữ liệu lớp học
     final classGroups = _buildClassGroups(dashboardVm);
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: ClassManagementColors.pageBg,
-      body: RefreshIndicator(
-        color: ClassManagementColors.orangePrimary,
-        onRefresh: () async {
-          await dashboardVm.loadClasses();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Stack(
-            children: [
-              // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
-              Container(
-                height: 220,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFFFEDE3),
-                      Color(0xFFFFF8F5),
-                      Color(0xFFF8FAFC),
-                    ],
-                  ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          // Hiệu ứng ánh sáng ấm áp góc trên đồng bộ với Trang chủ & Lịch dạy
+          if (!isDark)
+            Container(
+              height: 320,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFFEDE3),
+                    Color(0xFFFFF8F5),
+                    Color(0xFFF8FAFC),
+                  ],
                 ),
               ),
-              SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: 14,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 800),
+            ),
+          SafeArea(
+            bottom: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // PHẦN CỐ ĐỊNH (HEADER + TÌM KIẾM + THẺ THỐNG KÊ + TIÊU ĐỀ MỤC)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        14,
+                        horizontalPadding,
+                        10,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (dashboardVm.isLoading)
-                            const LinearProgressIndicator(),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 8),
+                              child: LinearProgressIndicator(),
+                            ),
                           if (dashboardVm.errorMessage != null)
-                            Text(dashboardVm.errorMessage!),
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFFECACA),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: Color(0xFFDC2626),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      dashboardVm.errorMessage!,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: Color(0xFFB91C1C),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: dashboardVm.loadClasses,
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 16,
+                                    ),
+                                    label: const Text('Thử lại'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFFDC2626),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           // 1. Header
                           const ClassManagementHeader(),
                           const SizedBox(height: 16),
 
-                          // 2. Ô tìm kiếm
+                          // 2. Thẻ thống kê màu tối (Dark Navy Banner) - tự ẩn khi mở bàn phím ảo
+                          if (!isKeyboardOpen) ...[
+                            ClassSummaryBanner(
+                              classCount: totalClasses,
+                              studentCount: totalStudents,
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                          // 3. Ô tìm kiếm
                           ClassSearchBar(
                             controller: _searchController,
                             onChanged: (val) {
@@ -133,14 +196,7 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                           ),
                           const SizedBox(height: 16),
 
-                          // 3. Thẻ thống kê màu tối (Dark Navy Banner)
-                          ClassSummaryBanner(
-                            classCount: totalClasses,
-                            studentCount: totalStudents,
-                          ),
-                          const SizedBox(height: 22),
-
-                          // 4. Tiêu đề mục: "Tất cả lớp học" & "Theo giờ dạy ↑"
+                          // 4. Tiêu đề mục: "Tất cả lớp học" & "Theo giờ dạy ↑" (Cố định)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -157,237 +213,261 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                                   ),
                                 ),
                               ),
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _sortAscending = !_sortAscending;
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(6),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Theo giờ dạy ${_sortAscending ? "↑" : "↓"}',
-                                        style: const TextStyle(
-                                          color:
-                                              ClassManagementColors.textMuted,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
+                              Tooltip(
+                                message: 'Đổi thứ tự sắp xếp theo giờ dạy',
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _sortAscending = !_sortAscending;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Theo giờ dạy ${_sortAscending ? "↑" : "↓"}',
+                                          style: const TextStyle(
+                                            color:
+                                                ClassManagementColors.textMuted,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-
-                          // 5. Khối HÔM NAY
-                          if (classGroups.todayClasses.isNotEmpty) ...[
-                            Text(
-                              'HÔM NAY • ${_getTodaySubtitle()}',
-                              style: const TextStyle(
-                                color: ClassManagementColors.textMuted,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            for (final item in classGroups.todayClasses) ...[
-                              ClassItemCard(
-                                dayLabel: item.dayLabel,
-                                startTime: item.startTime,
-                                slotLabel: item.slotLabel,
-                                subjectCode: item.subjectCode,
-                                classCode: item.classCode,
-                                subjectName: item.subjectName,
-                                timeDetail: item.timeDetail,
-                                attendanceRate: item.attendanceRate,
-                                status: item.status,
-                                onTap: () => _openHistory(item.classCode),
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 6. Khối SẮP TỚI
-                          if (classGroups.upcomingClasses.isNotEmpty) ...[
-                            const Text(
-                              'SẮP TỚI',
-                              style: TextStyle(
-                                color: ClassManagementColors.textMuted,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            for (final item in classGroups.upcomingClasses) ...[
-                              ClassItemCard(
-                                dayLabel: item.dayLabel,
-                                startTime: item.startTime,
-                                slotLabel: item.slotLabel,
-                                subjectCode: item.subjectCode,
-                                classCode: item.classCode,
-                                subjectName: item.subjectName,
-                                timeDetail: item.timeDetail,
-                                attendanceRate: item.attendanceRate,
-                                status: item.status,
-                                onTap: () => _openHistory(item.classCode),
-                              ),
-                            ],
-                            const SizedBox(height: 20),
-                          ],
-
-                          // 6.5. Empty State khi chưa có lớp hoặc không khớp tìm kiếm
-                          if (classGroups.todayClasses.isEmpty &&
-                              classGroups.upcomingClasses.isEmpty) ...[
-                            Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(top: 6, bottom: 20),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 28,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: ClassManagementColors.cardBorder,
-                                ),
-                                boxShadow: ClassManagementColors.cardShadow,
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: ClassManagementColors.orangeLight,
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      _searchQuery.isNotEmpty
-                                          ? Icons.search_off_rounded
-                                          : Icons.class_outlined,
-                                      color:
-                                          ClassManagementColors.orangePrimary,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _searchQuery.isNotEmpty
-                                        ? 'Không tìm thấy lớp học phù hợp'
-                                        : 'Chưa có lớp được phân công.',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: ClassManagementColors.textDark,
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _searchQuery.isNotEmpty
-                                        ? 'Thử tìm bằng mã môn, mã lớp khác hoặc xóa từ khóa hiện tại.'
-                                        : 'Bạn có thể quét ảnh thời khóa biểu FAP trong mục Lịch dạy để đồng bộ lớp.',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: ClassManagementColors.textMuted,
-                                      fontSize: 12,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  SizedBox(
-                                    height: 38,
-                                    child: OutlinedButton.icon(
-                                      onPressed: () {
-                                        if (_searchQuery.isNotEmpty) {
-                                          _searchController.clear();
-                                          setState(() {
-                                            _searchQuery = '';
-                                          });
-                                        } else {
-                                          dashboardVm.navigate('lich-hoc');
-                                        }
-                                      },
-                                      icon: Icon(
-                                        _searchQuery.isNotEmpty
-                                            ? Icons.clear_rounded
-                                            : Icons.calendar_today_rounded,
-                                        size: 15,
-                                        color:
-                                            ClassManagementColors.orangePrimary,
-                                      ),
-                                      label: Text(
-                                        _searchQuery.isNotEmpty
-                                            ? 'Xóa bộ lọc tìm kiếm'
-                                            : 'Tới Lịch dạy & Quét TKB',
-                                        style: const TextStyle(
-                                          color: ClassManagementColors
-                                              .orangePrimary,
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(
-                                          color: Color(0xFFFED7AA),
-                                          width: 1.2,
-                                        ),
-                                        backgroundColor:
-                                            const Color(0xFFFFF7ED),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-
-                          // 7. Ghi chú chân trang (Footer note)
-                          Center(
-                            child: Text(
-                              'Danh sách lớp được tải từ Firebase.',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: ClassManagementColors.textSubtle,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                height: 1.5,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: context.isMobile ? 108 : 36),
                         ],
                       ),
                     ),
+
+                    // PHẦN CUỘN (CHỈ DANH SÁCH LỚP HỌC PHÍA DƯỚI)
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: ClassManagementColors.orangePrimary,
+                        onRefresh: () async {
+                          await dashboardVm.loadClasses();
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            4,
+                            horizontalPadding,
+                            context.isMobile ? 108 : 36,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 5. Khối HÔM NAY
+                              if (classGroups.todayClasses.isNotEmpty) ...[
+                                Text(
+                                  'HÔM NAY • ${_getTodaySubtitle()}',
+                                  style: const TextStyle(
+                                    color: ClassManagementColors.textMuted,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                for (final item in classGroups.todayClasses) ...[
+                                  ClassItemCard(
+                                    dayLabel: item.dayLabel,
+                                    startTime: item.startTime,
+                                    slotLabel: item.slotLabel,
+                                    subjectCode: item.subjectCode,
+                                    classCode: item.classCode,
+                                    subjectName: item.subjectName,
+                                    timeDetail: item.timeDetail,
+                                    attendanceRate: item.attendanceRate,
+                                    status: item.status,
+                                    onTap: () => _openHistory(item.classCode),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                              ],
+
+                              // 6. Khối SẮP TỚI
+                              if (classGroups.upcomingClasses.isNotEmpty) ...[
+                                const Text(
+                                  'SẮP TỚI',
+                                  style: TextStyle(
+                                    color: ClassManagementColors.textMuted,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                for (final item in classGroups.upcomingClasses) ...[
+                                  ClassItemCard(
+                                    dayLabel: item.dayLabel,
+                                    startTime: item.startTime,
+                                    slotLabel: item.slotLabel,
+                                    subjectCode: item.subjectCode,
+                                    classCode: item.classCode,
+                                    subjectName: item.subjectName,
+                                    timeDetail: item.timeDetail,
+                                    attendanceRate: item.attendanceRate,
+                                    status: item.status,
+                                    onTap: () => _openHistory(item.classCode),
+                                  ),
+                                ],
+                                const SizedBox(height: 20),
+                              ],
+
+                              // 6.5. Empty State khi chưa có lớp hoặc không khớp tìm kiếm
+                              if (classGroups.todayClasses.isEmpty &&
+                                  classGroups.upcomingClasses.isEmpty) ...[
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 6, bottom: 20),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 28,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: ClassManagementColors.cardBorder,
+                                    ),
+                                    boxShadow: ClassManagementColors.cardShadow,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: ClassManagementColors.orangeLight,
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        child: Icon(
+                                          _searchQuery.isNotEmpty
+                                              ? Icons.search_off_rounded
+                                              : Icons.class_outlined,
+                                          color:
+                                              ClassManagementColors.orangePrimary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        _searchQuery.isNotEmpty
+                                            ? 'Không tìm thấy lớp học phù hợp'
+                                            : 'Chưa có lớp được phân công.',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: ClassManagementColors.textDark,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _searchQuery.isNotEmpty
+                                            ? 'Thử tìm bằng mã môn, mã lớp khác hoặc xóa từ khóa hiện tại.'
+                                            : 'Bạn có thể quét ảnh thời khóa biểu FAP trong mục Lịch dạy để đồng bộ lớp.',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: ClassManagementColors.textMuted,
+                                          fontSize: 12,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      SizedBox(
+                                        height: 38,
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            if (_searchQuery.isNotEmpty) {
+                                              _searchController.clear();
+                                              setState(() {
+                                                _searchQuery = '';
+                                              });
+                                            } else {
+                                              dashboardVm.navigate('lich-hoc');
+                                            }
+                                          },
+                                          icon: Icon(
+                                            _searchQuery.isNotEmpty
+                                              ? Icons.clear_rounded
+                                              : Icons.calendar_today_rounded,
+                                          size: 15,
+                                          color:
+                                              ClassManagementColors.orangePrimary,
+                                        ),
+                                        label: Text(
+                                          _searchQuery.isNotEmpty
+                                              ? 'Xóa bộ lọc tìm kiếm'
+                                              : 'Tới Lịch dạy & Quét TKB',
+                                          style: const TextStyle(
+                                            color: ClassManagementColors
+                                                .orangePrimary,
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: const BorderSide(
+                                            color: Color(0xFFFED7AA),
+                                            width: 1.2,
+                                          ),
+                                          backgroundColor:
+                                              const Color(0xFFFFF7ED),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            // 7. Ghi chú chân trang (Footer note)
+                            Center(
+                              child: Text(
+                                'Danh sách lớp được tải từ Firebase.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: ClassManagementColors.textSubtle,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  );
   }
 
   String _getTodaySubtitle() {

@@ -20,7 +20,7 @@ class LoadingScreen extends StatefulWidget {
 
   const LoadingScreen({
     super.key,
-    this.minDuration = const Duration(milliseconds: 2000),
+    this.minDuration = const Duration(milliseconds: 600),
   });
 
   @override

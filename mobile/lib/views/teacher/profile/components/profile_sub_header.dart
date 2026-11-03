@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import '../profile_colors.dart';
 
 /// Header có nút quay lại (Back) dùng chung cho trang Thông tin cá nhân & Thông tin công tác:
-/// - Nút quay lại bo góc viền xám nhạt
-/// - Danh mục uppercase: "HỒ SƠ"
-/// - Tiêu đề chính lớn (vd: "Thông tin cá nhân", "Thông tin công tác")
+/// - Nút quay lại bo góc nằm cùng hàng ngang với danh mục "HỒ SƠ" & Tiêu đề chính (đồng bộ với các màn hình con khác)
 class ProfileSubHeader extends StatelessWidget {
   final String category;
   final String title;
@@ -19,59 +17,82 @@ class ProfileSubHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark
+        ? Theme.of(context).colorScheme.surface
+        : Colors.white;
+    final textColor = isDark
+        ? Theme.of(context).colorScheme.onSurface
+        : ProfileColors.textDark;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Nút quay lại
-        InkWell(
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: ProfileColors.borderSubtle),
-              boxShadow: ProfileColors.cardShadow,
-            ),
-            child: const Icon(
-              Icons.chevron_left_rounded,
-              size: 24,
-              color: Color(0xFF334155),
+        // Nút quay lại (chuẩn vùng chạm >= 44x44dp)
+        Tooltip(
+          message: 'Quay lại',
+          child: InkWell(
+            onTap: onBack,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark
+                          ? Theme.of(context).colorScheme.outline
+                          : ProfileColors.borderSubtle,
+                    ),
+                    boxShadow: ProfileColors.cardShadow,
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 17,
+                    color: textColor,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(width: 10),
 
-        // Danh mục uppercase
-        Text(
-          category,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8,
-            color: ProfileColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 4),
-
-        // Tiêu đề lớn
-        FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: ProfileColors.textDark,
-              letterSpacing: -0.5,
-            ),
+        // Danh mục uppercase & Tiêu đề lớn
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                category,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: ProfileColors.orangePrimary,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                  letterSpacing: -0.4,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 }
-

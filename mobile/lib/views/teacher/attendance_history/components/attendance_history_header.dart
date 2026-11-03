@@ -9,7 +9,8 @@ import '../attendance_history_colors.dart';
 class AttendanceHistoryHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
+  final bool showBackButton;
   final VoidCallback? onExport;
   final VoidCallback? onOptions;
 
@@ -17,7 +18,8 @@ class AttendanceHistoryHeader extends StatelessWidget {
     super.key,
     this.title = 'Điểm danh sinh viên',
     this.subtitle = 'PRN231 · SE1801 · Buổi 12 · Ca 2 (Phòng AL-204)',
-    required this.onBack,
+    this.onBack,
+    this.showBackButton = false,
     this.onExport,
     this.onOptions,
   });
@@ -27,32 +29,42 @@ class AttendanceHistoryHeader extends StatelessWidget {
     return Row(
       children: [
         // Nút quay lại
-        InkWell(
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
+        if (showBackButton && onBack != null) ...[
+          Tooltip(
+            message: 'Quay lại',
+            child: InkWell(
+              onTap: onBack,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 16,
+                      color: AttendanceHistoryColors.textDark,
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 15,
-              color: AttendanceHistoryColors.textDark,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 8),
+        ],
 
         // Tiêu đề & Thông tin lớp
         Expanded(
@@ -128,25 +140,30 @@ class _CircleActionButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            size: 19,
-            color: AttendanceHistoryColors.textDark,
+              child: Icon(
+                icon,
+                size: 19,
+                color: AttendanceHistoryColors.textDark,
+              ),
+            ),
           ),
         ),
       ),

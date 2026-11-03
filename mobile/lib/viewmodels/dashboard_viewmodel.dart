@@ -73,6 +73,7 @@ class DashboardViewModel extends ChangeNotifier {
     _teacherMemberCode = '';
     _generation++;
     _currentRoute = 'tong-quan';
+    _routeHistory.clear();
     _classes = [];
     _status = ViewStatus.idle;
     _errorMessage = null;
@@ -249,11 +250,34 @@ class DashboardViewModel extends ChangeNotifier {
   // ── Navigation ───────────────────────────────────────────────────────────────
 
   String _currentRoute = 'tong-quan';
+  final List<String> _routeHistory = [];
   String get currentRoute => _currentRoute;
 
+  bool get canNavigateBack =>
+      _routeHistory.isNotEmpty || _currentRoute != 'tong-quan';
+
   void navigate(String route) {
+    if (route == _currentRoute) return;
+    _routeHistory.add(_currentRoute);
+    if (_routeHistory.length > 20) {
+      _routeHistory.removeAt(0);
+    }
     _currentRoute = route;
     notifyListeners();
+  }
+
+  bool navigateBack([String fallbackRoute = 'tong-quan']) {
+    if (_routeHistory.isNotEmpty) {
+      _currentRoute = _routeHistory.removeLast();
+      notifyListeners();
+      return true;
+    }
+    if (_currentRoute != fallbackRoute) {
+      _currentRoute = fallbackRoute;
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

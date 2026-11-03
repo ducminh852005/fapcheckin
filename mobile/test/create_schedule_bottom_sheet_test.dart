@@ -110,6 +110,15 @@ void main() {
       expect(find.text('Bắt buộc'), findsOneWidget);
       expect(find.text('Học bù (Make-up Slot)'), findsOneWidget);
 
+      await tester.tap(find.text('Học bù (Make-up Slot)'));
+      await tester.pumpAndSettle();
+      expect(find.text('CHỌN LOẠI BUỔI HỌC'), findsOneWidget);
+      expect(find.text('3 loại'), findsOneWidget);
+      expect(find.text('Workshop (Hội thảo / Chuyên đề)'), findsOneWidget);
+      expect(find.text('Ôn tập (Review Slot)'), findsOneWidget);
+      await tester.tap(find.text('Học bù (Make-up Slot)').last);
+      await tester.pumpAndSettle();
+
       // 4. LỚP HỌC *
       expect(find.text('LỚP HỌC'), findsOneWidget);
 
@@ -181,20 +190,19 @@ void main() {
       await tester.tap(find.text('Open Bottom Sheet'));
       await tester.pumpAndSettle();
 
-      final dropdowns = find.byType(DropdownButtonFormField<String>);
-
       // Chọn lớp học
-      await tester.ensureVisible(dropdowns.at(1));
-      await tester.tap(dropdowns.at(1));
+      await tester.ensureVisible(find.text('Chọn lớp học'));
+      await tester.tap(find.text('Chọn lớp học'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.text('PRN231_SE1801 — Building Cross-Platform Apps').last,
-      );
+      expect(find.text('CHỌN LỚP HỌC'), findsOneWidget);
+      expect(find.text('1 lớp'), findsOneWidget);
+      await tester.tap(find.text('PRN231_SE1801').last);
       await tester.pumpAndSettle();
 
       // Chọn phòng học
-      await tester.ensureVisible(dropdowns.at(2));
-      await tester.tap(dropdowns.at(2));
+      final dropdowns = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(dropdowns.at(1));
+      await tester.tap(dropdowns.at(1));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Phòng AL-204').last);
       await tester.pumpAndSettle();

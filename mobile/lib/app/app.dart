@@ -217,6 +217,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
           title: 'FAP Check-in',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
           themeMode: prefsVm.themeMode,
           routerConfig: _router,
           builder: (context, child) {
@@ -225,7 +226,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
               data: mq.copyWith(
                 textScaler: mq.textScaler.clamp(
                   minScaleFactor: 0.9,
-                  maxScaleFactor: 1.2,
+                  maxScaleFactor: 1.35,
                 ),
               ),
               child: child ?? const SizedBox.shrink(),

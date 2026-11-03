@@ -1,7 +1,7 @@
 {
   "hosting": {
     "public": "web/checkin",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md", "**/*.test.mjs"],
     "cleanUrls": false,
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [

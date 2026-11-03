@@ -229,6 +229,31 @@ class TeacherRepository {
     return ip;
   });
 
+  /// Enables or disables public-IP enforcement for an open session.
+  /// Both fields are updated together so a QR can never advertise IP checking
+  /// while the backend still has an empty teacher IP.
+  Future<ApiResult<bool>> updateSessionIpCheck({
+    required String sessionId,
+    required bool enabled,
+    String teacherIp = '',
+  }) => guardApi(() async {
+    final ip = enabled ? teacherIp.trim() : '';
+    if (sessionId.isEmpty || (enabled && ip.isEmpty)) {
+      throw ApiException(
+        'VALIDATION_ERROR',
+        enabled
+            ? 'Không xác định được IP công khai của giảng viên.'
+            : 'Thiếu sessionId.',
+      );
+    }
+    await _openSession(sessionId);
+    await _db.collection('sessions').doc(sessionId).update({
+      'ipCheck': enabled,
+      'teacherIp': ip,
+    });
+    return enabled;
+  });
+
   /// Phiên phải tồn tại, thuộc giảng viên và đang mở.
   Future<Json> _openSession(String sessionId) async {
     final session = await _session(sessionId);

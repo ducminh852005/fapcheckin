@@ -73,6 +73,7 @@ jobs:
         run: |
           cp web/checkin/app.js "$RUNNER_TEMP/checkin-app.mjs"
           node --check "$RUNNER_TEMP/checkin-app.mjs"
+          node --test web/checkin/profile.test.mjs
           for f in firebase/scripts/*.mjs; do node --check "$f" && echo "ok $f"; done
 
   flutter-core:
