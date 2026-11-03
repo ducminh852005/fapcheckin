@@ -27,7 +27,10 @@ service cloud.firestore {
       return get(profilePath()).data;
     }
     function isActive() {
-      return profile().get('active', true) == true;
+      // Dữ liệu cũ có một số hồ sơ lưu active dưới dạng chuỗi "true".
+      // Admin web cũng chấp nhận định dạng này, nên rules cần xử lý nhất quán.
+      return profile().get('active', true) == true
+        || profile().get('active', true) == 'true';
     }
     function isRole(r) {
       return hasProfile() && isActive() && profile().role == r;
@@ -311,12 +314,14 @@ service cloud.firestore {
       allow get: if isAdmin() || (hasProfile() && id.matches('^' + request.auth.uid + '_.*'));
       allow list: if isAdmin() || (hasProfile() && resource.data.authorUid == request.auth.uid);
       allow create: if hasProfile() && isActive()
-        && request.resource.data.keys().hasOnly(['authorUid', 'category', 'message', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['authorUid', 'category', 'message', 'attachments', 'status', 'createdAt'])
         && request.resource.data.authorUid == request.auth.uid
         && id.matches('^' + request.auth.uid + '_.*')
         && request.resource.data.category in ['bug', 'suggestion', 'other']
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.get('attachments', []) is list
+        && request.resource.data.get('attachments', []).size() <= 3
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time;
       allow update: if isAdmin() && onlyChanges(['status', 'reply', 'resolvedAt'])

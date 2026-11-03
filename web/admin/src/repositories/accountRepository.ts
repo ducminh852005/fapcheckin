@@ -461,6 +461,26 @@ export async function listAccountData(): Promise<AccountData> {
   }
 }
 
+export async function listAllAccountsForExport(): Promise<AccountRow[]> {
+  const snapshot = await getDocs(collection(firestore, "users"))
+  return snapshot.docs
+    .map((item) => {
+      const data = item.data()
+      const memberCode = String(data.memberCode ?? "")
+      return {
+        id: item.id,
+        memberCode,
+        fullName: String(data.fullName ?? ""),
+        email: String(data.email ?? ""),
+        role: String(data.role ?? ""),
+        rollNumber: String(data.rollNumber ?? ""),
+        active: typeof data.active === "boolean" ? data.active : null,
+        canonical: item.id !== memberCode && typeof data.active === "boolean",
+      } satisfies AccountRow
+    })
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"))
+}
+
 export async function createInvite(input: {
   email: string
   fullName: string

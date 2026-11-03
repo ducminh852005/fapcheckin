@@ -30,6 +30,15 @@ service firebase.storage {
           || (fileName == 'profile.png' && request.resource.contentType == 'image/png'));
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+
+    match /feedback_attachments/{uid}/{fileName} {
+      allow read: if request.auth != null && (request.auth.uid == uid || role() == 'admin');
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && role() == 'staff'
+        && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png)');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     match /{allPaths=**} {
       allow read, write: if false;
     }

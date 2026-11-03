@@ -11,7 +11,7 @@ const firebaseConfig = {
   storageBucket: "fapcheckin-3bn2di.firebasestorage.app",
 }
 
-const app = getApps()[0] ?? initializeApp(firebaseConfig)
+export const app = getApps()[0] ?? initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
 export const firestore = getFirestore(app)
