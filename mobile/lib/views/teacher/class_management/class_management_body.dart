@@ -6,7 +6,7 @@ import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard/components/weekly_timetable.dart';
 import 'class_management_colors.dart';
 import '../../../viewmodels/attendance_history_viewmodel.dart';
-import '../live_session/dialogs/start_session_dialog.dart';
+import '../../../core/services/auto_session_manager.dart';
 import 'components/class_management_header.dart';
 import 'components/class_search_bar.dart';
 import 'components/class_summary_banner.dart';
@@ -212,22 +212,6 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
                                 timeDetail: item.timeDetail,
                                 attendanceRate: item.attendanceRate,
                                 status: item.status,
-                                activeScannedInfo: item.activeScannedInfo,
-                                onOpenCheckin: () async {
-                                  final cls = dashboardVm.classes
-                                      .where(
-                                        (c) => c.classCode == item.classCode,
-                                      )
-                                      .first;
-                                  final ok = await startSessionWithOptions(
-                                    context,
-                                    classSection: cls,
-                                    slotCode: cls.slotCode,
-                                  );
-                                  if (mounted && ok) {
-                                    dashboardVm.navigate('diem-danh-qr');
-                                  }
-                                },
                                 onTap: () => _openHistory(item.classCode),
                               ),
                             ],
@@ -455,6 +439,14 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
         ClassCardStatus status = ClassCardStatus.normal;
         if (c.isActive) {
           status = ClassCardStatus.active;
+        } else if (isToday) {
+          final (startDt, endDt) = TimeSlotHelper.resolveSlotRange(now, c);
+          if (startDt != null && endDt != null) {
+            if ((now.isAfter(startDt) || now.isAtSameMomentAs(startDt)) &&
+                now.isBefore(endDt)) {
+              status = ClassCardStatus.active;
+            }
+          }
         }
 
         final rateStr = '${c.averageAttendance.toStringAsFixed(1)}%';

@@ -22,8 +22,8 @@ String failCode<T>(ApiResult<T> r) {
 void main() {
   late FakeFirebaseFirestore db;
   late TeacherRepository repo;
-  // 2026-10-21 03:00 UTC = 10:00 giờ Việt Nam
-  final now = DateTime.utc(2026, 10, 21, 3);
+  // 2026-10-21 01:00 UTC = 08:00 giờ Việt Nam (trong slot A1).
+  final now = DateTime.utc(2026, 10, 21, 1);
 
   setUp(() async {
     db = await seededDb();
@@ -56,6 +56,9 @@ void main() {
       expect(doc['teacherMemberCode'], 'GV001');
       expect(doc['qrSecret'], s.qrToken);
       expect(doc['teacherIp'], '');
+      expect(doc['startsAt'], isNotNull);
+      expect(doc['endsAt'], isNotNull);
+      expect(doc['manualAttendanceDeadline'], isNotNull);
     });
 
     test('ipCheck bật thì cần teacherIp và được lưu', () async {
@@ -103,6 +106,23 @@ void main() {
         await repo.startSession(classCode: 'PRN232_SE1917', slotCode: ''),
       );
       expect(s.slotCode, 'A1');
+    });
+
+    test('từ chối mở phiên khi ca học đã kết thúc', () async {
+      final afterSlot = TeacherRepository(
+        currentUser: teacher(),
+        firestore: db,
+        now: () => DateTime.utc(2026, 10, 21, 2, 15), // 09:15 VN
+      );
+      expect(
+        failCode(
+          await afterSlot.startSession(
+            classCode: 'PRN232_SE1917',
+            slotCode: 'A1',
+          ),
+        ),
+        'SESSION_OUTSIDE_SLOT_TIME',
+      );
     });
   });
 
@@ -209,6 +229,12 @@ void main() {
       expect(doc['networkVerificationResult'], 'Manual');
       expect(doc['teacherMemberCode'], 'GV001');
       expect(doc['classCode'], 'PRN232_SE1917');
+      expect(doc['checkinTime'], isNotNull);
+      final reloaded = ok(await repo.getRoster(sessionId: id));
+      expect(
+        reloaded.firstWhere((student) => student.rollNumber == 'SE1003').status,
+        'ManualByGV',
+      );
       ok(
         await repo.manualCheckin(
           sessionId: id,
@@ -239,6 +265,61 @@ void main() {
       expect(doc['status'], 'Absent');
       expect(doc['note'], 'Nghỉ');
     });
+
+    test('manualCheckin chấp nhận enrollment có document ID legacy', () async {
+      final canonical = db
+          .collection('enrollments')
+          .doc('PRN232_SE1917_SE1003');
+      final data = (await canonical.get()).data()!;
+      await canonical.delete();
+      await db.collection('enrollments').doc('legacy-random-id').set(data);
+
+      final id = await open();
+      ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1003'));
+      final record = await db
+          .collection('attendance_records')
+          .doc('${id}_SE1003')
+          .get();
+      expect(record['status'], 'ManualByGV');
+    });
+
+    test('manualCheckin từ chối sinh viên không thuộc lớp', () async {
+      final id = await open();
+      expect(
+        failCode(await repo.manualCheckin(sessionId: id, rollNumber: 'SE9999')),
+        'STUDENT_NOT_ENROLLED',
+      );
+      expect((await db.collection('attendance_records').get()).docs, isEmpty);
+    });
+
+    test('cho phép đến 23:59 và từ chối từ 00:00 ngày kế tiếp', () async {
+      final id = await open();
+      final beforeMidnight = TeacherRepository(
+        currentUser: teacher(),
+        firestore: db,
+        now: () => DateTime.utc(2026, 10, 21, 16, 59, 59),
+      );
+      ok(
+        await beforeMidnight.manualCheckin(sessionId: id, rollNumber: 'SE1001'),
+      );
+
+      final nextDay = TeacherRepository(
+        currentUser: teacher(),
+        firestore: db,
+        now: () => DateTime.utc(2026, 10, 21, 17),
+      );
+      expect(
+        failCode(
+          await nextDay.manualCheckin(sessionId: id, rollNumber: 'SE1002'),
+        ),
+        'MANUAL_ATTENDANCE_EXPIRED',
+      );
+      expect(
+        (await db.collection('attendance_records').doc('${id}_SE1002').get())
+            .exists,
+        false,
+      );
+    });
   });
 
   group('getClasses', () {
@@ -252,6 +333,36 @@ void main() {
       expect(c.activeSessionIpCheck, true);
       expect(c.timeLabel, contains('07:00'));
       expect(c.subjectCode, 'PRN232');
+    });
+
+    test('phiên open quá giờ không được trả về là đang dạy', () async {
+      await db.collection('sessions').doc('stale-open').set({
+        'classCode': 'PRN232_SE1917',
+        'teacherMemberCode': 'GV001',
+        'sessionDate': '2026-10-21',
+        'slotCode': 'A1',
+        'sessionStatus': 'open',
+        'qrSecret': 'stale-secret-0123456789',
+        'ipCheck': false,
+      });
+      final afterSlot = TeacherRepository(
+        currentUser: teacher(),
+        firestore: db,
+        now: () => DateTime.utc(2026, 10, 21, 3), // 10:00 VN
+      );
+
+      final c = ok(await afterSlot.getClasses(teacherMemberCode: 'GV001'))
+          .single;
+      expect(c.isActive, false);
+      expect(c.activeSessionId, isNull);
+
+      final session = ok(await afterSlot.getSession('stale-open'));
+      expect(session.sessionStatus, 'expired');
+      expect(session.isOpen, false);
+      expect(
+        failCode(await afterSlot.rotateQr(sessionId: 'stale-open')),
+        'SESSION_NOT_FOUND',
+      );
     });
 
     test('tính điểm danh trung bình và số buổi đã kết thúc', () async {
@@ -349,28 +460,31 @@ void main() {
     );
   });
 
-  test('syncToFap đồng bộ các bản ghi chưa đẩy lên FAP và đánh dấu syncedToFap', () async {
-    final id = await open();
-    ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1001'));
-    final first = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
-    expect(first.syncedCount, 1);
-    final record = await db
-        .collection('attendance_records')
-        .doc('${id}_SE1001')
-        .get();
-    expect(record.data()!['syncedToFap'], true);
-    expect(record.data()!['updatedBy'], 'GV001');
+  test(
+    'syncToFap đồng bộ các bản ghi chưa đẩy lên FAP và đánh dấu syncedToFap',
+    () async {
+      final id = await open();
+      ok(await repo.manualCheckin(sessionId: id, rollNumber: 'SE1001'));
+      final first = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
+      expect(first.syncedCount, 1);
+      final record = await db
+          .collection('attendance_records')
+          .doc('${id}_SE1001')
+          .get();
+      expect(record.data()!['syncedToFap'], true);
+      expect(record.data()!['updatedBy'], 'GV001');
 
-    // Gọi lại lần 2 khi tất cả đã đồng bộ -> syncedCount = 0
-    final second = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
-    expect(second.syncedCount, 0);
+      // Gọi lại lần 2 khi tất cả đã đồng bộ -> syncedCount = 0
+      final second = ok(await repo.syncToFap(classCode: 'PRN232_SE1917'));
+      expect(second.syncedCount, 0);
 
-    // Từ chối lớp của giảng viên khác
-    expect(
-      failCode(await repo.syncToFap(classCode: 'SWD392_SE1801')),
-      'FORBIDDEN',
-    );
-  });
+      // Từ chối lớp của giảng viên khác
+      expect(
+        failCode(await repo.syncToFap(classCode: 'SWD392_SE1801')),
+        'FORBIDDEN',
+      );
+    },
+  );
 
   test(
     'getSession resumes persisted date and token and rejects other owners',

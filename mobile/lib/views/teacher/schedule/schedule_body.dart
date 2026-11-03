@@ -5,7 +5,9 @@ import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../viewmodels/attendance_history_viewmodel.dart';
 import '../../../viewmodels/live_session_viewmodel.dart';
+import '../../../core/services/auto_session_manager.dart';
 import 'components/import_timetable_bottom_sheet.dart';
 import '../dashboard/components/weekly_timetable.dart';
 import 'schedule_colors.dart';
@@ -60,13 +62,29 @@ class _ScheduleBodyState extends State<ScheduleBody> {
     final cls = vm.classes
         .where((c) => c.classCode == item.classCode)
         .firstOrNull;
-    if (cls == null) return;
+    if (cls == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không tìm thấy thông tin lớp ${item.classCode}.'),
+        ),
+      );
+      return;
+    }
     final ok = await startSessionWithOptions(
       context,
       classSection: cls,
       slotCode: item.slotCode,
     );
     if (mounted && ok) vm.navigate('diem-danh-qr');
+  }
+
+  Future<void> _openAttendancePage(String classCode) async {
+    final history = context.read<AttendanceHistoryViewModel>();
+    final dashboard = context.read<DashboardViewModel>();
+    await history.loadClasses();
+    if (!mounted) return;
+    await history.selectClass(classCode);
+    if (mounted) dashboard.navigate('lich-su-diem-danh');
   }
 
   late DateTime _selectedDate;
@@ -209,19 +227,21 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                               ),
                               onPressed: () async {
                                 final created =
-                                    await showCreateScheduleBottomSheet(context);
+                                    await showCreateScheduleBottomSheet(
+                                      context,
+                                    );
                                 if (created != null && mounted) {
                                   await _loadPlans();
                                   if (!context.mounted) return;
                                   context.read<LiveSessionViewModel>().triggerToast(
-                                        type: ToastType.custom,
-                                        title: 'Đã tạo lịch học bổ sung',
-                                        message:
-                                            'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
-                                        icon: Icons.check_circle_outline,
-                                        accentColor: AppColors.statusPresent,
-                                        duration: const Duration(seconds: 4),
-                                      );
+                                    type: ToastType.custom,
+                                    title: 'Đã tạo lịch học bổ sung',
+                                    message:
+                                        'Lớp ${created['classCode']} ngày ${created['scheduleDate']} đã được tạo thành công.',
+                                    icon: Icons.check_circle_outline,
+                                    accentColor: AppColors.statusPresent,
+                                    duration: const Duration(seconds: 4),
+                                  );
                                 }
                               },
                             ),
@@ -318,12 +338,9 @@ class _ScheduleBodyState extends State<ScheduleBody> {
                                     isFirst: i == 0,
                                     isLast: i == sessions.length - 1,
                                     onOpenAttendance: () => _open(sessions[i]),
-                                    onTap: () {
-                                      if (sessions[i].status ==
-                                          ScheduleSessionStatus.active) {
-                                        _open(sessions[i]);
-                                      }
-                                    },
+                                    onTap: () => _openAttendancePage(
+                                      sessions[i].classCode,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -376,14 +393,40 @@ class _ScheduleBodyState extends State<ScheduleBody> {
 
       if (isToday) {
         final slotNum = info.slot;
+        final (startDt, endDt) = TimeSlotHelper.resolveSlotRange(date, c);
+
+        final now = DateTime.now();
+        final targetDay = DateTime(date.year, date.month, date.day);
+        final today = DateTime(now.year, now.month, now.day);
 
         ScheduleSessionStatus status = ScheduleSessionStatus.upcoming;
         String subtext = '${c.studentCount} sinh viên • Điểm danh QR';
 
-        if (c.isActive && DateUtils.isSameDay(date, DateTime.now())) {
-          status = ScheduleSessionStatus.active;
-          final scanned = vm.activeSessionScanned;
-          subtext = '$scanned/${c.studentCount} sinh viên đã điểm danh';
+        if (targetDay.isBefore(today)) {
+          status = ScheduleSessionStatus.completed;
+          subtext = 'Đã hoàn thành • ${c.studentCount} sinh viên';
+        } else if (targetDay.isAfter(today)) {
+          status = ScheduleSessionStatus.upcoming;
+          subtext = '${c.studentCount} sinh viên • Điểm danh QR';
+        } else {
+          // Ngày hôm nay: so sánh theo thời gian thực (real-time)
+          if (startDt != null && endDt != null) {
+            if (now.isAfter(endDt) || now.isAtSameMomentAs(endDt)) {
+              status = ScheduleSessionStatus.completed;
+              subtext = 'Ca học đã kết thúc (${c.endTime ?? 'hết giờ'})';
+            } else if (c.isActive ||
+                now.isAfter(startDt) ||
+                now.isAtSameMomentAs(startDt)) {
+              status = ScheduleSessionStatus.active;
+              subtext = c.isActive
+                  ? '${vm.activeSessionScanned}/${c.studentCount} sinh viên đã điểm danh'
+                  : 'Đang trong giờ dạy • Vào điểm danh ngay';
+            } else {
+              status = ScheduleSessionStatus.upcoming;
+              subtext =
+                  '${c.studentCount} sinh viên • Bắt đầu lúc ${c.startTime ?? ''}';
+            }
+          }
         }
 
         result.add(
@@ -414,6 +457,23 @@ class _ScheduleBodyState extends State<ScheduleBody> {
           .firstOrNull;
       if (cls == null) continue;
       final code = p['slotCode']?.toString() ?? '';
+
+      final now = DateTime.now();
+      final targetDay = DateTime(date.year, date.month, date.day);
+      final today = DateTime(now.year, now.month, now.day);
+      ScheduleSessionStatus planStatus = ScheduleSessionStatus.upcoming;
+      if (targetDay.isBefore(today)) {
+        planStatus = ScheduleSessionStatus.completed;
+      } else if (targetDay.isAtSameMomentAs(today)) {
+        final (pStart, pEnd) = TimeSlotHelper.resolveSlotRange(date, cls);
+        if (pEnd != null && (now.isAfter(pEnd) || now.isAtSameMomentAs(pEnd))) {
+          planStatus = ScheduleSessionStatus.completed;
+        } else if (pStart != null &&
+            (now.isAfter(pStart) || now.isAtSameMomentAs(pStart))) {
+          planStatus = ScheduleSessionStatus.active;
+        }
+      }
+
       result.add(
         _TimelineSessionData(
           slot: SlotCodeParser.parse(code)?.slot ?? 0,
@@ -424,7 +484,7 @@ class _ScheduleBodyState extends State<ScheduleBody> {
           subjectName: cls.subjectName,
           room: p['room']?.toString() ?? cls.room,
           subtext: 'Lịch bổ sung · ${p['note'] ?? ''}',
-          status: ScheduleSessionStatus.upcoming,
+          status: planStatus,
         ),
       );
     }

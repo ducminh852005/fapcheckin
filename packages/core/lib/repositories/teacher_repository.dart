@@ -76,11 +76,11 @@ class TeacherRepository {
       orElse: () => const {},
     );
 
-    Json? activeSessionOf(String classCode) {
+    Json? activeSessionOf(String classCode, String slotCode) {
       for (final s in tables.sessions) {
         if (text(s['classCode']) == classCode &&
-            s['sessionStatus'] == 'open' &&
-            fmtDate(s['sessionDate']) == today) {
+            text(s['slotCode']) == slotCode &&
+            isSessionActiveAt(s, slots, _now())) {
           return s;
         }
       }
@@ -115,7 +115,7 @@ class TeacherRepository {
       final slot = slotOf(slotCode);
       final start = text(slot['startTime']);
       final end = text(slot['endTime']);
-      final active = activeSessionOf(classCode);
+      final active = activeSessionOf(classCode, slotCode);
 
       result.add({
         'classCode': classCode,
@@ -154,7 +154,7 @@ class TeacherRepository {
       final slot = slotOf(slotCode);
       final start = text(slot['startTime']);
       final end = text(slot['endTime']);
-      final active = activeSessionOf(classCode);
+      final active = activeSessionOf(classCode, slotCode);
       result.add({
         'classCode': classCode,
         'subjectCode': text(cls['subjectCode']).isNotEmpty
@@ -232,10 +232,15 @@ class TeacherRepository {
   /// Phiên phải tồn tại, thuộc giảng viên và đang mở.
   Future<Json> _openSession(String sessionId) async {
     final session = await _session(sessionId);
-    if (session['sessionStatus'] != 'open') {
+    final status = effectiveSessionStatusAt(
+      session,
+      await loadSlots(_db),
+      _now(),
+    );
+    if (status != 'open') {
       throw ApiException(
         'SESSION_NOT_FOUND',
-        'Không tìm thấy phiên điểm danh đang mở.',
+        'Không tìm thấy phiên điểm danh còn trong giờ học.',
       );
     }
     return session;
@@ -244,16 +249,46 @@ class TeacherRepository {
   Future<ApiResult<SessionModel>> getSession(String sessionId) =>
       guardApi(() async {
         final data = await _session(sessionId);
+        final status = effectiveSessionStatusAt(
+          data,
+          await loadSlots(_db),
+          _now(),
+        );
         return SessionModel(
           sessionId: sessionId,
           classCode: text(data['classCode']),
           sessionDate: fmtDate(data['sessionDate']),
           slotCode: text(data['slotCode']),
-          sessionStatus: text(data['sessionStatus']),
+          sessionStatus: status,
           qrToken: text(data['qrSecret']),
           ipCheck: ipCheckEnabled(data),
         );
       });
+
+  Stream<SessionModel?> watchSession(String sessionId) {
+    if (sessionId.isEmpty) return Stream.value(null);
+    return Stream.fromFuture(loadSlots(_db)).asyncExpand(
+      (slots) => _db
+          .collection('sessions')
+          .where(FieldPath.documentId, isEqualTo: sessionId)
+          .where('teacherMemberCode', isEqualTo: _me)
+          .snapshots()
+          .map((snap) {
+            if (snap.docs.isEmpty) return null;
+            final doc = snap.docs.first;
+            final data = docToJson(doc)..['id'] = doc.id;
+            return SessionModel(
+              sessionId: sessionId,
+              classCode: text(data['classCode']),
+              sessionDate: fmtDate(data['sessionDate']),
+              slotCode: text(data['slotCode']),
+              sessionStatus: effectiveSessionStatusAt(data, slots, _now()),
+              qrToken: text(data['qrSecret']),
+              ipCheck: ipCheckEnabled(data),
+            );
+          }),
+    );
+  }
 
   Future<Json> _session(String sessionId) async {
     if (sessionId.isEmpty) {
@@ -333,13 +368,7 @@ class TeacherRepository {
 
   Future<ApiResult<String>> rotateQr({required String sessionId}) =>
       guardApi(() async {
-        final session = await _session(sessionId);
-        if (session['sessionStatus'] != 'open') {
-          throw ApiException(
-            'SESSION_NOT_FOUND',
-            'Phiên đã đóng, không thể làm mới QR.',
-          );
-        }
+        await _openSession(sessionId);
         final secret = randomSecret();
         await _db.collection('sessions').doc(sessionId).update({
           'qrSecret': secret,
@@ -360,6 +389,7 @@ class TeacherRepository {
         .where('teacherMemberCode', isEqualTo: _me)
         .where('classCode', isEqualTo: classCode)
         .get();
+    final slots = await loadSlots(_db);
     final sessions = <Json>[
       for (final d in sessionDocs.docs)
         {
@@ -367,7 +397,7 @@ class TeacherRepository {
           'classCode': classCode,
           'sessionDate': fmtDate(d.data()['sessionDate']),
           'slotCode': text(d.data()['slotCode']),
-          'sessionStatus': text(d.data()['sessionStatus']),
+          'sessionStatus': effectiveSessionStatusAt(d.data(), slots, _now()),
           'ipCheck': ipCheckEnabled(d.data()),
           'qrToken': text(d.data()['qrSecret']),
         },
@@ -554,8 +584,12 @@ class TeacherRepository {
       throw ApiException('VALIDATION_ERROR', 'Thiếu dữ liệu.');
     }
     final session = await _session(sessionId);
+    _validateManualAttendanceDay(session);
+    await _validateManualAttendance(session, [
+      {'rollNumber': rollNumber, 'status': status},
+    ]);
     final batch = _db.batch();
-    await _stageManualRecord(
+    _stageManualRecord(
       batch,
       session: session,
       rollNumber: rollNumber,
@@ -570,17 +604,19 @@ class TeacherRepository {
     required String sessionId,
     required List<Map<String, dynamic>> changes,
   }) => guardApi(() async {
-    if (sessionId.isEmpty) {
+    if (sessionId.isEmpty || changes.isEmpty) {
       throw ApiException(
         'VALIDATION_ERROR',
-        'Thiếu dữ liệu hoặc changes không hợp lệ.',
+        'Chưa chọn sinh viên để điểm danh.',
       );
     }
     final session = await _session(sessionId);
+    _validateManualAttendanceDay(session);
+    await _validateManualAttendance(session, changes);
     for (final group in chunked(changes, 400)) {
       final batch = _db.batch();
       for (final change in group) {
-        await _stageManualRecord(
+        _stageManualRecord(
           batch,
           session: session,
           rollNumber: text(change['rollNumber']),
@@ -592,8 +628,61 @@ class TeacherRepository {
     }
   });
 
+  /// Xác thực danh sách điểm danh tay bằng dữ liệu enrollment thay vì
+  /// phụ thuộc vào document ID. Dữ liệu legacy có thể dùng ID tự sinh
+  /// nhưng vẫn phải khớp lớp, mã sinh viên và giảng viên sở hữu.
+  Future<void> _validateManualAttendance(
+    Json session,
+    List<Map<String, dynamic>> changes,
+  ) async {
+    const statuses = {'Present', 'Late', 'Absent', 'ManualByGV', 'Unchecked'};
+    final requestedRolls = <String>{};
+    for (final change in changes) {
+      final roll = text(change['rollNumber']);
+      final status = text(change['status']);
+      if (roll.isEmpty || !statuses.contains(status)) {
+        throw ApiException(
+          'VALIDATION_ERROR',
+          'Dữ liệu điểm danh tay không hợp lệ.',
+        );
+      }
+      if (!requestedRolls.add(roll)) {
+        throw ApiException(
+          'VALIDATION_ERROR',
+          'Danh sách điểm danh có sinh viên bị trùng.',
+        );
+      }
+    }
+
+    final classCode = text(session['classCode']);
+    final enrollments = await _db
+        .collection('enrollments')
+        .where('teacherMemberCode', isEqualTo: _me)
+        .where('classCode', isEqualTo: classCode)
+        .get();
+    final enrolledRolls = {
+      for (final doc in enrollments.docs) text(doc.data()['rollNumber']),
+    }..remove('');
+    final missing = requestedRolls.difference(enrolledRolls);
+    if (missing.isNotEmpty) {
+      throw ApiException(
+        'STUDENT_NOT_ENROLLED',
+        'Sinh viên ${missing.join(', ')} không thuộc lớp $classCode.',
+      );
+    }
+  }
+
+  void _validateManualAttendanceDay(Json session) {
+    if (!canManuallyAttendOn(session, _now())) {
+      throw ApiException(
+        'MANUAL_ATTENDANCE_EXPIRED',
+        'Đã quá hạn điểm danh tay cho buổi học này. Hãy vào Cài đặt & Trợ giúp → Yêu cầu điểm danh / nghỉ phép để gửi admin duyệt.',
+      );
+    }
+  }
+
   /// Cập nhật bản ghi sẵn có hoặc tạo mới (điểm danh tay), đánh dấu `Manual`.
-  Future<void> _stageManualRecord(
+  void _stageManualRecord(
     WriteBatch batch, {
     required Json session,
     required String rollNumber,
@@ -604,28 +693,23 @@ class TeacherRepository {
     final ref = _db
         .collection('attendance_records')
         .doc('${sessionId}_$rollNumber');
-    final exists = (await ref.get()).exists;
-    final base = <String, dynamic>{
+    final record = <String, dynamic>{
+      'sessionId': sessionId,
+      'rollNumber': rollNumber,
+      'classCode': text(session['classCode']),
+      'teacherMemberCode': _me,
       'status': status,
       'networkVerificationResult': 'Manual',
+      'ipAddress': '',
       'syncedToFap': false,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': _me,
       'note': ?note,
+      if (isPresentStatus(status)) 'checkinTime': FieldValue.serverTimestamp(),
     };
-    if (exists) {
-      batch.update(ref, base);
-    } else {
-      batch.set(ref, {
-        ...base,
-        'sessionId': sessionId,
-        'rollNumber': rollNumber,
-        'classCode': text(session['classCode']),
-        'teacherMemberCode': _me,
-        'checkinTime': FieldValue.serverTimestamp(),
-        'ipAddress': '',
-      });
-    }
+    // Upsert trực tiếp: không đọc document canonical chưa tồn tại trước khi
+    // create (Firestore Rules không thể cấp quyền dựa trên resource rỗng).
+    batch.set(ref, record, SetOptions(merge: true));
   }
 
   // ── getStats ───────────────────────────────────────────────────────────────

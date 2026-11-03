@@ -280,6 +280,35 @@ class LiveSessionBody extends StatelessWidget {
                   totalCount: totalCount,
                   presentStudents: presentStudents,
                   absentStudents: students.where((s) => !s.isPresent).toList(),
+                  onOpenManualSheet: () => ManualAttendanceBottomSheet.show(context),
+                  onManualCheckin: (rollNumber) async {
+                    final student = students.firstWhere(
+                      (s) => s.rollNumber == rollNumber,
+                      orElse: () => const StudentAttendanceItem(
+                        rollNumber: '',
+                        fullName: '',
+                        initials: '',
+                      ),
+                    );
+                    final success = await liveVm.manualCheckin(rollNumber);
+                    if (!context.mounted) return;
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã điểm danh cho ${student.fullName} ($rollNumber)'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: LiveSessionColors.statusGreen,
+                        ),
+                      );
+                    } else if (liveVm.errorMessage != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(liveVm.errorMessage!),
+                          backgroundColor: Colors.red.shade700,
+                        ),
+                      );
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
