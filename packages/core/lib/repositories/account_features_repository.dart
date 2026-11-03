@@ -27,9 +27,10 @@ class AccountFeaturesRepository {
   });
   Future<ApiResult<Map<String, dynamic>>> support() => guardApi(() async =>
     (await _db.collection('support_config').doc('public').get()).data() ?? {});
-  Future<ApiResult<String>> sendFeedback(String category, String message, {required String requestId}) => guardApi(() async {
+  Future<ApiResult<String>> sendFeedback(String category, String message, {required String requestId, List<String> attachments = const []}) => guardApi(() async {
     final body = message.trim();
     if (!['bug', 'suggestion', 'other'].contains(category) || body.isEmpty || body.length > 2000 || !RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(requestId)) throw ApiException('VALIDATION_ERROR', 'Nội dung phải có 1–2000 ký tự.');
+    if (attachments.length > 3 || attachments.any((path) => !path.startsWith('feedback_attachments/$_uid/'))) throw ApiException('VALIDATION_ERROR', 'Tệp đính kèm không hợp lệ.');
     final ref = _db.collection('feedback').doc('${_uid}_$requestId');
     // A retry after a lost response must not create a second ticket.
     await _db.runTransaction((tx) async {
@@ -38,9 +39,18 @@ class AccountFeaturesRepository {
         if (prior.data()?['message'] != body || prior.data()?['category'] != category) throw ApiException('CONFLICT', 'Yêu cầu đã được dùng cho nội dung khác.');
         return;
       }
-      tx.set(ref, {'authorUid': _uid, 'category': category, 'message': body, 'status': 'pending', 'createdAt': FieldValue.serverTimestamp()});
+      tx.set(ref, {'authorUid': _uid, 'category': category, 'message': body, 'attachments': attachments, 'status': 'pending', 'createdAt': FieldValue.serverTimestamp()});
     });
     return ref.id;
+  });
+  Future<ApiResult<String>> uploadFeedbackAttachment(Uint8List bytes, String mime, {required String requestId, required int index}) => guardApi(() async {
+    final isPng = bytes.length >= 8 && bytes[0] == 137 && bytes[1] == 80 && bytes[2] == 78 && bytes[3] == 71;
+    final isJpeg = bytes.length >= 3 && bytes[0] == 255 && bytes[1] == 216 && bytes[2] == 255;
+    if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024 || index < 0 || index > 2 || !RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(requestId) || !(mime == 'image/png' && isPng || mime == 'image/jpeg' && isJpeg)) throw ApiException('VALIDATION_ERROR', 'Ảnh đính kèm phải là JPG/PNG thật, tối đa 5 MB.');
+    final extension = mime == 'image/png' ? 'png' : 'jpg';
+    final path = 'feedback_attachments/$_uid/${requestId}_$index.$extension';
+    await _storage.ref(path).putData(bytes, SettableMetadata(contentType: mime));
+    return path;
   });
   Stream<List<Map<String, dynamic>>> feedback() => _db.collection('feedback').where('authorUid', isEqualTo: _uid).snapshots().map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
   Stream<List<Map<String, dynamic>>> notifications() => _db.collection('user_notifications').doc(_uid).collection('items').orderBy('createdAt', descending: true).limit(100).snapshots().map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());

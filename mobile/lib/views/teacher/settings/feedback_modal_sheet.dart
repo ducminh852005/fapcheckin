@@ -194,8 +194,14 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
     // 1. Upload attachments
     final List<String> uploadedUrls = [];
-    for (final att in _attachments) {
-      final uploadRes = await repo.uploadFeedbackAttachment(att.bytes, att.mime);
+    for (final entry in _attachments.asMap().entries) {
+      final att = entry.value;
+      final uploadRes = await repo.uploadFeedbackAttachment(
+        att.bytes,
+        att.mime,
+        requestId: _requestId,
+        index: entry.key,
+      );
       if (uploadRes is ApiSuccess<String>) {
         uploadedUrls.add(uploadRes.data);
       } else {

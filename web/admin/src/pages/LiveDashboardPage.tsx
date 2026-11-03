@@ -39,10 +39,8 @@ export function LiveDashboard({
   const legacyAccountsCount = data?.legacyAccounts ?? 0
   const pendingInvitesCount = data?.pendingInvites ?? 0
   const pendingRequestsCount = data?.pendingRequests ?? 0
-  const unsyncedRecordsCount = data?.unsyncedRecords ?? 0
   const warningCount = data?.warningCount ?? 0
   const checkedInStudents = data?.checkedInStudents ?? 0
-  const latencyMs = data?.latencyMs ?? 0
   const liveSessions = data?.liveSessions ?? []
   const slotTimeline = data?.slotTimeline ?? []
 
@@ -81,7 +79,7 @@ export function LiveDashboard({
       ]),
     ]
     const csvContent =
-      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.join(",")).join("\n")
+      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.map(csvCell).join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
@@ -100,7 +98,7 @@ export function LiveDashboard({
             Tổng quan quản trị
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Các chỉ số hoạt động và phiên điểm danh trực tiếp được đồng bộ thời gian thực từ Cloud Firestore &amp; FAP Core.
+            Các chỉ số hoạt động và phiên điểm danh được tải từ Cloud Firestore. Dùng nút thử lại khi cần cập nhật dữ liệu.
           </p>
         </div>
 
@@ -324,9 +322,6 @@ export function LiveDashboard({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-slate-800">Phiên và bản ghi điểm danh</span>
-                  <span className="bg-orange-50 text-orange-700 border border-orange-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {loading ? "…" : `${unsyncedRecordsCount} bản ghi chưa đồng bộ FAP`}
-                  </span>
                 </div>
                 <p className="text-[11.5px] text-slate-500 mt-0.5">
                   Theo dõi {openSessionsCount} phiên đang mở và {pendingRequestsCount} đơn yêu cầu điểm danh bù từ sinh viên/giảng viên
@@ -614,7 +609,7 @@ export function LiveDashboard({
 
           {/* Bottom Bar of Live Sessions */}
           <div className="border-t border-slate-100 pt-3 mt-4 flex items-center justify-between text-xs text-slate-500">
-            <span className="text-[11px] text-slate-400">Độ trễ phản hồi: {latencyMs}ms</span>
+            <span className="text-[11px] text-slate-400">Dữ liệu tại thời điểm tải trang</span>
             <button
               onClick={() => onNavigate("attendance")}
               className="text-[11px] font-bold text-orange-600 hover:underline flex items-center gap-1 cursor-pointer"
@@ -634,15 +629,13 @@ export function LiveDashboard({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">Cơ sở hạ tầng &amp; Máy chủ FAP Cloud</span>
+              <span className="text-xs font-bold text-slate-900">Nguồn dữ liệu quản trị</span>
               <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {error ? "Gián đoạn" : "Ổn định"}
+                {error ? "Không tải được" : "Đã tải"}
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Cloud Firestore Latency: <b className="text-slate-700">{latencyMs}ms</b> · Tổng phiên:{" "}
-              <b className="text-slate-700">{totalSessionsCount}</b> · FPT Edu OAuth2 Gateway:{" "}
-              <b className="text-emerald-600">Healthy</b>
+              Cloud Firestore · Tổng phiên: <b className="text-slate-700">{totalSessionsCount}</b>
             </p>
           </div>
         </div>
@@ -669,4 +662,9 @@ export function LiveDashboard({
       </footer>
     </div>
   )
+}
+
+function csvCell(value: string | number) {
+  const text = String(value)
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
