@@ -96,3 +96,7 @@ packages/core/pubspec.lock
 *-[0-9a-f]*.json.key
 fapcheckin-*-[0-9a-f]*.json
 *service-account*.json
+
+# Checkpoint của script copy-firestore
+*.checkpoint.json
+firebase/scripts/.copy-firestore.checkpoint.json
