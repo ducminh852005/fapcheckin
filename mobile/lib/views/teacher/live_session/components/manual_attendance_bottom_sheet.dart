@@ -92,6 +92,7 @@ class _ManualAttendanceBottomSheetState
 
     final afterConfirmCount = currentPresent + _selectedIds.length;
     final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.90;
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxSheetHeight),
@@ -123,7 +124,7 @@ class _ManualAttendanceBottomSheetState
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               // Header: Tiêu đề + Nút đóng X
               Row(
@@ -153,47 +154,51 @@ class _ManualAttendanceBottomSheetState
                       ],
                     ),
                   ),
-                  InkWell(
-                    onTap: () => Navigator.pop(context),
-                    borderRadius: BorderRadius.circular(22),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      alignment: Alignment.center,
+                  Tooltip(
+                    message: 'Đóng',
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context),
+                      borderRadius: BorderRadius.circular(22),
                       child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 20,
-                          color: Color(0xFF475569),
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 20,
+                            color: Color(0xFF475569),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              // Mô tả
-              const Text(
-                'Xác nhận sinh viên có mặt tại lớp nhưng chưa thể quét mã QR.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: LiveSessionColors.textMuted,
-                  height: 1.35,
+              if (!isKeyboardOpen) ...[
+                const SizedBox(height: 10),
+                // Mô tả
+                const Text(
+                  'Xác nhận sinh viên có mặt tại lớp nhưng chưa thể quét mã QR.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: LiveSessionColors.textMuted,
+                    height: 1.35,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
+              ],
+              const SizedBox(height: 12),
 
               // Ô tìm kiếm
               Container(
                 height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.only(left: 12, right: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -232,23 +237,31 @@ class _ManualAttendanceBottomSheetState
                       ),
                     ),
                     if (_searchQuery.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                        child: const Icon(
-                          Icons.clear_rounded,
-                          size: 18,
-                          color: LiveSessionColors.textSubtle,
+                      Tooltip(
+                        message: 'Xóa tìm kiếm',
+                        child: InkWell(
+                          onTap: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: const SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: Icon(
+                              Icons.clear_rounded,
+                              size: 18,
+                              color: LiveSessionColors.textSubtle,
+                            ),
+                          ),
                         ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 2 Tab lọc: Chưa điểm danh / Tất cả
               Container(
@@ -274,7 +287,7 @@ class _ManualAttendanceBottomSheetState
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
 
               // Trạng thái chọn & Nút Chọn tất cả
               Row(
@@ -300,11 +313,11 @@ class _ManualAttendanceBottomSheetState
                         }
                       });
                     },
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
+                        horizontal: 10,
+                        vertical: 8,
                       ),
                       child: Text(
                         _selectedIds.length == filteredList.length &&
@@ -321,7 +334,7 @@ class _ManualAttendanceBottomSheetState
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
 
               // Danh sách sinh viên (cuộn được)
               Flexible(
@@ -364,23 +377,25 @@ class _ManualAttendanceBottomSheetState
                         },
                       ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // Dòng ghi chú dự kiến sau xác nhận
-              FittedBox(
-                alignment: Alignment.center,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'Sau xác nhận: $afterConfirmCount/$totalCount có mặt · Ghi nhận điểm danh tay',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: LiveSessionColors.textMuted,
-                    fontWeight: FontWeight.w500,
+              if (!isKeyboardOpen) ...[
+                // Dòng ghi chú dự kiến sau xác nhận
+                FittedBox(
+                  alignment: Alignment.center,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Sau xác nhận: $afterConfirmCount/$totalCount có mặt · Ghi nhận điểm danh tay',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: LiveSessionColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
 
               // Nút xác nhận chính & Hủy (Row ngang nhất quán với các Modal khác trong ứng dụng)
               Row(
@@ -555,12 +570,15 @@ class _ManualAttendanceBottomSheetState
           },
         )
         .toList();
-    await vm.manualCheckinBulk(changes);
+    final success = await vm.manualCheckinBulk(changes);
     if (!context.mounted) return;
     setState(() => _saving = false);
-    if (vm.errorMessage != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(vm.errorMessage ?? 'Không thể điểm danh tay. Vui lòng thử lại.'),
+        ),
+      );
       return;
     }
     final count = changes.length;

@@ -1,5 +1,3 @@
-
-
 import 'dart:io' as io;
 
 import 'dart:typed_data';
@@ -18,18 +16,13 @@ import 'package:fapcheckin_core/repositories/request_repository.dart';
 
 import 'package:fapcheckin_core/result/api_result.dart';
 
-
-
 import '../../../viewmodels/auth_viewmodel.dart';
 
-
-
-
-
-Future<T?> showRequestBottomSheet<T>(BuildContext context, {RequestRepository? repository}) {
-
+Future<T?> showRequestBottomSheet<T>(
+  BuildContext context, {
+  RequestRepository? repository,
+}) {
   return showModalBottomSheet<T>(
-
     context: context,
 
     isScrollControlled: true,
@@ -37,15 +30,10 @@ Future<T?> showRequestBottomSheet<T>(BuildContext context, {RequestRepository? r
     backgroundColor: Colors.transparent,
 
     builder: (_) => RequestModalSheet(repository: repository),
-
   );
-
 }
 
-
-
 class _AttachmentFile {
-
   final String name;
 
   final int size;
@@ -55,7 +43,6 @@ class _AttachmentFile {
   final Uint8List bytes;
 
   _AttachmentFile({
-
     required this.name,
 
     required this.size,
@@ -63,34 +50,20 @@ class _AttachmentFile {
     required this.mime,
 
     required this.bytes,
-
   });
-
 }
 
-
-
 class RequestModalSheet extends StatefulWidget {
-
   const RequestModalSheet({super.key, this.repository});
   final RequestRepository? repository;
 
-
-
   @override
-
   State<RequestModalSheet> createState() => _RequestModalSheetState();
-
 }
 
-
-
 class _RequestModalSheetState extends State<RequestModalSheet> {
-
   int _activeTab = 0; // 0: Tạo yêu cầu mới, 1: Lịch sử yêu cầu
   String _historyFilter = 'all'; // 'all', 'pending', 'approved', 'rejected'
-
-
 
   // Form state
 
@@ -107,13 +80,16 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
   final _dateController = TextEditingController();
   String _requestId = DateTime.now().microsecondsSinceEpoch.toString();
   List<Map<String, dynamic>> _classRows = [];
+  List<Map<String, dynamic>> _sessionRows = [];
   bool _loadingClasses = true;
+  bool _loadingSessions = false;
+  String? _selectedSessionId;
+  int _sessionLoadVersion = 0;
 
-  String _mainReason = 'business_trip'; // 'business_trip', 'health', 'technical_issue', 'other'
+  String _mainReason =
+      'business_trip'; // 'business_trip', 'health', 'technical_issue', 'other'
 
   final TextEditingController _reasonController = TextEditingController();
-
-
 
   final List<_AttachmentFile> _attachments = [];
 
@@ -121,22 +97,15 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
 
   String? _error;
 
-
-
   late RequestRepository _repo;
 
   Stream<List<Map<String, dynamic>>>? _requestsStream;
 
   String? _uid;
 
-
-
   final List<String> _defaultClasses = [];
 
-
-
   final Map<String, String> _mainReasonLabels = {
-
     'business_trip': 'Công tác đột xuất theo quyết định',
 
     'health': 'Lý do sức khỏe / Y tế',
@@ -144,15 +113,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     'technical_issue': 'Sự cố mạng / lỗi thiết bị',
 
     'other': 'Khác (Ghi rõ bên dưới)',
-
   };
 
-
-
   @override
-
   void didChangeDependencies() {
-
     super.didChangeDependencies();
 
     final authVm = context.watch<AuthViewModel>();
@@ -160,224 +124,221 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     final session = authVm.session;
 
     if (session != null && _uid != session.token) {
-
       _uid = session.token;
 
-      _repo = widget.repository ?? RequestRepository(
+      _repo =
+          widget.repository ??
+          RequestRepository(
+            uid: session.token,
 
-        uid: session.token,
-
-        memberCode: session.user.memberCode,
-
-      );
+            memberCode: session.user.memberCode,
+          );
 
       _requestsStream = _repo.watchMine();
       _loadClasses();
-
     }
-
-
-
   }
+
   Future<void> _loadClasses() async {
     final result = await _repo.classOptions();
     if (!mounted) return;
+    String? firstClass;
     setState(() {
       _loadingClasses = false;
       if (result is ApiSuccess<List<Map<String, dynamic>>>) {
         _classRows = result.data;
-        _defaultClasses..clear()..addAll(_classRows.map((c) => c['classCode'].toString()));
-        if (_defaultClasses.isNotEmpty) _selectClass(_defaultClasses.first);
+        _defaultClasses
+          ..clear()
+          ..addAll(_classRows.map((c) => c['classCode'].toString()));
+        if (_defaultClasses.isNotEmpty) firstClass = _defaultClasses.first;
       } else {
-        _error = (result as ApiFailure<List<Map<String, dynamic>>>).error.message;
+        _error =
+            (result as ApiFailure<List<Map<String, dynamic>>>).error.message;
+      }
+    });
+    if (firstClass != null) _selectClass(firstClass!);
+  }
+
+  void _selectClass(String code) {
+    final row = _classRows.firstWhere((c) => c['classCode'] == code);
+    setState(() {
+      _selectedClass = code;
+      _selectedSlot = (row['slotCode'] ?? '').toString();
+      _slotTime = (row['timeLabel'] ?? '').toString();
+      _slotDateRoom = (row['room'] ?? '').toString();
+      _sessionRows = [];
+      _selectedSessionId = null;
+      _sessionController.clear();
+      _dateController.clear();
+      _loadingSessions = true;
+      _error = null;
+    });
+    _loadSessions(code);
+  }
+
+  Future<void> _loadSessions(String classCode) async {
+    final version = ++_sessionLoadVersion;
+    final result = await _repo.sessionOptions(classCode);
+    if (!mounted ||
+        version != _sessionLoadVersion ||
+        _selectedClass != classCode)
+      return;
+
+    setState(() {
+      _loadingSessions = false;
+      if (result is ApiSuccess<List<Map<String, dynamic>>>) {
+        _sessionRows = result.data
+            .where((row) => (row['sessionId'] ?? '').toString().isNotEmpty)
+            .toList();
+        if (_sessionRows.isNotEmpty) {
+          _applySession(_sessionRows.first['sessionId'].toString());
+        }
+      } else {
+        _error =
+            (result as ApiFailure<List<Map<String, dynamic>>>).error.message;
       }
     });
   }
-  void _selectClass(String code) {
-    _selectedClass = code;
-    final row = _classRows.firstWhere((c) => c['classCode'] == code);
-    _selectedSlot = (row['slotCode'] ?? '').toString();
-    _slotTime = (row['timeLabel'] ?? '').toString();
-    _slotDateRoom = (row['room'] ?? '').toString();
-    _sessionController.clear();
+
+  void _applySession(String sessionId) {
+    final row = _sessionRows.firstWhere(
+      (item) => item['sessionId'].toString() == sessionId,
+    );
+    _selectedSessionId = sessionId;
+    _sessionController.text = sessionId;
+    _dateController.text = (row['sessionDate'] ?? '').toString();
+    final slotCode = (row['slotCode'] ?? '').toString();
+    if (slotCode.isNotEmpty) _selectedSlot = slotCode;
   }
 
   @override
-
   void dispose() {
-
     _reasonController.dispose();
     _sessionController.dispose();
     _dateController.dispose();
 
     super.dispose();
-
   }
 
-
-
   Future<void> _pickFile() async {
-
     try {
-
       final result = await FilePicker.platform.pickFiles(
-
         type: FileType.custom,
 
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'docx'],
 
         withData: true,
-
       );
 
       if (result == null || result.files.isEmpty) return;
 
       final file = result.files.single;
 
-
-
       Uint8List? bytes = file.bytes;
 
       if (bytes == null && !kIsWeb && file.path != null) {
-
         bytes = await io.File(file.path!).readAsBytes();
-
       }
 
       if (bytes != null) {
-
         if (bytes.length > 15 * 1024 * 1024) {
-
           if (mounted) {
-
             ScaffoldMessenger.of(context).showSnackBar(
-
               const SnackBar(content: Text('Tệp đính kèm tối đa 15 MB.')),
-
             );
-
           }
 
           return;
-
         }
 
         final ext = (file.extension ?? 'pdf').toLowerCase();
 
         final mime = ext == 'pdf'
-
             ? 'application/pdf'
-
-            : (ext == 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext == 'png' ? 'image/png' : 'image/jpeg');
-
-
+            : (ext == 'docx'
+                  ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                  : ext == 'png'
+                  ? 'image/png'
+                  : 'image/jpeg');
 
         setState(() {
+          _attachments.add(
+            _AttachmentFile(
+              name: file.name,
 
-          _attachments.add(_AttachmentFile(
+              size: file.size,
 
-            name: file.name,
+              mime: mime,
 
-            size: file.size,
-
-            mime: mime,
-
-            bytes: bytes!,
-
-          ));
-
+              bytes: bytes!,
+            ),
+          );
         });
-
       }
-
     } catch (e) {
-
       if (mounted) {
-
-        ScaffoldMessenger.of(context).showSnackBar(
-
-          SnackBar(content: Text('Lỗi tải tệp: $e')),
-
-        );
-
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi tải tệp: $e')));
       }
-
     }
-
   }
 
-
-
   Future<void> _submitRequest() async {
-
     if (_saving || _loadingClasses) return;
-    if (_selectedClass.isEmpty) { setState(() => _error = 'Chưa có lớp để gửi yêu cầu.'); return; }
-    if (_requestType == 'attendance_fix' && _sessionController.text.trim().isEmpty) { setState(() => _error = 'Nhập mã phiên cần sửa điểm danh.'); return; }
+    if (_selectedClass.isEmpty) {
+      setState(() => _error = 'Chưa có lớp để gửi yêu cầu.');
+      return;
+    }
+    if (_requestType == 'attendance_fix' &&
+        _sessionController.text.trim().isEmpty) {
+      setState(() => _error = 'Chọn ngày học cần sửa điểm danh.');
+      return;
+    }
 
     final detail = _reasonController.text.trim();
 
     if (detail.isEmpty) {
-
       setState(() => _error = 'Vui lòng nhập mô tả chi tiết & kế hoạch.');
 
       return;
-
     }
 
-
-
     setState(() {
-
       _saving = true;
 
       _error = null;
-
     });
 
-
-
     try {
-
       final List<String> uploadedUrls = [];
 
       for (final att in _attachments) {
-
-        final upRes = await _repo.uploadAttachment(att.bytes, att.mime, att.name);
+        final upRes = await _repo.uploadAttachment(
+          att.bytes,
+          att.mime,
+          att.name,
+        );
 
         if (upRes is ApiSuccess<String>) {
-
           uploadedUrls.add(upRes.data);
-
         } else {
-
           throw Exception((upRes as ApiFailure<String>).error.message);
-
         }
-
       }
-
-
 
       final mainReasonText = _mainReasonLabels[_mainReason] ?? _mainReason;
 
-      final fullReason = '[Lý do chính]: $mainReasonText\n'
-
+      final fullReason =
+          '[Lý do chính]: $mainReasonText\n'
           '[Ca học]: $_selectedSlot ($_slotTime) · $_slotDateRoom\n'
-
           '[Chi tiết & Kế hoạch]: $detail'
-
           '';
-
-
 
       final classCodeOnly = _selectedClass;
 
       final id = _requestId;
 
-
-
       final res = await _repo.submit(
-
         id: id,
 
         type: _requestType,
@@ -396,17 +357,12 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
         room: _slotDateRoom,
 
         attachments: uploadedUrls,
-
       );
-
-
 
       if (!mounted) return;
 
       if (res is ApiSuccess<void>) {
-
         setState(() {
-
           _saving = false;
 
           _activeTab = 1; // Switch to history tab
@@ -415,120 +371,82 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
           _requestId = DateTime.now().microsecondsSinceEpoch.toString();
 
           _attachments.clear();
-
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-
           const SnackBar(
-
-            content: Text('Đã gửi yêu cầu thành công tới phòng Quản lý Đào tạo (HAC).'),
+            content: Text(
+              'Đã gửi yêu cầu thành công tới phòng Quản lý Đào tạo (HAC).',
+            ),
 
             backgroundColor: Color(0xFF10B981),
-
           ),
-
         );
-
       } else {
-
         setState(() {
-
           _saving = false;
 
           _error = (res as ApiFailure<void>).error.message;
-
         });
-
       }
-
     } catch (e) {
-
       setState(() {
-
         _saving = false;
 
         _error = 'Lỗi gửi yêu cầu: $e';
-
       });
-
     }
-
   }
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
     return Container(
-
       constraints: BoxConstraints(
-
         maxHeight: MediaQuery.of(context).size.height * 0.90,
-
       ),
 
       decoration: const BoxDecoration(
-
         color: Colors.white,
 
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
 
         boxShadow: [
-
           BoxShadow(
-
             color: Color(0x26000000),
 
             blurRadius: 28,
 
             offset: Offset(0, -6),
-
           ),
-
         ],
-
       ),
 
       child: SafeArea(
-
         top: false,
 
         child: Column(
-
           mainAxisSize: MainAxisSize.min,
 
           children: [
-
             // Drag Handle
 
             const SizedBox(height: 12),
 
             Center(
-
               child: Container(
-
                 width: 48,
 
                 height: 5,
 
                 decoration: BoxDecoration(
-
                   color: const Color(0xFFE2E8F0),
 
                   borderRadius: BorderRadius.circular(2.5),
-
                 ),
-
               ),
-
             ),
 
             const SizedBox(height: 12),
-
-
 
             // Header Row: Dot + Title + Close Button
             Padding(
@@ -598,8 +516,6 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
             ),
             const SizedBox(height: 12),
             const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-
-
 
             // 2. SEGMENTED PILL TAB SWITCHER
             Padding(
@@ -761,1109 +677,846 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
   // ------------------------------------------------------------- TAB 1: FORM
   Widget _buildCreateFormTab(BuildContext context) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
 
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+          // 1. Loại yêu cầu
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            children: const [
+              Text.rich(
+                TextSpan(
+                  text: 'Loại yêu cầu ',
+
+                  style: TextStyle(
+                    fontSize: 13,
+
+                    fontWeight: FontWeight.w700,
+
+                    color: Color(0xFF0F172A),
+                  ),
+
+                  children: [
+                    TextSpan(
+                      text: '*',
+
+                      style: TextStyle(color: Color(0xFFEF4444)),
+                    ),
+                  ],
+                ),
+              ),
+
+              Text(
+                'Chọn 1 hình thức',
+
+                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Radio Cards
+          _buildRadioCard(
+            type: 'leave',
+
+            title: 'Xin nghỉ phép / Báo vắng',
+
+            badge: 'Khuyên dùng',
+
+            subtitle: 'Giảng viên bận việc đột xuất / công tác',
+
+            icon: Icons.event_busy_rounded,
+
+            iconColor: const Color(0xFFFA5A1E),
+
+            iconBg: const Color(0xFFFFEDD5),
+          ),
+
+          const SizedBox(height: 8),
+
+          _buildRadioCard(
+            type: 'attendance_fix',
+
+            title: 'Bổ sung điểm danh',
+
+            subtitle: 'Sinh viên lỗi QR / duyệt bù có minh chứng',
+
+            icon: Icons.how_to_reg_rounded,
+
+            iconColor: const Color(0xFF0284C7),
+
+            iconBg: const Color(0xFFE0F2FE),
+          ),
+
+          const SizedBox(height: 8),
+
+          _buildRadioCard(
+            type: 'reschedule',
+
+            title: 'Đổi ca dạy / Dạy bù',
+
+            subtitle: 'Chuyển đổi lịch trình hoặc giảng viên dạy thay',
+
+            icon: Icons.published_with_changes_rounded,
+
+            iconColor: const Color(0xFFD97706),
+
+            iconBg: const Color(0xFFFEF3C7),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 2. Class & Slot Picker Container
+          Container(
+            padding: const EdgeInsets.all(12),
+
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+
+              borderRadius: BorderRadius.circular(14),
+
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
 
             child: Column(
-
               crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
-
-                // 1. Loại yêu cầu
-
-                Row(
-
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                  children: const [
-
-                    Text.rich(
-
-                      TextSpan(
-
-                        text: 'Loại yêu cầu ',
-
-                        style: TextStyle(
-
-                          fontSize: 13,
-
-                          fontWeight: FontWeight.w700,
-
-                          color: Color(0xFF0F172A),
-
-                        ),
-
-                        children: [
-
-                          TextSpan(
-
-                            text: '*',
-
-                            style: TextStyle(color: Color(0xFFEF4444)),
-
-                          ),
-
-                        ],
-
-                      ),
-
-                    ),
-
-                    Text(
-
-                      'Chọn 1 hình thức',
-
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-
-                    ),
-
-                  ],
-
-                ),
-
-                const SizedBox(height: 8),
-
-
-
-                // Radio Cards
-
-                _buildRadioCard(
-
-                  type: 'leave',
-
-                  title: 'Xin nghỉ phép / Báo vắng',
-
-                  badge: 'Khuyên dùng',
-
-                  subtitle: 'Giảng viên bận việc đột xuất / công tác',
-
-                  icon: Icons.event_busy_rounded,
-
-                  iconColor: const Color(0xFFFA5A1E),
-
-                  iconBg: const Color(0xFFFFEDD5),
-
-                ),
-
-                const SizedBox(height: 8),
-
-
-
-                _buildRadioCard(
-
-                  type: 'attendance_fix',
-
-                  title: 'Bổ sung điểm danh',
-
-                  subtitle: 'Sinh viên lỗi QR / duyệt bù có minh chứng',
-
-                  icon: Icons.how_to_reg_rounded,
-
-                  iconColor: const Color(0xFF0284C7),
-
-                  iconBg: const Color(0xFFE0F2FE),
-
-                ),
-
-                const SizedBox(height: 8),
-
-
-
-                _buildRadioCard(
-
-                  type: 'reschedule',
-
-                  title: 'Đổi ca dạy / Dạy bù',
-
-                  subtitle: 'Chuyển đổi lịch trình hoặc giảng viên dạy thay',
-
-                  icon: Icons.published_with_changes_rounded,
-
-                  iconColor: const Color(0xFFD97706),
-
-                  iconBg: const Color(0xFFFEF3C7),
-
-                ),
-
-                const SizedBox(height: 14),
-
-
-
-                // 2. Class & Slot Picker Container
-
-                Container(
-
-                  padding: const EdgeInsets.all(12),
-
-                  decoration: BoxDecoration(
-
-                    color: const Color(0xFFF8FAFC),
-
-                    borderRadius: BorderRadius.circular(14),
-
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-
-                  ),
-
-                  child: Column(
-
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
-                    children: [
-
-                      // Class Picker
-
-                      const Text(
-
-                        'Chọn lớp học *',
-
-                        style: TextStyle(
-
-                          fontSize: 12.5,
-
-                          fontWeight: FontWeight.w600,
-
-                          color: Color(0xFF475569),
-
-                        ),
-
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      DropdownButtonFormField<String>(
-
-                        value: _defaultClasses.contains(_selectedClass)
-
-                            ? _selectedClass
-
-                            : (_defaultClasses.isEmpty ? null : _defaultClasses.first),
-
-                        isExpanded: true,
-
-                        decoration: InputDecoration(
-
-                          filled: true,
-
-                          fillColor: Colors.white,
-
-                          contentPadding: const EdgeInsets.symmetric(
-
-                            horizontal: 12,
-
-                            vertical: 10,
-
-                          ),
-
-                          enabledBorder: OutlineInputBorder(
-
-                            borderRadius: BorderRadius.circular(12),
-
-                            borderSide:
-
-                                const BorderSide(color: Color(0xFFE2E8F0)),
-
-                          ),
-
-                          focusedBorder: OutlineInputBorder(
-
-                            borderRadius: BorderRadius.circular(12),
-
-                            borderSide: const BorderSide(
-
-                              color: Color(0xFFFA5A1E),
-
-                              width: 1.5,
-
-                            ),
-
-                          ),
-
-                        ),
-
-                        items: _defaultClasses
-
-                            .map((c) => DropdownMenuItem(
-
-                                  value: c,
-
-                                  child: Text(
-
-                                    c,
-
-                                    style: const TextStyle(
-
-                                      fontSize: 13,
-
-                                      fontWeight: FontWeight.w500,
-
-                                      color: Color(0xFF0F172A),
-
-                                    ),
-
-                                    overflow: TextOverflow.ellipsis,
-
-                                  ),
-
-                                ))
-
-                            .toList(),
-
-                        onChanged: (val) {
-
-                          if (val != null) setState(() => _selectClass(val));
-
-                        },
-
-                      ),
-
-                      const SizedBox(height: 10),
-
-
-
-                      if (_loadingClasses) const LinearProgressIndicator(),
-                      if (_defaultClasses.isEmpty && !_loadingClasses) TextButton(onPressed: _loadClasses, child: const Text('Tải lại danh sách lớp')),
-                      TextField(controller: _sessionController, decoration: const InputDecoration(labelText: 'Mã phiên (bắt buộc khi sửa điểm danh)')),
-                      TextField(controller: _dateController, decoration: const InputDecoration(labelText: 'Ngày học (YYYY-MM-DD)')),
-                      // Slot Picker
-
-                      const Text(
-
-                        'Ca học (Slot) *',
-
-                        style: TextStyle(
-
-                          fontSize: 12.5,
-
-                          fontWeight: FontWeight.w600,
-
-                          color: Color(0xFF475569),
-
-                        ),
-
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      Container(
-
-                        padding: const EdgeInsets.all(10),
-
-                        decoration: BoxDecoration(
-
-                          color: Colors.white,
-
-                          borderRadius: BorderRadius.circular(12),
-
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-
-                        ),
-
-                        child: Row(
-
-                          children: [
-
-                            Container(
-
-                              padding: const EdgeInsets.symmetric(
-
-                                horizontal: 8,
-
-                                vertical: 4,
-
-                              ),
-
-                              decoration: BoxDecoration(
-
-                                color: const Color(0xFFFFEDD5),
-
-                                borderRadius: BorderRadius.circular(6),
-
-                              ),
-
-                              child: Text(
-
-                                _selectedSlot,
-
-                                style: const TextStyle(
-
-                                  color: Color(0xFFFA5A1E),
-
-                                  fontWeight: FontWeight.w700,
-
-                                  fontSize: 12,
-
-                                ),
-
-                              ),
-
-                            ),
-
-                            const SizedBox(width: 10),
-
-                            Expanded(
-
-                              child: Column(
-
-                                crossAxisAlignment: CrossAxisAlignment.start,
-
-                                children: [
-
-                                  Text(
-
-                                    _slotTime,
-
-                                    style: const TextStyle(
-
-                                      fontSize: 12.5,
-
-                                      fontWeight: FontWeight.w700,
-
-                                      color: Color(0xFF0F172A),
-
-                                    ),
-
-                                  ),
-
-                                  const SizedBox(height: 2),
-
-                                  Row(
-
-                                    children: [
-
-                                      const Icon(
-
-                                        Icons.calendar_month_outlined,
-
-                                        size: 12,
-
-                                        color: Color(0xFF64748B),
-
-                                      ),
-
-                                      const SizedBox(width: 4),
-
-                                      Text(
-
-                                        _slotDateRoom,
-
-                                        style: const TextStyle(
-
-                                          fontSize: 11,
-
-                                          color: Color(0xFF64748B),
-
-                                        ),
-
-                                      ),
-
-                                    ],
-
-                                  ),
-
-                                ],
-
-                              ),
-
-                            ),
-
-                            const Icon(
-
-                              Icons.calendar_month_outlined,
-
-                              size: 18,
-
-                              color: Color(0xFF64748B),
-
-                            ),
-
-                          ],
-
-                        ),
-
-                      ),
-
-                    ],
-
-                  ),
-
-                ),
-
-                const SizedBox(height: 14),
-
-
-
-                // 3. Reason & Plan Section
+                // Class Picker
 
                 const Text(
-
-                  'Lý do chính *',
+                  'Chọn lớp học *',
 
                   style: TextStyle(
-
                     fontSize: 12.5,
 
                     fontWeight: FontWeight.w600,
 
                     color: Color(0xFF475569),
-
                   ),
-
                 ),
 
                 const SizedBox(height: 6),
 
                 DropdownButtonFormField<String>(
-
-                  value: _mainReason,
+                  value: _defaultClasses.contains(_selectedClass)
+                      ? _selectedClass
+                      : (_defaultClasses.isEmpty
+                            ? null
+                            : _defaultClasses.first),
 
                   isExpanded: true,
 
                   decoration: InputDecoration(
-
                     filled: true,
 
-                    fillColor: const Color(0xFFF8FAFC),
+                    fillColor: Colors.white,
 
                     contentPadding: const EdgeInsets.symmetric(
-
                       horizontal: 12,
 
                       vertical: 10,
-
                     ),
 
                     enabledBorder: OutlineInputBorder(
-
                       borderRadius: BorderRadius.circular(12),
 
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-
                     ),
 
                     focusedBorder: OutlineInputBorder(
-
                       borderRadius: BorderRadius.circular(12),
 
                       borderSide: const BorderSide(
-
                         color: Color(0xFFFA5A1E),
 
                         width: 1.5,
-
                       ),
-
                     ),
-
                   ),
 
-                  items: _mainReasonLabels.entries
+                  items: _defaultClasses
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
 
-                      .map((e) => DropdownMenuItem(
+                          child: Text(
+                            c,
 
-                            value: e.key,
+                            style: const TextStyle(
+                              fontSize: 13,
 
-                            child: Text(
+                              fontWeight: FontWeight.w500,
 
-                              e.value,
-
-                              style: const TextStyle(
-
-                                fontSize: 13,
-
-                                fontWeight: FontWeight.w500,
-
-                                color: Color(0xFF0F172A),
-
-                              ),
-
+                              color: Color(0xFF0F172A),
                             ),
 
-                          ))
-
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
                       .toList(),
 
                   onChanged: (val) {
-
-                    if (val != null) setState(() => _mainReason = val);
-
+                    if (val != null && val != _selectedClass) _selectClass(val);
                   },
-
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
-
-
-                // Detailed message textarea
-
-                Row(
-
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                  children: [
-
-                    const Text.rich(
-
-                      TextSpan(
-
-                        text: 'Mô tả chi tiết & Kế hoạch bù ',
-
-                        style: TextStyle(
-
-                          fontSize: 12.5,
-
-                          fontWeight: FontWeight.w600,
-
-                          color: Color(0xFF475569),
-
-                        ),
-
-                        children: [
-
-                          TextSpan(
-
-                            text: '*',
-
-                            style: TextStyle(color: Color(0xFFEF4444)),
-
-                          ),
-
-                        ],
-
+                if (_loadingClasses) const LinearProgressIndicator(),
+                if (_defaultClasses.isEmpty && !_loadingClasses)
+                  TextButton(
+                    onPressed: _loadClasses,
+                    child: const Text('Tải lại danh sách lớp'),
+                  ),
+                TextField(
+                  controller: _sessionController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Mã phiên (tự động)',
+                    hintText: 'Chọn ngày học để lấy mã phiên',
+                  ),
+                ),
+                if (_loadingSessions) const LinearProgressIndicator(),
+                DropdownButtonFormField<String>(
+                  value:
+                      _sessionRows.any(
+                        (row) =>
+                            row['sessionId'].toString() == _selectedSessionId,
+                      )
+                      ? _selectedSessionId
+                      : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Ngày học',
+                    hintText: 'Chọn ngày học của lớp',
+                  ),
+                  items: _sessionRows.map((row) {
+                    final sessionId = row['sessionId'].toString();
+                    final date = (row['sessionDate'] ?? '').toString();
+                    final slot = (row['slotCode'] ?? '').toString();
+                    final status = (row['sessionStatus'] ?? '').toString();
+                    final details = [
+                      if (slot.isNotEmpty) slot,
+                      if (status.isNotEmpty)
+                        status == 'open' ? 'Đang mở' : 'Đã đóng',
+                    ].join(' · ');
+                    return DropdownMenuItem<String>(
+                      value: sessionId,
+                      child: Text(
+                        details.isEmpty ? date : '$date · $details',
+                        overflow: TextOverflow.ellipsis,
                       ),
-
+                    );
+                  }).toList(),
+                  onChanged: _loadingSessions || _sessionRows.isEmpty
+                      ? null
+                      : (sessionId) {
+                          if (sessionId != null) {
+                            setState(() => _applySession(sessionId));
+                          }
+                        },
+                ),
+                if (!_loadingSessions &&
+                    _selectedClass.isNotEmpty &&
+                    _sessionRows.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Lớp này chưa có phiên điểm danh.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
+                  ),
+                // Slot Picker
 
-                    Text(
+                const Text(
+                  'Ca học (Slot) *',
 
-                      '${_reasonController.text.length}/500',
+                  style: TextStyle(
+                    fontSize: 12.5,
 
-                      style: const TextStyle(
+                    fontWeight: FontWeight.w600,
 
-                        fontSize: 11,
-
-                        color: Color(0xFF64748B),
-
-                      ),
-
-                    ),
-
-                  ],
-
+                    color: Color(0xFF475569),
+                  ),
                 ),
 
                 const SizedBox(height: 6),
 
-                TextField(
-
-                  controller: _reasonController,
-
-                  maxLength: 500,
-
-                  maxLines: 3,
-
-                  buildCounter: (_,
-
-                          {required currentLength,
-
-                          required isFocused,
-
-                          maxLength}) =>
-
-                      null,
-
-                  onChanged: (_) => setState(() {}),
-
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
-
-                  decoration: InputDecoration(
-
-                    hintText:
-
-                        'Mô tả chi tiết lý do vắng mặt, người dự kiến dạy thay hoặc kế hoạch học bù...',
-
-                    hintStyle: const TextStyle(
-
-                      fontSize: 12.5,
-
-                      color: Color(0xFF94A3B8),
-
-                      height: 1.35,
-
-                    ),
-
-                    filled: true,
-
-                    fillColor: const Color(0xFFF8FAFC),
-
-                    contentPadding: const EdgeInsets.all(12),
-
-                    enabledBorder: OutlineInputBorder(
-
-                      borderRadius: BorderRadius.circular(12),
-
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-
-                    ),
-
-                    focusedBorder: OutlineInputBorder(
-
-                      borderRadius: BorderRadius.circular(12),
-
-                      borderSide: const BorderSide(
-
-                        color: Color(0xFFFA5A1E),
-
-                        width: 1.5,
-
-                      ),
-
-                    ),
-
-                  ),
-
-                ),
-
-                const SizedBox(height: 14),
-
-
-
-                // 4. Attachments Section
-
-                Row(
-
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-                  children: [
-
-                    Row(
-
-                      children: const [
-
-                        Icon(
-
-                          Icons.attach_file_rounded,
-
-                          size: 14,
-
-                          color: Color(0xFFFA5A1E),
-
-                        ),
-
-                        SizedBox(width: 4),
-
-                        Text(
-
-                          'Minh chứng đính kèm (Tối đa 15MB)',
-
-                          style: TextStyle(
-
-                            fontSize: 11,
-
-                            fontWeight: FontWeight.w600,
-
-                            color: Color(0xFF475569),
-
-                          ),
-
-                        ),
-
-                      ],
-
-                    ),
-
-                    GestureDetector(
-
-                      onTap: _pickFile,
-
-                      child: const Text(
-
-                        '+ Thêm tệp',
-
-                        style: TextStyle(
-
-                          fontSize: 11,
-
-                          fontWeight: FontWeight.w700,
-
-                          color: Color(0xFFFA5A1E),
-
-                        ),
-
-                      ),
-
-                    ),
-
-                  ],
-
-                ),
-
-                const SizedBox(height: 8),
-
-
-
-                if (_attachments.isEmpty)
-
-                  Container(
-
-                    padding: const EdgeInsets.symmetric(
-
-                      horizontal: 12,
-
-                      vertical: 10,
-
-                    ),
-
-                    decoration: BoxDecoration(
-
-                      color: const Color(0xFFF8FAFC),
-
-                      borderRadius: BorderRadius.circular(12),
-
-                      border: Border.all(
-
-                        color: const Color(0xFFE2E8F0),
-
-                        style: BorderStyle.solid,
-
-                      ),
-
-                    ),
-
-                    child: Row(
-
-                      children: const [
-
-                        Icon(
-
-                          Icons.picture_as_pdf_outlined,
-
-                          size: 18,
-
-                          color: Color(0xFF94A3B8),
-
-                        ),
-
-                        SizedBox(width: 8),
-
-                        Expanded(
-
-                          child: Text(
-
-                            'Chưa có tệp minh chứng đính kèm (PDF, JPG, PNG...)',
-
-                            style: TextStyle(
-
-                              fontSize: 11.5,
-
-                              color: Color(0xFF94A3B8),
-
-                            ),
-
-                          ),
-
-                        ),
-
-                      ],
-
-                    ),
-
-                  )
-
-                else
-
-                  Column(
-
-                    children: _attachments.asMap().entries.map((entry) {
-
-                      final idx = entry.key;
-
-                      final f = entry.value;
-
-                      final sizeMb = (f.size / (1024 * 1024)).toStringAsFixed(1);
-
-                      return Padding(
-
-                        padding: const EdgeInsets.only(bottom: 6),
-
-                        child: Container(
-
-                          padding: const EdgeInsets.symmetric(
-
-                            horizontal: 10,
-
-                            vertical: 8,
-
-                          ),
-
-                          decoration: BoxDecoration(
-
-                            color: const Color(0xFFF8FAFC),
-
-                            borderRadius: BorderRadius.circular(12),
-
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-
-                          ),
-
-                          child: Row(
-
-                            children: [
-
-                              Icon(
-
-                                f.name.endsWith('.pdf')
-
-                                    ? Icons.picture_as_pdf_rounded
-
-                                    : Icons.image_rounded,
-
-                                size: 18,
-
-                                color: const Color(0xFFFA5A1E),
-
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              Expanded(
-
-                                child: Column(
-
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                                  children: [
-
-                                    Text(
-
-                                      f.name,
-
-                                      style: const TextStyle(
-
-                                        fontSize: 11.5,
-
-                                        fontWeight: FontWeight.w600,
-
-                                        color: Color(0xFF0F172A),
-
-                                      ),
-
-                                      maxLines: 1,
-
-                                      overflow: TextOverflow.ellipsis,
-
-                                    ),
-
-                                    Text(
-
-                                      '$sizeMb MB · Đã tải lên',
-
-                                      style: const TextStyle(
-
-                                        fontSize: 10,
-
-                                        color: Color(0xFF64748B),
-
-                                      ),
-
-                                    ),
-
-                                  ],
-
-                                ),
-
-                              ),
-
-                              IconButton(
-
-                                padding: EdgeInsets.zero,
-
-                                constraints: const BoxConstraints(),
-
-                                icon: const Icon(
-
-                                  Icons.close_rounded,
-
-                                  size: 16,
-
-                                  color: Color(0xFF64748B),
-
-                                ),
-
-                                onPressed: () => setState(
-
-                                  () => _attachments.removeAt(idx),
-
-                                ),
-
-                              ),
-
-                            ],
-
-                          ),
-
-                        ),
-
-                      );
-
-                    }).toList(),
-
-                  ),
-
-                const SizedBox(height: 12),
-
-
-
-                // 5. Academic Policy Note
-
                 Container(
-
                   padding: const EdgeInsets.all(10),
 
                   decoration: BoxDecoration(
-
-                    color: const Color(0xFFF8FAFC),
+                    color: Colors.white,
 
                     borderRadius: BorderRadius.circular(12),
 
                     border: Border.all(color: const Color(0xFFE2E8F0)),
-
                   ),
 
                   child: Row(
-
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
                     children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+
+                          vertical: 4,
+                        ),
+
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEDD5),
+
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+
+                        child: Text(
+                          _selectedSlot,
+
+                          style: const TextStyle(
+                            color: Color(0xFFFA5A1E),
+
+                            fontWeight: FontWeight.w700,
+
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                          children: [
+                            Text(
+                              _slotTime,
+
+                              style: const TextStyle(
+                                fontSize: 12.5,
+
+                                fontWeight: FontWeight.w700,
+
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+
+                            const SizedBox(height: 2),
+
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_month_outlined,
+
+                                  size: 12,
+
+                                  color: Color(0xFF64748B),
+                                ),
+
+                                const SizedBox(width: 4),
+
+                                Text(
+                                  _slotDateRoom,
+
+                                  style: const TextStyle(
+                                    fontSize: 11,
+
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
 
                       const Icon(
-
-                        Icons.info_outline_rounded,
+                        Icons.calendar_month_outlined,
 
                         size: 18,
 
-                        color: Color(0xFFFA5A1E),
-
+                        color: Color(0xFF64748B),
                       ),
-
-                      const SizedBox(width: 8),
-
-                      Expanded(
-
-                        child: Text.rich(
-
-                          TextSpan(
-
-                            text: 'Lưu ý: ',
-
-                            style: const TextStyle(
-
-                              fontSize: 11,
-
-                              fontWeight: FontWeight.w700,
-
-                              color: Color(0xFF0F172A),
-
-                            ),
-
-                            children: [
-
-                              const TextSpan(
-
-                                text:
-
-                                    'Đơn xin nghỉ phép cần gửi trước ít nhất ',
-
-                                style: TextStyle(
-
-                                  fontWeight: FontWeight.normal,
-
-                                  color: Color(0xFF64748B),
-
-                                ),
-
-                              ),
-
-                              const TextSpan(
-
-                                text: '02 tiếng',
-
-                                style: TextStyle(
-
-                                  fontWeight: FontWeight.w700,
-
-                                  color: Color(0xFFFA5A1E),
-
-                                ),
-
-                              ),
-
-                              const TextSpan(
-
-                                text:
-
-                                    ' trước giờ bắt đầu slot học để HAC kịp thời phê duyệt.',
-
-                                style: TextStyle(
-
-                                  fontWeight: FontWeight.normal,
-
-                                  color: Color(0xFF64748B),
-
-                                ),
-
-                              ),
-
-                            ],
-
-                          ),
-
-                          style: const TextStyle(height: 1.3),
-
-                        ),
-
-                      ),
-
                     ],
-
                   ),
-
                 ),
+              ],
+            ),
+          ),
 
+          const SizedBox(height: 14),
 
+          // 3. Reason & Plan Section
+          const Text(
+            'Lý do chính *',
 
-                if (_error != null) ...[
+            style: TextStyle(
+              fontSize: 12.5,
 
-                  const SizedBox(height: 10),
+              fontWeight: FontWeight.w600,
 
-                  Text(
+              color: Color(0xFF475569),
+            ),
+          ),
 
-                    _error!,
+          const SizedBox(height: 6),
 
-                    style: const TextStyle(
+          DropdownButtonFormField<String>(
+            value: _mainReason,
 
-                      color: Color(0xFFEF4444),
+            isExpanded: true,
 
-                      fontSize: 12,
+            decoration: InputDecoration(
+              filled: true,
 
-                      fontWeight: FontWeight.w500,
+              fillColor: const Color(0xFFF8FAFC),
 
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+
+                vertical: 10,
+              ),
+
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+
+                borderSide: const BorderSide(
+                  color: Color(0xFFFA5A1E),
+
+                  width: 1.5,
+                ),
+              ),
+            ),
+
+            items: _mainReasonLabels.entries
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e.key,
+
+                    child: Text(
+                      e.value,
+
+                      style: const TextStyle(
+                        fontSize: 13,
+
+                        fontWeight: FontWeight.w500,
+
+                        color: Color(0xFF0F172A),
+                      ),
                     ),
+                  ),
+                )
+                .toList(),
 
+            onChanged: (val) {
+              if (val != null) setState(() => _mainReason = val);
+            },
+          ),
+
+          const SizedBox(height: 12),
+
+          // Detailed message textarea
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            children: [
+              const Text.rich(
+                TextSpan(
+                  text: 'Mô tả chi tiết & Kế hoạch bù ',
+
+                  style: TextStyle(
+                    fontSize: 12.5,
+
+                    fontWeight: FontWeight.w600,
+
+                    color: Color(0xFF475569),
                   ),
 
-                ],
+                  children: [
+                    TextSpan(
+                      text: '*',
 
-                    const SizedBox(height: 16),
+                      style: TextStyle(color: Color(0xFFEF4444)),
+                    ),
+                  ],
+                ),
+              ),
+
+              Text(
+                '${_reasonController.text.length}/500',
+
+                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+              ),
             ],
           ),
+
+          const SizedBox(height: 6),
+
+          TextField(
+            controller: _reasonController,
+
+            maxLength: 500,
+
+            maxLines: 3,
+
+            buildCounter: (
+              _, {
+              required currentLength,
+
+              required isFocused,
+
+              maxLength,
+            }) => null,
+
+            onChanged: (_) => setState(() {}),
+
+            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+
+            decoration: InputDecoration(
+              hintText: 'Mô tả chi tiết lý do vắng mặt, người dự kiến dạy thay hoặc kế hoạch học bù...',
+
+              hintStyle: const TextStyle(
+                fontSize: 12.5,
+
+                color: Color(0xFF94A3B8),
+
+                height: 1.35,
+              ),
+
+              filled: true,
+
+              fillColor: const Color(0xFFF8FAFC),
+
+              contentPadding: const EdgeInsets.all(12),
+
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+
+                borderSide: const BorderSide(
+                  color: Color(0xFFFA5A1E),
+
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 4. Attachments Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            children: [
+              Row(
+                children: const [
+                  Icon(
+                    Icons.attach_file_rounded,
+
+                    size: 14,
+
+                    color: Color(0xFFFA5A1E),
+                  ),
+
+                  SizedBox(width: 4),
+
+                  Text(
+                    'Minh chứng đính kèm (Tối đa 15MB)',
+
+                    style: TextStyle(
+                      fontSize: 11,
+
+                      fontWeight: FontWeight.w600,
+
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ],
+              ),
+
+              GestureDetector(
+                onTap: _pickFile,
+
+                child: const Text(
+                  '+ Thêm tệp',
+
+                  style: TextStyle(
+                    fontSize: 11,
+
+                    fontWeight: FontWeight.w700,
+
+                    color: Color(0xFFFA5A1E),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          if (_attachments.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+
+                borderRadius: BorderRadius.circular(12),
+
+                border: Border.all(
+                  color: const Color(0xFFE2E8F0),
+
+                  style: BorderStyle.solid,
+                ),
+              ),
+
+              child: Row(
+                children: const [
+                  Icon(
+                    Icons.picture_as_pdf_outlined,
+
+                    size: 18,
+
+                    color: Color(0xFF94A3B8),
+                  ),
+
+                  SizedBox(width: 8),
+
+                  Expanded(
+                    child: Text(
+                      'Chưa có tệp minh chứng đính kèm (PDF, JPG, PNG...)',
+
+                      style: TextStyle(
+                        fontSize: 11.5,
+
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: _attachments.asMap().entries.map((entry) {
+                final idx = entry.key;
+
+                final f = entry.value;
+
+                final sizeMb = (f.size / (1024 * 1024)).toStringAsFixed(1);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+
+                      vertical: 8,
+                    ),
+
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+
+                      borderRadius: BorderRadius.circular(12),
+
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+
+                    child: Row(
+                      children: [
+                        Icon(
+                          f.name.endsWith('.pdf')
+                              ? Icons.picture_as_pdf_rounded
+                              : Icons.image_rounded,
+
+                          size: 18,
+
+                          color: const Color(0xFFFA5A1E),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                            children: [
+                              Text(
+                                f.name,
+
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+
+                                  fontWeight: FontWeight.w600,
+
+                                  color: Color(0xFF0F172A),
+                                ),
+
+                                maxLines: 1,
+
+                                overflow: TextOverflow.ellipsis,
+                              ),
+
+                              Text(
+                                '$sizeMb MB · Đã tải lên',
+
+                                style: const TextStyle(
+                                  fontSize: 10,
+
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        IconButton(
+                          padding: EdgeInsets.zero,
+
+                          constraints: const BoxConstraints(),
+
+                          icon: const Icon(
+                            Icons.close_rounded,
+
+                            size: 16,
+
+                            color: Color(0xFF64748B),
+                          ),
+
+                          onPressed: () =>
+                              setState(() => _attachments.removeAt(idx)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+          const SizedBox(height: 12),
+
+          // 5. Academic Policy Note
+          Container(
+            padding: const EdgeInsets.all(10),
+
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+
+              borderRadius: BorderRadius.circular(12),
+
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+
+                  size: 18,
+
+                  color: Color(0xFFFA5A1E),
+                ),
+
+                const SizedBox(width: 8),
+
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: 'Lưu ý: ',
+
+                      style: const TextStyle(
+                        fontSize: 11,
+
+                        fontWeight: FontWeight.w700,
+
+                        color: Color(0xFF0F172A),
+                      ),
+
+                      children: [
+                        const TextSpan(
+                          text: 'Đơn xin nghỉ phép cần gửi trước ít nhất ',
+
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+
+                        const TextSpan(
+                          text: '02 tiếng',
+
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+
+                            color: Color(0xFFFA5A1E),
+                          ),
+                        ),
+
+                        const TextSpan(
+                          text: ' trước giờ bắt đầu slot học để HAC kịp thời phê duyệt.',
+
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    style: const TextStyle(height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+
+            Text(
+              _error!,
+
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+
+                fontSize: 12,
+
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
   Widget _buildRadioCard({
-
     required String type,
 
     required String title,
@@ -1877,200 +1530,139 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     required Color iconColor,
 
     required Color iconBg,
-
   }) {
-
     final isSelected = _requestType == type;
 
     return InkWell(
-
       borderRadius: BorderRadius.circular(12),
 
       onTap: () => setState(() => _requestType = type),
 
       child: AnimatedContainer(
-
         duration: const Duration(milliseconds: 150),
 
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 
         decoration: BoxDecoration(
-
           color: isSelected ? const Color(0xFFFFF7ED) : Colors.white,
 
           borderRadius: BorderRadius.circular(12),
 
           border: Border.all(
-
-            color: isSelected ? const Color(0xFFFA5A1E) : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? const Color(0xFFFA5A1E)
+                : const Color(0xFFE2E8F0),
 
             width: isSelected ? 1.8 : 1,
-
           ),
-
         ),
 
         child: Row(
-
           children: [
-
             Container(
-
               width: 32,
 
               height: 32,
 
               decoration: BoxDecoration(
-
                 color: iconBg,
 
                 borderRadius: BorderRadius.circular(8),
-
               ),
 
-              child: Center(
-
-                child: Icon(icon, color: iconColor, size: 18),
-
-              ),
-
+              child: Center(child: Icon(icon, color: iconColor, size: 18)),
             ),
 
             const SizedBox(width: 10),
 
             Expanded(
-
               child: Column(
-
                 crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-
                   Row(
-
                     children: [
-
                       Text(
-
                         title,
 
                         style: const TextStyle(
-
                           fontSize: 13,
 
                           fontWeight: FontWeight.w700,
 
                           color: Color(0xFF0F172A),
-
                         ),
-
                       ),
 
                       if (badge != null) ...[
-
                         const SizedBox(width: 6),
 
                         Container(
-
                           padding: const EdgeInsets.symmetric(
-
                             horizontal: 5,
 
                             vertical: 1.5,
-
                           ),
 
                           decoration: BoxDecoration(
-
                             color: const Color(0xFFFFEDD5),
 
                             borderRadius: BorderRadius.circular(6),
-
                           ),
 
                           child: Text(
-
                             badge,
 
                             style: const TextStyle(
-
                               color: Color(0xFFFA5A1E),
 
                               fontSize: 9.5,
 
                               fontWeight: FontWeight.w700,
-
                             ),
-
                           ),
-
                         ),
-
                       ],
-
                     ],
-
                   ),
 
                   const SizedBox(height: 2),
 
                   Text(
-
                     subtitle,
 
                     style: const TextStyle(
-
                       fontSize: 11,
 
                       color: Color(0xFF64748B),
-
                     ),
-
                   ),
-
                 ],
-
               ),
-
             ),
 
             Container(
-
               width: 16,
 
               height: 16,
 
               decoration: BoxDecoration(
-
                 shape: BoxShape.circle,
 
                 border: Border.all(
-
                   color: isSelected
-
                       ? const Color(0xFFFA5A1E)
-
                       : const Color(0xFFCBD5E1),
 
                   width: isSelected ? 4.5 : 1.5,
-
                 ),
-
               ),
-
             ),
-
           ],
-
         ),
-
       ),
-
     );
-
   }
-
-
 
   // ------------------------------------------------------------- TAB 2: HISTORY
   Widget _buildHistoryTab(BuildContext context) {
@@ -2109,9 +1701,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
 
         if (!snapshot.hasData) {
           return const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFFCC4900),
-            ),
+            child: CircularProgressIndicator(color: Color(0xFFCC4900)),
           );
         }
 
@@ -2120,10 +1710,12 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
         final pendingCount = allItems
             .where((e) => (e['status']?.toString() ?? 'pending') == 'pending')
             .length;
-        final approvedCount =
-            allItems.where((e) => e['status'] == 'approved').length;
-        final rejectedCount =
-            allItems.where((e) => e['status'] == 'rejected').length;
+        final approvedCount = allItems
+            .where((e) => e['status'] == 'approved')
+            .length;
+        final rejectedCount = allItems
+            .where((e) => e['status'] == 'rejected')
+            .length;
 
         final filteredList = allItems.where((r) {
           final s = r['status']?.toString() ?? 'pending';
@@ -2261,7 +1853,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     final reasonDetail = _parseDetailReason(row);
     final attachmentName = _parseAttachmentName(row);
     final createdAt = row['createdAt'] as Timestamp?;
-    final ticketCode = _formatTicketCode(row['id']?.toString() ?? '', createdAt);
+    final ticketCode = _formatTicketCode(
+      row['id']?.toString() ?? '',
+      createdAt,
+    );
     final timeStr = createdAt != null
         ? 'Gửi lúc ${createdAt.toDate().hour.toString().padLeft(2, '0')}:${createdAt.toDate().minute.toString().padLeft(2, '0')} hôm nay'
         : 'Gửi gần đây';
@@ -2318,7 +1913,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               ),
               // Status Badge Pending
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFDBCE),
                   borderRadius: BorderRadius.circular(20),
@@ -2516,7 +2114,8 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                   ],
                 ),
                 GestureDetector(
-                  onTap: () => _showRequestDetailDialog(context, row, ticketCode),
+                  onTap: () =>
+                      _showRequestDetailDialog(context, row, ticketCode),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
@@ -2553,7 +2152,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     final schedule = _parseSchedule(row);
     final adminNote = row['adminNote']?.toString() ?? '';
     final createdAt = row['createdAt'] as Timestamp?;
-    final ticketCode = _formatTicketCode(row['id']?.toString() ?? '', createdAt);
+    final ticketCode = _formatTicketCode(
+      row['id']?.toString() ?? '',
+      createdAt,
+    );
     final approvalStr = createdAt != null
         ? 'HAC_Admin duyệt ${createdAt.toDate().hour.toString().padLeft(2, '0')}:${createdAt.toDate().minute.toString().padLeft(2, '0')}, ${createdAt.toDate().day.toString().padLeft(2, '0')}/${createdAt.toDate().month.toString().padLeft(2, '0')}'
         : 'HAC_Admin duyệt';
@@ -2563,9 +2165,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFE2BFB2).withOpacity(0.3),
-        ),
+        border: Border.all(color: const Color(0xFFE2BFB2).withOpacity(0.3)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x080F172A),
@@ -2609,7 +2209,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               ),
               // Status Badge Approved
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDCFCE7),
                   borderRadius: BorderRadius.circular(20),
@@ -2786,7 +2389,8 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                   ],
                 ),
                 GestureDetector(
-                  onTap: () => _showRequestDetailDialog(context, row, ticketCode),
+                  onTap: () =>
+                      _showRequestDetailDialog(context, row, ticketCode),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
@@ -2823,7 +2427,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     final schedule = _parseSchedule(row);
     final adminNote = row['adminNote']?.toString() ?? '';
     final createdAt = row['createdAt'] as Timestamp?;
-    final ticketCode = _formatTicketCode(row['id']?.toString() ?? '', createdAt);
+    final ticketCode = _formatTicketCode(
+      row['id']?.toString() ?? '',
+      createdAt,
+    );
     final dateStr = createdAt != null
         ? '${createdAt.toDate().day.toString().padLeft(2, '0')}/${createdAt.toDate().month.toString().padLeft(2, '0')}/${createdAt.toDate().year}'
         : 'Gần đây';
@@ -2833,9 +2440,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFFFDAD6),
-        ),
+        border: Border.all(color: const Color(0xFFFFDAD6)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x080F172A),
@@ -2879,7 +2484,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               ),
               // Status Badge Rejected
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFDAD6),
                   borderRadius: BorderRadius.circular(20),
@@ -2988,9 +2596,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        adminNote.isNotEmpty
-                            ? adminNote
-                            : 'Phòng học AL-306 đã có lịch thi cuối kỳ vào slot yêu cầu. Vui lòng chọn slot khác.',
+                        adminNote.isNotEmpty ? adminNote : 'Phòng học AL-306 đã có lịch thi cuối kỳ vào slot yêu cầu. Vui lòng chọn slot khác.',
                         style: const TextStyle(
                           fontSize: 12.5,
                           color: Color(0xFF93000A),
@@ -3044,7 +2650,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                 GestureDetector(
                   onTap: () => _reapplyRequest(row),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE6E8EA),
                       borderRadius: BorderRadius.circular(20),
@@ -3128,7 +2737,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
             ),
           ],
@@ -3144,9 +2756,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(
-            color: const Color(0xFFE6E8EA).withOpacity(0.6),
-          ),
+          top: BorderSide(color: const Color(0xFFE6E8EA).withOpacity(0.6)),
         ),
       ),
       child: Row(
@@ -3217,29 +2827,29 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                         ],
                       )
                     : (_saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.send_rounded, size: 16),
-                              SizedBox(width: 8),
-                              Text(
-                                'Gửi yêu cầu',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                ),
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
                               ),
-                            ],
-                          )),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.send_rounded, size: 16),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Gửi yêu cầu',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ],
+                            )),
               ),
             ),
           ),
@@ -3341,7 +2951,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF2F4F6),
                           borderRadius: BorderRadius.circular(8),
@@ -3358,7 +2971,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: statusBg,
                           borderRadius: BorderRadius.circular(20),
@@ -3385,7 +3001,11 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                     onPressed: () => Navigator.pop(ctx),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF565E74)),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: Color(0xFF565E74),
+                    ),
                   ),
                 ],
               ),
@@ -3403,7 +3023,11 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                       color: const Color(0xFFFFDBCE),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(typeIcon, size: 18, color: const Color(0xFFCC4900)),
+                    child: Icon(
+                      typeIcon,
+                      size: 18,
+                      color: const Color(0xFFCC4900),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -3443,12 +3067,19 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFF565E74)),
+                        const Icon(
+                          Icons.schedule_rounded,
+                          size: 14,
+                          color: Color(0xFF565E74),
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             schedule,
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF565E74)),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF565E74),
+                            ),
                           ),
                         ),
                       ],
@@ -3456,7 +3087,10 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                     const SizedBox(height: 4),
                     Text(
                       'Thời gian gửi: $dateStr',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8E7166)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8E7166),
+                      ),
                     ),
                   ],
                 ),
@@ -3479,11 +3113,17 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F4F6),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2BFB2).withOpacity(0.3)),
+                  border: Border.all(
+                    color: const Color(0xFFE2BFB2).withOpacity(0.3),
+                  ),
                 ),
                 child: Text(
                   reasonDetail,
-                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF5A4138), height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFF5A4138),
+                    height: 1.4,
+                  ),
                 ),
               ),
 
@@ -3491,7 +3131,11 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.attach_file_rounded, size: 15, color: Color(0xFFCC4900)),
+                    const Icon(
+                      Icons.attach_file_rounded,
+                      size: 15,
+                      color: Color(0xFFCC4900),
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -3509,7 +3153,9 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               ],
 
               // HAC Response (if any)
-              if (adminNote.isNotEmpty || status == 'approved' || status == 'rejected') ...[
+              if (adminNote.isNotEmpty ||
+                  status == 'approved' ||
+                  status == 'rejected') ...[
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
@@ -3520,16 +3166,22 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                         : const Color(0xFFDCFCE7).withOpacity(0.5),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: status == 'rejected' ? const Color(0xFFFFDAD6) : const Color(0xFF6FFBBE),
+                      color: status == 'rejected'
+                          ? const Color(0xFFFFDAD6)
+                          : const Color(0xFF6FFBBE),
                     ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        status == 'rejected' ? Icons.error_outline_rounded : Icons.verified_rounded,
+                        status == 'rejected'
+                            ? Icons.error_outline_rounded
+                            : Icons.verified_rounded,
                         size: 16,
-                        color: status == 'rejected' ? const Color(0xFFBA1A1A) : const Color(0xFF006947),
+                        color: status == 'rejected'
+                            ? const Color(0xFFBA1A1A)
+                            : const Color(0xFF006947),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -3537,11 +3189,15 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              status == 'rejected' ? 'Lý do từ chối từ HAC:' : 'Phản hồi từ HAC:',
+                              status == 'rejected'
+                                  ? 'Lý do từ chối từ HAC:'
+                                  : 'Phản hồi từ HAC:',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: status == 'rejected' ? const Color(0xFFBA1A1A) : const Color(0xFF006947),
+                                color: status == 'rejected'
+                                    ? const Color(0xFFBA1A1A)
+                                    : const Color(0xFF006947),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -3549,11 +3205,13 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                               adminNote.isNotEmpty
                                   ? adminNote
                                   : (status == 'rejected'
-                                      ? 'Không đủ điều kiện theo quy chế đào tạo.'
-                                      : 'Yêu cầu đã được phê duyệt.'),
+                                        ? 'Không đủ điều kiện theo quy chế đào tạo.'
+                                        : 'Yêu cầu đã được phê duyệt.'),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: status == 'rejected' ? const Color(0xFF93000A) : const Color(0xFF002113),
+                                color: status == 'rejected'
+                                    ? const Color(0xFF93000A)
+                                    : const Color(0xFF002113),
                                 height: 1.35,
                               ),
                             ),
@@ -3575,11 +3233,16 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFCC4900),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
                   ),
                   child: const Text(
                     'Đóng',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -3622,7 +3285,9 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
       final dt = createdAt.toDate();
       final dateCode =
           '${dt.year}${dt.month.toString().padLeft(2, '0')}${dt.day.toString().padLeft(2, '0')}';
-      final suffix = id.length >= 2 ? id.substring(id.length - 2).toUpperCase() : '01';
+      final suffix = id.length >= 2
+          ? id.substring(id.length - 2).toUpperCase()
+          : '01';
       return '#YCHV-$dateCode-$suffix';
     }
     return id.isEmpty ? 'Đang gửi' : id;
@@ -3687,7 +3352,8 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
     final atts = row['attachments'] as List?;
     if (atts != null && atts.isNotEmpty) {
       final first = atts.first;
-      if (first is Map && first['name'] != null) return first['name'].toString();
+      if (first is Map && first['name'] != null)
+        return first['name'].toString();
       if (first is String) {
         if (first.contains('(')) return first.split('(')[0].trim();
         final uri = Uri.tryParse(first);

@@ -273,7 +273,7 @@ class ScheduleTimelineItem extends StatelessWidget {
                                     ),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Mở điểm danh ngay',
+                                      'Vào phòng điểm danh QR',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14,

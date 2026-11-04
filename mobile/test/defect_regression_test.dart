@@ -20,6 +20,7 @@ class _Repository extends TeacherRepository {
   _Repository() : super(currentUser: CurrentUser());
   final sessions = StreamController<SessionModel?>.broadcast();
   bool offline = true;
+  bool manualAllowed = true;
   int calls = 0;
   @override
   Stream<SessionModel?> watchSession(String id) => sessions.stream;
@@ -27,6 +28,19 @@ class _Repository extends TeacherRepository {
   Future<ApiResult<List<RosterEntryModel>>> getRoster({
     required String sessionId,
   }) async => ApiSuccess([]);
+  @override
+  Future<ApiResult<void>> manualCheckin({
+    required String sessionId,
+    required String rollNumber,
+    String status = 'ManualByGV',
+  }) async => manualAllowed
+      ? ApiSuccess(null)
+      : ApiFailure(
+          ApiError(
+            code: 'FORBIDDEN',
+            message: 'Bạn không có quyền thực hiện thao tác này.',
+          ),
+        );
   @override
   Future<ApiResult<List<ClassSectionModel>>> getClasses({
     required String teacherMemberCode,
@@ -39,6 +53,53 @@ class _Repository extends TeacherRepository {
 }
 
 void main() {
+  test('DEF-EXP-01: Back returns to the previous in-app route', () async {
+    final repo = _Repository();
+    final dashboard = DashboardViewModel(repo);
+
+    dashboard.navigate('lop-hoc');
+    dashboard.navigate('diem-danh-qr');
+
+    expect(dashboard.canNavigateBack, isTrue);
+    expect(dashboard.navigateBack(), isTrue);
+    expect(dashboard.currentRoute, 'lop-hoc');
+    expect(dashboard.navigateBack(), isTrue);
+    expect(dashboard.currentRoute, 'tong-quan');
+    expect(dashboard.canNavigateBack, isFalse);
+    expect(dashboard.navigateBack(), isFalse);
+
+    dashboard.dispose();
+    await repo.sessions.close();
+  });
+
+  test('manual attendance trả kết quả thành công/thất bại cho UI', () async {
+    final repo = _Repository();
+    final vm = LiveSessionViewModel(repo);
+    const session = SessionModel(
+      sessionId: 'S1',
+      classCode: 'C1',
+      sessionDate: '2026-11-03',
+      slotCode: 'P4',
+      sessionStatus: 'open',
+      qrToken: 'secret',
+    );
+    vm.adoptSession(
+      session,
+      ClassSectionModel.fromJson({'classCode': 'C1'}),
+      '',
+    );
+
+    expect(await vm.manualCheckin('SE1001'), isTrue);
+    expect(vm.errorMessage, isNull);
+
+    repo.manualAllowed = false;
+    expect(await vm.manualCheckin('SE1002'), isFalse);
+    expect(vm.errorMessage, contains('không có quyền'));
+
+    vm.dispose();
+    await repo.sessions.close();
+  });
+
   test(
     'TC03: external close updates active session; reset cancels old listener',
     () async {

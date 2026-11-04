@@ -35,6 +35,9 @@ const FeedbackInboxPage = lazy(() =>
 const FeedbackHistoryPage = lazy(() =>
   import("./pages/AdminFeedbackPage").then((module) => ({ default: module.FeedbackHistoryPage })),
 )
+const CrashlyticsPage = lazy(() =>
+  import("./pages/CrashlyticsPage").then((module) => ({ default: module.CrashlyticsPage })),
+)
 
 export default function AdminApp() {
   const [authReady, setAuthReady] = useState(false)
@@ -77,6 +80,7 @@ export default function AdminApp() {
     feedback: <FeedbackInboxPage />,
     "feedback-history": <FeedbackHistoryPage />,
     reports: <AttendanceReport />,
+    crashlytics: <CrashlyticsPage />,
     settings: <SystemSettingsPage adminEmail={profile.email} />,
   }[page]
 

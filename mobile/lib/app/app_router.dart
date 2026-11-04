@@ -59,7 +59,16 @@ GoRouter createAppRouter(AuthViewModel authViewModel) {
         name: 'teacher',
         builder: (context, state) => authViewModel.session?.user.role == 'user'
             ? const RequestsBody()
-            : const MainScreen(),
+            : MainScreen(initialRoute: state.uri.queryParameters['tab']),
+        routes: [
+          GoRoute(
+            path: ':tab',
+            builder: (context, state) =>
+                authViewModel.session?.user.role == 'user'
+                ? const RequestsBody()
+                : MainScreen(initialRoute: state.pathParameters['tab']),
+          ),
+        ],
       ),
     ],
   );

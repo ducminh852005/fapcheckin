@@ -10,18 +10,13 @@ import 'package:fapcheckin_core/result/api_result.dart';
 
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
+import '../../../core/services/telemetry.dart';
 
 
-import '../../../viewmodels/dashboard_viewmodel.dart';
 
 import '../../../viewmodels/preferences_viewmodel.dart';
-
 import '../profile/account_dialogs.dart';
-
 import '../profile/profile_colors.dart';
-
-import 'account_features_body.dart';
-
 import 'feedback_modal_sheet.dart';
 import 'feedback_history_modal_sheet.dart';
 
@@ -162,50 +157,27 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   @override
 
   Widget build(BuildContext context) {
-
-    final dashboardVm = context.watch<DashboardViewModel>();
-
     final prefsVm = context.watch<PreferencesViewModel?>();
-
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
-
-
     return Scaffold(
-
-      backgroundColor: ProfileColors.pageBg,
-
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
-
         physics: const AlwaysScrollableScrollPhysics(),
-
         padding: EdgeInsets.fromLTRB(
-
           horizontalPadding,
-
           context.isMobile ? 16.0 : 24.0,
-
           horizontalPadding,
-
           context.isMobile ? 108.0 : 40.0,
-
         ),
-
         child: Center(
-
           child: ConstrainedBox(
-
             constraints: const BoxConstraints(maxWidth: 680),
-
             child: Column(
-
               crossAxisAlignment: CrossAxisAlignment.stretch,
-
               children: [
-
                 // 1. Header
-
-                _buildHeader(context, dashboardVm),
+                _buildHeader(context),
 
                 if (prefsVm?.saving == true) ...[
 
@@ -271,6 +243,10 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
                 const SizedBox(height: 24),
 
+                _buildCrashlyticsDemoCard(context),
+
+                const SizedBox(height: 24),
+
 
 
                 // 5. Phiên bản
@@ -309,88 +285,123 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
   }
 
-
-
-  /// 1. Header: Back button + Title
-
-  Widget _buildHeader(BuildContext context, DashboardViewModel dashboardVm) {
-
-    return Row(
-
-      crossAxisAlignment: CrossAxisAlignment.center,
-
-      children: [
-
-        InkWell(
-
-          onTap: () => dashboardVm.navigate('cai-dat'),
-
-          borderRadius: BorderRadius.circular(12),
-
-          child: Container(
-
-            width: 38,
-
-            height: 38,
-
-            decoration: BoxDecoration(
-
-              color: Colors.white,
-
-              borderRadius: BorderRadius.circular(12),
-
-              border: Border.all(color: ProfileColors.borderSubtle),
-
-              boxShadow: ProfileColors.cardShadow,
-
-            ),
-
-            child: const Icon(
-
-              Icons.arrow_back_ios_new_rounded,
-
-              size: 18,
-
-              color: Color(0xFF334155),
-
-            ),
-
+  Widget _buildCrashlyticsDemoCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDBA74)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.bug_report_outlined, color: Color(0xFFC2410C)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Demo Firebase Crashlytics',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF9A3412),
+                  ),
+                ),
+              ),
+            ],
           ),
-
-        ),
-
-        const SizedBox(width: 14),
-
-        const Expanded(
-
-          child: Text(
-
-            'Cài đặt & Trợ giúp',
-
-            maxLines: 1,
-
-            overflow: TextOverflow.ellipsis,
-
+          const SizedBox(height: 8),
+          const Text(
+            'Nút này cố ý làm ứng dụng dừng. Hãy mở lại app để gửi báo cáo, '
+            'sau đó kiểm tra trên Firebase Console.',
             style: TextStyle(
-
-              fontSize: 20,
-
-              fontWeight: FontWeight.w800,
-
-              color: ProfileColors.textDark,
-
-              letterSpacing: -0.4,
-
+              height: 1.4,
+              fontSize: 12.5,
+              color: Color(0xFF7C2D12),
             ),
-
           ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('crashlytics-demo-button'),
+              onPressed: () => _confirmCrashlyticsDemo(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.warning_amber_rounded),
+              label: const Text('Tạo crash kiểm thử'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _confirmCrashlyticsDemo(BuildContext context) async {
+    if (!telemetrySupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Crashlytics chỉ hỗ trợ Android và iOS.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: Color(0xFFDC2626),
+          size: 36,
         ),
-
-      ],
-
+        title: const Text('Xác nhận làm ứng dụng crash?'),
+        content: const Text(
+          'Ứng dụng sẽ đóng ngay. Sau đó hãy mở lại ứng dụng và chờ vài phút '
+          'để báo cáo xuất hiện trên Firebase Crashlytics.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Crash ứng dụng'),
+          ),
+        ],
+      ),
     );
 
+    if (confirmed != true || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đang tạo crash kiểm thử…')),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await triggerCrashlyticsDemo();
+  }
+
+
+
+  /// 1. Header: Title
+  Widget _buildHeader(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Text(
+      'Cài đặt & Trợ giúp',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w800,
+        color: isDark ? Colors.white : ProfileColors.textDark,
+        letterSpacing: -0.4,
+      ),
+    );
   }
 
 

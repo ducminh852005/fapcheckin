@@ -21,7 +21,7 @@ class Sidebar extends StatelessWidget {
       builder: (context, vm, _) {
         return Container(
           width: width,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.surface,
             boxShadow: [
               BoxShadow(
@@ -35,13 +35,13 @@ class Sidebar extends StatelessWidget {
             children: [
               // Logo header
               _SidebarHeader(),
-              Divider(height: 1, color: AppColors.surfaceVariant),
+              const Divider(height: 1, color: AppColors.surfaceVariant),
               // Nav items
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      SizedBox(height: AppSpacing.sm),
+                      const SizedBox(height: AppSpacing.sm),
                       for (final d in kNavDestinations)
                         _NavItem(
                           icon: d.isActive(vm.currentRoute)
@@ -53,15 +53,6 @@ class Sidebar extends StatelessWidget {
                           currentRoute: vm.currentRoute,
                           onTap: () => vm.navigate(d.route),
                         ),
-                      /*
-                      _NavItem(
-                        icon: Icons.settings_outlined,
-                        label: 'Cài đặt',
-                        route: 'cai-dat',
-                        currentRoute: vm.currentRoute,
-                        onTap: () => vm.navigate('cai-dat'),
-                      ),
-                      */
                     ],
                   ),
                 ),
@@ -81,7 +72,7 @@ class _SidebarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: AppSpacing.topBarHeight,
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       color: AppColors.surface,
       child: Row(
         children: [
@@ -118,60 +109,70 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: InkWell(
+    return Semantics(
+      selected: isActive,
+      button: true,
+      label: label,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 2,
+        ),
+        child: Material(
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          onTap: () {
-            onTap();
-            if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
-              Navigator.of(context).pop(); // Close drawer
-            }
-          },
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 10,
-            ),
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.primaryContainer : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primaryContainer.withValues(
-                          alpha: 0.3,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            onTap: () {
+              onTap();
+              if (Scaffold.maybeOf(context)?.isDrawerOpen ?? false) {
+                Navigator.of(context).pop(); // Close drawer
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 11,
+              ),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppColors.primaryContainer
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primaryContainer.withValues(
+                            alpha: 0.3,
+                          ),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isActive
-                      ? AppColors.onPrimary
-                      : AppColors.textSecondary,
-                ),
-                SizedBox(width: 12),
-                Text(
-                  label,
-                  style: AppTextStyles.labelMd.copyWith(
+                      ]
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
                     color: isActive
                         ? AppColors.onPrimary
                         : AppColors.textSecondary,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text(
+                    label,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: isActive
+                          ? AppColors.onPrimary
+                          : AppColors.textSecondary,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -188,12 +189,12 @@ class _UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.all(AppSpacing.sm),
-      padding: EdgeInsets.all(AppSpacing.md),
+      margin: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             color: Color(0x0F142433),
             blurRadius: 3,
@@ -222,7 +223,7 @@ class _UserCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,16 +251,16 @@ class _UserCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
-          Divider(height: 1, color: AppColors.surfaceContainerHigh),
-          SizedBox(height: 8),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.surfaceContainerHigh),
+          const SizedBox(height: 8),
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             runSpacing: 4,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.secondaryContainer,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -275,15 +276,17 @@ class _UserCard extends StatelessWidget {
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  minimumSize: const Size(48, 38),
                   foregroundColor: AppColors.error,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                 ),
-                icon: Icon(Icons.logout, size: 16),
+                icon: const Icon(Icons.logout, size: 16),
                 label: Text(
                   'Đăng xuất',
                   style: AppTextStyles.caption.copyWith(color: AppColors.error),
