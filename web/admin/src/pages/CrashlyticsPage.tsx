@@ -1,7 +1,7 @@
 import { Activity, ExternalLink, Info, RotateCcw, Smartphone } from "lucide-react"
 
 const CRASHLYTICS_URL =
-  "https://console.firebase.google.com/project/fapcheckin-3bn2di/crashlytics"
+  "https://console.firebase.google.com/project/ducminh-41459/crashlytics"
 
 export function CrashlyticsPage() {
   return (
@@ -66,7 +66,7 @@ export function CrashlyticsPage() {
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
         Tài khoản quản trị cần được cấp quyền truy cập dự án Firebase
-        <strong> fapcheckin-3bn2di</strong> để xem báo cáo.
+        <strong> ducminh-41459</strong> để xem báo cáo.
       </div>
     </div>
   )
