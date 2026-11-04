@@ -2,6 +2,7 @@ import { collection, getCountFromServer, query, where } from "firebase/firestore
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   Bell,
+  Activity,
   CheckCheck,
   ClipboardCheck,
   Bug,
@@ -212,6 +213,12 @@ export function AdminShell({
           id: "accounts",
           label: "Quyền truy cập",
           icon: <KeyRound size={18} />,
+          badge: null,
+        },
+        {
+          id: "crashlytics",
+          label: "Firebase Crashlytics",
+          icon: <Activity size={18} />,
           badge: null,
         },
         {

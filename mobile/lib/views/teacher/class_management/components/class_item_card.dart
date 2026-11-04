@@ -294,59 +294,6 @@ class ClassItemCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (isActive && onOpenCheckin != null) ...[
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (activeScannedInfo != null)
-                      Flexible(
-                        child: Text(
-                          activeScannedInfo!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: ClassManagementColors.textMuted,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox.shrink(),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      height: 38,
-                      child: ElevatedButton.icon(
-                        onPressed: onOpenCheckin,
-                        icon: const Icon(
-                          Icons.qr_code_scanner_rounded,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Điểm danh QR',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ClassManagementColors.orangePrimary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),

@@ -475,6 +475,56 @@ class LiveSessionViewModel extends ChangeNotifier {
     return false;
   }
 
+  /// Changes IP enforcement for the currently open session.
+  /// Enabling first resolves the teacher's public IP, then persists the flag
+  /// and IP together. The QR URL reacts to [_session.ipCheck] (`ic=1`).
+  Future<bool> setIpCheck(bool enabled) async {
+    if (_session == null || isClosed || _status == ViewStatus.loading) {
+      return false;
+    }
+    if (_session!.ipCheck == enabled) return true;
+
+    final generation = _generation;
+    _status = ViewStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    var ip = '';
+    if (enabled) {
+      ip = await IpService.getPublicIp(forceRefresh: true);
+      if (_disposed || generation != _generation) return false;
+      if (_isPlaceholderIp(ip)) {
+        _status = ViewStatus.error;
+        _errorMessage =
+            'Không thể xác định IP công khai của mạng giảng viên. '
+            'Hãy kiểm tra Internet/VPN rồi thử lại.';
+        notifyListeners();
+        return false;
+      }
+    }
+
+    final result = await _repository.updateSessionIpCheck(
+      sessionId: _session!.sessionId,
+      enabled: enabled,
+      teacherIp: ip,
+    );
+    if (_disposed || generation != _generation) return false;
+    switch (result) {
+      case ApiSuccess<bool>():
+        _teacherIp = ip;
+        _session = _session!.copyWith(ipCheck: enabled);
+        _status = ViewStatus.success;
+        notifyListeners();
+        return true;
+      case ApiFailure<bool>(:final error):
+        _status = ViewStatus.error;
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
+  }
+
   /// Loads roster once (call manually or let polling handle it)
   void adoptSession(
     SessionModel session,
@@ -544,9 +594,10 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   /// Manually mark a student present (manualCheckin API)
-  Future<void> manualCheckin(String rollNumber) async {
+  Future<bool> manualCheckin(String rollNumber) async {
     final generation = _generation;
-    if (_session == null) return;
+    if (_session == null) return false;
+    _errorMessage = null;
 
     final result = await _repository.manualCheckin(
       sessionId: _session!.sessionId,
@@ -554,15 +605,18 @@ class LiveSessionViewModel extends ChangeNotifier {
       status: 'ManualByGV',
     );
 
-    if (_disposed || generation != _generation) return;
+    if (_disposed || generation != _generation) return false;
     switch (result) {
       case ApiSuccess<void>():
         // Immediately refresh the roster
         await loadRoster();
+        return true;
       case ApiFailure<void>(:final error):
         _errorMessage = error.message;
         notifyListeners();
+        return false;
     }
+    return false;
   }
 
   Future<void> _rotateQr() async {
@@ -586,9 +640,9 @@ class LiveSessionViewModel extends ChangeNotifier {
   }
 
   /// Manually mark multiple students
-  Future<void> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
+  Future<bool> manualCheckinBulk(List<Map<String, dynamic>> changes) async {
     final generation = _generation;
-    if (_session == null || isClosed) return;
+    if (_session == null || isClosed) return false;
     _errorMessage = null;
     _status = ViewStatus.loading;
     notifyListeners();
@@ -598,16 +652,19 @@ class LiveSessionViewModel extends ChangeNotifier {
       changes: changes,
     );
 
-    if (_disposed || generation != _generation) return;
+    if (_disposed || generation != _generation) return false;
     switch (result) {
       case ApiSuccess<void>():
         _status = ViewStatus.success;
         await loadRoster();
+        return true;
       case ApiFailure<void>(:final error):
         _errorMessage = error.message;
         _status = ViewStatus.error;
         notifyListeners();
+        return false;
     }
+    return false;
   }
 
   /// Load stats for a given class
@@ -740,8 +797,7 @@ class LiveSessionViewModel extends ChangeNotifier {
             },
             onError: (Object error) {
               if (_disposed || generation != _generation) return;
-              _errorMessage = 'Không thể cập nhật phiên: $error';
-              notifyListeners();
+              debugPrint('Không thể cập nhật phiên realtime: $error');
             },
           );
     }

@@ -73,15 +73,110 @@ Future<List<Json>> loadSlots(FirebaseFirestore db) async {
       'period': periodLabel[period] ?? period,
       'startTime': text(block['startTime']),
       'endTime': text(block['endTime']),
+      'weekdays': [
+        for (final value in (data['weekdays'] as List?) ?? const [])
+          if (value is num) value.toInt(),
+      ],
     };
   }).toList()..sort((a, b) => a['slotCode'].compareTo(b['slotCode']));
   return slots;
 }
 
+/// Khoảng thời gian tuyệt đối của một ca học theo giờ Việt Nam (UTC+7).
+///
+/// Trả về `null` khi ngày, slot hoặc giờ bị thiếu/sai. Các luồng xác
+/// định phiên đang hoạt động phải fail-closed với dữ liệu không hợp lệ.
+({DateTime start, DateTime end})? sessionSlotRange(
+  Object? sessionDate,
+  Object? slotCode,
+  List<Json> slots,
+) {
+  final day = fmtDate(sessionDate);
+  final dayMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(day);
+  if (dayMatch == null) return null;
+
+  // Hỗ trợ kiểm thử slot ngoài giờ / buổi tối cho slot A4 hoặc TEST hôm nay
+  final slotCodeStr = text(slotCode);
+  final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
+  final todayStr =
+      '${nowVn.year.toString().padLeft(4, '0')}-${nowVn.month.toString().padLeft(2, '0')}-${nowVn.day.toString().padLeft(2, '0')}';
+  if (day == todayStr &&
+      (slotCodeStr == 'A4' || slotCodeStr == 'TEST') &&
+      (nowVn.hour >= 22 || nowVn.hour <= 2)) {
+    final start = DateTime.utc(nowVn.year, nowVn.month, nowVn.day, 22, 0)
+        .subtract(const Duration(hours: 7));
+    final end = DateTime.utc(nowVn.year, nowVn.month, nowVn.day, 23, 59, 59)
+        .subtract(const Duration(hours: 7));
+    return (start: start, end: end);
+  }
+
+  final slot = slots
+      .where((s) => text(s['slotCode']) == slotCodeStr)
+      .firstOrNull;
+  if (slot == null) return null;
+
+  DateTime? boundary(Object? value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})(?::\d{2})?$')
+        .firstMatch(text(value));
+    if (match == null) return null;
+    final year = int.parse(dayMatch[1]!);
+    final month = int.parse(dayMatch[2]!);
+    final date = int.parse(dayMatch[3]!);
+    final hour = int.parse(match[1]!);
+    final minute = int.parse(match[2]!);
+    if (hour > 23 || minute > 59) return null;
+
+    // DateTime.utc(...).subtract(7h) biểu diễn đúng mốc giờ Việt Nam,
+    // không phụ thuộc timezone của thiết bị chạy repository.
+    return DateTime.utc(
+      year,
+      month,
+      date,
+      hour,
+      minute,
+    ).subtract(const Duration(hours: 7));
+  }
+
+  final start = boundary(slot['startTime']);
+  final end = boundary(slot['endTime']);
+  if (start == null || end == null || !end.isAfter(start)) return null;
+  return (start: start, end: end);
+}
+
+/// Chỉ phiên `open` và đang nằm trong khung giờ slot mới là phiên active.
+bool isSessionActiveAt(Json session, List<Json> slots, DateTime now) {
+  if (text(session['sessionStatus']) != 'open') return false;
+  final range = sessionSlotRange(
+    session['sessionDate'],
+    session['slotCode'],
+    slots,
+  );
+  if (range == null) return false;
+  final instant = now.toUtc();
+  return !instant.isBefore(range.start) && instant.isBefore(range.end);
+}
+
+/// Chuẩn hóa trạng thái `open` bị quá giờ thành `expired` khi trả dữ liệu.
+String effectiveSessionStatusAt(Json session, List<Json> slots, DateTime now) {
+  final stored = text(session['sessionStatus']);
+  if (stored != 'open') return stored;
+  return isSessionActiveAt(session, slots, now) ? 'open' : 'expired';
+}
+
+/// Cho phép điểm danh tay đến hết 23:59:59 của đúng ngày diễn ra phiên học
+/// theo giờ Việt Nam. Từ 00:00 ngày kế tiếp phải gửi yêu cầu cho admin duyệt.
+bool canManuallyAttendOn(Json session, DateTime now) {
+  final sessionDate = fmtDate(session['sessionDate']);
+  return sessionDate.isNotEmpty && sessionDate == vnDate(now);
+}
+
 /// Sắp xếp phiên mới nhất trước (ngày giảm dần, rồi sessionId giảm dần).
 int newestFirst(Json a, Json b) {
   final byDate = fmtDate(b['sessionDate']).compareTo(fmtDate(a['sessionDate']));
-  return byDate != 0 ? byDate : text(b['sessionId'] ?? b['id']).compareTo(text(a['sessionId'] ?? a['id']));
+  return byDate != 0
+      ? byDate
+      : text(b['sessionId'] ?? b['id'])
+            .compareTo(text(a['sessionId'] ?? a['id']));
 }
 
 /// Chuỗi ngẫu nhiên an toàn, dùng làm `qrSecret` (≥ 16 ký tự theo Security Rules).

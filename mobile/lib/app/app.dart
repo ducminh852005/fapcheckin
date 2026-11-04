@@ -9,6 +9,7 @@ import 'package:fapcheckin_core/repositories/account_features_repository.dart';
 import 'package:fapcheckin_core/repositories/announcement_repository.dart';
 import 'package:fapcheckin_core/theme/app_theme.dart';
 
+import '../core/services/auto_session_manager.dart';
 import '../core/services/google_auth_service.dart';
 import '../core/services/remote_settings.dart';
 import '../core/services/timetable_ocr_service.dart';
@@ -90,6 +91,11 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _reportViewModel = ReportViewModel(
       ReportRepository(currentUser: _currentUser),
     );
+    _autoSessionManager = AutoSessionManager(
+      liveSessionViewModel: _liveSessionViewModel,
+      dashboardViewModel: _dashboardViewModel,
+      teacherRepository: _teacherRepo,
+    );
     _authViewModel.addListener(_syncHistoryAccount);
     _liveSessionViewModel.addListener(_syncLiveSession);
 
@@ -114,6 +120,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
 
   StreamSubscription<Map<String, dynamic>>? _systemSettingsSubscription;
   Map<String, dynamic> _systemSettings = {};
+  AutoSessionManager? _autoSessionManager;
   String? _accountId;
   String? _liveSessionKey;
   void _syncLiveSession() {
@@ -131,6 +138,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       _liveSessionKey = key;
       if (_accountId != null) _dashboardViewModel.loadClasses();
       if (_accountId != null) _attendanceHistoryViewModel.refreshSummary();
+      _autoSessionManager?.checkRealtimeSessions();
     }
   }
 
@@ -161,6 +169,9 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         email: session.user.email,
         memberCode: session.user.memberCode,
       );
+      _autoSessionManager?.start();
+    } else {
+      _autoSessionManager?.stop();
     }
     _attendanceHistoryViewModel.bindAccount(
       session?.user.isTeacher == true ? session?.token : null,
@@ -170,6 +181,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
 
   @override
   void dispose() {
+    _autoSessionManager?.stop();
     _systemSettingsSubscription?.cancel();
     _authViewModel.removeListener(_syncHistoryAccount);
     _liveSessionViewModel.removeListener(_syncLiveSession);
@@ -205,6 +217,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
           title: 'FAP Check-in',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
           themeMode: prefsVm.themeMode,
           routerConfig: _router,
           builder: (context, child) {
@@ -213,7 +226,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
               data: mq.copyWith(
                 textScaler: mq.textScaler.clamp(
                   minScaleFactor: 0.9,
-                  maxScaleFactor: 1.2,
+                  maxScaleFactor: 1.35,
                 ),
               ),
               child: child ?? const SizedBox.shrink(),

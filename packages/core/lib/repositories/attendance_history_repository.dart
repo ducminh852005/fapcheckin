@@ -82,14 +82,29 @@ class AttendanceHistoryRepository {
       );
     }
     final (cls, data) = await _loadOwned(classCode);
-    if (!data.sessions.any((s) => text(s['sessionId']) == sessionId)) {
-      throw ApiException('SESSION_NOT_FOUND', 'Buổi học không thuộc lớp được chọn.');
+    final selectedSession = data.sessions
+        .where((s) => text(s['sessionId']) == sessionId)
+        .firstOrNull;
+    if (selectedSession == null) {
+      throw ApiException(
+        'SESSION_NOT_FOUND',
+        'Buổi học không thuộc lớp được chọn.',
+      );
+    }
+    if (!canManuallyAttendOn(selectedSession, _now())) {
+      throw ApiException(
+        'MANUAL_ATTENDANCE_EXPIRED',
+        'Đã quá hạn điểm danh tay cho buổi học này. Hãy vào Cài đặt & Trợ giúp → Yêu cầu điểm danh / nghỉ phép để gửi admin duyệt.',
+      );
     }
     final seen = <String>{};
     for (final change in changes) {
       final roll = text(change['rollNumber']);
       if (!data.students.any((s) => s.rollNumber == roll) || !seen.add(roll)) {
-        throw ApiException('VALIDATION_ERROR', 'Sinh viên không thuộc lớp hoặc bị trùng.');
+        throw ApiException(
+          'VALIDATION_ERROR',
+          'Sinh viên không thuộc lớp hoặc bị trùng.',
+        );
       }
       final note = change['note'];
       if (!_editableStatuses.contains(change['status']) ||
@@ -104,6 +119,10 @@ class AttendanceHistoryRepository {
 
     // Transaction: đọc lại từng bản ghi, so `revision`, rồi mới ghi — phát hiện cả thay đổi
     // đến từ SV điểm danh hoặc từ thiết bị khác trong lúc GV đang chỉnh.
+    final existingRolls = {
+      for (final student in data.students)
+        if (data.record(selectedSession, student) != null) student.rollNumber,
+    };
     await _db.runTransaction((tx) async {
       final refs = {
         for (final change in changes)
@@ -113,19 +132,27 @@ class AttendanceHistoryRepository {
       };
       final existing = <String, DocumentSnapshot<Json>>{};
       for (final entry in refs.entries) {
-        existing[entry.key] = await tx.get(entry.value);
-      }
-      for (final change in changes) {
-        final roll = text(change['rollNumber']);
-        final snap = existing[roll]!;
-        final current = snap.exists ? _revision(snap.id, docToJson(snap)) : '';
-        if (text(change['revision']) != current) {
-          throw ApiException('CONFLICT', 'Dữ liệu đã thay đổi. Tải lại trước khi chỉnh sửa.');
+        // Chỉ đọc document đã tồn tại. Đọc trực tiếp một document chưa tồn
+        // tại bị Firestore Rules từ chối vì không có resource.data để xác
+        // thực quyền sở hữu.
+        if (existingRolls.contains(entry.key)) {
+          existing[entry.key] = await tx.get(entry.value);
         }
       }
       for (final change in changes) {
         final roll = text(change['rollNumber']);
-        final snap = existing[roll]!;
+        final snap = existing[roll];
+        final current = snap == null ? '' : _revision(snap.id, docToJson(snap));
+        if (text(change['revision']) != current) {
+          throw ApiException(
+            'CONFLICT',
+            'Dữ liệu đã thay đổi. Tải lại trước khi chỉnh sửa.',
+          );
+        }
+      }
+      for (final change in changes) {
+        final roll = text(change['rollNumber']);
+        final snap = existing[roll];
         final status = text(change['status']);
         final update = <String, dynamic>{
           'status': status,
@@ -133,10 +160,10 @@ class AttendanceHistoryRepository {
           'updatedAt': FieldValue.serverTimestamp(),
           'updatedBy': _me,
           'syncedToFap': false,
-          if (!snap.exists || text(snap.data()!['status']) != status)
+          if (snap == null || text(snap.data()!['status']) != status)
             'networkVerificationResult': 'Manual',
         };
-        if (snap.exists) {
+        if (snap != null) {
           tx.update(refs[roll]!, update);
         } else {
           tx.set(refs[roll]!, {
@@ -145,6 +172,7 @@ class AttendanceHistoryRepository {
             'rollNumber': roll,
             'classCode': text(cls['classCode']),
             'teacherMemberCode': _me,
+            'checkinTime': FieldValue.serverTimestamp(),
             'ipAddress': '',
           });
         }
@@ -183,50 +211,81 @@ class AttendanceHistoryRepository {
         });
       });
 
-  Future<ApiResult<HistoryExport>> export(String classCode, String? sessionId) =>
-      guardApi(() async {
-        if (sessionId != null && sessionId.isNotEmpty) {
-          final detail = await _detailJson(classCode, sessionId);
-          final info = detail['classInfo'] as Json;
-          final selected = detail['selectedSession'] as Json?;
-          final rows = <List<Object?>>[
-            [
-              'Mã lớp', 'Buổi học', 'MSSV', 'Họ và tên', 'Email', 'Trạng thái',
-              'Thời gian điểm danh', 'Số buổi vắng', 'Số buổi đã kết thúc', 'Ghi chú',
-            ],
-            for (final s in detail['students'] as List)
-              [
-                info['classCode'],
-                selected == null ? '' : text(selected['sessionDate']),
-                s['rollNumber'], s['fullName'], s['email'], s['status'],
-                text(s['checkinTime']), s['absenceCount'], s['totalSessions'], s['note'],
-              ],
-          ];
-          return buildHistoryWorkbook(rows, text(info['classCode']));
-        }
-        final (cls, data) = await _loadOwned(classCode);
-        final rows = <List<Object?>>[
+  Future<ApiResult<HistoryExport>> export(
+    String classCode,
+    String? sessionId,
+  ) => guardApi(() async {
+    if (sessionId != null && sessionId.isNotEmpty) {
+      final detail = await _detailJson(classCode, sessionId);
+      final info = detail['classInfo'] as Json;
+      final selected = detail['selectedSession'] as Json?;
+      final rows = <List<Object?>>[
+        [
+          'Mã lớp',
+          'Buổi học',
+          'MSSV',
+          'Họ và tên',
+          'Email',
+          'Trạng thái',
+          'Thời gian điểm danh',
+          'Số buổi vắng',
+          'Số buổi đã kết thúc',
+          'Ghi chú',
+        ],
+        for (final s in detail['students'] as List)
           [
-            'Mã lớp', 'MSSV', 'Họ và tên', 'Email', 'Số buổi có mặt', 'Số buổi đi trễ',
-            'Số buổi vắng', 'Số buổi đã kết thúc', 'Tổng số buổi', 'Tỷ lệ có mặt (%)',
-            'Tỷ lệ vắng (%)',
+            info['classCode'],
+            selected == null ? '' : text(selected['sessionDate']),
+            s['rollNumber'],
+            s['fullName'],
+            s['email'],
+            s['status'],
+            text(s['checkinTime']),
+            s['absenceCount'],
+            s['totalSessions'],
+            s['note'],
           ],
-          for (final s in data.students)
-            () {
-              final x = _studentSummary(data, s);
-              final closed = x['closedSessions'] as int;
-              double pct(num n) => closed == 0 ? 0 : (n / closed * 1000).round() / 10;
-              return [
-                text(cls['classCode']), s.rollNumber, s.fullName, s.email,
-                x['presentCount'], x['lateCount'], x['absentCount'], closed,
-                x['totalSessions'],
-                pct((x['presentCount'] as int) + (x['lateCount'] as int)),
-                pct(x['absentCount'] as int),
-              ];
-            }(),
-        ];
-        return buildHistoryWorkbook(rows, text(cls['classCode']));
-      });
+      ];
+      return buildHistoryWorkbook(rows, text(info['classCode']));
+    }
+    final (cls, data) = await _loadOwned(classCode);
+    final rows = <List<Object?>>[
+      [
+        'Mã lớp',
+        'MSSV',
+        'Họ và tên',
+        'Email',
+        'Số buổi có mặt',
+        'Số buổi đi trễ',
+        'Số buổi vắng',
+        'Số buổi đã kết thúc',
+        'Tổng số buổi',
+        'Tỷ lệ có mặt (%)',
+        'Tỷ lệ vắng (%)',
+      ],
+      for (final s in data.students)
+        () {
+          final x = _studentSummary(data, s);
+          final closed = x['closedSessions'] as int;
+          double pct(num n) =>
+              closed == 0 ? 0 : (n / closed * 1000).round() / 10;
+          return [
+            text(cls['classCode']),
+            s.rollNumber,
+            s.fullName,
+            s.email,
+            x['presentCount'],
+            x['lateCount'],
+            x['absentCount'],
+            closed,
+            x['totalSessions'],
+            pct((x['presentCount'] as int) + (x['lateCount'] as int)),
+            pct(x['absentCount'] as int),
+          ];
+        }(),
+    ];
+    return buildHistoryWorkbook(rows, text(cls['classCode']));
+  });
 
   Future<ApiResult<SessionModel>> startSession(
     String classCode,
@@ -269,7 +328,10 @@ class AttendanceHistoryRepository {
     final snap = await _db.collection('classes').doc(classCode).get();
     final cls = snap.data();
     if (cls == null || text(cls['teacherMemberCode']) != _me) {
-      throw ApiException('FORBIDDEN', 'Lớp không thuộc giảng viên đang đăng nhập.');
+      throw ApiException(
+        'FORBIDDEN',
+        'Lớp không thuộc giảng viên đang đăng nhập.',
+      );
     }
     final base = <String, dynamic>{
       ...Map<String, dynamic>.from(firestoreToJson(cls)! as Map),
@@ -315,12 +377,17 @@ class AttendanceHistoryRepository {
           .where((s) => text(s['sessionId']) == sessionId)
           .firstOrNull;
       if (selected == null) {
-        throw ApiException('SESSION_NOT_FOUND', 'Buổi học không thuộc lớp được chọn.');
+        throw ApiException(
+          'SESSION_NOT_FOUND',
+          'Buổi học không thuộc lớp được chọn.',
+        );
       }
     } else {
       selected = data.sessions.firstOrNull;
     }
-    final closed = data.sessions.where((s) => s['sessionStatus'] == 'closed').toList();
+    final closed = data.sessions
+        .where((s) => s['sessionStatus'] == 'closed')
+        .toList();
     return {
       'classInfo': _classDto(cls, data),
       'teacherName': currentUser.requireUser.fullName,
@@ -330,7 +397,9 @@ class AttendanceHistoryRepository {
       'students': [
         for (final student in data.students)
           () {
-            final record = selected == null ? null : data.record(selected, student);
+            final record = selected == null
+                ? null
+                : data.record(selected, student);
             final absences = closed
                 .where((s) => _statusFor(data, s, student) == 'Absent')
                 .length;
@@ -340,7 +409,9 @@ class AttendanceHistoryRepository {
               'email': student.email,
               'status': _statusFor(data, selected, student),
               'checkinTime': text(record?['checkinTime']),
-              'networkVerificationResult': text(record?['networkVerificationResult']),
+              'networkVerificationResult': text(
+                record?['networkVerificationResult'],
+              ),
               'note': text(record?['note']),
               'absenceCount': absences,
               'totalSessions': closed.length,
@@ -380,7 +451,9 @@ class AttendanceHistoryRepository {
   }
 
   static Json _summary(_ClassData data) {
-    final closed = data.sessions.where((s) => s['sessionStatus'] == 'closed').toList();
+    final closed = data.sessions
+        .where((s) => s['sessionStatus'] == 'closed')
+        .toList();
     var present = 0, late = 0, atRisk = 0;
     for (final student in data.students) {
       var absences = 0;
@@ -414,12 +487,16 @@ class AttendanceHistoryRepository {
       'subjectName': text(cls['subjectName']),
       'room': text(cls['room']),
       'slotCode': text(cls['slotCode']),
-      'latestSession': data.sessions.isEmpty ? null : _sessionDto(data.sessions.first),
+      'latestSession': data.sessions.isEmpty
+          ? null
+          : _sessionDto(data.sessions.first),
     };
   }
 
   static Json _studentSummary(_ClassData data, _Student student) {
-    final closed = data.sessions.where((s) => s['sessionStatus'] == 'closed').toList();
+    final closed = data.sessions
+        .where((s) => s['sessionStatus'] == 'closed')
+        .toList();
     var present = 0, late = 0, absent = 0;
     for (final session in closed) {
       final status = _statusFor(data, session, student);
@@ -462,22 +539,26 @@ class _ClassData {
 
   factory _ClassData.of(Json cls, TeacherTables t) {
     final classCode = text(cls['classCode']);
-    final sessions = t.sessions
-        .where((s) => text(s['classCode']) == classCode)
-        .toList()
-      ..sort(newestFirst);
+    final sessions =
+        t.sessions.where((s) => text(s['classCode']) == classCode).toList()
+          ..sort(newestFirst);
     final seen = <String>{};
     final students = <_Student>[];
     for (final e in t.enrollments) {
       final roll = text(e['rollNumber']);
-      if (text(e['classCode']) != classCode || roll.isEmpty || !seen.add(roll)) continue;
+      if (text(e['classCode']) != classCode ||
+          roll.isEmpty ||
+          !seen.add(roll)) {
+        continue;
+      }
       students.add(_Student(roll, text(e['fullName']), text(e['email'])));
     }
     students.sort((a, b) => a.rollNumber.compareTo(b.rollNumber));
     final ids = sessions.map((s) => text(s['sessionId'])).toSet();
     final records = <String, Json>{};
     for (final r in t.records) {
-      if (ids.contains(text(r['sessionId'])) && seen.contains(text(r['rollNumber']))) {
+      if (ids.contains(text(r['sessionId'])) &&
+          seen.contains(text(r['rollNumber']))) {
         records['${text(r['sessionId'])}|${text(r['rollNumber'])}'] = r;
       }
     }

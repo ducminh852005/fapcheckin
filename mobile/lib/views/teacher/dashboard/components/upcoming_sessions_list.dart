@@ -40,14 +40,14 @@ class UpcomingSessionsList extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Flexible(
+                    child: Text(
                       'CA DẠY KẾ TIẾP',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: DashboardColors.textMuted,
                         fontSize: 12.5,
@@ -55,63 +55,57 @@ class UpcomingSessionsList extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                  ),
+                  const SizedBox(width: 6),
 
-                    // Badge "Hôm nay"
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: DashboardColors.orangeLight,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Hôm nay',
-                        style: TextStyle(
-                          color: DashboardColors.orangePrimary,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  // Badge "Hôm nay"
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: DashboardColors.orangeLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Hôm nay',
+                      style: TextStyle(
+                        color: DashboardColors.orangePrimary,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
 
             // Nút "Xem lịch tuần >"
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: InkWell(
-                  onTap: () => dashboardVm.navigate('lich-hoc'),
-                  borderRadius: BorderRadius.circular(6),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Xem lịch tuần',
-                          style: TextStyle(
-                            color: DashboardColors.orangePrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(width: 2),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: DashboardColors.orangePrimary,
-                          size: 15,
-                        ),
-                      ],
+            InkWell(
+              onTap: () => dashboardVm.navigate('lich-hoc'),
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Xem lịch tuần',
+                      style: TextStyle(
+                        color: DashboardColors.orangePrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
+                    SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: DashboardColors.orangePrimary,
+                      size: 15,
+                    ),
+                  ],
                 ),
               ),
             ),

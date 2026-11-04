@@ -45,26 +45,39 @@ class LiveSessionCustomHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (onBackTap != null) ...[
-              InkWell(
-                onTap: onBackTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: LiveSessionColors.borderSubtle),
-                    boxShadow: LiveSessionColors.cardShadow,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 17,
-                    color: Color(0xFF334155),
+              Tooltip(
+                message: 'Quay lại',
+                child: InkWell(
+                  onTap: onBackTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: LiveSessionColors.borderSubtle,
+                          ),
+                          boxShadow: LiveSessionColors.cardShadow,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 17,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
             ],
             const Expanded(
               child: FittedBox(
@@ -81,23 +94,36 @@ class LiveSessionCustomHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            InkWell(
-              onTap: onMoreTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: LiveSessionColors.borderSubtle),
-                  boxShadow: LiveSessionColors.cardShadow,
-                ),
-                child: const Icon(
-                  Icons.more_horiz_rounded,
-                  size: 22,
-                  color: Color(0xFF334155),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Tuỳ chọn phiên điểm danh',
+              child: InkWell(
+                onTap: onMoreTap,
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: LiveSessionColors.borderSubtle,
+                        ),
+                        boxShadow: LiveSessionColors.cardShadow,
+                      ),
+                      child: const Icon(
+                        Icons.more_horiz_rounded,
+                        size: 22,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

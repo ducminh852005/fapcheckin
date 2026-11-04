@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/repositories/schedule_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+
 import '../../dashboard/components/weekly_timetable.dart';
 
 /// Hiển thị Modal Bottom Sheet Tạo lịch học bổ sung (Học bù / Workshop / Ôn tập)
@@ -45,6 +46,51 @@ const List<_SlotDef> _kStandardSlots = [
   _SlotDef(number: 6, label: 'Slot 6', startTime: '16:00', endTime: '17:30'),
 ];
 
+class _LessonTypeOption {
+  final String id;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+
+  const _LessonTypeOption({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+  });
+}
+
+const List<_LessonTypeOption> _kLessonTypeOptions = [
+  _LessonTypeOption(
+    id: 'makeup',
+    title: 'Học bù (Make-up Slot)',
+    subtitle: 'Bổ sung buổi học bị hoãn hoặc thiếu tiết',
+    icon: Icons.event_repeat_rounded,
+    iconColor: Color(0xFFEA580C),
+    iconBackground: Color(0xFFFFEDD5),
+  ),
+  _LessonTypeOption(
+    id: 'workshop',
+    title: 'Workshop (Hội thảo / Chuyên đề)',
+    subtitle: 'Buổi chia sẻ, thực hành hoặc chuyên đề mở rộng',
+    icon: Icons.groups_2_outlined,
+    iconColor: Color(0xFF2563EB),
+    iconBackground: Color(0xFFDBEAFE),
+  ),
+  _LessonTypeOption(
+    id: 'review',
+    title: 'Ôn tập (Review Slot)',
+    subtitle: 'Ôn luyện kiến thức trước kiểm tra hoặc thi',
+    icon: Icons.menu_book_rounded,
+    iconColor: Color(0xFF7C3AED),
+    iconBackground: Color(0xFFEDE9FE),
+  ),
+];
+
 /// Bottom Sheet Tạo lịch học bổ sung
 class CreateScheduleBottomSheet extends StatefulWidget {
   const CreateScheduleBottomSheet({super.key, this.repository});
@@ -59,6 +105,14 @@ class CreateScheduleBottomSheet extends StatefulWidget {
 class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   late final ScheduleRepository _repository;
   final TextEditingController _note = TextEditingController();
+  final LayerLink _classMenuLink = LayerLink();
+  final GlobalKey _classFieldKey = GlobalKey();
+  OverlayEntry? _classMenuOverlay;
+  bool _isClassMenuOpen = false;
+  final LayerLink _lessonTypeMenuLink = LayerLink();
+  final GlobalKey _lessonTypeFieldKey = GlobalKey();
+  OverlayEntry? _lessonTypeMenuOverlay;
+  bool _isLessonTypeMenuOpen = false;
 
   Map<String, dynamic>? _options;
   String? _error;
@@ -85,8 +139,402 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   @override
   void dispose() {
+    _classMenuOverlay?.remove();
+    _classMenuOverlay = null;
+    _lessonTypeMenuOverlay?.remove();
+    _lessonTypeMenuOverlay = null;
     _note.dispose();
     super.dispose();
+  }
+
+  void _closeClassMenu() {
+    _classMenuOverlay?.remove();
+    _classMenuOverlay = null;
+    if (mounted && _isClassMenuOpen) {
+      setState(() => _isClassMenuOpen = false);
+    }
+  }
+
+  void _toggleClassMenu(List<Map<String, dynamic>> classes) {
+    if (_isClassMenuOpen) {
+      _closeClassMenu();
+      return;
+    }
+    if (_saving || _pending != null || classes.isEmpty) return;
+    _closeLessonTypeMenu();
+
+    final renderBox =
+        _classFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    setState(() => _isClassMenuOpen = true);
+    _classMenuOverlay = OverlayEntry(
+      builder: (overlayContext) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _closeClassMenu,
+              child: const ColoredBox(color: Colors.transparent),
+            ),
+          ),
+          CompositedTransformFollower(
+            link: _classMenuLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, 8),
+            child: SizedBox(
+              width: renderBox.size.width,
+              child: _buildClassMenuCard(classes),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_classMenuOverlay!);
+  }
+
+  void _closeLessonTypeMenu() {
+    _lessonTypeMenuOverlay?.remove();
+    _lessonTypeMenuOverlay = null;
+    if (mounted && _isLessonTypeMenuOpen) {
+      setState(() => _isLessonTypeMenuOpen = false);
+    }
+  }
+
+  void _toggleLessonTypeMenu() {
+    if (_isLessonTypeMenuOpen) {
+      _closeLessonTypeMenu();
+      return;
+    }
+    if (_saving || _pending != null) return;
+    _closeClassMenu();
+
+    final renderBox =
+        _lessonTypeFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    setState(() => _isLessonTypeMenuOpen = true);
+    _lessonTypeMenuOverlay = OverlayEntry(
+      builder: (overlayContext) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _closeLessonTypeMenu,
+              child: const ColoredBox(color: Colors.transparent),
+            ),
+          ),
+          CompositedTransformFollower(
+            link: _lessonTypeMenuLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: const Offset(0, 8),
+            child: SizedBox(
+              width: renderBox.size.width,
+              child: _buildLessonTypeMenuCard(),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_lessonTypeMenuOverlay!);
+  }
+
+  void _selectLessonType(String type) {
+    setState(() => _type = type);
+    _closeLessonTypeMenu();
+  }
+
+  Widget _buildLessonTypeMenuCard() {
+    return Material(
+      elevation: 10,
+      shadowColor: const Color(0x33000000),
+      borderRadius: BorderRadius.circular(16),
+      color: Colors.white,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CHỌN LOẠI BUỔI HỌC',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF94A3B8),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  Text(
+                    '3 loại',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            ..._kLessonTypeOptions.map((option) {
+              final selected = option.id == _type;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _selectLessonType(option.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFFFFF7ED)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: selected
+                          ? Border.all(
+                              color: const Color(0xFFFDBA74),
+                              width: 1.2,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: option.iconBackground,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            option.icon,
+                            color: option.iconColor,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                option.title,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: selected
+                                      ? const Color(0xFFFA5A1E)
+                                      : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                option.subtitle,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF64748B),
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (selected) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFFFA5A1E),
+                            size: 22,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectClass(
+    String classCode,
+    List<Map<String, dynamic>> classes,
+  ) {
+    setState(() {
+      _classCode = classCode;
+      final match = classes
+          .where((item) => item['classCode']?.toString() == classCode)
+          .firstOrNull;
+      final room = match?['room']?.toString();
+      if (room != null && room.isNotEmpty) _room = room;
+    });
+    _closeClassMenu();
+  }
+
+  Widget _buildClassMenuCard(List<Map<String, dynamic>> classes) {
+    return Material(
+      elevation: 10,
+      shadowColor: const Color(0x33000000),
+      borderRadius: BorderRadius.circular(16),
+      color: Colors.white,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 380),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'CHỌN LỚP HỌC',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF94A3B8),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  Text(
+                    '${classes.length} lớp',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: classes.map((item) {
+                    final classCode = item['classCode']?.toString() ?? '';
+                    final subjectName = item['subjectName']?.toString() ?? '';
+                    final selected = classCode == _classCode;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _selectClass(classCode, classes),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? const Color(0xFFFFF7ED)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: selected
+                                ? Border.all(
+                                    color: const Color(0xFFFDBA74),
+                                    width: 1.2,
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEDD5),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.school_outlined,
+                                  color: Color(0xFFEA580C),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      classCode,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: selected
+                                            ? const Color(0xFFFA5A1E)
+                                            : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    if (subjectName.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        subjectName,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: Color(0xFF64748B),
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              if (selected) ...[
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFFFA5A1E),
+                                  size: 22,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -178,8 +626,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
       return parsed.slot;
     }
 
-    final repoSlot =
-        repoSlots.where((s) => s['slotCode'] == selectedSlotCode).firstOrNull;
+    final repoSlot = repoSlots
+        .where((s) => s['slotCode'] == selectedSlotCode)
+        .firstOrNull;
     if (repoSlot != null) {
       final start = repoSlot['startTime']?.toString();
       for (final std in _kStandardSlots) {
@@ -190,6 +639,62 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
     }
 
     return 2;
+  }
+
+  int? _minutes(String? value) {
+    final match = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(value ?? '');
+    if (match == null) return null;
+    final hour = int.tryParse(match[1]!);
+    final minute = int.tryParse(match[2]!);
+    if (hour == null || minute == null || hour > 23 || minute > 59) {
+      return null;
+    }
+    return hour * 60 + minute;
+  }
+
+  Map<String, dynamic>? _regularClassConflict() {
+    final day = DateTime.tryParse(_day ?? '');
+    final selectedCode = _slotCode;
+    if (day == null || selectedCode == null) return null;
+
+    final slots = _rows('slots');
+    Map<String, dynamic>? slotOf(String code) =>
+        slots.where((slot) => slot['slotCode'] == code).firstOrNull;
+    final selected = slotOf(selectedCode);
+    if (selected == null) return null;
+    final selectedStart = _minutes(selected['startTime']?.toString());
+    final selectedEnd = _minutes(selected['endTime']?.toString());
+    if (selectedStart == null || selectedEnd == null) return null;
+
+    // Firestore dùng 2 = Thứ Hai ... 7 = Thứ Bảy, 8 = Chủ Nhật.
+    final firestoreWeekday = day.weekday + 1;
+    for (final regularClass in _rows('classes')) {
+      final regularSlot = slotOf(regularClass['slotCode']?.toString() ?? '');
+      if (regularSlot == null) continue;
+      final weekdays =
+          (regularSlot['weekdays'] as List?)?.whereType<num>().map(
+            (value) => value.toInt(),
+          ) ??
+          const Iterable<int>.empty();
+      if (!weekdays.contains(firestoreWeekday)) continue;
+      final start = _minutes(regularSlot['startTime']?.toString());
+      final end = _minutes(regularSlot['endTime']?.toString());
+      if (start != null &&
+          end != null &&
+          start < selectedEnd &&
+          end > selectedStart) {
+        return regularClass;
+      }
+    }
+    return null;
+  }
+
+  String? get _regularConflictMessage {
+    final conflict = _regularClassConflict();
+    if (conflict == null) return null;
+    final classCode = conflict['classCode']?.toString() ?? '';
+    final slotCode = conflict['slotCode']?.toString() ?? '';
+    return 'Giảng viên đã có lịch chính khóa $classCode ($slotCode) trong ngày và khung giờ này. Vui lòng chọn ngày hoặc ca khác.';
   }
 
   String _formatVnDate(DateTime date) {
@@ -230,6 +735,16 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final regularConflict = _regularConflictMessage;
+    if (regularConflict != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(regularConflict),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     if (_classCode == null || _slotCode == null || _room == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -294,6 +809,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
       (s) => s.number == selectedSlotNum,
       orElse: () => _kStandardSlots[1],
     );
+    final visibleError = _regularConflictMessage ?? _error;
 
     return Container(
       constraints: BoxConstraints(
@@ -377,7 +893,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                       const SizedBox(height: 12),
                     ],
 
-                    if (_error != null) ...[
+                    if (visibleError != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -395,7 +911,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _error!,
+                                visibleError,
                                 style: const TextStyle(
                                   color: Color(0xFFDC2626),
                                   fontSize: 12.5,
@@ -564,8 +1080,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                     ),
                   ),
                   TextSpan(
-                    text:
-                        'Lịch học bổ sung sẽ được đồng bộ tự động lên cổng FAP và gửi thông báo push đến toàn bộ sinh viên trong lớp sau khi xác nhận.',
+                    text: 'Lịch học bổ sung sẽ được đồng bộ tự động lên cổng FAP và gửi thông báo push đến toàn bộ sinh viên trong lớp sau khi xác nhận.',
                   ),
                 ],
               ),
@@ -625,42 +1140,71 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _type,
-          isExpanded: true,
-          decoration: _inputDecoration(),
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: Color(0xFF64748B),
+        CompositedTransformTarget(
+          link: _lessonTypeMenuLink,
+          child: InkWell(
+            key: _lessonTypeFieldKey,
+            borderRadius: BorderRadius.circular(12),
+            onTap: _toggleLessonTypeMenu,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isLessonTypeMenuOpen
+                      ? const Color(0xFFFA5A1E)
+                      : const Color(0xFFE2E8F0),
+                  width: _isLessonTypeMenuOpen ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: _kLessonTypeOptions
+                          .firstWhere((option) => option.id == _type)
+                          .iconBackground,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(
+                      _kLessonTypeOptions
+                          .firstWhere((option) => option.id == _type)
+                          .icon,
+                      color: _kLessonTypeOptions
+                          .firstWhere((option) => option.id == _type)
+                          .iconColor,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _kLessonTypeOptions
+                          .firstWhere((option) => option.id == _type)
+                          .title,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isLessonTypeMenuOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF64748B),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
           ),
-          items: const [
-            DropdownMenuItem(
-              value: 'makeup',
-              child: Text(
-                'Học bù (Make-up Slot)',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-            ),
-            DropdownMenuItem(
-              value: 'workshop',
-              child: Text(
-                'Workshop (Hội thảo / Chuyên đề)',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-            ),
-            DropdownMenuItem(
-              value: 'review',
-              child: Text(
-                'Ôn tập (Review Slot)',
-                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-          onChanged: _saving || _pending != null
-              ? null
-              : (v) {
-                  if (v != null) setState(() => _type = v);
-                },
         ),
       ],
     );
@@ -697,47 +1241,93 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _classCode,
-          isExpanded: true,
-          hint: const Text(
-            'Chọn lớp học',
-            style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-          ),
-          decoration: _inputDecoration(),
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: Color(0xFF64748B),
-          ),
-          items: classes
-              .map(
-                (c) => DropdownMenuItem(
-                  value: c['classCode']?.toString(),
-                  child: Text(
-                    '${c['classCode']} — ${c['subjectName']}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0F172A),
+        CompositedTransformTarget(
+          link: _classMenuLink,
+          child: InkWell(
+            key: _classFieldKey,
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _toggleClassMenu(classes),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isClassMenuOpen
+                      ? const Color(0xFFFA5A1E)
+                      : const Color(0xFFE2E8F0),
+                  width: _isClassMenuOpen ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEDD5),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.school_outlined,
+                      color: Color(0xFFEA580C),
+                      size: 18,
                     ),
                   ),
-                ),
-              )
-              .toList(),
-          onChanged: _saving || _pending != null
-              ? null
-              : (v) {
-                  setState(() {
-                    _classCode = v;
-                    final match =
-                        classes.where((c) => c['classCode'] == v).firstOrNull;
-                    if (match != null) {
-                      final r = match['room']?.toString();
-                      if (r != null && r.isNotEmpty) _room = r;
-                    }
-                  });
-                },
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _classCode == null
+                        ? const Text(
+                            'Chọn lớp học',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _classCode!,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                classes
+                                        .where(
+                                          (item) =>
+                                              item['classCode']?.toString() ==
+                                              _classCode,
+                                        )
+                                        .firstOrNull?['subjectName']
+                                        ?.toString() ??
+                                    '',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                  Icon(
+                    _isClassMenuOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: const Color(0xFF64748B),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -1109,11 +1699,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           ),
           child: const Row(
             children: [
-              Icon(
-                Icons.domain_rounded,
-                size: 17,
-                color: Color(0xFFEA580C),
-              ),
+              Icon(Icons.domain_rounded, size: 17, color: Color(0xFFEA580C)),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1174,6 +1760,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   // ── 10. Chân trang cố định ─────────────────────────────────────────────────
   Widget _buildFooter(double bottomPadding) {
+    final hasRegularConflict = _regularConflictMessage != null;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 10, 20, 14 + bottomPadding),
       decoration: const BoxDecoration(
@@ -1209,7 +1796,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: _saving || _options == null ? null : _save,
+                onPressed: _saving || _options == null || hasRegularConflict
+                    ? null
+                    : _save,
                 icon: _saving
                     ? const SizedBox(
                         width: 18,
@@ -1228,8 +1817,8 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                   _saving
                       ? 'Đang lưu…'
                       : _pending == null
-                          ? 'Xác nhận tạo lịch'
-                          : 'Thử lại cùng yêu cầu',
+                      ? 'Xác nhận tạo lịch'
+                      : 'Thử lại cùng yêu cầu',
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
@@ -1239,8 +1828,8 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFA5A1E),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor:
-                      const Color(0xFFFA5A1E).withValues(alpha: 0.5),
+                  disabledBackgroundColor: const Color(0xFFFA5A1E)
+                      .withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
