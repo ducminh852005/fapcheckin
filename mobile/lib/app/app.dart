@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ import 'package:fapcheckin_core/theme/app_theme.dart';
 
 import '../core/services/auto_session_manager.dart';
 import '../core/services/google_auth_service.dart';
+import '../core/services/push_notification_service.dart';
 import '../core/services/remote_settings.dart';
 import '../core/services/timetable_ocr_service.dart';
 
@@ -57,6 +59,10 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   late final PreferencesViewModel _preferencesViewModel;
   late final ReportViewModel _reportViewModel;
   late final GoRouter _router;
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+  late final PushNotificationService _pushNotificationService;
+  RemoteMessage? _pendingPushMessage;
 
   @override
   void initState() {
@@ -79,6 +85,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       uid: () => _authViewModel.session?.token ?? '',
     );
     _preferencesViewModel = PreferencesViewModel(_accountFeaturesRepo);
+    _authViewModel.beforeSignOut = _preferencesViewModel.unregisterDevice;
     _dashboardViewModel = DashboardViewModel(_teacherRepo);
     _liveSessionViewModel = LiveSessionViewModel(_teacherRepo)
       ..applyRemoteSettings(
@@ -100,6 +107,15 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _liveSessionViewModel.addListener(_syncLiveSession);
 
     _router = createAppRouter(_authViewModel);
+    _pushNotificationService = PushNotificationService(
+      messengerKey: _messengerKey,
+      onOpenMessage: _handlePushMessage,
+    );
+    unawaited(
+      _pushNotificationService.start().catchError((Object error) {
+        debugPrint('Push notification init error: $error');
+      }),
+    );
     // Firebase Auth giữ phiên trên thiết bị: nạp lại hồ sơ để khỏi đăng nhập lại.
     _authViewModel.restoreSession();
 
@@ -123,6 +139,19 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   AutoSessionManager? _autoSessionManager;
   String? _accountId;
   String? _liveSessionKey;
+
+  void _handlePushMessage(RemoteMessage message) {
+    if (!_authViewModel.isAuthenticated) {
+      _pendingPushMessage = message;
+      return;
+    }
+
+    final route = routeForPushMessage(message);
+    _pendingPushMessage = null;
+    _dashboardViewModel.navigate(route);
+    _router.go('${AppRoutes.teacher}/$route');
+  }
+
   void _syncLiveSession() {
     final vm = _liveSessionViewModel;
     _dashboardViewModel.updateActiveSession(
@@ -177,6 +206,12 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       session?.user.isTeacher == true ? session?.token : null,
     );
     _preferencesViewModel.bindAccount(_authViewModel.session?.token);
+    final pendingMessage = _pendingPushMessage;
+    if (session != null && pendingMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handlePushMessage(pendingMessage);
+      });
+    }
   }
 
   @override
@@ -191,6 +226,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _liveSessionViewModel.dispose();
     _attendanceHistoryViewModel.dispose();
     _preferencesViewModel.dispose();
+    unawaited(_pushNotificationService.dispose());
     _reportViewModel.dispose();
     super.dispose();
   }
@@ -219,6 +255,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: prefsVm.themeMode,
+          scaffoldMessengerKey: _messengerKey,
           routerConfig: _router,
           builder: (context, child) {
             final mq = MediaQuery.of(context);
