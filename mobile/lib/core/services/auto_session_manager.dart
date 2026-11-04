@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
@@ -18,9 +19,8 @@ class TimeSlotHelper {
     DateTime? end = _parseTime(date, c.endTime);
     if (start != null && end != null) return (start, end);
 
-    final m = RegExp(
-      r'(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})',
-    ).firstMatch(c.timeLabel);
+    final m = RegExp(r'(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})')
+        .firstMatch(c.timeLabel);
     if (m != null) {
       start ??= _parseTime(date, m.group(1));
       end ??= _parseTime(date, m.group(2));
@@ -70,16 +70,6 @@ class TimeSlotHelper {
     DateTime date,
     ClassSectionModel c,
   ) {
-    // Ca học kiểm thử hiện tại (22:00 - 23:59) hôm nay cho lớp SWD392_SE1927
-    if (c.classCode == 'SWD392_SE1927' && date.weekday == DateTime.tuesday) {
-      final now = DateTime.now();
-      if (now.hour >= 22 || now.hour <= 2) {
-        final start = DateTime(date.year, date.month, date.day, 22, 0);
-        final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
-        return (start, end);
-      }
-    }
-
     return resolveStandardSlotRange(date, c);
   }
 
@@ -117,7 +107,10 @@ class AutoSessionManager {
 
   void start() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => checkRealtimeSessions());
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => checkRealtimeSessions(),
+    );
     checkRealtimeSessions();
   }
 
@@ -134,7 +127,8 @@ class AutoSessionManager {
     _isProcessing = true;
     try {
       final now = _now();
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       if (_currentDayKey != todayStr) {
         _currentDayKey = todayStr;
         _autoClosedSessionsToday.clear();
@@ -142,7 +136,9 @@ class AutoSessionManager {
 
       for (final c in classes) {
         final info = SlotCodeParser.parse(c.slotCode);
-        final isToday = info != null ? info.weekdays.contains(now.weekday) : false;
+        final isToday = info != null
+            ? info.weekdays.contains(now.weekday)
+            : false;
         if (!isToday) continue;
 
         final (startDt, endDt) = TimeSlotHelper.resolveSlotRange(now, c);
@@ -161,18 +157,22 @@ class AutoSessionManager {
               liveSessionViewModel.triggerToast(
                 type: ToastType.closeSession,
                 title: 'Ca học đã kết thúc!',
-                message: 'Lớp ${c.classCode} (${c.subjectCode}) đã hết giờ và tự động đóng điểm danh.',
+                message:
+                    'Lớp ${c.classCode} (${c.subjectCode}) đã hết giờ và tự động đóng điểm danh.',
                 icon: Icons.check_circle_outline,
                 accentColor: AppColors.statusPresent,
               );
             } else if (c.isActive && (c.activeSessionId?.isNotEmpty ?? false)) {
               _autoClosedSessionsToday.add(classKey);
-              await teacherRepository.closeSession(sessionId: c.activeSessionId!);
+              await teacherRepository.closeSession(
+                sessionId: c.activeSessionId!,
+              );
               await dashboardViewModel.loadClasses();
               liveSessionViewModel.triggerToast(
                 type: ToastType.closeSession,
                 title: 'Ca học đã kết thúc!',
-                message: 'Lớp ${c.classCode} (${c.subjectCode}) đã hết giờ và tự động đóng điểm danh.',
+                message:
+                    'Lớp ${c.classCode} (${c.subjectCode}) đã hết giờ và tự động đóng điểm danh.',
                 icon: Icons.check_circle_outline,
                 accentColor: AppColors.statusPresent,
               );
@@ -180,11 +180,13 @@ class AutoSessionManager {
           }
         }
         // 2. Tự động mở lớp khi đến thời gian ca học (now >= startDt && now < endDt)
-        else if ((now.isAfter(startDt) || now.isAtSameMomentAs(startDt)) && now.isBefore(endDt)) {
+        else if ((now.isAfter(startDt) || now.isAtSameMomentAs(startDt)) &&
+            now.isBefore(endDt)) {
           if (!c.isActive &&
               !_autoClosedSessionsToday.contains(classKey) &&
               !liveSessionViewModel.isLoading &&
-              (liveSessionViewModel.session == null || !liveSessionViewModel.session!.isOpen)) {
+              (liveSessionViewModel.session == null ||
+                  !liveSessionViewModel.session!.isOpen)) {
             await liveSessionViewModel.startSession(
               classSection: c,
               slotCode: c.slotCode,
@@ -194,7 +196,8 @@ class AutoSessionManager {
             liveSessionViewModel.triggerToast(
               type: ToastType.startSession,
               title: 'Tự động mở lớp học!',
-              message: 'Đã đến giờ ca dạy lớp ${c.classCode} (${c.subjectCode}). Phiên điểm danh đã sẵn sàng.',
+              message:
+                  'Đã đến giờ ca dạy lớp ${c.classCode} (${c.subjectCode}). Phiên điểm danh đã sẵn sàng.',
               icon: Icons.qr_code_scanner,
               accentColor: AppColors.statusPresent,
             );
@@ -208,4 +211,3 @@ class AutoSessionManager {
     }
   }
 }
-

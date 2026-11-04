@@ -13,7 +13,6 @@ import '../dashboard/components/weekly_timetable.dart';
 import 'schedule_colors.dart';
 
 import 'package:fapcheckin_core/repositories/schedule_repository.dart';
-import 'package:fapcheckin_core/models/class_section_model.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
 
 import '../live_session/dialogs/start_session_dialog.dart';
@@ -485,7 +484,10 @@ class _ScheduleBodyState extends State<ScheduleBody> {
 
       if (isToday) {
         final slotNum = info.slot;
-        final (startDt, endDt) = TimeSlotHelper.resolveStandardSlotRange(date, c);
+        final (startDt, endDt) = TimeSlotHelper.resolveStandardSlotRange(
+          date,
+          c,
+        );
 
         final now = DateTime.now();
         final targetDay = DateTime(date.year, date.month, date.day);
@@ -537,50 +539,6 @@ class _ScheduleBodyState extends State<ScheduleBody> {
           ),
         );
       }
-    }
-
-    // Ca học kiểm thử Live Session hiện tại (22:30–23:59) hôm nay
-    if (DateUtils.isSameDay(date, DateTime.now())) {
-      final testCls = vm.classes.firstWhere(
-        (c) => c.classCode == 'SWD392_SE1927',
-        orElse: () => vm.classes.isNotEmpty
-            ? vm.classes.first
-            : const ClassSectionModel(
-                classCode: 'SWD392_SE1927',
-                subjectCode: 'SWD392',
-                subjectName: 'Kiến trúc và thiết kế phần mềm',
-                room: '611',
-                studentCount: 35,
-                teacherMemberCode: '',
-                timeLabel: '22:30–23:59',
-                completedSessions: 0,
-                totalSessions: 30,
-                averageAttendance: 0,
-                isActive: false,
-              ),
-      );
-
-      final liveVm = context.read<LiveSessionViewModel>();
-      final isLive = liveVm.session?.isOpen == true &&
-          liveVm.session?.classCode == testCls.classCode;
-
-      result.add(
-        _TimelineSessionData(
-          slot: 5,
-          slotCode: 'A4',
-          timeRange: '22:30–23:59',
-          subjectCode: testCls.subjectCode,
-          classCode: testCls.classCode,
-          subjectName: testCls.subjectName,
-          room: testCls.room.isNotEmpty ? testCls.room : '611',
-          subtext: isLive
-              ? '${liveVm.checkedInCount}/${testCls.studentCount} sinh viên đã điểm danh'
-              : (testCls.isActive
-                  ? '${vm.activeSessionScanned}/${testCls.studentCount} sinh viên đã điểm danh'
-                  : 'Đang trong giờ dạy • Vào điểm danh ngay'),
-          status: ScheduleSessionStatus.active,
-        ),
-      );
     }
 
     final dateKey =

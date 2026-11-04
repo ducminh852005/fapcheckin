@@ -7,4 +7,5 @@ export type AdminPage =
   | "feedback"
   | "feedback-history"
   | "reports"
+  | "crashlytics"
   | "settings"
