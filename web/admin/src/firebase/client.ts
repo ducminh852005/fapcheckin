@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB6jzp1YAVEUhHA43OYTOPIPzy33UWSUsY",
-  appId: "1:161196189514:web:2690898e4ff702d07c43b3",
-  messagingSenderId: "161196189514",
-  projectId: "fapcheckin-3bn2di",
-  authDomain: "fapcheckin-3bn2di.firebaseapp.com",
-  storageBucket: "fapcheckin-3bn2di.firebasestorage.app",
+  apiKey: "AIzaSyBqlu8uPKRM4d-zdCVOTQq4cCoQZhHuZ0Y",
+  appId: "1:1076774489636:web:735f55965525ec971892b1",
+  messagingSenderId: "1076774489636",
+  projectId: "ducminh-41459",
+  authDomain: "ducminh-41459.firebaseapp.com",
+  storageBucket: "ducminh-41459.firebasestorage.app",
 }
 
 export const app = getApps()[0] ?? initializeApp(firebaseConfig)
