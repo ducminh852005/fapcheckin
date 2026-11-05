@@ -266,7 +266,6 @@ class LiveSessionBody extends StatelessWidget {
                   sessionSubtitle: 'Ca ${liveVm.slot} · ${liveVm.dateLabel}',
                   classTitle: classTitle,
                   timeAndRoom: timeAndRoom,
-                  onBackTap: () => dashboardVm.navigateBack('lich-hoc'),
                   onMoreTap: () => _showMoreOptions(context, dashboardVm),
                 ),
                 const SizedBox(height: 16),

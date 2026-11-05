@@ -17,6 +17,7 @@ import 'package:fapcheckin_core/repositories/request_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
 
 import '../../../viewmodels/auth_viewmodel.dart';
+import '../../../core/widgets/app_toast.dart';
 
 Future<T?> showRequestBottomSheet<T>(
   BuildContext context, {
@@ -303,6 +304,13 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
       return;
     }
 
+    if (detail.length > 500) {
+      const message = 'Mô tả chi tiết không được vượt quá 500 ký tự.';
+      setState(() => _error = message);
+      showAppToast(context, message: message, type: AppToastType.warning);
+      return;
+    }
+
     setState(() {
       _saving = true;
 
@@ -373,28 +381,27 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
           _attachments.clear();
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+        showAppToast(
+          context,
+          message:
               'Đã gửi yêu cầu thành công tới phòng Quản lý Đào tạo (HAC).',
-            ),
-
-            backgroundColor: Color(0xFF10B981),
-          ),
+          type: AppToastType.success,
         );
       } else {
+        final message = (res as ApiFailure<void>).error.message;
         setState(() {
           _saving = false;
-
-          _error = (res as ApiFailure<void>).error.message;
+          _error = message;
         });
+        showAppToast(context, message: message, type: AppToastType.error);
       }
     } catch (e) {
+      final message = 'Lỗi gửi yêu cầu: $e';
       setState(() {
         _saving = false;
-
-        _error = 'Lỗi gửi yêu cầu: $e';
+        _error = message;
       });
+      showAppToast(context, message: message, type: AppToastType.error);
     }
   }
 
@@ -1155,10 +1162,15 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                 ),
               ),
 
-              Text(
-                '${_reasonController.text.length}/500',
-
-                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _reasonController,
+                builder: (context, value, _) => Text(
+                  '${value.text.length}/500',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ),
             ],
           ),
@@ -1168,20 +1180,17 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
           TextField(
             controller: _reasonController,
 
-            maxLength: 500,
+            keyboardType: TextInputType.multiline,
+
+            textCapitalization: TextCapitalization.sentences,
+
+            autocorrect: true,
+
+            enableSuggestions: true,
+
+            textInputAction: TextInputAction.newline,
 
             maxLines: 3,
-
-            buildCounter: (
-              _, {
-              required currentLength,
-
-              required isFocused,
-
-              maxLength,
-            }) => null,
-
-            onChanged: (_) => setState(() {}),
 
             style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
 

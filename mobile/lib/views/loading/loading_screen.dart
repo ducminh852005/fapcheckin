@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
 import '../../app/app_router.dart';
@@ -113,15 +114,18 @@ class _LoadingScreenState extends State<LoadingScreen> {
               const SizedBox(height: 38),
 
               // ── Vòng xoay tải màu cam FPT ──────────────────────────────────
-              const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.8,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppPalette.primary),
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: Lottie.asset(
+                  'assets/animations/loading.json',
+                  fit: BoxFit.contain,
+                  repeat: true,
+                  animate: true,
+                  frameRate: FrameRate.composition,
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 12),
 
               // ── Văn bản trạng thái ─────────────────────────────────────────
               const Text(
@@ -146,15 +150,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
               const Spacer(flex: 4),
 
               // ── Khối Logo FPT Education & Phiên bản ở chân trang ────────────
-              Image.asset(
-                'assets/images/Logo_FPT_Education-Photoroom.png',
-                width: 105,
-                height: 44,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 10),
               const Text(
                 'FAP CHECK-IN · PHIÊN BẢN 1.0.0',
                 style: TextStyle(

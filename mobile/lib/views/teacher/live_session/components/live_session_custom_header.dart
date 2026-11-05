@@ -10,7 +10,6 @@ class LiveSessionCustomHeader extends StatelessWidget {
   final String sessionSubtitle;
   final String classTitle;
   final String timeAndRoom;
-  final VoidCallback? onBackTap;
   final VoidCallback? onMoreTap;
 
   const LiveSessionCustomHeader({
@@ -18,7 +17,6 @@ class LiveSessionCustomHeader extends StatelessWidget {
     this.sessionSubtitle = '',
     this.classTitle = '',
     this.timeAndRoom = '',
-    this.onBackTap,
     this.onMoreTap,
   });
 
@@ -44,41 +42,6 @@ class LiveSessionCustomHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (onBackTap != null) ...[
-              Tooltip(
-                message: 'Quay lại',
-                child: InkWell(
-                  onTap: onBackTap,
-                  borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: LiveSessionColors.borderSubtle,
-                          ),
-                          boxShadow: LiveSessionColors.cardShadow,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 17,
-                          color: Color(0xFF334155),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
             const Expanded(
               child: FittedBox(
                 alignment: Alignment.centerLeft,

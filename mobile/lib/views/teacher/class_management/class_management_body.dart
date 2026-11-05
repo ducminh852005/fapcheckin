@@ -559,15 +559,26 @@ class _ClassManagementBodyState extends State<ClassManagementBody> {
       }).toList();
     }
 
-    allItems.sort(
-      (a, b) => _sortAscending
+    allItems.sort((a, b) {
+      // Ca đang diễn ra luôn phải nằm đầu danh sách để giảng viên có thể
+      // truy cập ngay, bất kể đang chọn sắp xếp giờ tăng hay giảm.
+      final activeCompare = _statusPriority(
+        a.status,
+      ).compareTo(_statusPriority(b.status));
+      if (activeCompare != 0) return activeCompare;
+
+      return _sortAscending
           ? a.startTime.compareTo(b.startTime)
-          : b.startTime.compareTo(a.startTime),
-    );
+          : b.startTime.compareTo(a.startTime);
+    });
     final today = allItems.where((c) => c.isToday).toList();
     final upcoming = allItems.where((c) => !c.isToday).toList();
 
     return _ClassGroups(todayClasses: today, upcomingClasses: upcoming);
+  }
+
+  int _statusPriority(ClassCardStatus status) {
+    return status == ClassCardStatus.active ? 0 : 1;
   }
 }
 
