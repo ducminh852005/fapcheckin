@@ -6,7 +6,7 @@ class AppConfig {
   /// Mã QR có dạng `<checkinBaseUrl>/?s=<sessionId>&t=<qrSecret>&ic=<0|1>`.
   static const String _rawCheckinBaseUrl = String.fromEnvironment(
     'CHECKIN_BASE_URL',
-    defaultValue: 'https://fapcheckin-3bn2di.web.app',
+    defaultValue: 'https://ducminh-41459.web.app',
   );
 
   static String get checkinBaseUrl => _rawCheckinBaseUrl.endsWith('/')

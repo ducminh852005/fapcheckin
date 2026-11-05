@@ -2,7 +2,7 @@
 // Chỉ gọi HTTP công khai (không cần khóa/đăng nhập), nên chạy được cả trên preview channel lẫn live.
 //
 //   node scripts/smoke-test.mjs <baseUrl> [projectId]
-//   vd: node scripts/smoke-test.mjs https://fapcheckin-3bn2di.web.app
+//   vd: node scripts/smoke-test.mjs https://ducminh-41459.web.app
 //
 // Kiểm tra:
 //   1. Trang SV là bản Firebase (nạp app.js, không còn Apps Script / BACKEND_URL)

@@ -50,19 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB6jzp1YAVEUhHA43OYTOPIPzy33UWSUsY',
-    appId: '1:161196189514:web:2690898e4ff702d07c43b3',
-    messagingSenderId: '161196189514',
-    projectId: 'fapcheckin-3bn2di',
-    authDomain: 'fapcheckin-3bn2di.firebaseapp.com',
-    storageBucket: 'fapcheckin-3bn2di.firebasestorage.app',
+    apiKey: 'AIzaSyBqlu8uPKRM4d-zdCVOTQq4cCoQZhHuZ0Y',
+    appId: '1:1076774489636:web:735f55965525ec971892b1',
+    messagingSenderId: '1076774489636',
+    projectId: 'ducminh-41459',
+    authDomain: 'ducminh-41459.firebaseapp.com',
+    storageBucket: 'ducminh-41459.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC_PRHErYryI69_O-b9oDxXErUMSAoUzVc',
-    appId: '1:161196189514:android:6513e3c87a152a077c43b3',
-    messagingSenderId: '161196189514',
-    projectId: 'fapcheckin-3bn2di',
-    storageBucket: 'fapcheckin-3bn2di.firebasestorage.app',
+    apiKey: 'AIzaSyCtnyCRjDk5edggVRFY0OvPpBGAuFVw4Ck',
+    appId: '1:1076774489636:android:74eb547ada844cc51892b1',
+    messagingSenderId: '1076774489636',
+    projectId: 'ducminh-41459',
+    storageBucket: 'ducminh-41459.firebasestorage.app',
   );
 }
