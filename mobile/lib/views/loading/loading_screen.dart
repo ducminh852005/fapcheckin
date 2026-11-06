@@ -117,12 +117,24 @@ class _LoadingScreenState extends State<LoadingScreen> {
               SizedBox(
                 width: 72,
                 height: 72,
-                child: Lottie.asset(
-                  'assets/animations/loading.json',
-                  fit: BoxFit.contain,
-                  repeat: true,
-                  animate: true,
-                  frameRate: FrameRate.composition,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Opacity(
+                      opacity: 0,
+                      child: CircularProgressIndicator(
+                        color: AppPalette.primary,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                    Lottie.asset(
+                      'assets/animations/loading.json',
+                      fit: BoxFit.contain,
+                      repeat: true,
+                      animate: true,
+                      frameRate: FrameRate.composition,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),

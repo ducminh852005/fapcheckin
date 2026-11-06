@@ -115,7 +115,7 @@ void main() {
   });
 
   group('AutoSessionManager', () {
-    test('auto-starts session when current time enters slot', () async {
+    test('does not auto-start and only auto-closes a teacher-opened session', () async {
       final repo = _FakeTeacherRepository();
       final dashboardVm = DashboardViewModel(repo);
       final liveVm = LiveSessionViewModel(repo);
@@ -153,9 +153,17 @@ void main() {
 
       await manager.checkRealtimeSessions();
 
+      // A scheduled class must remain closed until the teacher explicitly opens it.
+      expect(repo.startSessionCalls, 0);
+      expect(liveVm.session, isNull);
+
+      await liveVm.startSession(
+        classSection: cls,
+        slotCode: cls.slotCode,
+        ipCheck: false,
+      );
       expect(repo.startSessionCalls, 1);
       expect(liveVm.session?.isOpen, isTrue);
-      expect(liveVm.session?.classCode, 'SWD392_SE1927');
 
       // Now time passes to 11:50 AM (past 11:45)
       currentTime = DateTime(2026, 11, 3, 11, 50);

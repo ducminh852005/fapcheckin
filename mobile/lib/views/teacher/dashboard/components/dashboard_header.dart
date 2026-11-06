@@ -98,7 +98,12 @@ class DashboardHeader extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: DashboardColors.statusGreenDot,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF0F172A)
+                          : Colors.white,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -117,8 +122,10 @@ class DashboardHeader extends StatelessWidget {
                 'Xin chào, $teacherName',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: DashboardColors.textDark,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF8FAFC)
+                      : DashboardColors.textDark,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -129,8 +136,10 @@ class DashboardHeader extends StatelessWidget {
                 departmentText,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: DashboardColors.textMuted,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF94A3B8)
+                      : DashboardColors.textMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -142,52 +151,31 @@ class DashboardHeader extends StatelessWidget {
         // Nút chuông thông báo (Có chấm cam)
         Tooltip(
           message: 'Thông báo',
-          child: Material(
-            color: Colors.white,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: () => showNotificationModal(context),
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: DashboardColors.cardBorder,
-                    width: 1,
+          child: IconButton(
+            onPressed: () => showNotificationModal(context),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.notifications_none_rounded,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF8FAFC)
+                      : DashboardColors.textDark,
+                  size: 25,
+                ),
+                Positioned(
+                  top: -1,
+                  right: -1,
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: DashboardColors.orangePrimary,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(
-                      Icons.notifications_none_rounded,
-                      color: DashboardColors.textDark,
-                      size: 22,
-                    ),
-                    Positioned(
-                      top: 9,
-                      right: 10,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: DashboardColors.orangePrimary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),

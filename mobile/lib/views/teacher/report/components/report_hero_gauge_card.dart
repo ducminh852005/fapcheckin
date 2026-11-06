@@ -27,31 +27,43 @@ class ReportHeroGaugeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFFFE5D9);
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ReportColors.textMuted;
+
     final isZero = attendanceRate <= 0;
     final isWarning = attendanceRate > 0 && attendanceRate < 80;
     final semanticAccent = isZero
-        ? ReportColors.textMuted
+        ? mutedColor
         : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -67,7 +79,9 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   size: const Size(96, 96),
                   painter: _GaugePainter(
                     percentage: (attendanceRate / 100.0).clamp(0.0, 1.0),
-                    trackColor: const Color(0xFFF1F5F9),
+                    trackColor: isDark
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFFF1F5F9),
                     progressColor: isZero
                         ? ReportColors.textSubtle
                         : ReportColors.orangePrimary,
@@ -82,9 +96,7 @@ class ReportHeroGaugeCard extends StatelessWidget {
                       child: Text(
                         attendanceRateText,
                         style: TextStyle(
-                          color: isZero
-                              ? ReportColors.textMuted
-                              : ReportColors.textDark,
+                          color: isZero ? mutedColor : textColor,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
@@ -121,8 +133,8 @@ class ReportHeroGaugeCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     statusHeadline,
-                    style: const TextStyle(
-                      color: ReportColors.textDark,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       height: 1.25,
@@ -132,8 +144,8 @@ class ReportHeroGaugeCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   detailText,
-                  style: const TextStyle(
-                    color: ReportColors.textMuted,
+                  style: TextStyle(
+                    color: mutedColor,
                     fontSize: 11.5,
                     height: 1.3,
                   ),

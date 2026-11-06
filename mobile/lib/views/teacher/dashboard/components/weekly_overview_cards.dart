@@ -34,6 +34,23 @@ class WeeklyOverviewCards extends StatelessWidget {
     final updateTime =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : DashboardColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : DashboardColors.cardBorder;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : DashboardColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : DashboardColors.textMuted;
+    final subtleColor = isDark
+        ? const Color(0xFF64748B)
+        : DashboardColors.textSubtle;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -41,13 +58,13 @@ class WeeklyOverviewCards extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Flexible(
+            Flexible(
               child: Text(
                 'TỔNG QUAN LỚP HỌC',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: DashboardColors.textMuted,
+                  color: mutedColor,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -57,8 +74,8 @@ class WeeklyOverviewCards extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               'Lúc $updateTime',
-              style: const TextStyle(
-                color: DashboardColors.textSubtle,
+              style: TextStyle(
+                color: subtleColor,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w500,
               ),
@@ -75,23 +92,23 @@ class WeeklyOverviewCards extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: DashboardColors.cardBg,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: DashboardColors.cardBorder,
+                    color: borderColor,
                     width: 1,
                   ),
-                  boxShadow: DashboardColors.cardShadow,
+                  boxShadow: isDark ? null : DashboardColors.cardShadow,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Lớp phụ trách',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: DashboardColors.textMuted,
+                        color: mutedColor,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                       ),
@@ -112,18 +129,18 @@ class WeeklyOverviewCards extends StatelessWidget {
                               children: [
                                 Text(
                                   '$classCount',
-                                  style: const TextStyle(
-                                    color: DashboardColors.textDark,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontSize: 24,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: -0.5,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Text(
+                                Text(
                                   'lớp',
                                   style: TextStyle(
-                                    color: DashboardColors.textMuted,
+                                    color: mutedColor,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -137,8 +154,8 @@ class WeeklyOverviewCards extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           child: Text(
                             '$studentCount SV',
-                            style: const TextStyle(
-                              color: DashboardColors.textSubtle,
+                            style: TextStyle(
+                              color: subtleColor,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -155,7 +172,7 @@ class WeeklyOverviewCards extends StatelessWidget {
             // Thẻ 2: Chuyên cần (nhấn để mở Lịch sử điểm danh)
             Expanded(
               child: Material(
-                color: DashboardColors.cardBg,
+                color: cardBg,
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   onTap: () => dashboardVm.navigate('lich-su-diem-danh'),
@@ -165,10 +182,10 @@ class WeeklyOverviewCards extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: DashboardColors.cardBorder,
+                        color: borderColor,
                         width: 1,
                       ),
-                      boxShadow: DashboardColors.cardShadow,
+                      boxShadow: isDark ? null : DashboardColors.cardShadow,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,13 +193,13 @@ class WeeklyOverviewCards extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Flexible(
+                            Flexible(
                               child: Text(
                                 'Chuyên cần',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: DashboardColors.textMuted,
+                                  color: mutedColor,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -196,7 +213,11 @@ class WeeklyOverviewCards extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: DashboardColors.orangeLight,
+                                color: isDark
+                                    ? DashboardColors.orangePrimary.withValues(
+                                        alpha: 0.16,
+                                      )
+                                    : DashboardColors.orangeLight,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Row(

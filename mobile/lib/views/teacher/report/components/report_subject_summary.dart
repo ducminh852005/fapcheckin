@@ -53,34 +53,46 @@ class ReportSubjectSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ReportColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ReportColors.borderSubtle;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ReportColors.textMuted;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReportColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: ReportColors.borderSubtle),
-        boxShadow: ReportColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ReportColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Tổng hợp theo môn',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: ReportColors.textDark,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 14),
           if (subjects.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 'Chưa có dữ liệu môn học trong phạm vi đã chọn.',
                 style: TextStyle(
                   fontSize: 12.5,
-                  color: ReportColors.textMuted,
+                  color: mutedColor,
                 ),
               ),
             )
@@ -102,13 +114,19 @@ class _SubjectItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ReportColors.textMuted;
+
     final isZero = summary.rate <= 0;
     final isWarning = summary.rate > 0 && summary.rate < 0.8;
     final rateColor = isZero
-        ? ReportColors.textMuted
+        ? mutedColor
         : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
     final barColor = isZero
-        ? const Color(0xFFCBD5E1)
+        ? (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1))
         : (isWarning ? ReportColors.orangePrimary : ReportColors.statusGreen);
 
     return Column(
@@ -122,10 +140,10 @@ class _SubjectItem extends StatelessWidget {
                 summary.code,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: ReportColors.textDark,
+                  color: textColor,
                   height: 1.25,
                 ),
               ),
@@ -150,7 +168,9 @@ class _SubjectItem extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: summary.rate.clamp(0.0, 1.0),
                   minHeight: 5,
-                  backgroundColor: const Color(0xFFF1F5F9),
+                  backgroundColor: isDark
+                      ? const Color(0xFF0F172A)
+                      : const Color(0xFFF1F5F9),
                   valueColor: AlwaysStoppedAnimation<Color>(barColor),
                 ),
               ),
@@ -158,9 +178,9 @@ class _SubjectItem extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               summary.checkinCountText,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: ReportColors.textMuted,
+                color: mutedColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
