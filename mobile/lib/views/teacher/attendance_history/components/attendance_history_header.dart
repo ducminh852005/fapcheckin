@@ -26,6 +26,18 @@ class AttendanceHistoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : AttendanceHistoryColors.textDark;
+    final subtitleColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final btnBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final btnBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     return Row(
       children: [
         // Nút quay lại
@@ -42,21 +54,25 @@ class AttendanceHistoryHeader extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: btnBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      border: Border.all(color: btnBorder),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF0F172A,
+                                ).withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.arrow_back_ios_new_rounded,
                       size: 16,
-                      color: AttendanceHistoryColors.textDark,
+                      color: textColor,
                     ),
                   ),
                 ),
@@ -76,10 +92,10 @@ class AttendanceHistoryHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: AttendanceHistoryColors.textDark,
+                  color: textColor,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -88,10 +104,10 @@ class AttendanceHistoryHeader extends StatelessWidget {
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF64748B),
+                  color: subtitleColor,
                 ),
               ),
             ],
@@ -135,6 +151,15 @@ class _CircleActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : AttendanceHistoryColors.textDark;
+    final btnBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final btnBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -147,21 +172,25 @@ class _CircleActionButton extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: btnBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: btnBorder),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF0F172A,
+                          ).withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Icon(
                 icon,
                 size: 19,
-                color: AttendanceHistoryColors.textDark,
+                color: textColor,
               ),
             ),
           ),

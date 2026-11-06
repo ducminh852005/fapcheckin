@@ -23,6 +23,15 @@ class ProfileMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ProfileColors.textMuted;
+    final iconBg = isDark
+        ? ProfileColors.orangePrimary.withValues(alpha: 0.16)
+        : ProfileColors.orangeLight;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -35,7 +44,7 @@ class ProfileMenuItem extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: ProfileColors.orangeLight,
+                color: iconBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -53,10 +62,10 @@ class ProfileMenuItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: ProfileColors.textDark,
+                      color: textColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -64,9 +73,9 @@ class ProfileMenuItem extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: ProfileColors.textMuted,
+                      color: mutedColor,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
@@ -81,18 +90,18 @@ class ProfileMenuItem extends StatelessWidget {
             if (valueText != null) ...[
               Text(
                 valueText!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
-                  color: ProfileColors.textMuted,
+                  color: mutedColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(width: 4),
             ],
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 20,
-              color: ProfileColors.textSubtle,
+              color: mutedColor,
             ),
           ],
         ),

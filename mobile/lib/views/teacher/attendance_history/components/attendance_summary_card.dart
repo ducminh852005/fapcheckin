@@ -28,14 +28,28 @@ class AttendanceSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rateFraction = (attendanceRate / 100).clamp(0.0, 1.0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : AttendanceHistoryColors.cardBorder;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : AttendanceHistoryColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : AttendanceHistoryColors.textMuted;
+    final subtleColor = isDark
+        ? const Color(0xFF64748B)
+        : AttendanceHistoryColors.textSubtle;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AttendanceHistoryColors.cardBorder),
-        boxShadow: AttendanceHistoryColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : AttendanceHistoryColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -52,18 +66,18 @@ class AttendanceSummaryCard extends StatelessWidget {
                   children: [
                     RichText(
                       text: TextSpan(
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AttendanceHistoryColors.textDark,
+                          color: textColor,
                           fontFamily: 'SF Pro Display',
                         ),
                         children: [
                           const TextSpan(text: 'Sĩ số lớp: '),
                           TextSpan(
                             text: '$totalStudents Sinh viên',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AttendanceHistoryColors.textDark,
+                              color: textColor,
                             ),
                           ),
                         ],
@@ -76,7 +90,9 @@ class AttendanceSummaryCard extends StatelessWidget {
                           vertical: 2.5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8FDF2),
+                          color: isDark
+                              ? const Color(0xFF14532D).withValues(alpha: 0.4)
+                              : const Color(0xFFE8FDF2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -108,10 +124,10 @@ class AttendanceSummaryCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 '${attendanceRate.toStringAsFixed(1)}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
-                  color: AttendanceHistoryColors.textDark,
+                  color: textColor,
                 ),
               ),
             ],
@@ -165,19 +181,19 @@ class AttendanceSummaryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 5),
-                  const Text(
+                  Text(
                     'Có mặt: ',
                     style: TextStyle(
                       fontSize: 12,
-                      color: AttendanceHistoryColors.textMuted,
+                      color: mutedColor,
                     ),
                   ),
                   Text(
                     '$presentCount SV',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AttendanceHistoryColors.textDark,
+                      color: textColor,
                     ),
                   ),
                 ],
@@ -200,11 +216,11 @@ class AttendanceSummaryCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 5),
-                      const Text(
+                      Text(
                         'Vắng: ',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AttendanceHistoryColors.textMuted,
+                          color: mutedColor,
                         ),
                       ),
                       Text(
@@ -220,9 +236,9 @@ class AttendanceSummaryCard extends StatelessWidget {
                   if (excusedAbsentCount > 0)
                     Text(
                       ' ($excusedAbsentCount có phép)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AttendanceHistoryColors.textSubtle,
+                        color: subtleColor,
                       ),
                     ),
                 ],

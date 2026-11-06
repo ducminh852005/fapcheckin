@@ -57,15 +57,31 @@ class ActiveSessionCard extends StatelessWidget {
         ? 0
         : (scannedStudents / totalStudents).clamp(0.0, 1.0);
     final percentText = '${(progress * 100).toStringAsFixed(1)}%';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : DashboardColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : DashboardColors.cardBorder;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : DashboardColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : DashboardColors.textMuted;
+    final subtleColor = isDark
+        ? const Color(0xFF64748B)
+        : DashboardColors.textSubtle;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: DashboardColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: DashboardColors.cardBorder, width: 1.2),
-        boxShadow: DashboardColors.activeCardShadow,
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isDark ? null : DashboardColors.activeCardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +97,9 @@ class ActiveSessionCard extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: DashboardColors.statusGreenBg,
+                  color: isDark
+                      ? const Color(0xFF14532D).withValues(alpha: 0.4)
+                      : DashboardColors.statusGreenBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -115,8 +133,8 @@ class ActiveSessionCard extends StatelessWidget {
                   slotLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: DashboardColors.textMuted,
+                  style: TextStyle(
+                    color: mutedColor,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -135,17 +153,17 @@ class ActiveSessionCard extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: subjectCode,
-                    style: const TextStyle(
-                      color: DashboardColors.textDark,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const TextSpan(
+                  TextSpan(
                     text: '  •  ',
                     style: TextStyle(
-                      color: DashboardColors.textSubtle,
+                      color: subtleColor,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -169,8 +187,8 @@ class ActiveSessionCard extends StatelessWidget {
             '$subjectName • Phòng $room',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: DashboardColors.textMuted,
+            style: TextStyle(
+              color: mutedColor,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -181,7 +199,7 @@ class ActiveSessionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -189,13 +207,13 @@ class ActiveSessionCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Flexible(
+                    Flexible(
                       child: Text(
                         'Tiến độ điểm danh',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: DashboardColors.textMuted,
+                          color: mutedColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -219,16 +237,16 @@ class ActiveSessionCard extends StatelessWidget {
                               ),
                               TextSpan(
                                 text: '/$totalStudents sinh viên ',
-                                style: const TextStyle(
-                                  color: DashboardColors.textDark,
+                                style: TextStyle(
+                                  color: textColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               TextSpan(
                                 text: '($percentText)',
-                                style: const TextStyle(
-                                  color: DashboardColors.textSubtle,
+                                style: TextStyle(
+                                  color: subtleColor,
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -248,7 +266,9 @@ class ActiveSessionCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 7,
-                    backgroundColor: DashboardColors.cardTrack,
+                    backgroundColor: isDark
+                        ? const Color(0xFF334155)
+                        : DashboardColors.cardTrack,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       DashboardColors.orangePrimary,
                     ),
@@ -323,24 +343,30 @@ class ActiveSessionCard extends StatelessWidget {
                         await ManualAttendanceBottomSheet.show(context);
                       }
                     },
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.how_to_reg_outlined,
-                      color: DashboardColors.textBody,
+                      color: isDark
+                          ? const Color(0xFFCBD5E1)
+                          : DashboardColors.textBody,
                       size: 20,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Điểm danh tay',
                       style: TextStyle(
-                        color: DashboardColors.textDark,
+                        color: textColor,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: DashboardColors.textDark,
-                      side: const BorderSide(
-                        color: Color(0xFFE2E8F0),
+                      backgroundColor: isDark
+                          ? const Color(0xFF0F172A)
+                          : Colors.white,
+                      foregroundColor: textColor,
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFE2E8F0),
                         width: 1.2,
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),

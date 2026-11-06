@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
@@ -11,9 +12,8 @@ import 'package:fapcheckin_core/result/api_result.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../core/services/telemetry.dart';
-
-
-
+import '../../../core/widgets/app_toast.dart';
+import '../../../viewmodels/live_session_viewmodel.dart';
 import '../../../viewmodels/preferences_viewmodel.dart';
 import '../profile/account_dialogs.dart';
 import '../profile/profile_colors.dart';
@@ -99,6 +99,49 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   }
 
 
+
+  void _showNotificationToast({
+    required bool isEnabled,
+    required bool success,
+    String? errorMessage,
+  }) {
+    final title = success
+        ? (isEnabled ? 'Đã bật nhắc lịch dạy' : 'Đã tắt nhắc lịch dạy')
+        : 'Không thể lưu cài đặt';
+    final message = success
+        ? (isEnabled
+            ? 'Hệ thống sẽ thông báo tự động 15 phút trước giờ dạy.'
+            : 'Đã tắt thông báo tự động trước giờ dạy.')
+        : (errorMessage ?? 'Không thể lưu cài đặt nhắc lịch.');
+
+    final liveVm = context.read<LiveSessionViewModel?>();
+    if (liveVm != null) {
+      liveVm.triggerToast(
+        type: ToastType.custom,
+        title: title,
+        message: message,
+        icon: success
+            ? (isEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_rounded)
+            : Icons.error_outline_rounded,
+        accentColor: success
+            ? (isEnabled
+                ? const Color(0xFFFA5A1E)
+                : const Color(0xFF64748B))
+            : const Color(0xFFDC2626),
+        duration: const Duration(seconds: 4),
+      );
+    } else {
+      showAppToast(
+        context,
+        title: title,
+        message: message,
+        type: success ? AppToastType.success : AppToastType.error,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
 
   Future<void> _loadSupportConfig() async {
 
@@ -243,9 +286,10 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
                 const SizedBox(height: 24),
 
-                _buildCrashlyticsDemoCard(context),
-
-                const SizedBox(height: 24),
+                if (kDebugMode) ...[
+                  _buildCrashlyticsDemoCard(context),
+                  const SizedBox(height: 24),
+                ],
 
 
 
@@ -541,47 +585,25 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
                   activeTrackColor: ProfileColors.orangeLight,
 
                   onChanged: isSaving
-
                       ? null
-
                       : (val) async {
-
                           if (prefsVm == null) {
-
                             setState(() => _localReminderEnabled = val);
-
+                            _showNotificationToast(
+                              isEnabled: val,
+                              success: true,
+                            );
                             return;
-
                           }
 
                           final ok = await prefsVm.save(newReminders: val);
-
                           if (!context.mounted) return;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-
-                            SnackBar(
-
-                              content: Text(
-
-                                ok
-
-                                    ? (val
-
-                                        ? 'Đã bật nhắc lịch trước giờ dạy 15 phút.'
-
-                                        : 'Đã tắt nhắc lịch dạy.')
-
-                                    : (prefsVm.error ??
-
-                                        'Không thể lưu cài đặt nhắc lịch.'),
-
-                              ),
-
-                            ),
-
+                          _showNotificationToast(
+                            isEnabled: val,
+                            success: ok,
+                            errorMessage: prefsVm.error,
                           );
-
                         },
 
                 ),

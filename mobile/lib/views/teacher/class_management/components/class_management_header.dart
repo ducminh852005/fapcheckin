@@ -8,12 +8,15 @@ class ClassManagementHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
       children: [
         Text(
           'Quản lý lớp',
           style: TextStyle(
-            color: ClassManagementColors.textDark,
+            color: isDark
+                ? const Color(0xFFF8FAFC)
+                : ClassManagementColors.textDark,
             fontSize: 24,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,

@@ -90,12 +90,14 @@ class ScheduleWeekPicker extends StatelessWidget {
                     icon: Icons.chevron_left_rounded,
                     tooltip: 'Tuần trước',
                     onTap: onPrevWeek,
+                    isDark: isDark,
                   ),
                   const SizedBox(width: 4),
                   _buildNavArrow(
                     icon: Icons.chevron_right_rounded,
                     tooltip: 'Tuần sau',
                     onTap: onNextWeek,
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -120,6 +122,7 @@ class ScheduleWeekPicker extends StatelessWidget {
     required IconData icon,
     required String tooltip,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return Tooltip(
       message: tooltip,
@@ -133,15 +136,25 @@ class ScheduleWeekPicker extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: ScheduleColors.orangeLighter,
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : ScheduleColors.orangeLighter,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: ScheduleColors.orangeBorder,
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : ScheduleColors.orangeBorder,
                   width: 1,
                 ),
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 20, color: ScheduleColors.textDark),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isDark
+                    ? const Color(0xFFF8FAFC)
+                    : ScheduleColors.textDark,
+              ),
             ),
           ),
         ),

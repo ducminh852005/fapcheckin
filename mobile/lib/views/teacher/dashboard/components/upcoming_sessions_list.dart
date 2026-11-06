@@ -131,14 +131,28 @@ class UpcomingSessionsList extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context, DashboardViewModel vm) {
     final hasNoClasses = vm.classes.isEmpty;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : DashboardColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : DashboardColors.cardBorder;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : DashboardColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : DashboardColors.textMuted;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: DashboardColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: DashboardColors.cardBorder, width: 1),
-        boxShadow: DashboardColors.cardShadow,
+        border: Border.all(color: borderColor, width: 1),
+        boxShadow: isDark ? null : DashboardColors.cardShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -147,7 +161,9 @@ class UpcomingSessionsList extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: DashboardColors.orangeLight,
+              color: isDark
+                  ? DashboardColors.orangePrimary.withValues(alpha: 0.16)
+                  : DashboardColors.orangeLight,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -164,8 +180,8 @@ class UpcomingSessionsList extends StatelessWidget {
                 ? 'Chưa có lớp học được phân công'
                 : 'Không còn ca dạy kế tiếp hôm nay',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: DashboardColors.textDark,
+            style: TextStyle(
+              color: textColor,
               fontSize: 14.5,
               fontWeight: FontWeight.w700,
             ),
@@ -176,15 +192,15 @@ class UpcomingSessionsList extends StatelessWidget {
                 ? 'Vào mục Lịch dạy để quét thời khóa biểu FAP hoặc kiểm tra lịch phân công.'
                 : 'Bạn đã hoàn thành các ca dạy trong ngày hoặc có thể xem toàn bộ lịch tuần.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: DashboardColors.textMuted,
+            style: TextStyle(
+              color: mutedColor,
               fontSize: 12,
               height: 1.4,
             ),
           ),
           const SizedBox(height: 14),
           SizedBox(
-            height: 38,
+            height: 44,
             child: OutlinedButton.icon(
               onPressed: () => vm.navigate('lich-hoc'),
               icon: const Icon(
@@ -201,11 +217,15 @@ class UpcomingSessionsList extends StatelessWidget {
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(
-                  color: Color(0xFFFED7AA),
+                side: BorderSide(
+                  color: isDark
+                      ? DashboardColors.orangePrimary.withValues(alpha: 0.4)
+                      : const Color(0xFFFED7AA),
                   width: 1.2,
                 ),
-                backgroundColor: const Color(0xFFFFF7ED),
+                backgroundColor: isDark
+                    ? DashboardColors.orangePrimary.withValues(alpha: 0.12)
+                    : const Color(0xFFFFF7ED),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -223,16 +243,33 @@ class UpcomingSessionsList extends StatelessWidget {
     _UpcomingSessionItemData item,
     DashboardViewModel vm,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : DashboardColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : DashboardColors.cardBorder;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : DashboardColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : DashboardColors.textMuted;
+    final subtleColor = isDark
+        ? const Color(0xFF64748B)
+        : DashboardColors.textSubtle;
+
     return InkWell(
       onTap: () => vm.navigate('lich-hoc'),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: DashboardColors.cardBg,
+          color: cardBg,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: DashboardColors.cardBorder, width: 1),
-          boxShadow: DashboardColors.cardShadow,
+          border: Border.all(color: borderColor, width: 1),
+          boxShadow: isDark ? null : DashboardColors.cardShadow,
         ),
         child: Row(
           children: [
@@ -241,16 +278,18 @@ class UpcomingSessionsList extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'CA',
                     style: TextStyle(
-                      color: DashboardColors.textMuted,
+                      color: mutedColor,
                       fontSize: 9.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -258,8 +297,8 @@ class UpcomingSessionsList extends StatelessWidget {
                   ),
                   Text(
                     item.slot,
-                    style: const TextStyle(
-                      color: DashboardColors.textDark,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       height: 1.1,
@@ -283,24 +322,24 @@ class UpcomingSessionsList extends StatelessWidget {
                         children: [
                           TextSpan(
                             text: item.courseCode,
-                            style: const TextStyle(
-                              color: DashboardColors.textDark,
+                            style: TextStyle(
+                              color: textColor,
                               fontSize: 14.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          const TextSpan(
+                          TextSpan(
                             text: '  •  ',
                             style: TextStyle(
-                              color: DashboardColors.textSubtle,
+                              color: subtleColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           TextSpan(
                             text: item.classCode,
-                            style: const TextStyle(
-                              color: DashboardColors.textMuted,
+                            style: TextStyle(
+                              color: mutedColor,
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -314,8 +353,8 @@ class UpcomingSessionsList extends StatelessWidget {
                     '${item.timeRange} • Phòng ${item.room}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: DashboardColors.textMuted,
+                    style: TextStyle(
+                      color: mutedColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -331,13 +370,17 @@ class UpcomingSessionsList extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: DashboardColors.statusNeutralBg,
+                  color: isDark
+                      ? const Color(0xFF0F172A)
+                      : DashboardColors.statusNeutralBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Text(
+                child: Text(
                   'Chưa bắt đầu',
                   style: TextStyle(
-                    color: DashboardColors.statusNeutral,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : DashboardColors.statusNeutral,
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),

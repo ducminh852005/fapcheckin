@@ -84,9 +84,10 @@ class TimeSlotHelper {
   }
 }
 
-/// Tự động quản lý vòng đời phiên học theo thời gian thực (Real-time Session Manager):
-/// 1. Tự động mở phiên khi chạm vào khung giờ ca học (now >= startDt && now < endDt)
-/// 2. Tự động kết thúc phiên khi hết giờ ca học (now >= endDt)
+/// Theo dõi các phiên do giáo viên chủ động mở và tự động kết thúc khi hết giờ.
+///
+/// Manager này tuyệt đối không tự mở phiên. Việc mở điểm danh chỉ được thực hiện
+/// từ thao tác xác nhận của giáo viên.
 class AutoSessionManager {
   final LiveSessionViewModel liveSessionViewModel;
   final DashboardViewModel dashboardViewModel;
@@ -146,7 +147,7 @@ class AutoSessionManager {
 
         final classKey = '${c.classCode}_${todayStr}_${c.slotCode}';
 
-        // 1. Tự động đóng lớp khi hết thời gian ca học (now >= endDt)
+        // Tự động đóng lớp khi hết thời gian ca học (now >= endDt).
         if (now.isAfter(endDt) || now.isAtSameMomentAs(endDt)) {
           if (!_autoClosedSessionsToday.contains(classKey)) {
             if (liveSessionViewModel.session?.isOpen == true &&
@@ -177,30 +178,6 @@ class AutoSessionManager {
                 accentColor: AppColors.statusPresent,
               );
             }
-          }
-        }
-        // 2. Tự động mở lớp khi đến thời gian ca học (now >= startDt && now < endDt)
-        else if ((now.isAfter(startDt) || now.isAtSameMomentAs(startDt)) &&
-            now.isBefore(endDt)) {
-          if (!c.isActive &&
-              !_autoClosedSessionsToday.contains(classKey) &&
-              !liveSessionViewModel.isLoading &&
-              (liveSessionViewModel.session == null ||
-                  !liveSessionViewModel.session!.isOpen)) {
-            await liveSessionViewModel.startSession(
-              classSection: c,
-              slotCode: c.slotCode,
-              ipCheck: liveSessionViewModel.ipCheckDefault,
-            );
-            await dashboardViewModel.loadClasses();
-            liveSessionViewModel.triggerToast(
-              type: ToastType.startSession,
-              title: 'Tự động mở lớp học!',
-              message:
-                  'Đã đến giờ ca dạy lớp ${c.classCode} (${c.subjectCode}). Phiên điểm danh đã sẵn sàng.',
-              icon: Icons.qr_code_scanner,
-              accentColor: AppColors.statusPresent,
-            );
           }
         }
       }

@@ -146,15 +146,6 @@ class _RequestsBodyState extends State<RequestsBody> {
                               color: AppPalette.textDark,
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Đăng xuất',
-                            onPressed: () =>
-                                context.read<AuthViewModel>().signOut(),
-                            icon: const Icon(
-                              Icons.logout_rounded,
-                              color: AppPalette.statusRed,
-                            ),
-                          ),
                         ],
                       ),
                     ),

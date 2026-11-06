@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fapcheckin_core/repositories/account_features_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+import '../../../core/widgets/app_toast.dart';
 
 Future<T?> showFeedbackBottomSheet<T>(BuildContext context) {
   return showModalBottomSheet<T>(
@@ -135,8 +136,10 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
   Future<void> _pickImages() async {
     if (_attachments.length >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chỉ đính kèm tối đa 3 ảnh minh chứng.')),
+      showAppToast(
+        context,
+        message: 'Chỉ đính kèm tối đa 3 ảnh minh chứng.',
+        type: AppToastType.warning,
       );
       return;
     }
@@ -166,8 +169,10 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
       setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi chọn ảnh: $e')),
+        showAppToast(
+          context,
+          message: 'Lỗi chọn ảnh: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -205,7 +210,18 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
       if (uploadRes is ApiSuccess<String>) {
         uploadedUrls.add(uploadRes.data);
       } else {
-        if (mounted) setState(() { _saving = false; _error = (uploadRes as ApiFailure<String>).error.message; });
+        if (mounted) {
+          final message = (uploadRes as ApiFailure<String>).error.message;
+          setState(() {
+            _saving = false;
+            _error = message;
+          });
+          showAppToast(
+            context,
+            message: message,
+            type: AppToastType.error,
+          );
+        }
         return;
       }
     }
@@ -239,25 +255,24 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
     if (!mounted) return;
     if (result is ApiSuccess<String>) {
+      final toastContext = Navigator.of(context).context;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Cảm ơn bạn! Góp ý đã được gửi thành công.'),
-          backgroundColor: const Color(0xFF10B981),
-          action: SnackBarAction(
-            label: 'Xem lịch sử',
-            textColor: Colors.white,
-            onPressed: () => showFeedbackHistoryBottomSheet(context),
-          ),
-        ),
+      showAppToast(
+        toastContext,
+        message: 'Cảm ơn bạn! Góp ý đã được gửi thành công.',
+        type: AppToastType.success,
+        actionLabel: 'Xem lịch sử',
+        onAction: () => showFeedbackHistoryBottomSheet(toastContext),
       );
       return;
     }
 
+    final message = (result as ApiFailure<String>).error.message;
     setState(() {
       _saving = false;
-      _error = (result as ApiFailure<String>).error.message;
+      _error = message;
     });
+    showAppToast(context, message: message, type: AppToastType.error);
   }
 
   Widget _buildPopupMenuCard() {
@@ -656,12 +671,15 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          '${_textController.text.length}/2000',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _textController,
+                          builder: (context, value, _) => Text(
+                            '${value.text.length}/2000',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -670,14 +688,12 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     TextField(
                       controller: _textController,
                       enabled: !_saving,
-                      maxLength: 2000,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      autocorrect: true,
+                      enableSuggestions: true,
+                      textInputAction: TextInputAction.newline,
                       maxLines: 4,
-                      buildCounter: (_,
-                              {required currentLength,
-                              required isFocused,
-                              maxLength}) =>
-                          null,
-                      onChanged: (_) => setState(() {}),
                       style: const TextStyle(
                         fontSize: 13.5,
                         color: Color(0xFF0F172A),
