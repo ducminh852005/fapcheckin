@@ -51,6 +51,7 @@ export function AdminShell({
   const [pendingFeedbackCount, setPendingFeedbackCount] = useState<number | null>(null)
   const [notifications, setNotifications] = useState<HeaderNotificationItem[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<HeaderNotificationItem | null>(null)
   const [notifFilter, setNotifFilter] = useState<"all" | "academic" | "announcement" | "system">("all")
   const userMenuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -109,8 +110,19 @@ export function AdminShell({
       prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
     )
     setShowNotifications(false)
-    go(item.targetPage)
+    setSelectedNotification(item)
   }
+
+  useEffect(() => {
+    if (!selectedNotification) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedNotification(null)
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [selectedNotification])
 
   const handleMouseEnter = () => {
     if (closeTimerRef.current) {
@@ -455,10 +467,11 @@ export function AdminShell({
                             notifFilter === "all" ? true : n.category === notifFilter
                           )
                           .map((item) => (
-                            <div
+                            <button
+                              type="button"
                               key={item.id}
                               onClick={() => handleItemClick(item)}
-                              className={`p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${
+                              className={`w-full text-left p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${
                                 item.unread ? "bg-orange-50/25" : ""
                               }`}
                             >
@@ -505,7 +518,7 @@ export function AdminShell({
                               {item.unread && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] shrink-0 mt-2" />
                               )}
-                            </div>
+                            </button>
                           ))
                       )}
                     </div>
@@ -582,6 +595,72 @@ export function AdminShell({
           </main>
         </div>
       </div>
+
+      {selectedNotification && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedNotification(null)
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-detail-title"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#EA580C]">
+                  {selectedNotification.type === "announcement" ? (
+                    <Megaphone size={19} />
+                  ) : selectedNotification.type === "attendance" ? (
+                    <ClipboardCheck size={19} />
+                  ) : selectedNotification.type === "audit" ? (
+                    <ShieldCheck size={19} />
+                  ) : (
+                    <Bell size={19} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C2410C]">
+                    Chi tiết thông báo
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">{selectedNotification.time}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNotification(null)}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700"
+                aria-label="Đóng thông báo"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-5 sm:px-6">
+              <h2 id="notification-detail-title" className="text-base font-bold leading-6 text-slate-900 sm:text-lg">
+                {selectedNotification.title}
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+                {selectedNotification.description}
+              </p>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => setSelectedNotification(null)}
+                className="rounded-lg bg-[#EA580C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#C2410C]"
+              >
+                Đóng
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
