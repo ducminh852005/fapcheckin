@@ -13,6 +13,7 @@ class PreferencesViewModel extends ChangeNotifier {
   String? _uid;
   int _generation = 0;
   StreamSubscription<String>? _tokens;
+  String? _registeredToken;
   // One token per app installation (FCM token used as the document key via a safe encoding).
   String _deviceId(String token) => Uri.encodeComponent(token);
   ThemeMode get themeMode => switch (theme) {'dark' => ThemeMode.dark, 'system' => ThemeMode.system, _ => ThemeMode.light};
@@ -21,6 +22,7 @@ class PreferencesViewModel extends ChangeNotifier {
   Future<void> bindAccount(String? uid) async {
     if (_uid == uid) return;
     _uid = uid;
+    _registeredToken = null;
     final generation = ++_generation;
     await _tokens?.cancel();
     theme = 'light'; language = 'vi'; reminders = false; saving = false; error = null;
@@ -57,19 +59,32 @@ class PreferencesViewModel extends ChangeNotifier {
     if (permission.authorizationStatus != AuthorizationStatus.authorized && permission.authorizationStatus != AuthorizationStatus.provisional) {
       return 'Chưa được cấp quyền thông báo trên thiết bị.';
     }
-    final token = await messaging.getToken();
+    await _tokens?.cancel();
+    final firstRegistration = Completer<String>();
+    _tokens = messaging.onRegistered.listen((token) async {
+      if (!firstRegistration.isCompleted) {
+        firstRegistration.complete(token);
+        return;
+      }
+      if (generation == _generation && reminders) {
+        _registeredToken = token;
+        await repository.registerDevice(_deviceId(token), token);
+      }
+    });
+    await messaging.register();
+    final token = await firstRegistration.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => '',
+    );
     if (generation != _generation) return null;
-    if (token == null) {
+    if (token.isEmpty) {
       return 'Chưa nhận được token thông báo. Kiểm tra cấu hình FCM/APNs.';
     }
     final saved = await repository.registerDevice(_deviceId(token), token);
     if (saved is ApiFailure<void>) {
       return saved.error.message;
     }
-    await _tokens?.cancel();
-    _tokens = messaging.onTokenRefresh.listen((token) async {
-      if (generation == _generation && reminders) await repository.registerDevice(_deviceId(token), token);
-    });
+    _registeredToken = token;
     return null;
   }
 
@@ -96,6 +111,9 @@ class PreferencesViewModel extends ChangeNotifier {
         if (generation == _generation) error = result.error.message;
         return false;
       }
+      if (newReminders == false && reminders) {
+        await unregisterDevice();
+      }
       theme = newTheme ?? theme;
       language = newLanguage ?? language;
       reminders = newReminders ?? reminders;
@@ -114,9 +132,21 @@ class PreferencesViewModel extends ChangeNotifier {
   }
   Future<void> unregisterDevice() async {
     try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await repository.removeDevice(_deviceId(token));
-      await FirebaseMessaging.instance.deleteToken();
+      final messaging = FirebaseMessaging.instance;
+      var token = _registeredToken;
+      if (token == null || token.isEmpty) {
+        final registration = messaging.onRegistered.first.timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => '',
+        );
+        await messaging.register();
+        token = await registration;
+      }
+      if (token.isNotEmpty) {
+        await repository.removeDevice(_deviceId(token));
+      }
+      await messaging.unregister();
+      _registeredToken = null;
     } catch (_) { /* Sign-out must remain possible when offline. */ }
   }
   @override

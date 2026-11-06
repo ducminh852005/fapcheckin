@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from "react"
 import {
   AlertTriangle,
-  Bell,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -10,13 +8,11 @@ import {
   Clock,
   Download,
   FileSpreadsheet,
-  Filter,
   History,
   Info,
   QrCode,
   RotateCw,
   Search,
-  Send,
   ShieldAlert,
   UserX,
   X,
@@ -24,8 +20,6 @@ import {
 import { useAsyncData } from "../hooks/useAsyncData"
 import {
   getAttendanceReportStats,
-  recordAcademicIntervention,
-  sendAttendanceWarningNotification,
   type StudentRiskItem,
 } from "../repositories/attendanceReportRepository"
 import { Pagination } from "../components/Pagination"
@@ -35,8 +29,6 @@ export function AttendanceReport() {
   const { data, loading } = useAsyncData(loader)
 
   // Filters & State
-  const [selectedSemester] = useState("Fall 2026")
-  const [selectedWeek] = useState("Tuần hiện tại")
   const [riskFilter, setRiskFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStudent, setSelectedStudent] = useState<StudentRiskItem | null>(null)
@@ -48,45 +40,9 @@ export function AttendanceReport() {
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  // Handle FCM Batch notification
-  const handleBatchFCM = async () => {
-    const targets = data?.riskStudents ?? []
-    if (targets.length === 0) {
-      showToast("Hiện không có sinh viên nào trong danh sách nguy cơ cần gửi cảnh báo.")
-      return
-    }
-    try {
-      await sendAttendanceWarningNotification(targets)
-      showToast(`Đã phát thông báo cảnh báo chuyên cần tới ${targets.length} sinh viên trên Firestore!`)
-    } catch {
-      showToast("Không thể gửi cảnh báo lên Firestore. Vui lòng kiểm tra quyền quản trị.")
-    }
-  }
-
-  // Handle individual notification
-  const handleIndividualNotify = async (student: StudentRiskItem) => {
-    try {
-      await sendAttendanceWarningNotification([student])
-      showToast(
-        `Đã gửi thông báo cảnh báo tới sinh viên ${student.fullName} (${student.rollNumber}) qua FAP Check-in!`
-      )
-    } catch {
-      showToast("Lỗi khi lưu thông báo cảnh báo lên Firestore.")
-    }
-  }
-
-  const handleIntervene = async (student: StudentRiskItem) => {
-    try {
-      await recordAcademicIntervention(student)
-      showToast(`Đã ghi nhận can thiệp học vụ cho sinh viên ${student.rollNumber} vào Audit Log!`)
-    } catch {
-      showToast(`Đã ghi nhận can thiệp học vụ cho sinh viên ${student.rollNumber}`)
-    }
-  }
-
   // Export report
   const handleExport = () => {
-    showToast("Đang kết xuất và tải xuống báo cáo chuyên cần (Excel/PDF)...")
+    showToast("Đang tạo tệp dữ liệu chuyên cần CSV...")
     const rows = [
       ["MSSV", "Ho va Ten", "Nganh", "Mon hoc", "Lop", "Giang vien", "So buoi vang", "Ty le chuyen can", "Muc canh bao"],
       ...(data?.riskStudents ?? []).map((s) => [
@@ -101,11 +57,12 @@ export function AttendanceReport() {
         s.riskLabel,
       ]),
     ]
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.join(",")).join("\n")
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.map(csvCell).join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `Bao_cao_chuyen_can_${selectedSemester.replace(/\s+/g, "_")}_Tuan6.csv`)
+    link.setAttribute("download", `Du_lieu_chuyen_can_${new Date().toISOString().slice(0, 10)}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -153,25 +110,12 @@ export function AttendanceReport() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Báo cáo &amp; Phân tích Chuyên cần Toàn khóa
+            Báo cáo chuyên cần từ dữ liệu gần đây
           </h1>
         </div>
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-3">
-          {/* Semester Selector Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              className="h-9 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer"
-              title="Chọn học kỳ và tuần"
-            >
-              <Filter size={14} className="text-slate-400" />
-              <span>Học kỳ {selectedSemester} / {selectedWeek}</span>
-              <ChevronDown size={14} className="text-slate-400 ml-1" />
-            </button>
-          </div>
-
           {/* Export Button */}
           <button
             type="button"
@@ -179,7 +123,7 @@ export function AttendanceReport() {
             className="h-9 bg-[#C2410C] hover:bg-[#9A3412] text-white px-4 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer"
           >
             <Download size={14} />
-            <span>Xuất báo cáo Excel / PDF</span>
+            <span>Tải dữ liệu CSV</span>
           </button>
         </div>
       </div>
@@ -216,11 +160,11 @@ export function AttendanceReport() {
           </div>
         </div>
 
-        {/* Card 2: Chạm ngưỡng cấm thi (>15%) */}
+        {/* Card 2: Sinh viên có buổi vắng */}
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500">Chạm ngưỡng cấm thi (&gt;15%)</span>
+              <span className="text-xs font-medium text-slate-500">Sinh viên có buổi vắng</span>
               <span className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
                 <AlertTriangle size={16} />
               </span>
@@ -489,22 +433,13 @@ export function AttendanceReport() {
                 className="text-xs bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg appearance-none pr-7 focus:outline-none focus:border-[#EA580C] cursor-pointer"
               >
                 <option value="all">Lọc mức cảnh báo (Tất cả)</option>
-                <option value="danger">Nguy cơ cấm thi</option>
-                <option value="warning_1">Cảnh báo cấp 1</option>
-                <option value="suspended">Đình chỉ thi slot tới</option>
+                <option value="warning_1">Vắng 1–2 buổi</option>
+                <option value="danger">Vắng 3 buổi</option>
+                <option value="suspended">Vắng từ 4 buổi</option>
               </select>
               <ChevronDown size={13} className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
             </div>
 
-            {/* Batch FCM action button */}
-            <button
-              type="button"
-              onClick={handleBatchFCM}
-              className="bg-[#C2410C] hover:bg-[#9A3412] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-            >
-              <Send size={13} />
-              <span>Gửi cảnh báo FCM hàng loạt</span>
-            </button>
           </div>
         </div>
 
@@ -608,16 +543,6 @@ export function AttendanceReport() {
                         className="inline-flex items-center gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {/* Notify Bell */}
-                        <button
-                          type="button"
-                          onClick={() => handleIndividualNotify(student)}
-                          title="Gửi thông báo nhắc nhở"
-                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-[#EA580C] hover:bg-orange-50 flex items-center justify-center transition cursor-pointer"
-                        >
-                          <Bell size={15} />
-                        </button>
-
                         {/* View History */}
                         <button
                           type="button"
@@ -628,15 +553,6 @@ export function AttendanceReport() {
                           <History size={15} />
                         </button>
 
-                        {/* Intervene / resolve */}
-                        <button
-                          type="button"
-                          onClick={() => void handleIntervene(student)}
-                          title="Ghi nhận can thiệp học vụ"
-                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 flex items-center justify-center transition cursor-pointer"
-                        >
-                          <CheckCircle2 size={15} />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -653,7 +569,7 @@ export function AttendanceReport() {
           pageSize={10}
           onPageChange={setPageNumber}
           itemLabel="sinh viên nguy cơ"
-          syncNote="Đồng bộ từ Google Cloud Firestore & FAP Edu Core"
+          syncNote="Dữ liệu gần đây từ Cloud Firestore"
         />
       </section>
 
@@ -753,24 +669,16 @@ export function AttendanceReport() {
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleIndividualNotify(selectedStudent)
-                    setSelectedStudent(null)
-                  }}
-                  className="bg-[#C2410C] hover:bg-[#9A3412] text-white px-4 py-2 rounded-xl font-semibold flex items-center gap-1.5 shadow-xs"
-                >
-                  <Send size={13} />
-                  <span>Gửi cảnh báo FCM tới sinh viên</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
       )}
     </div>
   )
+}
+
+function csvCell(value: string | number) {
+  const text = String(value)
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 

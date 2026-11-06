@@ -25,24 +25,37 @@ class PersonalFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ProfileColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: ProfileColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ProfileColors.borderSubtle),
-        boxShadow: ProfileColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ProfileColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Họ và tên
-          _buildField(label: 'Họ và tên', controller: nameController),
+          _buildField(
+            context,
+            label: 'Họ và tên',
+            controller: nameController,
+          ),
           const SizedBox(height: 16),
 
           // 2. Email (read-only)
           _buildField(
+            context,
             label: 'Email',
             controller: emailController,
             readOnly: true,
@@ -53,15 +66,16 @@ class PersonalFormCard extends StatelessWidget {
 
           // 3. Số điện thoại
           _buildField(
+            context,
             label: 'Số điện thoại',
             controller: phoneController,
             keyboardType: TextInputType.phone,
-
           ),
           const SizedBox(height: 16),
 
           // 4. Ngày sinh
           _buildField(
+            context,
             label: 'Ngày sinh (YYYY-MM-DD)',
             controller: birthDateController,
             onTap: onPickBirthDate,
@@ -72,7 +86,8 @@ class PersonalFormCard extends StatelessWidget {
     );
   }
 
-  Widget _buildField({
+  Widget _buildField(
+    BuildContext context, {
     required String label,
     required TextEditingController controller,
     bool readOnly = false,
@@ -81,15 +96,27 @@ class PersonalFormCard extends StatelessWidget {
     TextInputType? keyboardType,
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ProfileColors.textMuted;
+    final fieldBg = isDark
+        ? (readOnly ? const Color(0xFF0F172A) : const Color(0xFF1E293B))
+        : (readOnly ? const Color(0xFFF8FAFC) : Colors.white);
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: ProfileColors.textMuted,
+            color: mutedColor,
           ),
         ),
         const SizedBox(height: 6),
@@ -99,9 +126,9 @@ class PersonalFormCard extends StatelessWidget {
             height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: readOnly ? const Color(0xFFF8FAFC) : Colors.white,
+              color: fieldBg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: ProfileColors.borderSubtle),
+              border: Border.all(color: borderColor),
             ),
             child: Row(
               children: [
@@ -111,10 +138,10 @@ class PersonalFormCard extends StatelessWidget {
                     readOnly: readOnly,
                     onTap: onTap,
                     keyboardType: keyboardType,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: ProfileColors.textDark,
+                      color: textColor,
                     ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
@@ -125,7 +152,7 @@ class PersonalFormCard extends StatelessWidget {
                 ),
                 if (trailingIcon != null) ...[
                   const SizedBox(width: 8),
-                  Icon(trailingIcon, size: 18, color: ProfileColors.textSubtle),
+                  Icon(trailingIcon, size: 18, color: mutedColor),
                 ],
               ],
             ),
@@ -135,9 +162,9 @@ class PersonalFormCard extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             helperText,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: ProfileColors.textSubtle,
+              color: mutedColor,
               fontStyle: FontStyle.italic,
             ),
           ),

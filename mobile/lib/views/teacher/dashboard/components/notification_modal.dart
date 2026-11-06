@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/repositories/account_features_repository.dart';
@@ -18,6 +19,12 @@ Future<void> showNotificationModal(BuildContext context) {
 }
 
 enum _NotifFilter { all, unread, schedule, attendance }
+
+bool _isActivelyPinned(Map<String, dynamic> row) {
+  if (row['pinToTop'] != true) return false;
+  final pinnedUntil = row['pinnedUntil'];
+  return pinnedUntil is Timestamp && pinnedUntil.toDate().isAfter(DateTime.now());
+}
 
 class NotificationModal extends StatefulWidget {
   const NotificationModal({super.key, this.announcements});
@@ -201,7 +208,8 @@ class _NotificationModalState extends State<NotificationModal> {
             child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _stream,
           builder: (context, snapshot) {
-            final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+            final rows = [...?snapshot.data]
+              ..sort((a, b) => (_isActivelyPinned(b) ? 1 : 0).compareTo(_isActivelyPinned(a) ? 1 : 0));
             final unreadCount = rows
                 .asMap()
                 .entries

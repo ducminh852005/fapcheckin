@@ -125,6 +125,11 @@ class FakeHistoryRepository extends AttendanceHistoryRepository {
       pending[classCode]?.future ??
       Future.value(ApiSuccess(summary(classCode, hasSessions: !emptySessions)));
   @override
+  Future<ApiResult<HistoryDetail>> getDetail(
+    String classCode, {
+    String? sessionId,
+  }) async => ApiSuccess(saveResult(classCode));
+  @override
   Future<ApiResult<HistoryDetail>> save(
     String classCode,
     String sessionId,
@@ -301,4 +306,28 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('past session shows manual-attendance expiry guidance', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = FakeHistoryRepository();
+    final vm = AttendanceHistoryViewModel(repo);
+    addTearDown(vm.dispose);
+    await vm.loadClasses();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: vm,
+        child: const MaterialApp(home: Scaffold(body: AttendanceHistoryBody())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đã hết hạn điểm danh tay'), findsOneWidget);
+    expect(find.text('Đi tới Cài đặt & Trợ giúp'), findsOneWidget);
+  });
 }

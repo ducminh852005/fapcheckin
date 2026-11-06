@@ -9,7 +9,8 @@ import '../attendance_history_colors.dart';
 class AttendanceHistoryHeader extends StatelessWidget {
   final String title;
   final String subtitle;
-  final VoidCallback onBack;
+  final VoidCallback? onBack;
+  final bool showBackButton;
   final VoidCallback? onExport;
   final VoidCallback? onOptions;
 
@@ -17,42 +18,69 @@ class AttendanceHistoryHeader extends StatelessWidget {
     super.key,
     this.title = 'Điểm danh sinh viên',
     this.subtitle = 'PRN231 · SE1801 · Buổi 12 · Ca 2 (Phòng AL-204)',
-    required this.onBack,
+    this.onBack,
+    this.showBackButton = false,
     this.onExport,
     this.onOptions,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : AttendanceHistoryColors.textDark;
+    final subtitleColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final btnBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final btnBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     return Row(
       children: [
         // Nút quay lại
-        InkWell(
-          onTap: onBack,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
+        if (showBackButton && onBack != null) ...[
+          Tooltip(
+            message: 'Quay lại',
+            child: InkWell(
+              onTap: onBack,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: btnBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: btnBorder),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF0F172A,
+                                ).withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 16,
+                      color: textColor,
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 15,
-              color: AttendanceHistoryColors.textDark,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 8),
+        ],
 
         // Tiêu đề & Thông tin lớp
         Expanded(
@@ -64,10 +92,10 @@ class AttendanceHistoryHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: AttendanceHistoryColors.textDark,
+                  color: textColor,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -76,10 +104,10 @@ class AttendanceHistoryHeader extends StatelessWidget {
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF64748B),
+                  color: subtitleColor,
                 ),
               ),
             ],
@@ -123,30 +151,48 @@ class _CircleActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : AttendanceHistoryColors.textDark;
+    final btnBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final btnBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+
     return Tooltip(
       message: tooltip,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          child: Center(
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: btnBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: btnBorder),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF0F172A,
+                          ).withValues(alpha: 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
-            ],
-          ),
-          child: Icon(
-            icon,
-            size: 19,
-            color: AttendanceHistoryColors.textDark,
+              child: Icon(
+                icon,
+                size: 19,
+                color: textColor,
+              ),
+            ),
           ),
         ),
       ),

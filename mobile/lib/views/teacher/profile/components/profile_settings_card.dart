@@ -17,25 +17,34 @@ class ProfileSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ProfileColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
-        color: ProfileColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: ProfileColors.borderSubtle),
-        boxShadow: ProfileColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ProfileColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
               'Cài đặt',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: ProfileColors.textDark,
+                color: textColor,
               ),
             ),
           ),

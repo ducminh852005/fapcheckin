@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock3, LoaderCircle, RotateCw, Search, SlidersHorizontal, Users, X } from "lucide-react"
+import { AlertTriangle, ClipboardCheck, Clock3, LoaderCircle, Search, SlidersHorizontal, Users, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { Button, PageHeader } from "../components/ui"
 import { Pagination } from "../components/Pagination"
@@ -12,7 +12,6 @@ export function AttendanceOperations() {
   const [classCode, setClassCode] = useState("all")
   const [teacher, setTeacher] = useState("all")
   const [slot, setSlot] = useState("all")
-  const [sync, setSync] = useState("all")
   const [warning, setWarning] = useState("all")
   const [selectedDate, setSelectedDate] = useState("")
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -31,11 +30,10 @@ export function AttendanceOperations() {
         classCode,
         teacher,
         slot,
-        sync,
         warning,
         selectedDate,
       }),
-    [sessionPage, search, status, classCode, teacher, slot, sync, warning, selectedDate]
+    [sessionPage, search, status, classCode, teacher, slot, warning, selectedDate]
   )
   const { data, loading, error } = useAsyncData(loader)
 
@@ -43,23 +41,23 @@ export function AttendanceOperations() {
   const totalSessions = data?.totalSessions ?? sessions.length
   const warningSessions = data?.sessions.filter((item) => item.warningCount > 0).length ?? 0
   const overdueSessions = data?.sessions.filter((item) => item.overdue).length ?? 0
-  const activeAdvancedFilters = [classCode, teacher, slot, sync, warning].filter((value) => value !== "all").length + (selectedDate ? 1 : 0)
+  const activeAdvancedFilters = [classCode, teacher, slot, warning].filter((value) => value !== "all").length + (selectedDate ? 1 : 0)
 
   const open = async (session: SessionRow) => {
     setSelected(session); setDetailLoading(true); setDetailError(null)
     try { setRecords(await listSessionRecords(session.id)) } catch (reason) { setDetailError(readError(reason)) }
     finally { setDetailLoading(false) }
   }
-  const clearFilters = () => { setSearch(""); setStatus("all"); setClassCode("all"); setTeacher("all"); setSlot("all"); setSync("all"); setWarning("all"); setSelectedDate(""); setSessionPage(1) }
+  const clearFilters = () => { setSearch(""); setStatus("all"); setClassCode("all"); setTeacher("all"); setSlot("all"); setWarning("all"); setSelectedDate(""); setSessionPage(1) }
 
   const paginatedSessions = sessions
 
   return <>
     <PageHeader title="Giám sát điểm danh" description="Theo dõi phiên, tỷ lệ tham dự và các bất thường mà không hiển thị QR secret hoặc địa chỉ IP." />
     {error && <section className="data-error"><b>Không thể tải điểm danh</b><span>{error}</span></section>}
-    <section className="monitor-grid attendance-kpis"><Metric icon={<ClipboardCheck size={21} />} tone="warning" label="PHIÊN ĐANG MỞ" value={loading ? "…" : data?.openCount ?? 0} /><Metric icon={<Clock3 size={21} />} tone="danger" label="MỞ QUÁ GIỜ" value={loading ? "…" : overdueSessions} /><Metric icon={<AlertTriangle size={21} />} tone="danger" label="PHIÊN CÓ CẢNH BÁO" value={loading ? "…" : warningSessions} /><Metric icon={<RotateCw size={21} />} tone="warning" label="CHƯA ĐỒNG BỘ FAP" value={loading ? "…" : data?.unsyncedCount ?? 0} /></section>
-    <section className={`card attendance-filters ${advancedOpen ? "is-open" : ""}`}><div className="attendance-filter-main"><label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm lớp, giảng viên hoặc session ID..." /></label><Filter value={status} set={setStatus} label="Trạng thái" options={[["all", "Tất cả"], ["open", "Đang mở"], ["closed", "Đã đóng"]]} /><Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setAdvancedOpen(!advancedOpen)}>Bộ lọc nâng cao{activeAdvancedFilters ? ` (${activeAdvancedFilters})` : ""}</Button></div>{advancedOpen && <div className="attendance-filter-advanced"><Filter value={classCode} set={setClassCode} label="Lớp học" options={[["all", "Tất cả lớp"], ...(data?.classes ?? []).map((value) => [value, value])]} /><Filter value={teacher} set={setTeacher} label="Giảng viên" options={[["all", "Tất cả GV"], ...(data?.teachers ?? []).map((value) => [value, value])]} /><Filter value={slot} set={setSlot} label="Slot" options={[["all", "Tất cả slot"], ...(data?.slots ?? []).map((value) => [value, value])]} /><Filter value={sync} set={setSync} label="Đồng bộ FAP" options={[["all", "Tất cả"], ["unsynced", "Chưa đồng bộ"], ["synced", "Đã đồng bộ"]]} /><Filter value={warning} set={setWarning} label="Cảnh báo" options={[["all", "Tất cả"], ["warning", "Có cảnh báo"], ["clean", "Bình thường"]]} /><label className="field"><span>Ngày</span><input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label><Button variant="ghost" onClick={clearFilters}>Xóa bộ lọc</Button></div>}</section>
-    <article className="card table-card"><div className="table-toolbar"><div><b>{sessions.length} / {totalSessions} phiên gần nhất</b></div></div>{loading ? <div className="data-loading"><LoaderCircle className="spin" size={24} /><span>Đang tải và đối chiếu phiên...</span></div> : <><SessionsTable rows={paginatedSessions} open={open} /><Pagination currentPage={sessionPage} totalItems={totalSessions} pageSize={10} onPageChange={setSessionPage} itemLabel="phiên điểm danh" syncNote="Google Cloud Firestore realtime" /></>}</article>
+    <section className="monitor-grid attendance-kpis"><Metric icon={<ClipboardCheck size={21} />} tone="warning" label="PHIÊN ĐANG MỞ" value={loading ? "…" : data?.openCount ?? 0} /><Metric icon={<Clock3 size={21} />} tone="danger" label="MỞ QUÁ GIỜ" value={loading ? "…" : overdueSessions} /><Metric icon={<AlertTriangle size={21} />} tone="danger" label="PHIÊN CÓ CẢNH BÁO" value={loading ? "…" : warningSessions} /></section>
+    <section className={`card attendance-filters ${advancedOpen ? "is-open" : ""}`}><div className="attendance-filter-main"><label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm lớp, giảng viên hoặc session ID..." /></label><Filter value={status} set={setStatus} label="Trạng thái" options={[["all", "Tất cả"], ["open", "Đang mở"], ["closed", "Đã đóng"]]} /><Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setAdvancedOpen(!advancedOpen)}>Bộ lọc nâng cao{activeAdvancedFilters ? ` (${activeAdvancedFilters})` : ""}</Button></div>{advancedOpen && <div className="attendance-filter-advanced"><Filter value={classCode} set={setClassCode} label="Lớp học" options={[["all", "Tất cả lớp"], ...(data?.classes ?? []).map((value) => [value, value])]} /><Filter value={teacher} set={setTeacher} label="Giảng viên" options={[["all", "Tất cả GV"], ...(data?.teachers ?? []).map((value) => [value, value])]} /><Filter value={slot} set={setSlot} label="Slot" options={[["all", "Tất cả slot"], ...(data?.slots ?? []).map((value) => [value, value])]} /><Filter value={warning} set={setWarning} label="Cảnh báo" options={[["all", "Tất cả"], ["warning", "Có cảnh báo"], ["clean", "Bình thường"]]} /><label className="field"><span>Ngày</span><input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label><Button variant="ghost" onClick={clearFilters}>Xóa bộ lọc</Button></div>}</section>
+    <article className="card table-card"><div className="table-toolbar"><div><b>{sessions.length} / {totalSessions} phiên gần nhất</b></div></div>{loading ? <div className="data-loading"><LoaderCircle className="spin" size={24} /><span>Đang tải và đối chiếu phiên...</span></div> : <><SessionsTable rows={paginatedSessions} open={open} /><Pagination currentPage={sessionPage} totalItems={totalSessions} pageSize={10} onPageChange={setSessionPage} itemLabel="phiên điểm danh" /></>}</article>
     {selected && <SessionDrawer session={selected} records={records} loading={detailLoading} error={detailError} close={() => setSelected(null)} />}
   </>
 }
@@ -69,7 +67,7 @@ function Filter({ value, set, label, options }: { value: string; set: (value: st
 
 function SessionsTable({ rows, open }: { rows: SessionRow[]; open: (row: SessionRow) => void }) {
   if (!rows.length) return <div className="empty-state compact-empty"><span><ClipboardCheck size={28} /></span><h3>Không tìm thấy phiên</h3></div>
-  return <div className="table-scroll"><table className="admin-data-table attendance-table"><thead><tr><th>Ngày / lớp</th><th>Giảng viên</th><th>Trạng thái</th><th>Tham dự</th><th>Chưa ghi nhận</th><th>FAP</th><th>Cảnh báo</th></tr></thead><tbody>{rows.map((row) => { const attended = row.presentCount + row.lateCount; const rate = row.totalStudents ? Math.round(attended / row.totalStudents * 100) : 0; return <tr key={row.id} onClick={() => void open(row)}><td className="session-identity"><b className="code-link">{row.classCode}</b><small className="cell-note">{row.sessionDate} · {row.slotCode}</small><small className="session-id">{row.id}</small></td><td><b className="teacher-code">{row.teacherMemberCode}</b></td><td><span className={`status ${row.overdue ? "status-error" : row.sessionStatus === "open" ? "status-warning" : "status-success"}`}><i />{row.overdue ? "Mở quá giờ" : row.sessionStatus === "open" ? "Đang mở" : "Đã đóng"}</span></td><td className="attendance-rate"><div><b>{attended}/{row.totalStudents}</b><strong>{rate}%</strong></div><span className="attendance-progress"><i style={{ width: `${rate}%` }} /></span><small>Vắng {row.absentCount} · Muộn {row.lateCount}</small></td><td><b className={row.notRecordedCount ? "count-danger" : "count-ok"}>{row.notRecordedCount}</b></td><td>{row.unsyncedCount ? <span className="status status-warning"><i />{row.unsyncedCount} chưa đồng bộ</span> : <span className="status status-success"><i />Đã đồng bộ</span>}</td><td>{row.warningCount ? <span className="status status-error"><i />{row.warningCount} cảnh báo</span> : <span className="status status-success"><i />Bình thường</span>}</td></tr> })}</tbody></table></div>
+  return <div className="table-scroll"><table className="admin-data-table attendance-table"><thead><tr><th>Ngày / lớp</th><th>Giảng viên</th><th>Trạng thái</th><th>Tham dự</th><th>Chưa ghi nhận</th><th>Cảnh báo</th></tr></thead><tbody>{rows.map((row) => { const attended = row.presentCount + row.lateCount; const rate = row.totalStudents ? Math.round(attended / row.totalStudents * 100) : 0; return <tr key={row.id} onClick={() => void open(row)}><td className="session-identity"><b className="code-link">{row.classCode}</b><small className="cell-note">{row.sessionDate} · {row.slotCode}</small><small className="session-id">{row.id}</small></td><td><b className="teacher-code">{row.teacherMemberCode}</b></td><td><span className={`status ${row.overdue ? "status-error" : row.sessionStatus === "open" ? "status-warning" : "status-success"}`}><i />{row.overdue ? "Mở quá giờ" : row.sessionStatus === "open" ? "Đang mở" : "Đã đóng"}</span></td><td className="attendance-rate"><div><b>{attended}/{row.totalStudents}</b><strong>{rate}%</strong></div><span className="attendance-progress"><i style={{ width: `${rate}%` }} /></span><small>Vắng {row.absentCount} · Muộn {row.lateCount}</small></td><td><b className={row.notRecordedCount ? "count-danger" : "count-ok"}>{row.notRecordedCount}</b></td><td>{row.warningCount ? <span className="status status-error"><i />{row.warningCount} cảnh báo</span> : <span className="status status-success"><i />Bình thường</span>}</td></tr> })}</tbody></table></div>
 }
 
 function SessionDrawer({ session, records, loading, error, close }: { session: SessionRow; records: AttendanceRecordRow[]; loading: boolean; error: string | null; close: () => void }) {
@@ -94,7 +92,7 @@ function RecordsTable({ rows }: { rows: AttendanceRecordRow[] }) {
       <div className="table-scroll">
         <table className="drawer-table attendance-records">
           <thead>
-            <tr><th>Sinh viên</th><th>Trạng thái</th><th>Mạng</th><th>FAP</th><th>Kiểm tra</th></tr>
+            <tr><th>Sinh viên</th><th>Trạng thái</th><th>Mạng</th><th>Kiểm tra</th></tr>
           </thead>
           <tbody>
             {paginated.map((row) => (
@@ -102,7 +100,6 @@ function RecordsTable({ rows }: { rows: AttendanceRecordRow[] }) {
                 <td><b>{row.fullName || row.rollNumber}</b><small className="cell-note">{row.rollNumber} · {row.email}</small></td>
                 <td><AttendanceStatus value={row.status} /></td>
                 <td>{row.networkResult}</td>
-                <td>{row.status === "Chưa điểm danh" ? "—" : row.syncedToFap ? <CheckCircle2 size={16} /> : "Chưa đồng bộ"}</td>
                 <td>{row.warning ? <span className="status status-error"><i />{row.warning}</span> : <span className="status status-success"><i />Hợp lệ</span>}</td>
               </tr>
             ))}

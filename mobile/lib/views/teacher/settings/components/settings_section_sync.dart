@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_toast.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_spacing.dart';
@@ -119,7 +120,6 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
                       _lastSyncMessage = null;
                     });
                     final dashVm = context.read<DashboardViewModel>();
-                    final messenger = ScaffoldMessenger.of(context);
                     final result = await dashVm.syncToFap();
                     if (!mounted) return;
                     String msg;
@@ -136,14 +136,12 @@ class _SettingsSectionSyncState extends State<SettingsSectionSync> {
                       _syncing = false;
                       _lastSyncMessage = msg;
                     });
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(msg),
-                        backgroundColor: result is ApiSuccess<SyncResult>
-                            ? AppColors.statusPresent
-                            : AppColors.statusAbsent,
-                        duration: Duration(seconds: 3),
-                      ),
+                    showAppToast(
+                      context,
+                      message: msg,
+                      type: result is ApiSuccess<SyncResult>
+                          ? AppToastType.success
+                          : AppToastType.error,
                     );
                   },
             style: ElevatedButton.styleFrom(

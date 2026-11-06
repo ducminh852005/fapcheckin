@@ -73,9 +73,11 @@ class DashboardViewModel extends ChangeNotifier {
     _teacherMemberCode = '';
     _generation++;
     _currentRoute = 'tong-quan';
+    _routeHistory.clear();
     _classes = [];
     _status = ViewStatus.idle;
     _errorMessage = null;
+    _errorCode = null;
     notifyListeners();
   }
 
@@ -84,6 +86,9 @@ class DashboardViewModel extends ChangeNotifier {
   ViewStatus _status = ViewStatus.idle;
   ViewStatus get status => _status;
   bool get isLoading => _status == ViewStatus.loading;
+
+  String? _errorCode;
+  String? get errorCode => _errorCode;
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
@@ -193,6 +198,7 @@ class DashboardViewModel extends ChangeNotifier {
     final generation = ++_generation;
     _status = ViewStatus.loading;
     _errorMessage = null;
+    _errorCode = null;
     notifyListeners();
 
     try {
@@ -206,14 +212,16 @@ class DashboardViewModel extends ChangeNotifier {
           _classes = _sortClassesByCheckinPriority(
             data.where((c) => !c.isMakeup).toList(),
           );
-          _status = data.isEmpty ? ViewStatus.idle : ViewStatus.success;
+          _status = ViewStatus.success;
         case ApiFailure<List<ClassSectionModel>>(:final error):
           _status = ViewStatus.error;
+          _errorCode = error.code;
           _errorMessage = error.message;
       }
     } catch (e) {
       if (generation != _generation) return;
       _status = ViewStatus.error;
+      _errorCode = 'UNKNOWN_ERROR';
       _errorMessage = e.toString();
     }
     notifyListeners();
@@ -242,11 +250,34 @@ class DashboardViewModel extends ChangeNotifier {
   // ── Navigation ───────────────────────────────────────────────────────────────
 
   String _currentRoute = 'tong-quan';
+  final List<String> _routeHistory = [];
   String get currentRoute => _currentRoute;
 
+  bool get canNavigateBack =>
+      _routeHistory.isNotEmpty || _currentRoute != 'tong-quan';
+
   void navigate(String route) {
+    if (route == _currentRoute) return;
+    _routeHistory.add(_currentRoute);
+    if (_routeHistory.length > 20) {
+      _routeHistory.removeAt(0);
+    }
     _currentRoute = route;
     notifyListeners();
+  }
+
+  bool navigateBack([String fallbackRoute = 'tong-quan']) {
+    if (_routeHistory.isNotEmpty) {
+      _currentRoute = _routeHistory.removeLast();
+      notifyListeners();
+      return true;
+    }
+    if (_currentRoute != fallbackRoute) {
+      _currentRoute = fallbackRoute;
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

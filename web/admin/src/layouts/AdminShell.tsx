@@ -2,11 +2,14 @@ import { collection, getCountFromServer, query, where } from "firebase/firestore
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import {
   Bell,
+  Activity,
   CheckCheck,
   ClipboardCheck,
+  Bug,
   FileText,
   FolderKanban,
   HelpCircle,
+  History,
   KeyRound,
   LayoutDashboard,
   LineChart,
@@ -45,6 +48,7 @@ export function AdminShell({
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [classesCount, setClassesCount] = useState<number | null>(null)
   const [openSessionsCount, setOpenSessionsCount] = useState<number | null>(null)
+  const [pendingFeedbackCount, setPendingFeedbackCount] = useState<number | null>(null)
   const [notifications, setNotifications] = useState<HeaderNotificationItem[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifFilter, setNotifFilter] = useState<"all" | "academic" | "announcement" | "system">("all")
@@ -61,14 +65,18 @@ export function AdminShell({
 
   useEffect(() => {
     void (async () => {
-      const [classesSnap, openSnap] = await Promise.all([
+      const [classesSnap, openSnap, feedbackSnap] = await Promise.all([
         getCountFromServer(collection(firestore, "classes")).catch(() => null),
         getCountFromServer(
           query(collection(firestore, "sessions"), where("sessionStatus", "==", "open"))
         ).catch(() => null),
+        getCountFromServer(
+          query(collection(firestore, "feedback"), where("status", "==", "pending"))
+        ).catch(() => null),
       ])
       if (classesSnap) setClassesCount(classesSnap.data().count)
       if (openSnap) setOpenSessionsCount(openSnap.data().count)
+      if (feedbackSnap) setPendingFeedbackCount(feedbackSnap.data().count)
     })()
   }, [page])
 
@@ -179,6 +187,23 @@ export function AdminShell({
           icon: <LineChart size={18} />,
           badge: null,
         },
+        {
+          id: "feedback",
+          label: "Tiếp nhận báo lỗi",
+          icon: <Bug size={18} />,
+          badge:
+            pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
+              <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
+                {pendingFeedbackCount > 99 ? "99+" : pendingFeedbackCount}
+              </span>
+            ) : null,
+        },
+        {
+          id: "feedback-history",
+          label: "Lịch sử góp ý",
+          icon: <History size={18} />,
+          badge: null,
+        },
       ],
     },
     {
@@ -188,6 +213,12 @@ export function AdminShell({
           id: "accounts",
           label: "Quyền truy cập",
           icon: <KeyRound size={18} />,
+          badge: null,
+        },
+        {
+          id: "crashlytics",
+          label: "Firebase Crashlytics",
+          icon: <Activity size={18} />,
           badge: null,
         },
         {

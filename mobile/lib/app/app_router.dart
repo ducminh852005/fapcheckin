@@ -1,3 +1,5 @@
+import '../views/teacher/requests/requests_body.dart';
+
 import 'package:go_router/go_router.dart';
 
 import '../viewmodels/auth_viewmodel.dart';
@@ -55,7 +57,18 @@ GoRouter createAppRouter(AuthViewModel authViewModel) {
       GoRoute(
         path: AppRoutes.teacher,
         name: 'teacher',
-        builder: (context, state) => const MainScreen(),
+        builder: (context, state) => authViewModel.session?.user.role == 'user'
+            ? const RequestsBody()
+            : MainScreen(initialRoute: state.uri.queryParameters['tab']),
+        routes: [
+          GoRoute(
+            path: ':tab',
+            builder: (context, state) =>
+                authViewModel.session?.user.role == 'user'
+                ? const RequestsBody()
+                : MainScreen(initialRoute: state.pathParameters['tab']),
+          ),
+        ],
       ),
     ],
   );

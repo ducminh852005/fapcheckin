@@ -31,46 +31,58 @@ class WorkDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ProfileColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ProfileColors.textMuted;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: ProfileColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ProfileColors.borderSubtle),
-        boxShadow: ProfileColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ProfileColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Chi tiết',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: ProfileColors.textDark,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 16),
           for (int i = 0; i < entries.length; i++) ...[
             if (i > 0) const SizedBox(height: 14),
-            _buildRow(entries[i]),
+            _buildRow(entries[i], textColor, mutedColor),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildRow(WorkDetailEntry entry) {
+  Widget _buildRow(WorkDetailEntry entry, Color textColor, Color mutedColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           entry.label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: ProfileColors.textMuted,
+            color: mutedColor,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -81,10 +93,10 @@ class WorkDetailsCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               entry.value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
-                color: ProfileColors.textDark,
+                color: textColor,
               ),
             ),
           ),

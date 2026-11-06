@@ -104,7 +104,7 @@ export async function listAttendanceSessionsPaginated(options: {
   ])
 
   const totalSessionsFromDb = totalSnap ? totalSnap.data().count : 0
-  const openCount = openSnap ? openSnap.data().count : 11
+  const openCount = openSnap ? openSnap.data().count : 0
   const unsyncedCount = unsyncedSnap ? unsyncedSnap.data().count : 0
 
   // 2. Tải cửa sổ phiên vừa đủ cho trang yêu cầu (tối đa page * pageSize)

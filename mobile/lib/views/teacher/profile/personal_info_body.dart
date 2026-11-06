@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/auth_viewmodel.dart';
-import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../core/widgets/app_toast.dart';
 import 'account_dialogs.dart';
 import 'profile_colors.dart';
 import 'components/profile_sub_header.dart';
@@ -11,7 +11,7 @@ import 'components/personal_avatar_card.dart';
 import 'components/personal_form_card.dart';
 
 /// Màn hình Thông tin cá nhân của Giảng viên:
-/// 1. Header có nút quay lại (Back), nhãn "HỒ SƠ" và tiêu đề "Thông tin cá nhân"
+/// 1. Header có nhãn "HỒ SƠ" và tiêu đề "Thông tin cá nhân"
 /// 2. Thẻ Avatar kèm nút "Đổi ảnh đại diện"
 /// 3. Thẻ form thông tin: Họ và tên, Email (khóa), Số điện thoại, Ngày sinh
 /// 4. Nút cam "Lưu thay đổi"
@@ -68,20 +68,19 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
   @override
   Widget build(BuildContext context) {
     final authVm = context.watch<AuthViewModel>();
-    final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
     final initials = _extractInitials(_nameController.text);
     final avatarPath = authVm.session?.user.avatarPath ?? '';
 
     return Scaffold(
-      backgroundColor: ProfileColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           horizontalPadding,
           context.isMobile ? 16.0 : 24.0,
           horizontalPadding,
-          context.isMobile ? 32.0 : 40.0,
+          context.isMobile ? 108.0 : 40.0,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -89,11 +88,8 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Header có nút quay lại
-                ProfileSubHeader(
-                  title: 'Thông tin cá nhân',
-                  onBack: () => dashboardVm.navigate('cai-dat'),
-                ),
+                // 1. Header
+                const ProfileSubHeader(title: 'Thông tin cá nhân'),
                 const SizedBox(height: 16),
 
                 // 2. Thẻ Avatar
@@ -119,12 +115,14 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
 
                 // 4. Nút "Lưu thay đổi"
                 InkWell(
-                  onTap: _handleSave,
+                  onTap: _saving ? null : _handleSave,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     height: 48,
                     decoration: BoxDecoration(
-                      color: ProfileColors.orangePrimary,
+                      color: _saving
+                          ? ProfileColors.orangePrimary.withValues(alpha: 0.7)
+                          : ProfileColors.orangePrimary,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -136,15 +134,38 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Text(
-                        'Lưu thay đổi',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
+                    child: Center(
+                      child: _saving
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Đang lưu...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const Text(
+                              'Lưu thay đổi',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -159,23 +180,27 @@ class _PersonalInfoBodyState extends State<PersonalInfoBody> {
   bool _saving = false;
   Future<void> _handleSave() async {
     if (_saving) return;
-    _saving = true;
+    setState(() => _saving = true);
     final vm = context.read<AuthViewModel>();
-    final ok = await vm.updateProfile(_nameController.text, _phoneController.text, _birthDateController.text);
+    final ok = await vm.updateProfile(
+      _nameController.text,
+      _phoneController.text,
+      _birthDateController.text,
+    );
     if (!mounted) return;
-    _saving = false;
+    setState(() => _saving = false);
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.errorMessage ?? 'Không thể lưu.')),
+      showAppToast(
+        context,
+        message: vm.errorMessage ?? 'Không thể lưu.',
+        type: AppToastType.error,
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã lưu thay đổi thông tin cá nhân thành công'),
-        backgroundColor: ProfileColors.statusGreen,
-        duration: Duration(seconds: 2),
-      ),
+    showAppToast(
+      context,
+      message: 'Đã lưu thay đổi thông tin cá nhân thành công',
+      type: AppToastType.success,
     );
   }
 }

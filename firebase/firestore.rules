@@ -27,20 +27,27 @@ service cloud.firestore {
       return get(profilePath()).data;
     }
     function isActive() {
-      return profile().get('active', true) == true;
+      // Dữ liệu cũ có một số hồ sơ lưu active dưới dạng chuỗi "true".
+      // Admin web cũng chấp nhận định dạng này, nên rules cần xử lý nhất quán.
+      return profile().get('active', true) == true
+        || profile().get('active', true) == 'true';
     }
     function isRole(r) {
       return hasProfile() && isActive() && profile().role == r;
     }
     function isAdmin() { return isRole('admin'); }
-    function isStaff() { return isRole('staff'); }
-    function isStudent() { return isRole('user'); }
+    function isStaff() {
+      return isRole('staff') || isRole('GV') || isRole('teacher') || isRole('admin');
+    }
+    function isStudent() {
+      return isRole('user') || isRole('SV') || isRole('student');
+    }
     function myMemberCode() { return profile().memberCode; }
     function myRollNumber() { return profile().get('rollNumber', ''); }
 
     // GV sở hữu tài liệu có trường teacherMemberCode khớp với memberCode của mình.
     function ownsDoc(data) {
-      return isStaff() && data.teacherMemberCode == myMemberCode();
+      return (isStaff() || isAdmin()) && data.teacherMemberCode == myMemberCode();
     }
     // Trường định danh không được đổi khi cập nhật.
     function keepsFields(fields) {
@@ -51,6 +58,13 @@ service cloud.firestore {
     }
     function emailKey() {
       return request.auth.token.email.lower();
+    }
+    function sameVietnamDay(left, right) {
+      let leftVn = left + duration.value(7, 'h');
+      let rightVn = right + duration.value(7, 'h');
+      return leftVn.year() == rightVn.year()
+        && leftVn.month() == rightVn.month()
+        && leftVn.day() == rightVn.day();
     }
 
     // --------------------------------------------------------------- users
@@ -152,7 +166,13 @@ service cloud.firestore {
 
     // ----------------------------------------------------- class_schedules
     match /class_schedules/{scheduleId} {
-      allow read: if isAdmin() || ownsDoc(resource.data);
+      // ScheduleRepository đọc ID xác định trước khi create để retry
+      // không tạo trùng. Với document chưa tồn tại, resource.data không
+      // có nên ownsDoc(resource.data) sẽ bị permission-denied.
+      allow get: if isAdmin()
+        || (isStaff() && scheduleId.matches('^' + myMemberCode() + '_.*'))
+        || ownsDoc(resource.data);
+      allow list: if isAdmin() || ownsDoc(resource.data);
       allow create: if isAdmin()
         || (ownsDoc(request.resource.data)
             && get(/databases/$(database)/documents/classes/$(request.resource.data.classCode))
@@ -168,9 +188,16 @@ service cloud.firestore {
     // attendance_records. Mã QR mang sessionId + qrSecret.
     match /sessions/{sessionId} {
       allow read: if isAdmin() || ownsDoc(resource.data);
-      allow create: if isStaff()
+      allow create: if (isStaff() || isAdmin())
         && request.resource.data.teacherMemberCode == myMemberCode()
         && request.resource.data.sessionStatus == 'open'
+        && request.resource.data.manualAttendanceDeadline is timestamp
+        && request.resource.data.manualAttendanceDeadline > request.time
+        && request.resource.data.manualAttendanceDeadline
+             <= request.time + duration.value(24, 'h')
+        && request.resource.data.manualAttendanceDeadline.hours() == 17
+        && request.resource.data.manualAttendanceDeadline.minutes() == 0
+        && request.resource.data.manualAttendanceDeadline.seconds() == 0
         && request.resource.data.qrSecret is string
         && request.resource.data.qrSecret.size() >= 16
         && request.resource.data.ipCheck is bool
@@ -178,7 +205,9 @@ service cloud.firestore {
              .data.teacherMemberCode == myMemberCode();
       allow update: if isAdmin()
         || (ownsDoc(resource.data) && ownsDoc(request.resource.data)
-            && keepsFields(['classCode', 'teacherMemberCode', 'sessionDate']));
+            && keepsFields(['classCode', 'teacherMemberCode', 'sessionDate'])
+            && request.resource.data.get('manualAttendanceDeadline', null)
+                 == resource.data.get('manualAttendanceDeadline', null));
       allow delete: if isAdmin();
     }
 
@@ -195,7 +224,11 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (ownsDoc(resource.data) && ownsDoc(request.resource.data)
             && onlyChanges(['status', 'checkinTime', 'networkVerificationResult', 'ipAddress',
-                            'note', 'updatedAt', 'updatedBy', 'syncedToFap']));
+                            'note', 'updatedAt', 'updatedBy', 'syncedToFap'])
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(
+                  ['status', 'checkinTime', 'networkVerificationResult', 'note'])
+                || (request.resource.data.networkVerificationResult == 'Manual'
+                    && manualAttendanceWithinDeadline(request.resource.data))));
       allow delete: if isAdmin();
 
       // SV quét QR: điều kiện kiểm tra QR, ghi danh, trạng thái phiên và IP.
@@ -230,16 +263,33 @@ service cloud.firestore {
       function teacherCreatesRecord(recordId) {
         let d = request.resource.data;
         let s = get(/databases/$(database)/documents/sessions/$(d.sessionId)).data;
-        return ownsDoc(d)
+        return (ownsDoc(d) || isAdmin())
           && d.keys().hasOnly(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode',
                'status', 'checkinTime', 'networkVerificationResult', 'ipAddress', 'note',
                'updatedAt', 'updatedBy', 'syncedToFap'])
           && d.keys().hasAll(['sessionId', 'rollNumber', 'classCode', 'teacherMemberCode', 'status'])
           && recordId == d.sessionId + '_' + d.rollNumber
+          && d.rollNumber is string
+          && d.rollNumber.size() > 0
           && d.status in ['Present', 'Late', 'Absent', 'ManualByGV', 'Unchecked']
+          && (d.get('networkVerificationResult', '') != 'Manual'
+              || manualAttendanceWithinDeadline(d))
           && s.teacherMemberCode == myMemberCode()
-          && d.classCode == s.classCode
-          && exists(/databases/$(database)/documents/enrollments/$(s.classCode + '_' + d.rollNumber));
+          && d.teacherMemberCode == s.teacherMemberCode
+          && d.classCode == s.classCode;
+      }
+
+      function manualAttendanceWithinDeadline(d) {
+        let s = get(/databases/$(database)/documents/sessions/$(d.sessionId)).data;
+        return (s.keys().hasAll(['manualAttendanceDeadline'])
+            && s.manualAttendanceDeadline is timestamp
+            && request.time < s.manualAttendanceDeadline)
+          // Tương thích phiên được tạo trước khi manualAttendanceDeadline ra đời.
+          // Chỉ cho phép trong đúng ngày tạo phiên theo múi giờ Việt Nam.
+          || (!s.keys().hasAny(['manualAttendanceDeadline'])
+            && s.keys().hasAll(['createdAt'])
+            && s.createdAt is timestamp
+            && sameVietnamDay(s.createdAt, request.time));
       }
     }
 
@@ -249,10 +299,10 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (hasProfile() && resource.data.authorUid == request.auth.uid);
       allow create: if hasProfile() && isActive()
-        && (profile().role == 'user' || profile().role == 'staff')
+        && (isStaff() || isStudent())
         && request.resource.data.keys().hasOnly(
              ['type', 'authorUid', 'authorMemberCode', 'sessionId', 'classCode',
-              'reason', 'status', 'createdAt'])
+              'reason', 'status', 'createdAt', 'attachments'])
         && request.resource.data.keys().hasAll(
              ['type', 'authorUid', 'authorMemberCode', 'reason', 'status', 'createdAt'])
         && request.resource.data.type in ['attendance_fix', 'leave']
@@ -277,6 +327,8 @@ service cloud.firestore {
     match /announcements/{id} {
       allow read: if hasProfile()
         && (resource.data.audience == 'all'
+            || (resource.data.audience == 'staff' && isStaff())
+            || (resource.data.audience == 'user' && isStudent())
             || resource.data.audience == profile().role
             || profile().role == 'admin');
       allow write: if isAdmin();
@@ -311,12 +363,14 @@ service cloud.firestore {
       allow get: if isAdmin() || (hasProfile() && id.matches('^' + request.auth.uid + '_.*'));
       allow list: if isAdmin() || (hasProfile() && resource.data.authorUid == request.auth.uid);
       allow create: if hasProfile() && isActive()
-        && request.resource.data.keys().hasOnly(['authorUid', 'category', 'message', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['authorUid', 'category', 'message', 'status', 'createdAt', 'attachments'])
         && request.resource.data.authorUid == request.auth.uid
         && id.matches('^' + request.auth.uid + '_.*')
         && request.resource.data.category in ['bug', 'suggestion', 'other']
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.get('attachments', []) is list
+        && request.resource.data.get('attachments', []).size() <= 3
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time;
       allow update: if isAdmin() && onlyChanges(['status', 'reply', 'resolvedAt'])

@@ -114,7 +114,7 @@ export async function getAttendanceReportStats(): Promise<AttendanceReportStats>
     const memberCode = String(d.memberCode ?? "").trim()
     const rollNumber = String(d.rollNumber ?? d.memberCode ?? "").trim()
     const fullName = String(d.fullName ?? "").trim()
-    if (["staff", "GV"].includes(role) && memberCode) {
+    if (["staff"].includes(role) && memberCode) {
       teacherNames.set(memberCode, fullName || memberCode)
     }
     if (rollNumber) {
@@ -352,13 +352,13 @@ export async function getAttendanceReportStats(): Promise<AttendanceReportStats>
     const percentOfMax = Math.min(100, Math.round((agg.absent / maxAllowed) * 100))
 
     let riskLevel: "danger" | "warning_1" | "suspended" = "warning_1"
-    let riskLabel = "Cảnh báo cấp 1"
+    let riskLabel = "Vắng 1–2 buổi"
     if (agg.absent >= maxAllowed) {
       riskLevel = "suspended"
-      riskLabel = "Đình chỉ thi slot tới"
+      riskLabel = `Vắng từ ${maxAllowed} buổi`
     } else if (agg.absent >= maxAllowed - 1) {
       riskLevel = "danger"
-      riskLabel = "Nguy cơ cấm thi"
+      riskLabel = `Vắng ${maxAllowed - 1} buổi`
     }
 
     if (agg.absent >= 2) {

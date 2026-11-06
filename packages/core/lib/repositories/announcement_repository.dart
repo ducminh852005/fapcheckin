@@ -21,6 +21,7 @@ class AnnouncementRepository {
     return query.snapshots().map((snapshot) {
       final rows = snapshot.docs
           .map((d) => <String, dynamic>{...d.data(), 'id': d.id})
+          .where((row) => row['status'] != 'draft' && row['status'] != 'scheduled')
           .toList();
       rows.sort((a, b) {
         final aTime = a['createdAt'];

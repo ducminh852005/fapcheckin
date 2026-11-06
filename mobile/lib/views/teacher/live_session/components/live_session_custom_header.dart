@@ -3,70 +3,37 @@ import 'package:flutter/material.dart';
 import '../live_session_colors.dart';
 
 /// Header của màn hình Điểm danh trực tiếp:
-/// - Subtitle: "CA 2 · THỨ NĂM, 08/10/2026"
 /// - Title: "Điểm danh trực tiếp" + Nút menu (...)
 /// - Thông tin môn & lớp: Icon quyển sách cam, "PRN231 · SE1801", giờ học, phòng học, chấm xanh trực tuyến
 class LiveSessionCustomHeader extends StatelessWidget {
-  final String sessionSubtitle;
   final String classTitle;
   final String timeAndRoom;
-  final VoidCallback? onBackTap;
   final VoidCallback? onMoreTap;
 
   const LiveSessionCustomHeader({
     super.key,
-    this.sessionSubtitle = '',
     this.classTitle = '',
     this.timeAndRoom = '',
-    this.onBackTap,
     this.onMoreTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.white : LiveSessionColors.textDark;
+    final subtextColor =
+        isDark ? const Color(0xFF94A3B8) : LiveSessionColors.textMuted;
+    final iconColor = isDark ? Colors.white : const Color(0xFF334155);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Dòng phụ đề thời gian ca học
-        Text(
-          sessionSubtitle,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.8,
-            color: LiveSessionColors.textMuted,
-          ),
-        ),
-        const SizedBox(height: 4),
-
         // Tiêu đề chính + Nút Back (nếu có) + Nút 3 chấm
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (onBackTap != null) ...[
-              InkWell(
-                onTap: onBackTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: LiveSessionColors.borderSubtle),
-                    boxShadow: LiveSessionColors.cardShadow,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 17,
-                    color: Color(0xFF334155),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            const Expanded(
+            Expanded(
               child: FittedBox(
                 alignment: Alignment.centerLeft,
                 fit: BoxFit.scaleDown,
@@ -75,29 +42,21 @@ class LiveSessionCustomHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: LiveSessionColors.textDark,
+                    color: titleColor,
                     letterSpacing: -0.5,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            InkWell(
-              onTap: onMoreTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: LiveSessionColors.borderSubtle),
-                  boxShadow: LiveSessionColors.cardShadow,
-                ),
-                child: const Icon(
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Tuỳ chọn phiên điểm danh',
+              child: IconButton(
+                onPressed: onMoreTap,
+                icon: Icon(
                   Icons.more_horiz_rounded,
-                  size: 22,
-                  color: Color(0xFF334155),
+                  size: 26,
+                  color: iconColor,
                 ),
               ),
             ),
@@ -112,7 +71,9 @@ class LiveSessionCustomHeader extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: LiveSessionColors.orangeLight,
+                color: isDark
+                    ? LiveSessionColors.orangePrimary.withValues(alpha: 0.22)
+                    : LiveSessionColors.orangeLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -131,19 +92,19 @@ class LiveSessionCustomHeader extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       classTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: LiveSessionColors.textDark,
+                        color: titleColor,
                       ),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     timeAndRoom,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: LiveSessionColors.textMuted,
+                      color: subtextColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

@@ -1,10 +1,9 @@
+import './teacher/requests/requests_body.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
@@ -26,7 +25,9 @@ import './teacher/dashboard/components/nav_destinations.dart';
 import './teacher/dashboard/components/top_bar.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final String? initialRoute;
+
+  const MainScreen({super.key, this.initialRoute});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -43,6 +44,10 @@ class _MainScreenState extends State<MainScreen> {
         final authVm = context.read<AuthViewModel>();
         final dashboardVm = context.read<DashboardViewModel>();
 
+        if (widget.initialRoute != null && widget.initialRoute!.isNotEmpty) {
+          dashboardVm.navigate(widget.initialRoute!);
+        }
+
         if (authVm.session != null && dashboardVm.teacherMemberCode.isEmpty) {
           dashboardVm.setTeacherInfo(
             name: authVm.session!.user.fullName,
@@ -53,7 +58,7 @@ class _MainScreenState extends State<MainScreen> {
 
         dashboardVm.loadClasses();
 
-        _timer = Timer.periodic(Duration(seconds: 1), (_) {
+        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
           if (mounted) {
             context.read<LiveSessionViewModel>().tickTimers();
             context.read<DashboardViewModel>().tickCountdown();
@@ -61,6 +66,20 @@ class _MainScreenState extends State<MainScreen> {
         });
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant MainScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialRoute != null &&
+        widget.initialRoute!.isNotEmpty &&
+        widget.initialRoute != oldWidget.initialRoute) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<DashboardViewModel>().navigate(widget.initialRoute!);
+        }
+      });
+    }
   }
 
   @override
@@ -100,6 +119,9 @@ class _MainScreenState extends State<MainScreen> {
       case 'thong-tin-cong-tac':
         body = const WorkInfoBody();
         break;
+      case 'yeu-cau':
+        body = const RequestsBody();
+        break;
       case 'bao-cao':
         body = ReportBody();
         break;
@@ -109,64 +131,48 @@ class _MainScreenState extends State<MainScreen> {
         break;
     }
 
-    // Phone: bottom nav. 600-768: drawer. >= 768: permanent sidebar.
-    final isMobile = context.isMobile;
+    // < 768: bottom nav (mobile & small tablet). >= 768: permanent sidebar.
     final isDesktop = context.screenWidth >= 768;
+    final showBottomNav = !isDesktop;
+    final dashboardVm = context.watch<DashboardViewModel>();
 
-    return Scaffold(
-      extendBody: isMobile,
-      backgroundColor: AppColors.background,
-      drawer: isDesktop
-          ? null
-          : Drawer(
-              width: math.min(304.0, context.screenWidth * 0.85),
-              backgroundColor: AppColors.surface,
-              child: SafeArea(child: Sidebar(width: double.infinity)),
-            ),
-      bottomNavigationBar: isMobile
-          ? _MobileNavBar(currentRoute: currentRoute)
-          : null,
-      body: SafeArea(
-        bottom: !isMobile,
-        child: Stack(
-          children: [
-            Row(
-              children: [
-                if (isDesktop) Sidebar(),
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (isDesktop ||
-                          (currentRoute != 'tong-quan' &&
-                              currentRoute != 'lich-hoc' &&
-                              currentRoute != 'lop-hoc' &&
-                              currentRoute != 'bao-cao' &&
-                              currentRoute != 'cai-dat' &&
-                              currentRoute != 'ho-so' &&
-                              currentRoute != 'thong-tin-ca-nhan' &&
-                              currentRoute != 'thong-tin-cong-tac' &&
-                              currentRoute != 'cai-dat-tro-giup' &&
-                              currentRoute != 'lich-su-diem-danh' &&
-                              currentRoute != 'diem-danh-qr'))
-                        TopBar(
-                          isDesktop: isDesktop,
-                          currentRoute: currentRoute,
-                        ),
-                      Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            bottom: isMobile ? 84.0 : 0.0,
+    return PopScope(
+      canPop: !dashboardVm.canNavigateBack,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          dashboardVm.navigateBack();
+        }
+      },
+      child: Scaffold(
+        extendBody: showBottomNav,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        bottomNavigationBar: showBottomNav
+            ? _MobileNavBar(currentRoute: currentRoute)
+            : null,
+        body: SafeArea(
+          bottom: !showBottomNav,
+          child: Stack(
+            children: [
+              Row(
+                children: [
+                  if (isDesktop) const Sidebar(),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        if (isDesktop)
+                          TopBar(
+                            isDesktop: isDesktop,
+                            currentRoute: currentRoute,
                           ),
-                          child: body,
-                        ),
-                      ),
-                    ],
+                        Expanded(child: body),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            ToastNotification(),
-          ],
+                ],
+              ),
+              const ToastNotification(),
+            ],
+          ),
         ),
       ),
     );
@@ -180,6 +186,7 @@ class _MobileNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = kNavDestinations.indexWhere(
       (d) => d.isActive(currentRoute),
     );
@@ -213,11 +220,15 @@ class _MobileNavBar extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
                 decoration: BoxDecoration(
-                  // Nền trắng đục kính mờ (Frosted Glass) phong cách iOS 26
-                  color: Colors.white.withValues(alpha: 0.82),
+                  // Nền kính mờ (Frosted Glass) thích ứng Sáng / Tối
+                  color: isDark
+                      ? const Color(0xFF1E293B).withValues(alpha: 0.88)
+                      : Colors.white.withValues(alpha: 0.82),
                   borderRadius: BorderRadius.circular(38),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.95),
+                    color: isDark
+                        ? const Color(0xFF334155).withValues(alpha: 0.9)
+                        : Colors.white.withValues(alpha: 0.95),
                     width: 1.5,
                   ),
                 ),
@@ -258,62 +269,79 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFFFEDE5).withValues(alpha: 0.95)
-              : Colors.transparent,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      label: destination.label,
+      child: Tooltip(
+        message: destination.label,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(30),
-          border: isSelected
-              ? Border.all(
-                  color: const Color(0xFFFFD4C2).withValues(alpha: 0.8),
-                  width: 1,
-                )
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFFA5A1E).withValues(alpha: 0.12),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? destination.selectedIcon : destination.icon,
-              color: isSelected ? AppPalette.primary : const Color(0xFF64748B),
-              size: 21,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? (isDark
+                        ? AppPalette.primary.withValues(alpha: 0.22)
+                        : const Color(0xFFFFEDE5).withValues(alpha: 0.95))
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+              border: isSelected
+                  ? Border.all(
+                      color: isDark
+                          ? AppPalette.primary.withValues(alpha: 0.45)
+                          : const Color(0xFFFFD4C2).withValues(alpha: 0.8),
+                      width: 1,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFFA5A1E).withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
-            const SizedBox(height: 3),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                destination.label,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? destination.selectedIcon : destination.icon,
                   color: isSelected
                       ? AppPalette.primary
-                      : const Color(0xFF64748B),
-                  letterSpacing: -0.2,
+                      : (isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B)),
+                  size: 21,
                 ),
-              ),
+                const SizedBox(height: 3),
+                Text(
+                  destination.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? AppPalette.primary
+                        : (isDark
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF64748B)),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -29,25 +29,62 @@ class ScheduleRepository {
 
   static const _lessonTypes = ['makeup', 'workshop', 'review'];
   static const _columns = [
-    'scheduleId', 'requestId', 'teacherMemberCode', 'classCode', 'scheduleDate',
-    'slotCode', 'room', 'lessonType', 'teachingMethod', 'note', 'status', 'createdAt',
+    'scheduleId',
+    'requestId',
+    'teacherMemberCode',
+    'classCode',
+    'scheduleDate',
+    'slotCode',
+    'room',
+    'lessonType',
+    'teachingMethod',
+    'note',
+    'status',
+    'createdAt',
   ];
 
   /// Bảng slot chuẩn dùng khi Firestore chưa có `slots` (xem docs/03-du-lieu-firestore.md §3).
   static const _fallbackSlots = [
-    ('A1', '07:00', '09:15'), ('A2', '09:30', '11:45'),
-    ('A3', '07:00', '09:15'), ('A4', '09:30', '11:45'),
-    ('A5', '07:00', '09:15'), ('A6', '09:30', '11:45'),
-    ('P1', '12:30', '14:45'), ('P2', '15:00', '17:15'),
-    ('P3', '12:30', '14:45'), ('P4', '15:00', '17:15'),
-    ('P5', '12:30', '14:45'), ('P6', '15:00', '17:15'),
-    ('Slot 1', '07:00', '08:30'), ('Slot 2', '08:45', '10:15'),
-    ('Slot 3', '10:30', '12:00'), ('Slot 4', '12:30', '14:00'),
-    ('Slot 5', '14:15', '15:45'), ('Slot 6', '16:00', '17:30'),
-    ('1', '07:00', '08:30'), ('2', '08:45', '10:15'),
-    ('3', '10:30', '12:00'), ('4', '12:30', '14:00'),
-    ('5', '14:15', '15:45'), ('6', '16:00', '17:30'),
+    ('A1', '07:00', '09:15'),
+    ('A2', '09:30', '11:45'),
+    ('A3', '07:00', '09:15'),
+    ('A4', '09:30', '11:45'),
+    ('A5', '07:00', '09:15'),
+    ('A6', '09:30', '11:45'),
+    ('P1', '12:30', '14:45'),
+    ('P2', '15:00', '17:15'),
+    ('P3', '12:30', '14:45'),
+    ('P4', '15:00', '17:15'),
+    ('P5', '12:30', '14:45'),
+    ('P6', '15:00', '17:15'),
+    ('Slot 1', '07:00', '08:30'),
+    ('Slot 2', '08:45', '10:15'),
+    ('Slot 3', '10:30', '12:00'),
+    ('Slot 4', '12:30', '14:00'),
+    ('Slot 5', '14:15', '15:45'),
+    ('Slot 6', '16:00', '17:30'),
+    ('1', '07:00', '08:30'),
+    ('2', '08:45', '10:15'),
+    ('3', '10:30', '12:00'),
+    ('4', '12:30', '14:00'),
+    ('5', '14:15', '15:45'),
+    ('6', '16:00', '17:30'),
   ];
+
+  /// Quy ước `slots.weekdays`: 2 = Thứ Hai ... 7 = Thứ Bảy, 8 = Chủ Nhật.
+  static List<int> _fallbackWeekdays(String code) {
+    final match = RegExp(
+      r'^[AP]([1-6])$',
+      caseSensitive: false,
+    ).firstMatch(code);
+    final number = int.tryParse(match?[1] ?? '');
+    return switch (number) {
+      1 || 2 => const [2, 5],
+      3 || 4 => const [3, 6],
+      5 || 6 => const [4, 7],
+      _ => const [],
+    };
+  }
 
   String get _me => currentUser.memberCode;
 
@@ -98,128 +135,193 @@ class ScheduleRepository {
   Future<ApiResult<List<Map<String, dynamic>>>> list() =>
       guardApi(() => _listFor(_me));
 
-  Future<ApiResult<Map<String, dynamic>>> create(Map<String, dynamic> input) =>
-      guardApi(() async {
-        final me = _me;
-        final classCode = text(input['classCode']);
-        final classSnap = await _db.collection('classes').doc(classCode).get();
-        final cls = classSnap.data();
-        if (cls == null || text(cls['teacherMemberCode']) != me) {
-          throw ApiException('FORBIDDEN', 'Lớp không thuộc giảng viên đang đăng nhập.');
-        }
-        final requestId = text(input['requestId']);
-        if (!RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(requestId)) {
-          throw ApiException('VALIDATION_ERROR', 'requestId không hợp lệ.');
-        }
-        if (input['autoQR'] == true || input['sendEmail'] == true || input['syncFap'] == true) {
-          throw ApiException('NOT_SUPPORTED', 'QR tự động, email và đồng bộ FAP chưa được tích hợp.');
-        }
+  Future<ApiResult<Map<String, dynamic>>> create(
+    Map<String, dynamic> input,
+  ) => guardApi(() async {
+    final me = _me;
+    final classCode = text(input['classCode']);
+    final classSnap = await _db.collection('classes').doc(classCode).get();
+    final cls = classSnap.data();
+    if (cls == null || text(cls['teacherMemberCode']) != me) {
+      throw ApiException(
+        'FORBIDDEN',
+        'Lớp không thuộc giảng viên đang đăng nhập.',
+      );
+    }
+    final requestId = text(input['requestId']);
+    if (!RegExp(r'^[a-zA-Z0-9_-]{8,100}$').hasMatch(requestId)) {
+      throw ApiException('VALIDATION_ERROR', 'requestId không hợp lệ.');
+    }
+    if (input['autoQR'] == true ||
+        input['sendEmail'] == true ||
+        input['syncFap'] == true) {
+      throw ApiException(
+        'NOT_SUPPORTED',
+        'QR tự động, email và đồng bộ FAP chưa được tích hợp.',
+      );
+    }
 
-        final allSlots = await _slots();
-        final slot = allSlots
-            .where((s) => s['slotCode'] == text(input['slotCode']) && s['available'] == true)
-            .firstOrNull;
-        if (slot == null) {
-          throw ApiException(
-            'VALIDATION_ERROR',
-            'Ca học không hợp lệ. Kiểm tra giờ bắt đầu/kết thúc của slot (24 giờ).',
+    final allSlots = await _slots();
+    final slot = allSlots
+        .where(
+          (s) =>
+              s['slotCode'] == text(input['slotCode']) &&
+              s['available'] == true,
+        )
+        .firstOrNull;
+    if (slot == null) {
+      throw ApiException(
+        'VALIDATION_ERROR',
+        'Ca học không hợp lệ. Kiểm tra giờ bắt đầu/kết thúc của slot (24 giờ).',
+      );
+    }
+    final day = text(input['scheduleDate']);
+    final parsed = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day)
+        ? DateTime.tryParse('${day}T00:00:00Z')
+        : null;
+    if (parsed == null || parsed.toIso8601String().substring(0, 10) != day) {
+      throw ApiException('VALIDATION_ERROR', 'Ngày học không hợp lệ.');
+    }
+    final lessonType = text(input['lessonType']);
+    if (!_lessonTypes.contains(lessonType) ||
+        input['teachingMethod'] != 'onCampus') {
+      throw ApiException(
+        'VALIDATION_ERROR',
+        'Loại buổi học hoặc hình thức học không hợp lệ.',
+      );
+    }
+    final room = text(input['room']);
+    final note = text(input['note']);
+    final ownedClasses = await _db
+        .collection('classes')
+        .where('teacherMemberCode', isEqualTo: me)
+        .get();
+    if (room.isEmpty ||
+        !ownedClasses.docs.any((c) => text(c.data()['room']) == room) ||
+        note.length > 2000) {
+      throw ApiException(
+        'VALIDATION_ERROR',
+        'Phòng học không hợp lệ hoặc ghi chú quá 2000 ký tự.',
+      );
+    }
+
+    final wanted = {
+      'teacherMemberCode': me,
+      'classCode': classCode,
+      'scheduleDate': day,
+      'slotCode': slot['slotCode'],
+      'room': room,
+      'lessonType': lessonType,
+      'teachingMethod': 'onCampus',
+      'note': note,
+    };
+
+    // Idempotent theo requestId: id tài liệu xác định nên retry không tạo trùng.
+    final scheduleId = '${me}_$requestId';
+    final ref = _db.collection('class_schedules').doc(scheduleId);
+    final existingDoc = await ref.get();
+    if (existingDoc.exists) {
+      final saved = _dto({...docToJson(existingDoc), 'scheduleId': scheduleId});
+      if (wanted.keys.any((k) => saved[k] != wanted[k])) {
+        throw ApiException(
+          'CONFLICT',
+          'Yêu cầu đã được sử dụng cho một lịch khác.',
+        );
+      }
+      return saved;
+    }
+
+    final start = DateTime.parse('${day}T${slot['startTime']}:00+07:00');
+    if (!start.isAfter(_now())) {
+      throw ApiException('VALIDATION_ERROR', 'Chọn ca học chưa bắt đầu.');
+    }
+
+    bool overlaps(String? s, String? e) =>
+        s == null ||
+        e == null ||
+        s.isEmpty ||
+        e.isEmpty ||
+        (s.compareTo(slot['endTime']) < 0 &&
+            e.compareTo(slot['startTime']) > 0);
+    Map<String, dynamic>? slotOf(String code) =>
+        allSlots.where((s) => s['slotCode'] == code).firstOrNull;
+
+    // Lịch chính khóa lặp theo thứ. Không cho phép lịch học bù chồng giờ
+    // với bất kỳ lớp chính khóa nào của chính giảng viên.
+    final firestoreWeekday = parsed.weekday + 1;
+    QueryDocumentSnapshot<Map<String, dynamic>>? regularConflict;
+    for (final doc in ownedClasses.docs) {
+      final regularSlot = slotOf(text(doc.data()['slotCode']));
+      if (regularSlot == null) continue;
+      final weekdays =
+          (regularSlot['weekdays'] as List?)?.whereType<num>().map(
+            (value) => value.toInt(),
+          ) ??
+          const Iterable<int>.empty();
+      final conflicts =
+          weekdays.contains(firestoreWeekday) &&
+          overlaps(
+            regularSlot['startTime'] as String?,
+            regularSlot['endTime'] as String?,
           );
-        }
-        final day = text(input['scheduleDate']);
-        final parsed = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(day)
-            ? DateTime.tryParse('${day}T00:00:00Z')
-            : null;
-        if (parsed == null || parsed.toIso8601String().substring(0, 10) != day) {
-          throw ApiException('VALIDATION_ERROR', 'Ngày học không hợp lệ.');
-        }
-        final lessonType = text(input['lessonType']);
-        if (!_lessonTypes.contains(lessonType) || input['teachingMethod'] != 'onCampus') {
-          throw ApiException('VALIDATION_ERROR', 'Loại buổi học hoặc hình thức học không hợp lệ.');
-        }
-        final room = text(input['room']);
-        final note = text(input['note']);
-        final ownedRooms = await _db
-            .collection('classes')
-            .where('teacherMemberCode', isEqualTo: me)
-            .get();
-        if (room.isEmpty ||
-            !ownedRooms.docs.any((c) => text(c.data()['room']) == room) ||
-            note.length > 2000) {
-          throw ApiException('VALIDATION_ERROR', 'Phòng học không hợp lệ hoặc ghi chú quá 2000 ký tự.');
-        }
+      if (conflicts) {
+        regularConflict = doc;
+        break;
+      }
+    }
+    if (regularConflict != null) {
+      final data = regularConflict.data();
+      throw ApiException(
+        'SCHEDULE_CONFLICT',
+        'Trùng lịch chính khóa ${regularConflict.id} (${text(data['slotCode'])}) của giảng viên trong ngày và khung giờ này.',
+      );
+    }
 
-        final wanted = {
-          'teacherMemberCode': me,
-          'classCode': classCode,
-          'scheduleDate': day,
-          'slotCode': slot['slotCode'],
-          'room': room,
-          'lessonType': lessonType,
-          'teachingMethod': 'onCampus',
-          'note': note,
-        };
-
-        // Idempotent theo requestId: id tài liệu xác định nên retry không tạo trùng.
-        final scheduleId = '${me}_$requestId';
-        final ref = _db.collection('class_schedules').doc(scheduleId);
-        final existingDoc = await ref.get();
-        if (existingDoc.exists) {
-          final saved = _dto({...docToJson(existingDoc), 'scheduleId': scheduleId});
-          if (wanted.keys.any((k) => saved[k] != wanted[k])) {
-            throw ApiException('CONFLICT', 'Yêu cầu đã được sử dụng cho một lịch khác.');
-          }
-          return saved;
+    // Mọi lịch/phiên trong dữ liệu của giảng viên này đều thuộc cùng giảng viên,
+    // nên chỉ cần trùng khoảng giờ trong ngày là xung đột.
+    final plans = await _listFor(me);
+    var conflict = plans.any((r) {
+      if (r['status'] == 'cancelled' || r['scheduleDate'] != day) return false;
+      final other = slotOf(text(r['slotCode']));
+      return overlaps(
+        other?['startTime'] as String?,
+        other?['endTime'] as String?,
+      );
+    });
+    if (!conflict) {
+      final sessions = await _db
+          .collection('sessions')
+          .where('teacherMemberCode', isEqualTo: me)
+          .get();
+      conflict = sessions.docs.any((d) {
+        final s = d.data();
+        if (fmtDate(s['sessionDate']) != day ||
+            s['sessionStatus'] == 'cancelled') {
+          return false;
         }
-
-        final start = DateTime.parse('${day}T${slot['startTime']}:00+07:00');
-        if (!start.isAfter(_now())) {
-          throw ApiException('VALIDATION_ERROR', 'Chọn ca học chưa bắt đầu.');
-        }
-
-        bool overlaps(String? s, String? e) =>
-            s == null || e == null || s.isEmpty || e.isEmpty ||
-            (s.compareTo(slot['endTime']) < 0 && e.compareTo(slot['startTime']) > 0);
-        Map<String, dynamic>? slotOf(String code) =>
-            allSlots.where((s) => s['slotCode'] == code).firstOrNull;
-
-        // Mọi lịch/phiên trong dữ liệu của giảng viên này đều thuộc cùng giảng viên,
-        // nên chỉ cần trùng khoảng giờ trong ngày là xung đột.
-        final plans = await _listFor(me);
-        var conflict = plans.any((r) {
-          if (r['status'] == 'cancelled' || r['scheduleDate'] != day) return false;
-          final other = slotOf(text(r['slotCode']));
-          return overlaps(other?['startTime'] as String?, other?['endTime'] as String?);
-        });
-        if (!conflict) {
-          final sessions = await _db
-              .collection('sessions')
-              .where('teacherMemberCode', isEqualTo: me)
-              .get();
-          conflict = sessions.docs.any((d) {
-            final s = d.data();
-            if (fmtDate(s['sessionDate']) != day || s['sessionStatus'] == 'cancelled') {
-              return false;
-            }
-            final other = slotOf(text(s['slotCode']));
-            return overlaps(other?['startTime'] as String?, other?['endTime'] as String?);
-          });
-        }
-        if (conflict) {
-          throw ApiException(
-            'SCHEDULE_CONFLICT',
-            'Giảng viên, lớp hoặc phòng đã có lịch trong khoảng thời gian này.',
-          );
-        }
-
-        final record = {
-          ...wanted,
-          'scheduleId': scheduleId,
-          'requestId': requestId,
-          'status': 'scheduled',
-        };
-        await ref.set({...record, 'createdAt': FieldValue.serverTimestamp()});
-        return _dto({...record, 'createdAt': _now().toUtc().toIso8601String()});
+        final other = slotOf(text(s['slotCode']));
+        return overlaps(
+          other?['startTime'] as String?,
+          other?['endTime'] as String?,
+        );
       });
+    }
+    if (conflict) {
+      throw ApiException(
+        'SCHEDULE_CONFLICT',
+        'Giảng viên, lớp hoặc phòng đã có lịch trong khoảng thời gian này.',
+      );
+    }
+
+    final record = {
+      ...wanted,
+      'scheduleId': scheduleId,
+      'requestId': requestId,
+      'status': 'scheduled',
+    };
+    await ref.set({...record, 'createdAt': FieldValue.serverTimestamp()});
+    return _dto({...record, 'createdAt': _now().toUtc().toIso8601String()});
+  });
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -235,18 +337,33 @@ class ScheduleRepository {
     if (raw.isEmpty) {
       return [
         for (final (code, start, end) in _fallbackSlots)
-          {'slotCode': code, 'startTime': start, 'endTime': end, 'available': true},
+          {
+            'slotCode': code,
+            'startTime': start,
+            'endTime': end,
+            'weekdays': _fallbackWeekdays(code),
+            'available': true,
+          },
       ];
     }
     return [
       for (final s in raw)
         () {
           final start = time(s['startTime']), end = time(s['endTime']);
+          final code = text(s['slotCode']);
+          final configuredWeekdays = [
+            for (final value in (s['weekdays'] as List?) ?? const [])
+              if (value is num) value.toInt(),
+          ];
           return {
-            'slotCode': text(s['slotCode']),
+            'slotCode': code,
             'startTime': start,
             'endTime': end,
-            'available': start.isNotEmpty && end.isNotEmpty && start.compareTo(end) < 0,
+            'weekdays': configuredWeekdays.isEmpty
+                ? _fallbackWeekdays(code)
+                : configuredWeekdays,
+            'available':
+                start.isNotEmpty && end.isNotEmpty && start.compareTo(end) < 0,
           };
         }(),
     ];
@@ -255,17 +372,21 @@ class ScheduleRepository {
   Future<List<Map<String, dynamic>>> _listFor(String memberCode) async {
     final slots = await _slots();
     String startOf(String code) =>
-        slots.where((s) => s['slotCode'] == code).firstOrNull?['startTime'] as String? ?? '';
+        slots.where((s) => s['slotCode'] == code).firstOrNull?['startTime']
+            as String? ??
+        '';
     final snap = await _db
         .collection('class_schedules')
         .where('teacherMemberCode', isEqualTo: memberCode)
         .get();
-    final rows = [
-      for (final d in snap.docs) _dto({...docToJson(d), 'scheduleId': d.id}),
-    ]..sort(
-        (a, b) => ('${a['scheduleDate']}${startOf(text(a['slotCode']))}')
-            .compareTo('${b['scheduleDate']}${startOf(text(b['slotCode']))}'),
-      );
+    final rows =
+        [
+          for (final d in snap.docs)
+            _dto({...docToJson(d), 'scheduleId': d.id}),
+        ]..sort(
+          (a, b) => ('${a['scheduleDate']}${startOf(text(a['slotCode']))}')
+              .compareTo('${b['scheduleDate']}${startOf(text(b['slotCode']))}'),
+        );
     return rows;
   }
 

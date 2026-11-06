@@ -1,11 +1,22 @@
 import { describe, it, before, after, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where,
+  collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
 } from 'firebase/firestore';
 import { ACCOUNTS, SECRET, TEACHER_IP, anon, as, asUnverified, createEnv, seed } from './helpers.mjs';
 
 let env;
+const nextVietnamMidnight = () => {
+  const vietnamNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  return Timestamp.fromMillis(
+    Date.UTC(
+      vietnamNow.getUTCFullYear(),
+      vietnamNow.getUTCMonth(),
+      vietnamNow.getUTCDate() + 1,
+    ) - 7 * 60 * 60 * 1000,
+  );
+};
 before(async () => { env = await createEnv(); });
 after(async () => { await env.cleanup(); });
 beforeEach(async () => {
@@ -195,6 +206,16 @@ describe('class_schedules', () => {
     await assertSucceeds(getDoc(doc(db, 'class_schedules/sch-1')));
     await assertSucceeds(setDoc(doc(db, 'class_schedules/sch-2'), data));
   });
+  it('GV được kiểm tra ID idempotency chưa tồn tại của chính mình', async () => {
+    const db = as(env, 't1');
+    const ownId = 'GV001_1762250000000000_123456';
+    const otherId = 'GV002_1762250000000000_123456';
+    const snapshot = await assertSucceeds(
+      getDoc(doc(db, 'class_schedules', ownId)),
+    );
+    assert.equal(snapshot.exists(), false);
+    await assertFails(getDoc(doc(db, 'class_schedules', otherId)));
+  });
   it('GV không tạo lịch cho lớp của GV khác hoặc mạo danh', async () => {
     const db = as(env, 't1');
     await assertFails(setDoc(doc(db, 'class_schedules/sch-3'), { ...data, classCode: 'SWD392_SE1801' }));
@@ -216,7 +237,8 @@ describe('class_schedules', () => {
 describe('sessions', () => {
   const newSession = (over = {}) => ({
     classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001', sessionDate: '2026-10-21', slotCode: 'A1',
-    sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '', ...over,
+    sessionStatus: 'open', qrSecret: SECRET, ipCheck: false, teacherIp: '',
+    manualAttendanceDeadline: nextVietnamMidnight(), ...over,
   });
   it('GV mở phiên cho lớp của mình', async () => {
     await assertSucceeds(setDoc(doc(as(env, 't1'), 'sessions/new'), newSession()));
@@ -227,6 +249,9 @@ describe('sessions', () => {
     await assertFails(setDoc(doc(db, 'sessions/x2'), newSession({ teacherMemberCode: 'GV002' })));
     await assertFails(setDoc(doc(db, 'sessions/x3'), newSession({ qrSecret: 'short' })));
     await assertFails(setDoc(doc(db, 'sessions/x4'), newSession({ sessionStatus: 'closed' })));
+    await assertFails(setDoc(doc(db, 'sessions/x-deadline'), newSession({
+      manualAttendanceDeadline: Timestamp.fromMillis(Date.now() + 30 * 60 * 1000),
+    })));
   });
   it('SV không tạo phiên, không đọc phiên (lộ qrSecret)', async () => {
     await assertFails(setDoc(doc(as(env, 's1'), 'sessions/x5'), newSession()));
@@ -242,6 +267,9 @@ describe('sessions', () => {
     const db = as(env, 't1');
     await assertFails(updateDoc(doc(db, 'sessions/sess-open'), { teacherMemberCode: 'GV002' }));
     await assertFails(updateDoc(doc(db, 'sessions/sess-open'), { classCode: 'SWD392_SE1801' }));
+    await assertFails(updateDoc(doc(db, 'sessions/sess-open'), {
+      manualAttendanceDeadline: Timestamp.fromMillis(Date.now() + 23 * 60 * 60 * 1000),
+    }));
   });
   it('chỉ admin xóa phiên', async () => {
     await assertFails(deleteDoc(doc(as(env, 't1'), 'sessions/sess-open')));
@@ -333,6 +361,38 @@ describe('attendance_records — đọc & GV chỉnh sửa', () => {
       status: 'Absent', networkVerificationResult: 'AutoAbsent', ipAddress: '', syncedToFap: false,
     }));
   });
+  it('GV điểm danh tay cho enrollment legacy với payload đầy đủ của mobile', async () => {
+    await assertSucceeds(setDoc(rec(as(env, 't1'), 'sess-open_SE1003'), {
+      sessionId: 'sess-open', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Giảng viên xác nhận', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
+  it('GV không được điểm danh tay sau deadline của ngày học', async () => {
+    await assertFails(setDoc(rec(as(env, 't1'), 'sess-expired_SE1003'), {
+      sessionId: 'sess-expired', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Bổ sung muộn', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
+  it('GV được điểm danh tay cho phiên legacy thiếu deadline nếu được tạo trong hôm nay', async () => {
+    await assertSucceeds(setDoc(rec(as(env, 't1'), 'sess-legacy-current_SE1003'), {
+      sessionId: 'sess-legacy-current', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Xác nhận phiên legacy', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
+  it('GV không được điểm danh tay cho phiên legacy thiếu deadline từ ngày cũ', async () => {
+    await assertFails(setDoc(rec(as(env, 't1'), 'sess-legacy-old_SE1003'), {
+      sessionId: 'sess-legacy-old', rollNumber: 'SE1003', classCode: 'PRN232_SE1917', teacherMemberCode: 'GV001',
+      status: 'ManualByGV', checkinTime: serverTimestamp(), networkVerificationResult: 'Manual',
+      ipAddress: '', note: 'Không được bổ sung muộn', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
+  });
   it('GV không tạo bản ghi cho phiên của GV khác', async () => {
     await assertFails(setDoc(rec(as(env, 't1'), 'sess-other_SE1002'), {
       sessionId: 'sess-other', rollNumber: 'SE1002', classCode: 'SWD392_SE1801', teacherMemberCode: 'GV001',
@@ -344,7 +404,10 @@ describe('attendance_records — đọc & GV chỉnh sửa', () => {
     }));
   });
   it('GV sửa trạng thái bản ghi của mình nhưng không đổi khóa; GV khác thì không', async () => {
-    await assertSucceeds(updateDoc(rec(as(env, 't1'), 'sess-closed_SE1001'), { status: 'Late', syncedToFap: false }));
+    await assertSucceeds(updateDoc(rec(as(env, 't1'), 'sess-closed_SE1001'), {
+      status: 'Late', networkVerificationResult: 'Manual', updatedAt: serverTimestamp(),
+      updatedBy: 'GV001', syncedToFap: false,
+    }));
     await assertFails(updateDoc(rec(as(env, 't1'), 'sess-closed_SE1001'), { rollNumber: 'SE1002' }));
     await assertFails(updateDoc(rec(as(env, 't1'), 'sess-closed_SE1001'), { teacherMemberCode: 'GV002' }));
     await assertFails(updateDoc(rec(as(env, 't2'), 'sess-closed_SE1001'), { status: 'Absent' }));

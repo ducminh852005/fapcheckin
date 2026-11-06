@@ -20,14 +20,22 @@ class PersonalAvatarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ProfileColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: ProfileColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ProfileColors.borderSubtle),
-        boxShadow: ProfileColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ProfileColors.cardShadow,
       ),
       child: Column(
         children: [
@@ -39,7 +47,7 @@ class PersonalAvatarCard extends StatelessWidget {
                 width: 86,
                 height: 86,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: ProfileColors.orangePrimary,
@@ -52,7 +60,7 @@ class PersonalAvatarCard extends StatelessWidget {
                         path: avatarPath,
                         initials: initials,
                         radius: 41,
-                        backgroundColor: Colors.white,
+                        backgroundColor: cardBg,
                         textStyle: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,

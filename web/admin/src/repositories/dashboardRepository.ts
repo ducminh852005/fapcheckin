@@ -74,7 +74,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     getCountFromServer(collection(firestore, "subjects")),
     getCountFromServer(query(collection(firestore, "sessions"), where("sessionStatus", "==", "open"))),
     getCountFromServer(collection(firestore, "sessions")),
-    getCountFromServer(query(collection(firestore, "users"), where("role", "in", ["SV", "GV"]))),
+    getCountFromServer(query(collection(firestore, "users"), where("legacyRole", "in", ["SV", "GV"]))),
     getCountFromServer(collection(firestore, "user_invites")),
     getCountFromServer(query(collection(firestore, "requests"), where("status", "==", "pending"))),
     getCountFromServer(query(collection(firestore, "attendance_records"), where("syncedToFap", "==", false))),
@@ -82,7 +82,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     getDocs(collection(firestore, "timeSlots")),
     getDocs(collection(firestore, "slots")),
     getDocs(query(collection(firestore, "sessions"), limit(50))),
-    getDocs(query(collection(firestore, "users"), where("role", "in", ["staff", "GV"]), limit(100))),
+    getDocs(query(collection(firestore, "users"), where("role", "==", "staff"), limit(100))),
   ])
 
   const latencyMs = Math.max(1, Math.round(performance.now() - startTime))

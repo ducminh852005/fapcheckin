@@ -43,8 +43,8 @@ Future<void> putSession(
 
 void main() {
   late FakeFirebaseFirestore db;
-  // 2026-10-21 03:00 UTC = 10:00 giờ Việt Nam
-  final now = DateTime.utc(2026, 10, 21, 3);
+  // 2026-10-21 01:00 UTC = 08:00 giờ Việt Nam (trong slot A1).
+  final now = DateTime.utc(2026, 10, 21, 1);
 
   setUp(() async {
     db = await seededDb();
@@ -61,8 +61,8 @@ void main() {
     });
 
     Future<void> twoClosedSessions() async {
-      await putSession(db, 's1', '2026-10-14', 'closed');
-      await putSession(db, 's2', '2026-10-15', 'closed');
+      await putSession(db, 's1', '2026-10-21', 'closed');
+      await putSession(db, 's2', '2026-10-21', 'closed');
       await putRecord(db, 's1', 'SE1001', 'Present');
       await putRecord(db, 's1', 'SE1002', 'Late');
       await putRecord(db, 's1', 'SE1003', 'Absent');
@@ -164,6 +164,16 @@ void main() {
           .get();
       expect(doc['classCode'], 'PRN232_SE1917');
       expect(doc['teacherMemberCode'], 'GV001');
+      expect(doc['checkinTime'], isNotNull);
+      final reloaded = ok(
+        await repo.getDetail('PRN232_SE1917', sessionId: 's2'),
+      );
+      expect(
+        reloaded.students
+            .firstWhere((student) => student.rollNumber == 'SE1002')
+            .status,
+        'Late',
+      );
     });
 
     test('save phát hiện xung đột khi dữ liệu đã đổi', () async {
@@ -196,6 +206,31 @@ void main() {
             .doc('s1_SE1001')
             .get())['status'],
         'Late',
+      );
+    });
+
+    test('save từ chối điểm danh tay sau 23:59 của ngày học', () async {
+      await putSession(db, 'old-session', '2026-10-20', 'closed');
+      expect(
+        failCode(
+          await repo.save('PRN232_SE1917', 'old-session', [
+            {
+              'rollNumber': 'SE1001',
+              'status': 'ManualByGV',
+              'note': 'Bổ sung muộn',
+              'revision': '',
+            },
+          ]),
+        ),
+        'MANUAL_ATTENDANCE_EXPIRED',
+      );
+      expect(
+        await db
+            .collection('attendance_records')
+            .doc('old-session_SE1001')
+            .get()
+            .then((doc) => doc.exists),
+        false,
       );
     });
 
@@ -386,6 +421,7 @@ void main() {
         'slotCode': 'A1',
         'startTime': '07:00',
         'endTime': '09:15',
+        'weekdays': [2, 5],
         'available': true,
       });
     });
@@ -446,5 +482,18 @@ void main() {
         'SCHEDULE_CONFLICT',
       );
     });
+
+    test(
+      'create từ chối trùng lịch chính khóa theo thứ và khung giờ',
+      () async {
+        // 22/10/2026 là Thứ Năm; slot A1 có weekdays [2, 5]
+        // (Thứ Hai và Thứ Năm theo quy ước dữ liệu Firestore).
+        expect(
+          failCode(await repo.create(input(date: '2026-10-22'))),
+          'SCHEDULE_CONFLICT',
+        );
+        expect((await db.collection('class_schedules').get()).docs, isEmpty);
+      },
+    );
   });
 }

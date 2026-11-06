@@ -29,10 +29,19 @@ class LiveSessionBody extends StatelessWidget {
     final liveVm = context.watch<LiveSessionViewModel>();
     final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg =
+        isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final cardBorder = isDark
+        ? Theme.of(context).colorScheme.outline
+        : LiveSessionColors.borderSubtle;
+    final textDark = isDark ? Colors.white : LiveSessionColors.textDark;
+    final textMuted =
+        isDark ? const Color(0xFF94A3B8) : LiveSessionColors.textMuted;
 
     if (liveVm.session == null || liveVm.isClosed) {
       return Scaffold(
-        backgroundColor: LiveSessionColors.pageBg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
@@ -47,41 +56,71 @@ class LiveSessionBody extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: () => dashboardVm.navigate('lich-hoc'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: LiveSessionColors.borderSubtle,
+                      Row(
+                        children: [
+                          if (dashboardVm.canNavigateBack) ...[
+                            Tooltip(
+                              message: 'Quay lại',
+                              child: InkWell(
+                                onTap: () =>
+                                    dashboardVm.navigateBack('lich-hoc'),
+                                borderRadius: BorderRadius.circular(12),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                  ),
+                                  child: Center(
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: cardBg,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: cardBorder),
+                                        boxShadow: isDark
+                                            ? null
+                                            : LiveSessionColors.cardShadow,
+                                      ),
+                                      child: Icon(
+                                        Icons.arrow_back_ios_new_rounded,
+                                        size: 17,
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            boxShadow: LiveSessionColors.cardShadow,
+                            const SizedBox(width: 10),
+                          ],
+                          Expanded(
+                            child: Text(
+                              'Điểm danh trực tiếp',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: textDark,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 17,
-                            color: Color(0xFF334155),
-                          ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Chọn lớp để mở điểm danh',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: LiveSessionColors.textDark,
-                            letterSpacing: -0.4,
-                          ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Chọn lớp học bên dưới để mở phiên quét mã QR',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textMuted,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -103,12 +142,13 @@ class LiveSessionBody extends StatelessWidget {
                         vertical: 28,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardBg,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: LiveSessionColors.borderSubtle,
+                          color: cardBorder,
                         ),
-                        boxShadow: LiveSessionColors.cardShadow,
+                        boxShadow:
+                            isDark ? null : LiveSessionColors.cardShadow,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -117,7 +157,10 @@ class LiveSessionBody extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: LiveSessionColors.orangeLight,
+                              color: isDark
+                                  ? LiveSessionColors.orangePrimary
+                                      .withValues(alpha: 0.22)
+                                  : LiveSessionColors.orangeLight,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Icon(
@@ -127,22 +170,22 @@ class LiveSessionBody extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'Chưa có lớp được phân công.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w700,
-                              color: LiveSessionColors.textDark,
+                              color: textDark,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'Hãy quét thời khóa biểu FAP trong mục Lịch dạy để chọn lớp mở phiên QR.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 12,
-                              color: LiveSessionColors.textMuted,
+                              color: textMuted,
                               height: 1.4,
                             ),
                           ),
@@ -154,12 +197,13 @@ class LiveSessionBody extends StatelessWidget {
                       Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardBg,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: LiveSessionColors.borderSubtle,
+                            color: cardBorder,
                           ),
-                          boxShadow: LiveSessionColors.cardShadow,
+                          boxShadow:
+                              isDark ? null : LiveSessionColors.cardShadow,
                         ),
                         child: ListTile(
                           shape: RoundedRectangleBorder(
@@ -167,16 +211,16 @@ class LiveSessionBody extends StatelessWidget {
                           ),
                           title: Text(
                             '${c.subjectCode} · ${c.classCode}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: LiveSessionColors.textDark,
+                              color: textDark,
                             ),
                           ),
                           subtitle: Text(
                             '${c.timeLabel} · ${c.room}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: LiveSessionColors.textMuted,
+                              color: textMuted,
                             ),
                           ),
                           trailing: const Icon(
@@ -229,7 +273,7 @@ class LiveSessionBody extends StatelessWidget {
         .toList();
     final presentStudents = students.where((s) => s.isPresent).toList();
     return Scaffold(
-      backgroundColor: LiveSessionColors.pageBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
@@ -252,10 +296,8 @@ class LiveSessionBody extends StatelessWidget {
                   ),
                 // 1 & 2. Header & Banner môn học
                 LiveSessionCustomHeader(
-                  sessionSubtitle: 'Ca ${liveVm.slot} · ${liveVm.dateLabel}',
                   classTitle: classTitle,
                   timeAndRoom: timeAndRoom,
-                  onBackTap: () => dashboardVm.navigate('lich-hoc'),
                   onMoreTap: () => _showMoreOptions(context, dashboardVm),
                 ),
                 const SizedBox(height: 16),
@@ -271,7 +313,25 @@ class LiveSessionBody extends StatelessWidget {
                 const SizedBox(height: 14),
 
                 // 4. Thẻ Kiểm tra IP mạng
-                LiveSessionNetworkCard(isEnforced: liveVm.ipCheck),
+                LiveSessionNetworkCard(
+                  isEnforced: liveVm.ipCheck,
+                  onToggle: liveVm.isLoading
+                      ? null
+                      : (enabled) async {
+                          final ok = await liveVm.setIpCheck(enabled);
+                          if (!ok && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  liveVm.errorMessage ??
+                                      'Không thể cập nhật kiểm tra IP mạng.',
+                                ),
+                                backgroundColor: Colors.red.shade800,
+                              ),
+                            );
+                          }
+                        },
+                ),
                 const SizedBox(height: 18),
 
                 // 5. Thẻ danh sách sinh viên điểm danh
@@ -280,6 +340,38 @@ class LiveSessionBody extends StatelessWidget {
                   totalCount: totalCount,
                   presentStudents: presentStudents,
                   absentStudents: students.where((s) => !s.isPresent).toList(),
+                  onOpenManualSheet: () =>
+                      ManualAttendanceBottomSheet.show(context),
+                  onManualCheckin: (rollNumber) async {
+                    final student = students.firstWhere(
+                      (s) => s.rollNumber == rollNumber,
+                      orElse: () => const StudentAttendanceItem(
+                        rollNumber: '',
+                        fullName: '',
+                        initials: '',
+                      ),
+                    );
+                    final success = await liveVm.manualCheckin(rollNumber);
+                    if (!context.mounted) return;
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Đã điểm danh cho ${student.fullName} ($rollNumber)',
+                          ),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: LiveSessionColors.statusGreen,
+                        ),
+                      );
+                    } else if (liveVm.errorMessage != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(liveVm.errorMessage!),
+                          backgroundColor: Colors.red.shade700,
+                        ),
+                      );
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -470,6 +562,7 @@ class ToastNotification extends StatelessWidget {
         }
         final toast = vm.toastData!;
         final isMobile = context.isMobile;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Positioned(
           top: isMobile ? 8 : 20,
           right: isMobile ? 12 : 20,
@@ -478,31 +571,33 @@ class ToastNotification extends StatelessWidget {
             color: Colors.transparent,
             child: Container(
               constraints: const BoxConstraints(maxWidth: 440),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border(
-                  left: BorderSide(color: toast.accentColor, width: 4),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE5E7EB),
                 ),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x1A142433),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
+                    color: Color(0x240F172A),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: toast.accentColor.withValues(alpha: 0.15),
+                      color: toast.accentColor,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(toast.icon, size: 20, color: toast.accentColor),
+                    child: Icon(toast.icon, size: 25, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -512,33 +607,41 @@ class ToastNotification extends StatelessWidget {
                       children: [
                         Text(
                           toast.title,
-                          style: const TextStyle(
-                            fontSize: 13,
+                          style: TextStyle(
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF404040),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           toast.message,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: Color(0xFF64748B),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF8A8A8A),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => vm.dismissToast(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Color(0xFF94A3B8),
-                      ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: 'Đóng',
+                    onPressed: () => vm.dismissToast(),
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 22,
+                      color: isDark
+                          ? const Color(0xFF94A3B8)
+                          : const Color(0xFF8A8A8A),
                     ),
                   ),
                 ],

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fapcheckin_core/constants/app_colors.dart';
 import 'package:fapcheckin_core/constants/app_text_styles.dart';
-import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../widgets/google_web_sign_in_button.dart';
+import '../widgets/login_brand.dart';
 
 class LoginDesktopLayout extends StatelessWidget {
   const LoginDesktopLayout({
@@ -56,25 +56,8 @@ class LoginDesktopLayout extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/logos/fap_checkin_logo.png',
-                    width: 210,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Hệ thống điểm danh FAP',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.headlineLg.copyWith(
-                      fontSize: mobile ? 26 : 32,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                      letterSpacing: 0,
-                      height: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 12),
+                  const LoginBrandCard(),
+                  const SizedBox(height: 16),
                   Text(
                     'Dành cho Cán bộ, Giảng viên & Sinh viên Đại học FPT. Vui lòng sử dụng tài khoản nội bộ để tiếp tục.',
                     textAlign: TextAlign.center,
@@ -129,7 +112,7 @@ class LoginDesktopLayout extends StatelessWidget {
                   ),
                   SizedBox(
                     width: double.infinity,
-                    height: mobile ? 48 : 40,
+                    height: 48,
                     child: ElevatedButton(
                       onPressed: onUnsupportedLogin,
                       style: ElevatedButton.styleFrom(
@@ -215,7 +198,7 @@ class _SsoButtonState extends State<_SsoButton> {
         child: AnimatedContainer(
           duration: Duration(milliseconds: 150),
           width: double.infinity,
-          height: context.isMobile ? 48 : 40,
+          height: 48,
           decoration: BoxDecoration(
             color: _isHovered
                 ? AppColors.primaryLight.withValues(alpha: 0.3)

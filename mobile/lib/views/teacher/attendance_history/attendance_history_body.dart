@@ -41,6 +41,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   String? _loadedClassCode;
   String? _selectedSessionId;
+  String? _loadedSessionStatus;
   HistoryDetail? _detail;
   bool _loadingDetail = false;
   bool _savingSession = false;
@@ -73,7 +74,8 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         if (historyVm.selectedClassCode == null &&
             dashVm != null &&
             dashVm.classes.isNotEmpty) {
-          final activeClass = dashVm.classes.where((c) => c.isActive).firstOrNull ??
+          final activeClass =
+              dashVm.classes.where((c) => c.isActive).firstOrNull ??
               dashVm.classes.first;
           historyVm.selectClass(activeClass.classCode);
         } else if (historyVm.classes.isEmpty) {
@@ -112,22 +114,29 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     }
 
     final dashVm = context.read<DashboardViewModel?>();
-    final dashClass =
-        dashVm?.classes.where((c) => c.classCode == classCode).firstOrNull;
+    final dashClass = dashVm?.classes
+        .where((c) => c.classCode == classCode)
+        .firstOrNull;
     final activeSessionId = dashClass?.activeSessionId;
 
     final targetSessionId =
         (activeSessionId != null &&
-                sessions.any((s) => s.sessionId == activeSessionId))
-            ? activeSessionId
-            : ((_selectedSessionId != null &&
-                    sessions.any((s) => s.sessionId == _selectedSessionId))
-                ? _selectedSessionId!
-                : sessions.first.sessionId);
+            sessions.any((s) => s.sessionId == activeSessionId))
+        ? activeSessionId
+        : ((_selectedSessionId != null &&
+                  sessions.any((s) => s.sessionId == _selectedSessionId))
+              ? _selectedSessionId!
+              : sessions.first.sessionId);
 
-    if (_loadedClassCode != classCode || _selectedSessionId != targetSessionId) {
+    final targetStatus = sessions
+        .firstWhere((s) => s.sessionId == targetSessionId)
+        .sessionStatus;
+    if (_loadedClassCode != classCode ||
+        _selectedSessionId != targetSessionId ||
+        _loadedSessionStatus != targetStatus) {
       _loadedClassCode = classCode;
       _selectedSessionId = targetSessionId;
+      _loadedSessionStatus = targetStatus;
       _pendingEdits.clear();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -190,12 +199,76 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
+  String _todayInVietnam() {
+    final now = DateTime.now().toUtc().add(const Duration(hours: 7));
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+  }
+
+  SessionModel? _currentSelectedSession() {
+    final summarySessions =
+        context.read<AttendanceHistoryViewModel>().summary?.sessions ??
+        const [];
+    final sessions = _detail?.sessions ?? summarySessions;
+    return _detail?.selectedSession ??
+        sessions.where((s) => s.sessionId == _selectedSessionId).firstOrNull;
+  }
+
+  bool _canEditManualAttendance([SessionModel? session]) {
+    final selected = session ?? _currentSelectedSession();
+    return selected == null || selected.sessionDate == _todayInVietnam();
+  }
+
+  void _showFloatingSnackBar(
+    BuildContext context,
+    String message, {
+    Color? backgroundColor,
+    Duration duration = const Duration(seconds: 3),
+    SnackBarAction? action,
+  }) {
+    if (!mounted) return;
+    final isMobile = MediaQuery.sizeOf(context).width < 768;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.fromLTRB(16, 0, 16, isMobile ? 88 : 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: duration,
+        action: action,
+      ),
+    );
+  }
+
+  void _showExpiredManualAttendanceGuidance() {
+    _showFloatingSnackBar(
+      context,
+      'Đã qua ngày học. Hãy vào Cài đặt & Trợ giúp → Yêu cầu điểm danh / nghỉ phép để gửi admin duyệt.',
+      backgroundColor: AttendanceHistoryColors.statusRed,
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: 'MỞ CÀI ĐẶT',
+        textColor: Colors.white,
+        onPressed: () =>
+            context.read<DashboardViewModel>().navigate('cai-dat-tro-giup'),
+      ),
+    );
+  }
+
+  bool _guardManualAttendanceDay() {
+    if (_canEditManualAttendance()) return true;
+    _showExpiredManualAttendanceGuidance();
+    return false;
+  }
+
   List<StudentAttendanceModel> _buildStudentModels(
     AttendanceHistoryViewModel vm,
   ) {
     final detail = _detail;
-    if (detail != null &&
-        detail.classInfo.classCode == vm.selectedClassCode) {
+    if (detail != null && detail.classInfo.classCode == vm.selectedClassCode) {
       return detail.students.asMap().entries.map((entry) {
         final idx = entry.key;
         final s = entry.value;
@@ -206,8 +279,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
             ? edit.checkinTime
             : _formatCheckinTime(s.checkinTime);
 
-        final palette =
-            _avatarPalettes[idx % _avatarPalettes.length];
+        final palette = _avatarPalettes[idx % _avatarPalettes.length];
 
         final state = _mapStatusToState(
           status: effectiveStatus,
@@ -264,7 +336,8 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         seatOrNote = null;
       } else if (s.presentCount + s.lateCount > 0) {
         state = StudentAttendanceState.presentQr;
-        seatOrNote = 'Có mặt ${s.presentCount + s.lateCount}/${s.closedSessions} buổi';
+        seatOrNote =
+            'Có mặt ${s.presentCount + s.lateCount}/${s.closedSessions} buổi';
       } else {
         state = StudentAttendanceState.absentUnscanned;
         seatOrNote = null;
@@ -323,14 +396,19 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     if (_selectedSessionId != null) return _selectedSessionId;
     final vm = context.read<AttendanceHistoryViewModel>();
     final dashVm = context.read<DashboardViewModel?>();
-    final dashClass =
-        dashVm?.classes.where((c) => c.classCode == classCode).firstOrNull;
+    final dashClass = dashVm?.classes
+        .where((c) => c.classCode == classCode)
+        .firstOrNull;
     final slotCode = (dashClass?.slotCode.isNotEmpty == true)
         ? dashClass!.slotCode
         : (vm.summary?.slotCodes.firstOrNull ?? '1');
 
-    final result = await vm.repository
-        .startSession(classCode, slotCode, '', ipCheck: false);
+    final result = await vm.repository.startSession(
+      classCode,
+      slotCode,
+      '',
+      ipCheck: false,
+    );
     if (result is ApiSuccess<SessionModel>) {
       final session = result.data;
       setState(() {
@@ -345,13 +423,22 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   // Điểm danh thủ công cho 1 sinh viên và lưu thẳng lên Firebase
   Future<void> _handleManualCheckin(StudentAttendanceModel student) async {
+    if (!_guardManualAttendanceDay()) return;
     final vm = context.read<AttendanceHistoryViewModel>();
     final classCode = vm.selectedClassCode;
     if (classCode == null) return;
 
     var sessionId = _selectedSessionId;
+    sessionId ??= await _ensureSession(classCode);
+
     if (sessionId == null) {
-      sessionId = await _ensureSession(classCode);
+      if (!mounted) return;
+      _showFloatingSnackBar(
+        context,
+        'Không thể xác định phiên điểm danh để lưu dữ liệu.',
+        backgroundColor: AttendanceHistoryColors.statusRed,
+      );
+      return;
     }
 
     setState(() {
@@ -362,25 +449,28 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       );
     });
 
-    if (sessionId != null) {
-      await _commitChangesToFirestore([
-        {
-          'rollNumber': student.rollNumber,
-          'status': 'ManualByGV',
-          'note': 'Xác nhận tay',
-          'revision': _findRevision(student.rollNumber),
-        },
-      ], silentSuccess: true);
+    final saved = await _commitChangesToFirestore([
+      {
+        'rollNumber': student.rollNumber,
+        'status': 'ManualByGV',
+        'note': 'Xác nhận tay',
+        'revision': _findRevision(student.rollNumber),
+      },
+    ]);
+
+    if (!saved) {
+      if (mounted) {
+        setState(() => _pendingEdits.remove(student.rollNumber));
+      }
+      return;
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✓ Đã điểm danh thủ công cho ${student.fullName}'),
-        backgroundColor: AttendanceHistoryColors.statusGreen,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    _showFloatingSnackBar(
+      context,
+      '✓ Đã điểm danh thủ công cho ${student.fullName}',
+      backgroundColor: AttendanceHistoryColors.statusGreen,
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -412,11 +502,10 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         return true;
       case ApiFailure<HistoryDetail>(:final error):
         if (!silentSuccess && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error.message),
-              backgroundColor: AttendanceHistoryColors.statusRed,
-            ),
+          _showFloatingSnackBar(
+            context,
+            error.message,
+            backgroundColor: AttendanceHistoryColors.statusRed,
           );
         }
         return false;
@@ -426,6 +515,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   // Đổi trạng thái sinh viên qua Modal Bottom Sheet
   void _showChangeStatusSheet(StudentAttendanceModel student) {
+    if (!_guardManualAttendanceDay()) return;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -540,6 +630,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     required String status,
     required String note,
   }) async {
+    if (!_guardManualAttendanceDay()) return;
     setState(() {
       _pendingEdits[student.rollNumber] = _PendingEdit(
         status: status,
@@ -560,6 +651,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   // Nút Chọn nhanh
   void _handleQuickSelect(List<StudentAttendanceModel> allStudents) {
+    if (!_guardManualAttendanceDay()) return;
     final absentUnscanned = allStudents
         .where((s) => s.state == StudentAttendanceState.absentUnscanned)
         .toList();
@@ -632,14 +724,10 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                     ];
                     final ok = await _commitChangesToFirestore(changes);
                     if (mounted && ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '✓ Đã điểm danh và lưu ${absentUnscanned.length} sinh viên lên Firebase!',
-                          ),
-                          backgroundColor: AttendanceHistoryColors.statusGreen,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      _showFloatingSnackBar(
+                        context,
+                        '✓ Đã điểm danh và lưu ${absentUnscanned.length} sinh viên lên Firebase!',
+                        backgroundColor: AttendanceHistoryColors.statusGreen,
                       );
                     }
                   },
@@ -674,6 +762,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
   // Lưu bảng điểm danh lên Firestore và đồng bộ FAP
   Future<void> _handleSave(int sessionNumber) async {
+    if (!_guardManualAttendanceDay()) return;
     final vm = context.read<AttendanceHistoryViewModel>();
     final classCode = vm.selectedClassCode;
 
@@ -684,10 +773,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       sessionId = await _ensureSession(classCode);
       if (sessionId == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Không thể khởi tạo buổi học để lưu điểm danh.'),
-            ),
+          _showFloatingSnackBar(
+            context,
+            'Không thể khởi tạo buổi học để lưu điểm danh.',
           );
         }
         return;
@@ -861,8 +949,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         sessions.where((s) => s.sessionId == _selectedSessionId).firstOrNull;
 
     final dashVm = context.read<DashboardViewModel?>();
-    final dashClass =
-        dashVm?.classes.where((c) => c.classCode == info.classCode).firstOrNull;
+    final dashClass = dashVm?.classes
+        .where((c) => c.classCode == info.classCode)
+        .firstOrNull;
 
     final subject = info.subjectCode.isNotEmpty
         ? info.subjectCode
@@ -875,10 +964,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         '';
     final slot =
         (selectedSession != null && selectedSession.slotCode.isNotEmpty)
-            ? selectedSession.slotCode
-            : (fallbackSlot.isNotEmpty ? fallbackSlot : '1');
-    final roomName =
-        info.room.isNotEmpty ? info.room : (dashClass?.room ?? '');
+        ? selectedSession.slotCode
+        : (fallbackSlot.isNotEmpty ? fallbackSlot : '1');
+    final roomName = info.room.isNotEmpty ? info.room : (dashClass?.room ?? '');
     final room = roomName.isNotEmpty ? 'Phòng $roomName' : '';
 
     final parts = <String>[
@@ -906,6 +994,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     final selectedSession =
         _detail?.selectedSession ??
         (selectedIdx >= 0 ? sessions[selectedIdx] : null);
+    final canEditManualAttendance = _canEditManualAttendance(selectedSession);
 
     final allStudents = _buildStudentModels(vm);
     final totalStudents = allStudents.length;
@@ -914,7 +1003,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     final excusedCount = allStudents
         .where((s) => s.state == StudentAttendanceState.absentExcused)
         .length;
-    final rate = totalStudents == 0 ? 0.0 : (presentCount / totalStudents) * 100;
+    final rate = totalStudents == 0
+        ? 0.0
+        : (presentCount / totalStudents) * 100;
 
     final filteredList = allStudents.where((s) {
       final matchesFilter = switch (_activeFilter) {
@@ -931,9 +1022,81 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     }).toList();
 
     final subtitle = _buildHeaderSubtitle(vm, sessions, sessionNumber);
+    final isShortScreen = MediaQuery.sizeOf(context).height < 500;
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    if (isShortScreen) {
+      // Khi xoay ngang màn hình (chiều cao hẹp < 500dp), cuộn chung toàn bộ trang
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            color: AttendanceHistoryColors.orangePrimary,
+            onRefresh: () async {
+              _pendingEdits.clear();
+              await vm.loadClasses(force: true);
+              if (_loadedClassCode != null && _selectedSessionId != null) {
+                await _loadSessionDetail(
+                  _loadedClassCode!,
+                  _selectedSessionId!,
+                );
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                MediaQuery.sizeOf(context).width < 768 ? 108 : 32,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AttendanceHistoryHeader(
+                    title: 'Điểm danh sinh viên',
+                    subtitle: subtitle,
+                    showBackButton: false,
+                    onExport: vm.busy || vm.summary == null
+                        ? null
+                        : () => exportHistory(context),
+                    onOptions: () => _showMoreOptions(vm),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTopControls(
+                    vm: vm,
+                    sessions: sessions,
+                    canEditManualAttendance: canEditManualAttendance,
+                    totalStudents: totalStudents,
+                    presentCount: presentCount,
+                    absentCount: absentCount,
+                    excusedCount: excusedCount,
+                    rate: rate,
+                    selectedSession: selectedSession,
+                    allStudents: allStudents,
+                    isKeyboardOpen: isKeyboardOpen,
+                  ),
+                  const SizedBox(height: 12),
+                  ..._buildStudentItems(
+                    vm: vm,
+                    filteredList: filteredList,
+                    allStudents: allStudents,
+                    sessionNumber: sessionNumber,
+                    canEditManualAttendance: canEditManualAttendance,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -950,16 +1113,11 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
               child: AttendanceHistoryHeader(
                 title: 'Điểm danh sinh viên',
                 subtitle: subtitle,
-                onBack: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    context.read<DashboardViewModel?>()?.navigate('lop-hoc');
-                  }
-                },
+                showBackButton: false,
                 onExport: vm.busy || vm.summary == null
                     ? null
                     : () => exportHistory(context),
+                onOptions: () => _showMoreOptions(vm),
               ),
             ),
 
@@ -979,7 +1137,25 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 ),
               ),
 
-            // ── 2. Nội dung cuộn chính ─────────────────────────────────────────
+            // ── 2. Khung cố định: Sĩ số lớp %, Search và các nút Tất cả / Có mặt / Vắng ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _buildTopControls(
+                vm: vm,
+                sessions: sessions,
+                canEditManualAttendance: canEditManualAttendance,
+                totalStudents: totalStudents,
+                presentCount: presentCount,
+                absentCount: absentCount,
+                excusedCount: excusedCount,
+                rate: rate,
+                selectedSession: selectedSession,
+                allStudents: allStudents,
+                isKeyboardOpen: isKeyboardOpen,
+              ),
+            ),
+
+            // ── 3. Danh sách sinh viên cuộn lên xuống ──────────────────────────
             Expanded(
               child: RefreshIndicator(
                 color: AttendanceHistoryColors.orangePrimary,
@@ -997,124 +1173,19 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    // Thanh trượt chọn buổi học thực tế (khi lớp có nhiều buổi)
-                    if (sessions.isNotEmpty) ...[
-                      AttendanceSessionSelector(
-                        sessions: sessions,
-                        selectedSessionId: _selectedSessionId,
-                        onSelectSession: (sessionId) {
-                          if (_selectedSessionId == sessionId) return;
-                          setState(() {
-                            _selectedSessionId = sessionId;
-                            _pendingEdits.clear();
-                          });
-                          if (vm.selectedClassCode != null) {
-                            _loadSessionDetail(
-                              vm.selectedClassCode!,
-                              sessionId,
-                            );
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Thẻ thống kê tóm tắt
-                    AttendanceSummaryCard(
-                      totalStudents: totalStudents,
-                      presentCount: presentCount,
-                      absentCount: absentCount,
-                      excusedAbsentCount: excusedCount,
-                      attendanceRate: rate,
-                      isOngoing: selectedSession?.isOpen ?? sessions.isNotEmpty,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Thanh tìm kiếm và bộ lọc chip
-                    AttendanceSearchFilterBar(
-                      searchController: _searchController,
-                      onSearchChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                      },
-                      activeFilter: _activeFilter,
-                      onFilterChanged: (filter) {
-                        setState(() {
-                          _activeFilter = filter;
-                        });
-                      },
-                      totalCount: totalStudents,
-                      presentCount: presentCount,
-                      absentCount: absentCount,
-                      onQuickSelect: () => _handleQuickSelect(allStudents),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Danh sách sinh viên từ Firebase
-                    if (!vm.loadingClasses &&
-                        !vm.loadingSummary &&
-                        vm.classes.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'Chưa có lớp học được phân công.',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      )
-                    else if (filteredList.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        alignment: Alignment.center,
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.search_off_rounded,
-                              size: 40,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Không tìm thấy sinh viên phù hợp',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...filteredList.map(
-                        (student) => AttendanceStudentCard(
-                          student: student,
-                          onManualCheckin: () => _handleManualCheckin(student),
-                          onChangeStatus: () => _showChangeStatusSheet(student),
-                          onOptions: () => _showChangeStatusSheet(student),
-                        ),
-                      ),
-
-                    const SizedBox(height: 14),
-
-                    // Nút Lưu bảng điểm danh
-                    if (allStudents.isNotEmpty)
-                      AttendanceSaveActionButton(
-                        sessionNumber: sessionNumber > 0 ? sessionNumber : 1,
-                        onSave: () => _handleSave(
-                          sessionNumber > 0 ? sessionNumber : 1,
-                        ),
-                      ),
-
-                    const SizedBox(height: 20),
-                  ],
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    4,
+                    16,
+                    MediaQuery.sizeOf(context).width < 768 ? 108 : 32,
+                  ),
+                  children: _buildStudentItems(
+                    vm: vm,
+                    filteredList: filteredList,
+                    allStudents: allStudents,
+                    sessionNumber: sessionNumber,
+                    canEditManualAttendance: canEditManualAttendance,
+                  ),
                 ),
               ),
             ),
@@ -1122,5 +1193,199 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         ),
       ),
     );
+  }
+
+  Widget _buildTopControls({
+    required AttendanceHistoryViewModel vm,
+    required List<SessionModel> sessions,
+    required bool canEditManualAttendance,
+    required int totalStudents,
+    required int presentCount,
+    required int absentCount,
+    required int excusedCount,
+    required double rate,
+    required SessionModel? selectedSession,
+    required List<StudentAttendanceModel> allStudents,
+    bool isKeyboardOpen = false,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Thanh trượt chọn buổi học thực tế (khi lớp có nhiều buổi)
+        if (sessions.isNotEmpty) ...[
+          AttendanceSessionSelector(
+            sessions: sessions,
+            selectedSessionId: _selectedSessionId,
+            onSelectSession: (sessionId) {
+              if (_selectedSessionId == sessionId) return;
+              setState(() {
+                _selectedSessionId = sessionId;
+                _pendingEdits.clear();
+              });
+              if (vm.selectedClassCode != null) {
+                _loadSessionDetail(
+                  vm.selectedClassCode!,
+                  sessionId,
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        if (!canEditManualAttendance) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFECACA)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Đã hết hạn điểm danh tay',
+                  style: TextStyle(
+                    color: AttendanceHistoryColors.statusRed,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Chỉ được điểm danh trực tiếp đến 23:59 của ngày học. Sau thời hạn này, hãy gửi yêu cầu để admin duyệt.',
+                  style: TextStyle(
+                    color: Color(0xFF991B1B),
+                    fontSize: 12.5,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context
+                      .read<DashboardViewModel>()
+                      .navigate('cai-dat-tro-giup'),
+                  icon: const Icon(Icons.settings_outlined),
+                  label: const Text('Đi tới Cài đặt & Trợ giúp'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+
+        // Thẻ thống kê tóm tắt (Sĩ số & phần trăm) - tự ẩn khi mở bàn phím để tối ưu không gian danh sách
+        if (!isKeyboardOpen) ...[
+          AttendanceSummaryCard(
+            totalStudents: totalStudents,
+            presentCount: presentCount,
+            absentCount: absentCount,
+            excusedAbsentCount: excusedCount,
+            attendanceRate: rate,
+            isOngoing: selectedSession?.isOpen ?? sessions.isNotEmpty,
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // Thanh tìm kiếm và bộ lọc chip (Tất cả, Có mặt, Vắng...)
+        AttendanceSearchFilterBar(
+          searchController: _searchController,
+          onSearchChanged: (val) {
+            setState(() {
+              _searchQuery = val;
+            });
+          },
+          activeFilter: _activeFilter,
+          onFilterChanged: (filter) {
+            setState(() {
+              _activeFilter = filter;
+            });
+          },
+          totalCount: totalStudents,
+          presentCount: presentCount,
+          absentCount: absentCount,
+          onQuickSelect: canEditManualAttendance
+              ? () => _handleQuickSelect(allStudents)
+              : _showExpiredManualAttendanceGuidance,
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildStudentItems({
+    required AttendanceHistoryViewModel vm,
+    required List<StudentAttendanceModel> filteredList,
+    required List<StudentAttendanceModel> allStudents,
+    required int sessionNumber,
+    required bool canEditManualAttendance,
+  }) {
+    if (!vm.loadingClasses && !vm.loadingSummary && vm.classes.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          alignment: Alignment.center,
+          child: const Text(
+            'Chưa có lớp học được phân công.',
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (filteredList.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          alignment: Alignment.center,
+          child: Column(
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: 40,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Không tìm thấy sinh viên phù hợp',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    return [
+      ...filteredList.map(
+        (student) => AttendanceStudentCard(
+          student: student,
+          onManualCheckin: canEditManualAttendance
+              ? () => _handleManualCheckin(student)
+              : _showExpiredManualAttendanceGuidance,
+          onChangeStatus: canEditManualAttendance
+              ? () => _showChangeStatusSheet(student)
+              : _showExpiredManualAttendanceGuidance,
+          onOptions: canEditManualAttendance
+              ? () => _showChangeStatusSheet(student)
+              : _showExpiredManualAttendanceGuidance,
+        ),
+      ),
+      const SizedBox(height: 14),
+      if (allStudents.isNotEmpty)
+        AttendanceSaveActionButton(
+          sessionNumber: sessionNumber > 0 ? sessionNumber : 1,
+          onSave: canEditManualAttendance
+              ? () => _handleSave(
+                  sessionNumber > 0 ? sessionNumber : 1,
+                )
+              : _showExpiredManualAttendanceGuidance,
+        ),
+      const SizedBox(height: 20),
+    ];
   }
 }

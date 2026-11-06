@@ -14,6 +14,10 @@ class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository;
   final GoogleAuthService _googleAuthService;
 
+  /// Called while Firebase Auth is still available so device-scoped data can
+  /// be removed from the account that is signing out.
+  Future<void> Function()? beforeSignOut;
+
   AuthViewModel(
     this._repository,
     this._googleAuthService, {
@@ -58,7 +62,7 @@ class AuthViewModel extends ChangeNotifier {
       _status = ViewStatus.idle;
       if (result is ApiSuccess<AuthSessionModel?>) {
         final data = result.data;
-        if (data != null && data.user.isTeacher) {
+        if (data != null && (data.user.isTeacher || data.user.role == 'user')) {
           _session = data;
           _status = ViewStatus.success;
         } else if (data != null) {
@@ -73,6 +77,30 @@ class AuthViewModel extends ChangeNotifier {
       _isRestoringSession = false;
       notifyListeners();
     }
+  }
+
+  /// Reloads profile data without entering the app-startup loading state.
+  /// Use this after an in-session profile update so GoRouter does not replace
+  /// the current screen with LoadingScreen.
+  Future<bool> refreshProfile() async {
+    final account = _session?.token;
+    if (account == null) return false;
+
+    final result = await _repository.restoreSession();
+    if (account != _session?.token) return false;
+    switch (result) {
+      case ApiSuccess<AuthSessionModel?>(:final data):
+        if (data == null) return false;
+        _session = data;
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      case ApiFailure<AuthSessionModel?>(:final error):
+        _errorMessage = error.message;
+        notifyListeners();
+        return false;
+    }
+    return false;
   }
 
   Future<bool> loginWithGoogle() async {
@@ -129,9 +157,9 @@ class AuthViewModel extends ChangeNotifier {
 
     if (result is ApiSuccess<AuthSessionModel>) {
       final data = result.data;
-      if (!data.user.isTeacher) {
+      if (!data.user.isTeacher && data.user.role != 'user') {
         _status = ViewStatus.error;
-        _errorMessage = 'Tài khoản này không có quyền giảng viên. Sinh viên điểm danh bằng cách quét mã QR của giảng viên.';
+        _errorMessage = 'Tài khoản này không có quyền sử dụng ứng dụng.';
         await _repository.signOut();
         notifyListeners();
         return false;
@@ -173,17 +201,37 @@ class AuthViewModel extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> updateProfile(String name, String phone, String birthDate) async {
+  Future<bool> updateProfile(
+    String name,
+    String phone,
+    String birthDate,
+  ) async {
     final account = _session?.token;
-    final result = await _repository.updateProfile(name: name, phone: phone, birthDate: birthDate);
+    final result = await _repository.updateProfile(
+      name: name,
+      phone: phone,
+      birthDate: birthDate,
+    );
     if (account != _session?.token) return false;
-    if (result is ApiSuccess<AuthSessionModel>) { _session = result.data; _errorMessage = null; notifyListeners(); return true; }
-    if (result is ApiFailure<AuthSessionModel>) _errorMessage = result.error.message;
+    if (result is ApiSuccess<AuthSessionModel>) {
+      _session = result.data;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    }
+    if (result is ApiFailure<AuthSessionModel>) {
+      _errorMessage = result.error.message;
+    }
     notifyListeners();
     return false;
   }
 
   Future<void> signOut() async {
+    try {
+      await beforeSignOut?.call();
+    } catch (_) {
+      // Token cleanup must not prevent the user from signing out.
+    }
     _session = null;
     _status = ViewStatus.idle;
     _errorMessage = null;
