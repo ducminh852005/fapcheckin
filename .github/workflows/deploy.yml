@@ -5,7 +5,7 @@ name: Deploy Firebase
 #   2. deploy  : firebase deploy bản live + smoke test lại bản live
 # Thiết lập một lần: docs/deploy-firebase.md §10.
 #   Secret   FIREBASE_SERVICE_ACCOUNT : JSON khóa service account (vai trò Firebase Admin) — KHÔNG commit
-#   Variable FIREBASE_PROJECT_ID      : mặc định fapcheckin-3bn2di
+#   Variable FIREBASE_PROJECT_ID      : mặc định ducminh-41459
 #   Variable FIREBASE_DEPLOY_TARGETS  : mặc định "firestore,hosting"; thêm storage, remoteconfig, functions
 #                                       khi đã bật (Storage; Functions cần gói Blaze + Cloud Vision API)
 
@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 env:
-  PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'fapcheckin-3bn2di' }}
+  PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'ducminh-41459' }}
   TARGETS: ${{ vars.FIREBASE_DEPLOY_TARGETS || 'firestore,hosting' }}
   SHA: ${{ github.event.workflow_run.head_sha }}
 

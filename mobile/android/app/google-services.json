@@ -1,20 +1,20 @@
 {
   "project_info": {
-    "project_number": "161196189514",
-    "project_id": "fapcheckin-3bn2di",
-    "storage_bucket": "fapcheckin-3bn2di.firebasestorage.app"
+    "project_number": "1076774489636",
+    "project_id": "ducminh-41459",
+    "storage_bucket": "ducminh-41459.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:161196189514:android:6513e3c87a152a077c43b3",
+        "mobilesdk_app_id": "1:1076774489636:android:74eb547ada844cc51892b1",
         "android_client_info": {
           "package_name": "com.example.fapcheckin"
         }
       },
       "oauth_client": [
         {
-          "client_id": "161196189514-30ak98bnf6lh5i7jsf0tr8fduk0t7iah.apps.googleusercontent.com",
+          "client_id": "1076774489636-ahvpp7nit13jc3rcngcgljbgmrk0fukh.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.fapcheckin",
@@ -22,20 +22,28 @@
           }
         },
         {
-          "client_id": "161196189514-jtodr06udnlqeca7768qkqq5lrqn32qo.apps.googleusercontent.com",
+          "client_id": "1076774489636-p5qqjiuu5c9msmmrrn10f4p2n390ae2v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fapcheckin",
+            "certificate_hash": "5b2e7b98d37bc56574798f6ac098fc13af36847f"
+          }
+        },
+        {
+          "client_id": "1076774489636-4n13aj1a21e302a1bc4nahjklud6eu2f.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyC_PRHErYryI69_O-b9oDxXErUMSAoUzVc"
+          "current_key": "AIzaSyCtnyCRjDk5edggVRFY0OvPpBGAuFVw4Ck"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "161196189514-jtodr06udnlqeca7768qkqq5lrqn32qo.apps.googleusercontent.com",
+              "client_id": "1076774489636-4n13aj1a21e302a1bc4nahjklud6eu2f.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
