@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Pagination } from "../components/Pagination"
+import { ToastMessage } from "../components/ToastMessage"
 import { useAsyncData } from "../hooks/useAsyncData"
 import {
   AlertCircle,
@@ -50,14 +51,14 @@ export function AnnouncementPage({
 
   // Form State
   const [title, setTitle] = useState(
-    "Thông báo thay đổi phòng học & cập nhật lịch thi Slot 2"
+    "Thông báo thay đổi phòng học & cập nhật lịch thi Slot 2",
   )
   const targetAudience = "teachers" as const
   const [priority, setPriority] = useState<"normal" | "important" | "urgent">(
-    "urgent"
+    "urgent",
   )
   const [content, setContent] = useState(
-    "Kính gửi quý Thầy Cô, đề nghị kiểm tra lịch dạy và phòng học cập nhật trực tiếp trên ứng dụng FAP Check-in trước giờ vào ca."
+    "Kính gửi quý Thầy Cô, đề nghị kiểm tra lịch dạy và phòng học cập nhật trực tiếp trên ứng dụng FAP Check-in trước giờ vào ca.",
   )
   const [contentText, setContentText] = useState(content)
   const [pinToTop, setPinToTop] = useState(false)
@@ -103,9 +104,13 @@ export function AnnouncementPage({
         recipientCount: estimatedRecipients,
         createdBy: adminEmail,
       })
-      showToast(`Đã đăng thông báo cho ${estimatedRecipients.toLocaleString("vi-VN")} giảng viên.`)
+      showToast(
+        `Đã đăng thông báo cho ${estimatedRecipients.toLocaleString("vi-VN")} giảng viên.`,
+      )
     } catch {
-      showToast("Lỗi khi lưu thông báo lên Firestore. Vui lòng kiểm tra quyền quản trị.")
+      showToast(
+        "Lỗi khi lưu thông báo lên Firestore. Vui lòng kiểm tra quyền quản trị.",
+      )
     } finally {
       setIsSending(false)
     }
@@ -147,7 +152,9 @@ export function AnnouncementPage({
     setContentText(editor.innerText.replace(/\u00a0/g, " ").slice(0, 1000))
   }
 
-  const applyFormat = (command: "bold" | "italic" | "underline" | "insertUnorderedList" | "insertOrderedList") => {
+  const applyFormat = (
+    command: "bold" | "italic" | "underline" | "insertUnorderedList" | "insertOrderedList",
+  ) => {
     contentRef.current?.focus()
     document.execCommand(command)
     syncEditorContent()
@@ -163,7 +170,11 @@ export function AnnouncementPage({
     contentRef.current?.focus()
     const selection = window.getSelection()
     if (!selection || selection.isCollapsed) {
-      document.execCommand("insertHTML", false, `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>`)
+      document.execCommand(
+        "insertHTML",
+        false,
+        `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>`,
+      )
     } else {
       document.execCommand("createLink", false, url)
     }
@@ -180,16 +191,18 @@ export function AnnouncementPage({
     <div className="space-y-6 text-slate-800 pb-12">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="ml-2 text-slate-400 hover:text-white"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        <ToastMessage
+          toast={{
+            title: /^(Lỗi|Không|Vui lòng)/.test(toastMessage)
+              ? "Có lỗi xảy ra"
+              : "Thông báo",
+            detail: toastMessage,
+            tone: /^(Lỗi|Không|Vui lòng)/.test(toastMessage)
+              ? "error"
+              : "success",
+          }}
+          close={() => setToastMessage(null)}
+        />
       )}
 
       {/* Page Header */}
@@ -199,7 +212,8 @@ export function AnnouncementPage({
             Tạo thông báo &amp; Truyền thông FAP
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Gửi thông tin tức thời hoặc hẹn giờ phát sóng tới giảng viên trên ứng dụng FAP Mobile.
+            Gửi thông tin tức thời hoặc hẹn giờ phát sóng tới giảng viên trên
+            ứng dụng FAP Mobile.
           </p>
         </div>
 
@@ -235,7 +249,9 @@ export function AnnouncementPage({
               <label className="font-bold text-slate-800">
                 Tiêu đề thông báo <span className="text-[#EA580C]">*</span>
               </label>
-              <span className="text-slate-400 text-[11px]">Ngắn gọn, rõ mục đích</span>
+              <span className="text-slate-400 text-[11px]">
+                Ngắn gọn, rõ mục đích
+              </span>
             </div>
             <input
               type="text"
@@ -253,9 +269,12 @@ export function AnnouncementPage({
                 <GraduationCap size={20} />
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-900">Gửi tới toàn bộ giảng viên</div>
+                <div className="text-xs font-bold text-slate-900">
+                  Gửi tới toàn bộ giảng viên
+                </div>
                 <div className="mt-1 text-[11px] text-slate-500">
-                  {(targetsData?.teacherCount ?? 0).toLocaleString("vi-VN")} tài khoản giảng viên trên FAP Mobile
+                  {(targetsData?.teacherCount ?? 0).toLocaleString("vi-VN")} tài
+                  khoản giảng viên trên FAP Mobile
                 </div>
               </div>
             </div>
@@ -284,7 +303,6 @@ export function AnnouncementPage({
                 />
               </div>
             </div>
-
           </div>
 
           {/* 4. Nội dung thông báo */}
@@ -372,7 +390,9 @@ export function AnnouncementPage({
 
               {/* Dynamic Variables */}
               <div className="flex items-center gap-1.5 text-[11px]">
-                <span className="text-slate-400 font-medium">Chèn biến động:</span>
+                <span className="text-slate-400 font-medium">
+                  Chèn biến động:
+                </span>
                 {[
                   { tag: "[teacher_name]", label: "[teacher_name]" },
                   { tag: "[class_id]", label: "[class_id]" },
@@ -404,7 +424,11 @@ export function AnnouncementPage({
               onInput={syncEditorContent}
               onPaste={(event) => {
                 event.preventDefault()
-                document.execCommand("insertText", false, event.clipboardData.getData("text/plain"))
+                document.execCommand(
+                  "insertText",
+                  false,
+                  event.clipboardData.getData("text/plain"),
+                )
                 syncEditorContent()
               }}
               className="min-h-[156px] w-full overflow-y-auto text-xs text-slate-800 leading-relaxed bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 focus:outline-none focus:border-[#EA580C] focus:bg-white transition [&_a]:text-blue-600 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
@@ -489,7 +513,6 @@ export function AnnouncementPage({
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* 2. Xem trước trong ứng dụng giảng viên */}
@@ -622,7 +645,9 @@ export function AnnouncementPage({
 
             <div className="p-5 space-y-3 text-xs max-h-[60vh] overflow-y-auto divide-y divide-slate-100">
               {paginatedHistory.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">Chưa có lịch sử phát thông báo.</div>
+                <div className="text-center py-8 text-slate-400">
+                  Chưa có lịch sử phát thông báo.
+                </div>
               ) : (
                 paginatedHistory.map((item) => (
                   <div key={item.id} className="pt-3 first:pt-0 space-y-1">
@@ -677,4 +702,3 @@ function escapeHtml(value: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
 }
-
