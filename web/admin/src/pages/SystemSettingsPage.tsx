@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react"
 import { useAsyncData } from "../hooks/useAsyncData"
+import { ToastMessage } from "../components/ToastMessage"
 import {
   DEFAULT_SETTINGS,
   getSystemSettings,
@@ -44,19 +45,19 @@ export function SystemSettingsPage({
   const [isSyncing, setIsSyncing] = useState(false)
 
   // Sync state once data loaded
-  const currentSettings = isDirty ? settings : data ?? DEFAULT_SETTINGS
+  const currentSettings = isDirty ? settings : (data ?? DEFAULT_SETTINGS)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  const updateField = <K extends keyof SystemSettings>(
+  const updateField = <K extends keyof SystemSettings,>(
     key: K,
-    val: SystemSettings[K]
+    val: SystemSettings[K],
   ) => {
     setSettings((prev) => ({
-      ...(isDirty ? prev : data ?? DEFAULT_SETTINGS),
+      ...(isDirty ? prev : (data ?? DEFAULT_SETTINGS)),
       [key]: val,
     }))
     setIsDirty(true)
@@ -67,7 +68,9 @@ export function SystemSettingsPage({
       await saveSystemSettings(currentSettings, adminEmail)
       setIsDirty(false)
       reload()
-      showToast("Đã lưu các thay đổi tham số toàn hệ thống vào Firestore thành công!")
+      showToast(
+        "Đã lưu các thay đổi tham số toàn hệ thống vào Firestore thành công!",
+      )
     } catch {
       showToast("Lỗi khi lưu cấu hình vào Firestore.")
     }
@@ -76,7 +79,9 @@ export function SystemSettingsPage({
   const handleReset = () => {
     setSettings(DEFAULT_SETTINGS)
     setIsDirty(true)
-    showToast("Đã nạp lại bộ giá trị mặc định của ứng dụng. Bấm Lưu thay đổi để áp dụng.")
+    showToast(
+      "Đã nạp lại bộ giá trị mặc định của ứng dụng. Bấm Lưu thay đổi để áp dụng.",
+    )
   }
 
   const handleSyncNow = async () => {
@@ -89,16 +94,16 @@ export function SystemSettingsPage({
     <div className="space-y-6 text-slate-800">
       {/* Toast notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="ml-2 text-slate-400 hover:text-white"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        <ToastMessage
+          toast={{
+            title: toastMessage.startsWith("Lỗi")
+              ? "Có lỗi xảy ra"
+              : "Thông báo",
+            detail: toastMessage,
+            tone: toastMessage.startsWith("Lỗi") ? "error" : "success",
+          }}
+          close={() => setToastMessage(null)}
+        />
       )}
 
       {/* Header */}
@@ -113,7 +118,8 @@ export function SystemSettingsPage({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Cấu hình các tham số đang được ứng dụng hỗ trợ. Tích hợp FAP Core hiện chưa được triển khai.
+            Cấu hình các tham số đang được ứng dụng hỗ trợ. Tích hợp FAP Core
+            hiện chưa được triển khai.
           </p>
         </div>
 
@@ -187,7 +193,8 @@ export function SystemSettingsPage({
                   { seconds: 45, label: "45 giây" },
                   { seconds: 60, label: "60 giây (Tối ưu)" },
                 ].map((item) => {
-                  const isSelected = currentSettings.qrRefreshRate === item.seconds
+                  const isSelected =
+                    currentSettings.qrRefreshRate === item.seconds
                   return (
                     <button
                       key={item.seconds}
@@ -213,7 +220,8 @@ export function SystemSettingsPage({
                   Thời gian cho phép điểm danh sau khi bắt đầu ca (Grace Period)
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Sinh viên vào trễ sau thời gian này sẽ tự động bị hệ thống đánh dấu &apos;Vắng&apos;
+                  Sinh viên vào trễ sau thời gian này sẽ tự động bị hệ thống
+                  đánh dấu &apos;Vắng&apos;
                 </p>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shrink-0">
@@ -222,7 +230,9 @@ export function SystemSettingsPage({
                   min={1}
                   max={60}
                   value={currentSettings.gracePeriodMinutes}
-                  onChange={(e) => updateField("gracePeriodMinutes", Number(e.target.value))}
+                  onChange={(e) =>
+                    updateField("gracePeriodMinutes", Number(e.target.value))
+                  }
                   className="w-10 text-xs font-bold text-slate-800 bg-transparent text-right focus:outline-none"
                 />
                 <span className="text-xs text-slate-500 font-medium">phút</span>
@@ -236,7 +246,8 @@ export function SystemSettingsPage({
                   Cho phép Giảng viên duyệt đơn điểm danh bù
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Giảng viên bộ môn có quyền xác thực sinh viên điểm danh bù thủ công khi gặp sự cố camera
+                  Giảng viên bộ môn có quyền xác thực sinh viên điểm danh bù thủ
+                  công khi gặp sự cố camera
                 </p>
               </div>
               <button
@@ -244,16 +255,20 @@ export function SystemSettingsPage({
                 onClick={() =>
                   updateField(
                     "allowTeacherManualApproval",
-                    !currentSettings.allowTeacherManualApproval
+                    !currentSettings.allowTeacherManualApproval,
                   )
                 }
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  currentSettings.allowTeacherManualApproval ? "bg-[#EA580C]" : "bg-slate-200"
+                  currentSettings.allowTeacherManualApproval
+                    ? "bg-[#EA580C]"
+                    : "bg-slate-200"
                 }`}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    currentSettings.allowTeacherManualApproval ? "translate-x-5" : "translate-x-0"
+                    currentSettings.allowTeacherManualApproval
+                      ? "translate-x-5"
+                      : "translate-x-0"
                   }`}
                 />
               </button>
@@ -263,7 +278,10 @@ export function SystemSettingsPage({
           {/* Footer note */}
           <div className="pt-4 mt-6 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-400">
             <Info size={14} className="text-[#EA580C] shrink-0" />
-            <span>Mỗi mã QR mã hóa SHA-256 kèm theo Timestamp định danh duy nhất theo từng Slot.</span>
+            <span>
+              Mỗi mã QR mã hóa SHA-256 kèm theo Timestamp định danh duy nhất
+              theo từng Slot.
+            </span>
           </div>
         </div>
 
@@ -301,15 +319,22 @@ export function SystemSettingsPage({
                 <button
                   type="button"
                   onClick={() =>
-                    updateField("requireCampusIp", !currentSettings.requireCampusIp)
+                    updateField(
+                      "requireCampusIp",
+                      !currentSettings.requireCampusIp,
+                    )
                   }
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    currentSettings.requireCampusIp ? "bg-[#EA580C]" : "bg-slate-200"
+                    currentSettings.requireCampusIp
+                      ? "bg-[#EA580C]"
+                      : "bg-slate-200"
                   }`}
                 >
                   <span
                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      currentSettings.requireCampusIp ? "translate-x-5" : "translate-x-0"
+                      currentSettings.requireCampusIp
+                        ? "translate-x-5"
+                        : "translate-x-0"
                     }`}
                   />
                 </button>
@@ -351,7 +376,9 @@ export function SystemSettingsPage({
 
               <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
                 <span>50m (Cực hẹp)</span>
-                <span className="font-medium text-slate-600">Tòa nhà Alpha / Beta / Delta</span>
+                <span className="font-medium text-slate-600">
+                  Tòa nhà Alpha / Beta / Delta
+                </span>
                 <span>500m (Rộng)</span>
               </div>
             </div>
@@ -363,7 +390,8 @@ export function SystemSettingsPage({
                   Khóa thiết bị sinh viên (Device Fingerprint)
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Mỗi tài khoản FPT chỉ được check-in trên 1 thiết bị duy nhất trong mỗi ca học
+                  Mỗi tài khoản FPT chỉ được check-in trên 1 thiết bị duy nhất
+                  trong mỗi ca học
                 </p>
               </div>
               <button
@@ -371,16 +399,20 @@ export function SystemSettingsPage({
                 onClick={() =>
                   updateField(
                     "enableDeviceFingerprint",
-                    !currentSettings.enableDeviceFingerprint
+                    !currentSettings.enableDeviceFingerprint,
                   )
                 }
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  currentSettings.enableDeviceFingerprint ? "bg-[#EA580C]" : "bg-slate-200"
+                  currentSettings.enableDeviceFingerprint
+                    ? "bg-[#EA580C]"
+                    : "bg-slate-200"
                 }`}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    currentSettings.enableDeviceFingerprint ? "translate-x-5" : "translate-x-0"
+                    currentSettings.enableDeviceFingerprint
+                      ? "translate-x-5"
+                      : "translate-x-0"
                   }`}
                 />
               </button>
@@ -390,7 +422,9 @@ export function SystemSettingsPage({
           {/* Verification Badge Box */}
           <div className="mt-6 bg-emerald-50/70 border border-emerald-200/60 rounded-xl p-3 flex items-center gap-2.5 text-xs text-emerald-800">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-            <span className="font-medium">Hệ thống kích hoạt chuẩn chứng thực FPT Edu 2.0</span>
+            <span className="font-medium">
+              Hệ thống kích hoạt chuẩn chứng thực FPT Edu 2.0
+            </span>
           </div>
         </div>
 
@@ -435,7 +469,10 @@ export function SystemSettingsPage({
                     max={50}
                     value={currentSettings.maxAbsentThresholdPercent}
                     onChange={(e) =>
-                      updateField("maxAbsentThresholdPercent", Number(e.target.value))
+                      updateField(
+                        "maxAbsentThresholdPercent",
+                        Number(e.target.value),
+                      )
                     }
                     className="w-10 text-xs font-bold text-slate-800 bg-transparent text-right focus:outline-none"
                   />
@@ -447,7 +484,8 @@ export function SystemSettingsPage({
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs text-slate-600">
                 <Info size={14} className="text-slate-400 shrink-0" />
                 <span>
-                  Tương đương: Nghỉ quá <b>4 buổi</b> trên tổng số 20 buổi của môn tiêu chuẩn (3 tín chỉ).
+                  Tương đương: Nghỉ quá <b>4 buổi</b> trên tổng số 20 buổi của
+                  môn tiêu chuẩn (3 tín chỉ).
                 </span>
               </div>
             </div>
@@ -459,21 +497,29 @@ export function SystemSettingsPage({
                   Tự động gửi thông báo FCM nhắc nhở
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Gửi cảnh báo qua FAP Mobile App tới sinh viên khi bắt đầu vắng từ buổi thứ 2
+                  Gửi cảnh báo qua FAP Mobile App tới sinh viên khi bắt đầu vắng
+                  từ buổi thứ 2
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() =>
-                  updateField("autoSendFcmNotice", !currentSettings.autoSendFcmNotice)
+                  updateField(
+                    "autoSendFcmNotice",
+                    !currentSettings.autoSendFcmNotice,
+                  )
                 }
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  currentSettings.autoSendFcmNotice ? "bg-[#EA580C]" : "bg-slate-200"
+                  currentSettings.autoSendFcmNotice
+                    ? "bg-[#EA580C]"
+                    : "bg-slate-200"
                 }`}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    currentSettings.autoSendFcmNotice ? "translate-x-5" : "translate-x-0"
+                    currentSettings.autoSendFcmNotice
+                      ? "translate-x-5"
+                      : "translate-x-0"
                   }`}
                 />
               </button>
@@ -486,21 +532,29 @@ export function SystemSettingsPage({
                   Cảnh báo GVCN &amp; Cố vấn học tập
                 </h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Tự động gửi email tổng hợp sinh viên có nguy cơ cấm thi vào thứ 6 hàng tuần
+                  Tự động gửi email tổng hợp sinh viên có nguy cơ cấm thi vào
+                  thứ 6 hàng tuần
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() =>
-                  updateField("notifyAdvisorWeekly", !currentSettings.notifyAdvisorWeekly)
+                  updateField(
+                    "notifyAdvisorWeekly",
+                    !currentSettings.notifyAdvisorWeekly,
+                  )
                 }
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  currentSettings.notifyAdvisorWeekly ? "bg-[#EA580C]" : "bg-slate-200"
+                  currentSettings.notifyAdvisorWeekly
+                    ? "bg-[#EA580C]"
+                    : "bg-slate-200"
                 }`}
               >
                 <span
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    currentSettings.notifyAdvisorWeekly ? "translate-x-5" : "translate-x-0"
+                    currentSettings.notifyAdvisorWeekly
+                      ? "translate-x-5"
+                      : "translate-x-0"
                   }`}
                 />
               </button>
@@ -510,7 +564,10 @@ export function SystemSettingsPage({
           {/* Footer note */}
           <div className="pt-4 mt-6 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span>Áp dụng toàn bộ sinh viên Đại học chính quy</span>
-            <span>Ngưỡng này chỉ được lưu cấu hình; chưa tự động áp dụng quyết định học vụ.</span>
+            <span>
+              Ngưỡng này chỉ được lưu cấu hình; chưa tự động áp dụng quyết định
+              học vụ.
+            </span>
           </div>
         </div>
 
@@ -546,14 +603,19 @@ export function SystemSettingsPage({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">Firebase Firestore</span>
+                    <span className="text-xs font-bold text-slate-900">
+                      Firebase Firestore
+                    </span>
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
                       Đã tải dữ liệu
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     Ping: <b>{data?.pingMs ?? 0}ms</b> • Đã đồng bộ{" "}
-                    <b>{(data?.totalSyncedAccounts ?? 0).toLocaleString("en-US")}</b> tài khoản
+                    <b>
+                      {(data?.totalSyncedAccounts ?? 0).toLocaleString("en-US")}
+                    </b>{" "}
+                    tài khoản
                   </p>
                 </div>
               </div>
@@ -568,13 +630,16 @@ export function SystemSettingsPage({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">FAP Core Portal</span>
+                    <span className="text-xs font-bold text-slate-900">
+                      FAP Core Portal
+                    </span>
                     <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">
                       Chưa triển khai
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Chưa có API kết nối với FAP Core. Nút bên dưới chỉ hiển thị trạng thái triển khai.
+                    Chưa có API kết nối với FAP Core. Nút bên dưới chỉ hiển thị
+                    trạng thái triển khai.
                   </p>
                 </div>
               </div>
@@ -584,7 +649,9 @@ export function SystemSettingsPage({
 
           {/* Card Footer: Manual Sync Button */}
           <div className="pt-4 mt-6 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-[11px] text-slate-400">Tính năng dự kiến</span>
+            <span className="text-[11px] text-slate-400">
+              Tính năng dự kiến
+            </span>
 
             <button
               type="button"
@@ -596,7 +663,9 @@ export function SystemSettingsPage({
                 size={13}
                 className={isSyncing ? "animate-spin text-[#C2410C]" : ""}
               />
-              <span>{isSyncing ? "Đang kiểm tra..." : "Kiểm tra tích hợp FAP"}</span>
+              <span>
+                {isSyncing ? "Đang kiểm tra..." : "Kiểm tra tích hợp FAP"}
+              </span>
             </button>
           </div>
         </div>
@@ -611,9 +680,10 @@ export function SystemSettingsPage({
           </span>
         </div>
 
-        <span className="text-[11px] text-slate-400">Cấu hình được lưu trong Cloud Firestore.</span>
+        <span className="text-[11px] text-slate-400">
+          Cấu hình được lưu trong Cloud Firestore.
+        </span>
       </div>
     </div>
   )
 }
-

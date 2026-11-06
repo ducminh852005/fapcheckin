@@ -182,6 +182,7 @@ class _NotificationModalState extends State<NotificationModal> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final maxHeight = (screenHeight * 0.88).clamp(360.0, 780.0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -190,10 +191,13 @@ class _NotificationModalState extends State<NotificationModal> {
           maxHeight: maxHeight,
           maxWidth: 520,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
+        decoration: BoxDecoration(
+          color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: isDark
+              ? Border.all(color: Theme.of(context).colorScheme.outline)
+              : null,
+          boxShadow: const [
             BoxShadow(
               color: Color(0x280F172A),
               blurRadius: 32,
@@ -241,10 +245,12 @@ class _NotificationModalState extends State<NotificationModal> {
                 Center(
                   child: Container(
                     margin: const EdgeInsets.only(top: 10, bottom: 4),
-                    width: 42,
-                    height: 4.5,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFCBD5E1),
+                      color: isDark
+                          ? const Color(0xFF475569)
+                          : const Color(0xFFCBD5E1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -258,8 +264,10 @@ class _NotificationModalState extends State<NotificationModal> {
                       Container(
                         width: 42,
                         height: 42,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFEDE5),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFFFEDE5),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -275,7 +283,7 @@ class _NotificationModalState extends State<NotificationModal> {
                           children: [
                             Row(
                               children: [
-                                const Flexible(
+                                Flexible(
                                   child: Text(
                                     'Thông báo',
                                     maxLines: 1,
@@ -283,7 +291,9 @@ class _NotificationModalState extends State<NotificationModal> {
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
+                                      color: isDark
+                                          ? const Color(0xFFF8FAFC)
+                                          : const Color(0xFF0F172A),
                                       letterSpacing: -0.3,
                                     ),
                                   ),
@@ -312,11 +322,13 @@ class _NotificationModalState extends State<NotificationModal> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            const Text(
+                            Text(
                               'Cập nhật trực tuyến',
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: Color(0xFF64748B),
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF64748B),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -333,14 +345,18 @@ class _NotificationModalState extends State<NotificationModal> {
                           child: Container(
                             width: 34,
                             height: 34,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : const Color(0xFFF1F5F9),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.close_rounded,
                               size: 18,
-                              color: Color(0xFF475569),
+                              color: isDark
+                                  ? const Color(0xFFCBD5E1)
+                                  : const Color(0xFF475569),
                             ),
                           ),
                         ),
@@ -349,7 +365,13 @@ class _NotificationModalState extends State<NotificationModal> {
                   ),
                 ),
 
-                const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: isDark
+                      ? Theme.of(context).colorScheme.outline
+                      : const Color(0xFFF1F5F9),
+                ),
 
                 // 3. Nút "Đánh dấu đã đọc tất cả"
                 Padding(
@@ -484,9 +506,17 @@ class _NotificationModalState extends State<NotificationModal> {
                 // 6. Footer: Cài đặt nhận thông báo + Nút Đóng thông báo
                 Container(
                   padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Theme.of(context).colorScheme.surface
+                        : Colors.white,
+                    border: Border(
+                      top: BorderSide(
+                        color: isDark
+                            ? Theme.of(context).colorScheme.outline
+                            : const Color(0xFFF1F5F9),
+                      ),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -503,17 +533,19 @@ class _NotificationModalState extends State<NotificationModal> {
                                 dashVm?.navigate('cai-dat-tro-giup');
                               },
                               borderRadius: BorderRadius.circular(8),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.settings_outlined,
                                       size: 16,
-                                      color: Color(0xFF475569),
+                                      color: isDark
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF475569),
                                     ),
-                                    SizedBox(width: 6),
+                                    const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
                                         'Cài đặt nhận thông báo',
@@ -522,7 +554,9 @@ class _NotificationModalState extends State<NotificationModal> {
                                         style: TextStyle(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF475569),
+                                          color: isDark
+                                              ? const Color(0xFFCBD5E1)
+                                              : const Color(0xFF475569),
                                         ),
                                       ),
                                     ),
@@ -548,19 +582,25 @@ class _NotificationModalState extends State<NotificationModal> {
                         child: TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: TextButton.styleFrom(
-                            backgroundColor: const Color(0xFFE2E8F0)
-                                .withValues(alpha: 0.7),
-                            foregroundColor: const Color(0xFF0F172A),
+                            backgroundColor: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0)
+                                    .withValues(alpha: 0.7),
+                            foregroundColor: isDark
+                                ? const Color(0xFFF8FAFC)
+                                : const Color(0xFF0F172A),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Đóng thông báo',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
+                              color: isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF0F172A),
                             ),
                           ),
                         ),
@@ -584,9 +624,13 @@ class _NotificationModalState extends State<NotificationModal> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final bgColor =
-        isSelected ? const Color(0xFFC2410C) : const Color(0xFFF1F5F9);
-    final textColor = isSelected ? Colors.white : const Color(0xFF475569);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isSelected
+        ? const Color(0xFFC2410C)
+        : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9));
+    final textColor = isSelected
+        ? Colors.white
+        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569));
 
     return InkWell(
       onTap: onTap,
@@ -618,7 +662,9 @@ class _NotificationModalState extends State<NotificationModal> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Colors.white.withValues(alpha: 0.25)
-                      : const Color(0xFFFFEDD5),
+                      : (isDark
+                          ? const Color(0xFF475569)
+                          : const Color(0xFFFFEDD5)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -626,7 +672,11 @@ class _NotificationModalState extends State<NotificationModal> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: isSelected ? Colors.white : const Color(0xFFC2410C),
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark
+                            ? const Color(0xFFFED7AA)
+                            : const Color(0xFFC2410C)),
                   ),
                 ),
               ),
@@ -642,6 +692,7 @@ class _NotificationModalState extends State<NotificationModal> {
     int index, {
     required bool isUnread,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final title = (row['title'] ?? 'Thông báo').toString();
     final body = (row['body'] ?? row['content'] ?? '').toString();
     final category = _categoryOf(row);
@@ -652,11 +703,15 @@ class _NotificationModalState extends State<NotificationModal> {
         ? 'Sắp bắt đầu'
         : (isAttendance ? 'Cảnh báo chuyên cần' : 'Thông báo hệ thống');
     final badgeBg = isSchedule
-        ? const Color(0xFFFFE4D6)
-        : (isAttendance ? const Color(0xFFFFEDD5) : const Color(0xFFEEF2FF));
+        ? (isDark ? const Color(0xFF7F1D1D).withValues(alpha: 0.4) : const Color(0xFFFFE4D6))
+        : (isAttendance
+            ? (isDark ? const Color(0xFF7C2D12).withValues(alpha: 0.4) : const Color(0xFFFFEDD5))
+            : (isDark ? const Color(0xFF312E81).withValues(alpha: 0.4) : const Color(0xFFEEF2FF)));
     final badgeFg = isSchedule
-        ? const Color(0xFFB91C1C)
-        : (isAttendance ? const Color(0xFFC2410C) : const Color(0xFF4338CA));
+        ? (isDark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C))
+        : (isAttendance
+            ? (isDark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C))
+            : (isDark ? const Color(0xFFA5B4FC) : const Color(0xFF4338CA)));
     final icon = isSchedule
         ? Icons.alarm_rounded
         : (isAttendance
@@ -669,12 +724,14 @@ class _NotificationModalState extends State<NotificationModal> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isUnread ? const Color(0xFFFFFBF5) : const Color(0xFFF8FAFC),
+          color: isDark
+              ? (isUnread ? const Color(0xFF1E293B) : const Color(0xFF0F172A))
+              : (isUnread ? const Color(0xFFFFFBF5) : const Color(0xFFF8FAFC)),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isUnread
-                ? const Color(0xFFFED7AA)
-                : const Color(0xFFE2E8F0),
+            color: isDark
+                ? (isUnread ? const Color(0xFFC2410C) : const Color(0xFF334155))
+                : (isUnread ? const Color(0xFFFED7AA) : const Color(0xFFE2E8F0)),
             width: 1.2,
           ),
         ),
@@ -706,7 +763,10 @@ class _NotificationModalState extends State<NotificationModal> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFC2410C),
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
@@ -740,10 +800,12 @@ class _NotificationModalState extends State<NotificationModal> {
                       const SizedBox(height: 6),
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: isDark
+                              ? const Color(0xFFF8FAFC)
+                              : const Color(0xFF0F172A),
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -756,9 +818,11 @@ class _NotificationModalState extends State<NotificationModal> {
               const SizedBox(height: 10),
               Text(
                 body,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
-                  color: Color(0xFF475569),
+                  color: isDark
+                      ? const Color(0xFFCBD5E1)
+                      : const Color(0xFF475569),
                   height: 1.45,
                 ),
               ),

@@ -206,13 +206,20 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
 
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modalBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final closeBtnBg = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final closeIconColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: modalBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
@@ -225,11 +232,11 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
               // Thanh kéo nhỏ trên đầu bottom sheet
               Center(
                 child: Container(
-                  width: 44,
-                  height: 4.5,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(3),
+                    color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
@@ -245,7 +252,7 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                     size: 24,
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -254,17 +261,17 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: titleColor,
                             letterSpacing: -0.3,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Chọn khoảng thời gian thống kê điểm danh chuyên cần',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF64748B),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
@@ -280,14 +287,14 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                       child: Container(
                         width: 34,
                         height: 34,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF1F5F9),
+                        decoration: BoxDecoration(
+                          color: closeBtnBg,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: Color(0xFF64748B),
+                          color: closeIconColor,
                         ),
                       ),
                     ),
@@ -463,22 +470,22 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                       child: OutlinedButton(
                         onPressed: _resetFilter,
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF334155),
-                          side: const BorderSide(
-                            color: Color(0xFFE2E8F0),
+                          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          foregroundColor: isDark ? Colors.white : const Color(0xFF334155),
+                          side: BorderSide(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                             width: 1.2,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Thiết lập lại',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF334155),
+                            color: isDark ? Colors.white : const Color(0xFF334155),
                           ),
                         ),
                       ),
@@ -539,6 +546,16 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
     Widget? customChild,
   }) {
     final isSelected = _selectedType == type;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorder = isSelected
+        ? const Color(0xFFEA580C)
+        : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
+    final iconBoxBg = isSelected
+        ? const Color(0xFFFFEDD5)
+        : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9));
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return InkWell(
       onTap: () => setState(() => _selectedType = type),
@@ -546,12 +563,10 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFFEA580C)
-                : const Color(0xFFE2E8F0),
+            color: cardBorder,
             width: isSelected ? 1.6 : 1.0,
           ),
           boxShadow: isSelected
@@ -574,9 +589,7 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFFFEDD5)
-                        : const Color(0xFFF1F5F9),
+                    color: iconBoxBg,
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(
@@ -584,7 +597,7 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                     size: 20,
                     color: isSelected
                         ? const Color(0xFFEA580C)
-                        : const Color(0xFF64748B),
+                        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -599,10 +612,10 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                           Flexible(
                             child: Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
+                                color: titleColor,
                               ),
                             ),
                           ),
@@ -632,10 +645,10 @@ class _ReportScopeBottomSheetState extends State<ReportScopeBottomSheet> {
                       const SizedBox(height: 3),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF64748B),
+                          color: subtitleColor,
                         ),
                       ),
                     ],

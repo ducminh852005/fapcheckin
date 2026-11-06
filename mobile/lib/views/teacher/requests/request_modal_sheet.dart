@@ -407,17 +407,29 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modalBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? Colors.white : const Color(0xFF191C1E);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF565E74);
+    final closeBtnBg = isDark ? const Color(0xFF334155) : const Color(0xFFF2F4F6);
+    final closeIconColor = isDark ? Colors.white70 : const Color(0xFF565E74);
+    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final tabSwitcherBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF2F4F6);
+    final activeTabBg = isDark ? const Color(0xFF334155) : Colors.white;
+    final unselectedTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF565E74);
+    final unselectedBadgeBg = isDark ? const Color(0xFF334155) : const Color(0xFFE0E3E5);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.90,
       ),
 
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: modalBg,
 
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
 
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             color: Color(0x26000000),
 
@@ -441,14 +453,14 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
 
             Center(
               child: Container(
-                width: 48,
+                width: 40,
 
-                height: 5,
+                height: 4,
 
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0),
 
-                  borderRadius: BorderRadius.circular(2.5),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
@@ -480,41 +492,47 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
+                            Text(
                               'Yêu cầu điểm danh / Nghỉ phép',
                               style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF191C1E),
+                                color: titleColor,
                                 letterSpacing: -0.3,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 3),
-                        const Text(
+                        Text(
                           'Phòng Quản lý Đào tạo (HAC) xử lý trực tuyến',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF565E74),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  GestureDetector(
+                  InkWell(
                     onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF2F4F6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: Color(0xFF565E74),
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: closeBtnBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: closeIconColor,
+                        ),
                       ),
                     ),
                   ),
@@ -522,7 +540,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+            Divider(height: 1, thickness: 1, color: dividerColor),
 
             // 2. SEGMENTED PILL TAB SWITCHER
             Padding(
@@ -530,7 +548,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F4F6),
+                  color: tabSwitcherBg,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
@@ -544,7 +562,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 9),
                           decoration: BoxDecoration(
                             color: _activeTab == 0
-                                ? Colors.white
+                                ? activeTabBg
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: _activeTab == 0
@@ -573,7 +591,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                                     : FontWeight.w500,
                                 color: _activeTab == 0
                                     ? const Color(0xFFA33900)
-                                    : const Color(0xFF565E74),
+                                    : unselectedTextColor,
                               ),
                             ),
                           ),
@@ -590,7 +608,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 9),
                           decoration: BoxDecoration(
                             color: _activeTab == 1
-                                ? Colors.white
+                                ? activeTabBg
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: _activeTab == 1
@@ -621,7 +639,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                                       : FontWeight.w500,
                                   color: _activeTab == 1
                                       ? const Color(0xFFA33900)
-                                      : const Color(0xFF565E74),
+                                      : unselectedTextColor,
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -637,7 +655,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                                     decoration: BoxDecoration(
                                       color: _activeTab == 1
                                           ? const Color(0xFFCC4900)
-                                          : const Color(0xFFE0E3E5),
+                                          : unselectedBadgeBg,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -645,7 +663,7 @@ class _RequestModalSheetState extends State<RequestModalSheet> {
                                       style: TextStyle(
                                         color: _activeTab == 1
                                             ? Colors.white
-                                            : const Color(0xFF565E74),
+                                            : unselectedTextColor,
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w700,
                                       ),

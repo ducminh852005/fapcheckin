@@ -27,14 +27,22 @@ class LiveSessionQrCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = LiveSessionColors.getCardBg(context);
+    final cardBorder = LiveSessionColors.getBorder(context);
+    final textDark = LiveSessionColors.getTextDark(context);
+    final textMuted = LiveSessionColors.getTextMuted(context);
+    final countdownBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final trackColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: LiveSessionColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: LiveSessionColors.borderSubtle),
-        boxShadow: LiveSessionColors.cardShadow,
+        border: Border.all(color: cardBorder),
+        boxShadow: isDark ? null : LiveSessionColors.cardShadow,
       ),
       child: Column(
         children: [
@@ -81,10 +89,10 @@ class LiveSessionQrCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     alignment: Alignment.center,
-                    child: const Icon(
+                    child: Icon(
                       Icons.crop_free_rounded,
                       size: 22,
-                      color: LiveSessionColors.textDark,
+                      color: textDark,
                     ),
                   ),
                 ),
@@ -93,7 +101,7 @@ class LiveSessionQrCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // Mã QR chính giữa
+          // Mã QR chính giữa (Luôn giữ nền trắng cho QR reader quét được)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -117,11 +125,11 @@ class LiveSessionQrCard extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Chú thích dưới QR
-          const Text(
+          Text(
             'Sinh viên quét mã bằng FAP Check-in',
             style: TextStyle(
               fontSize: 11.5,
-              color: LiveSessionColors.textMuted,
+              color: textMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -131,9 +139,9 @@ class LiveSessionQrCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: countdownBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: LiveSessionColors.borderSubtle),
+              border: Border.all(color: cardBorder),
             ),
             child: Row(
               children: [
@@ -151,17 +159,17 @@ class LiveSessionQrCard extends StatelessWidget {
                             0.0,
                             1.0,
                           ),
-                          trackColor: const Color(0xFFE2E8F0),
+                          trackColor: trackColor,
                           progressColor: LiveSessionColors.orangePrimary,
                           strokeWidth: 3.5,
                         ),
                       ),
                       Text(
                         '${refreshSeconds}s',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: LiveSessionColors.textDark,
+                          color: textDark,
                         ),
                       ),
                     ],
@@ -179,10 +187,10 @@ class LiveSessionQrCard extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           'Mã mới sau $refreshSeconds giây',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: LiveSessionColors.textDark,
+                            color: textDark,
                           ),
                         ),
                       ),
@@ -192,9 +200,9 @@ class LiveSessionQrCard extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           'Tự làm mới mỗi $totalCycleSeconds giây',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: LiveSessionColors.textMuted,
+                            color: textMuted,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

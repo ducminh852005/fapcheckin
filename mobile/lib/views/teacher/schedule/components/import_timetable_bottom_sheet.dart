@@ -153,14 +153,18 @@ class _ImportTimetableBottomSheetState
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: isDark
+            ? Border.all(color: Theme.of(context).colorScheme.outline)
+            : null,
       ),
       child: SafeArea(
         top: false,
@@ -173,10 +177,12 @@ class _ImportTimetableBottomSheetState
               // Thanh kéo nhỏ
               Center(
                 child: Container(
-                  width: 44,
-                  height: 4.5,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
+                    color: isDark
+                        ? const Color(0xFF475569)
+                        : const Color(0xFFCBD5E1),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -218,7 +224,7 @@ class _ImportTimetableBottomSheetState
                       children: [
                         Row(
                           children: [
-                            const Flexible(
+                            Flexible(
                               child: Text(
                                 'Quét thời khóa biểu',
                                 maxLines: 1,
@@ -226,7 +232,9 @@ class _ImportTimetableBottomSheetState
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
+                                  color: isDark
+                                      ? const Color(0xFFF8FAFC)
+                                      : const Color(0xFF0F172A),
                                   letterSpacing: -0.3,
                                 ),
                               ),
@@ -238,10 +246,14 @@ class _ImportTimetableBottomSheetState
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFEDD5),
+                                color: isDark
+                                    ? const Color(0xFF7C2D12).withValues(alpha: 0.4)
+                                    : const Color(0xFFFFEDD5),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: const Color(0xFFFED7AA),
+                                  color: isDark
+                                      ? const Color(0xFFC2410C)
+                                      : const Color(0xFFFED7AA),
                                   width: 0.8,
                                 ),
                               ),
@@ -257,12 +269,14 @@ class _ImportTimetableBottomSheetState
                           ],
                         ),
                         const SizedBox(height: 3),
-                        const Text(
+                        Text(
                           'FAP Lecturer Portal • FPT University',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -280,14 +294,18 @@ class _ImportTimetableBottomSheetState
                       child: Container(
                         width: 34,
                         height: 34,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF1F5F9),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFF1F5F9),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: Color(0xFF64748B),
+                          color: isDark
+                              ? const Color(0xFFCBD5E1)
+                              : const Color(0xFF64748B),
                         ),
                       ),
                     ),
@@ -437,17 +455,18 @@ class _ImportTimetableBottomSheetState
   }
 
   Widget _buildUploadDropzone() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         CustomPaint(
-          painter: const _DashedBorderPainter(
-            color: Color(0xFFFDBA74),
+          painter: _DashedBorderPainter(
+            color: isDark ? const Color(0xFFC2410C) : const Color(0xFFFDBA74),
             radius: 20,
             strokeWidth: 1.4,
           ),
           child: Material(
-            color: const Color(0xFFFFFDFB),
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFDFB),
             borderRadius: BorderRadius.circular(20),
             child: InkWell(
               onTap: _pickAndScan,
@@ -462,10 +481,12 @@ class _ImportTimetableBottomSheetState
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF334155) : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFFFFEDD5),
+                          color: isDark
+                              ? const Color(0xFFC2410C)
+                              : const Color(0xFFFFEDD5),
                           width: 1.2,
                         ),
                         boxShadow: [
@@ -485,25 +506,28 @@ class _ImportTimetableBottomSheetState
                     const SizedBox(height: 12),
 
                     // Tiêu đề
-                    const Text(
+                    Text(
                       'Tải lên hoặc chụp ảnh thời khóa biểu',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: isDark
+                            ? const Color(0xFFF8FAFC)
+                            : const Color(0xFF0F172A),
                       ),
                     ),
                     const SizedBox(height: 4),
 
                     // Phụ đề
-                    const Text(
+                    Text(
                       'Hỗ trợ ảnh JPG, PNG • Tối đa 5 MB\nẢnh được nhận dạng ngay trên điện thoại',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF64748B),
+                        fontSize: 12,
+                        color: isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B),
                         height: 1.4,
                       ),
                     ),

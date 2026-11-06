@@ -1,7 +1,7 @@
 import { Activity, ExternalLink, Info, RotateCcw, Smartphone } from "lucide-react"
 
 const CRASHLYTICS_URL =
-  "https://console.firebase.google.com/project/ducminh-41459/crashlytics"
+  "https://console.firebase.google.com/project/ducminh-41459/crashlytics/app/android:com.example.fapcheckin/issues"
 
 export function CrashlyticsPage() {
   return (

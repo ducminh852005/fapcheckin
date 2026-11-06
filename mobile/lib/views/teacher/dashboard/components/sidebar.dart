@@ -17,25 +17,31 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF1E293B) : AppColors.surface;
+    final dividerColor = isDark ? const Color(0xFF334155) : AppColors.surfaceVariant;
+
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
         return Container(
           width: width,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0F142433),
-                blurRadius: 8,
-                offset: Offset(1, 0),
-              ),
-            ],
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            boxShadow: isDark
+                ? null
+                : const [
+                    BoxShadow(
+                      color: Color(0x0F142433),
+                      blurRadius: 8,
+                      offset: Offset(1, 0),
+                    ),
+                  ],
           ),
           child: Column(
             children: [
               // Logo header
               _SidebarHeader(),
-              const Divider(height: 1, color: AppColors.surfaceVariant),
+              Divider(height: 1, color: dividerColor),
               // Nav items
               Expanded(
                 child: SingleChildScrollView(
@@ -70,10 +76,11 @@ class Sidebar extends StatelessWidget {
 class _SidebarHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: AppSpacing.topBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      color: AppColors.surface,
+      color: isDark ? const Color(0xFF1E293B) : AppColors.surface,
       child: Row(
         children: [
           Image.asset(
@@ -188,19 +195,24 @@ class _UserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF0F172A) : AppColors.surfaceContainerLowest;
+
     return Container(
       margin: const EdgeInsets.all(AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
+        color: cardBg,
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F142433),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0F142433),
+                  blurRadius: 3,
+                  offset: Offset(0, 1),
+                ),
+              ],
       ),
       child: Column(
         children: [
