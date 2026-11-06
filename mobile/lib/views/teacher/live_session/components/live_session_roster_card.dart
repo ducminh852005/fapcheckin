@@ -60,6 +60,12 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = LiveSessionColors.getCardBg(context);
+    final cardBorder = LiveSessionColors.getBorder(context);
+    final textDark = LiveSessionColors.getTextDark(context);
+    final textMuted = LiveSessionColors.getTextMuted(context);
+
     final absentCount = widget.totalCount - widget.presentCount;
     final activeList = _selectedTab == 0
         ? widget.presentStudents
@@ -83,7 +89,7 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Flexible(
+                  Flexible(
                     child: FittedBox(
                       alignment: Alignment.centerLeft,
                       fit: BoxFit.scaleDown,
@@ -92,7 +98,7 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: LiveSessionColors.textDark,
+                          color: textDark,
                         ),
                       ),
                     ),
@@ -101,7 +107,7 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: LiveSessionColors.orangeLight,
+                      color: isDark ? const Color(0xFF431407) : LiveSessionColors.orangeLight,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -179,17 +185,17 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: LiveSessionColors.borderSubtle),
-            boxShadow: LiveSessionColors.cardShadow,
+            border: Border.all(color: cardBorder),
+            boxShadow: isDark ? null : LiveSessionColors.cardShadow,
           ),
           child: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.search_rounded,
                 size: 20,
-                color: LiveSessionColors.textSubtle,
+                color: isDark ? const Color(0xFF94A3B8) : LiveSessionColors.textSubtle,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -200,15 +206,15 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
                       _searchQuery = val.trim();
                     });
                   },
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: LiveSessionColors.textDark,
+                    color: textDark,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Tìm tên sinh viên hoặc mã số...',
                     hintStyle: TextStyle(
                       fontSize: 12.5,
-                      color: LiveSessionColors.textSubtle,
+                      color: isDark ? const Color(0xFF64748B) : LiveSessionColors.textSubtle,
                     ),
                     border: InputBorder.none,
                     isDense: true,
@@ -224,10 +230,10 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
                       _searchQuery = '';
                     });
                   },
-                  child: const Icon(
+                  child: Icon(
                     Icons.clear_rounded,
                     size: 18,
-                    color: LiveSessionColors.textSubtle,
+                    color: isDark ? const Color(0xFF94A3B8) : LiveSessionColors.textSubtle,
                   ),
                 ),
             ],
@@ -240,11 +246,11 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 24),
             alignment: Alignment.center,
-            child: const Text(
+            child: Text(
               'Không tìm thấy sinh viên phù hợp',
               style: TextStyle(
                 fontSize: 12.5,
-                color: LiveSessionColors.textMuted,
+                color: textMuted,
               ),
             ),
           )
@@ -267,6 +273,7 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
   }
 
   Widget _buildTab({required int index, required String label}) {
+    final textMuted = LiveSessionColors.getTextMuted(context);
     final isSelected = _selectedTab == index;
     return InkWell(
       onTap: () {
@@ -290,7 +297,7 @@ class _LiveSessionRosterCardState extends State<LiveSessionRosterCard> {
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color: isSelected
                       ? LiveSessionColors.orangePrimary
-                      : LiveSessionColors.textMuted,
+                      : textMuted,
                 ),
               ),
             ),
@@ -323,13 +330,19 @@ class _StudentItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = LiveSessionColors.getCardBg(context);
+    final cardBorder = LiveSessionColors.getBorder(context);
+    final textDark = LiveSessionColors.getTextDark(context);
+    final textMuted = LiveSessionColors.getTextMuted(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: LiveSessionColors.cardBorder),
-        boxShadow: LiveSessionColors.cardShadow,
+        border: Border.all(color: cardBorder),
+        boxShadow: isDark ? null : LiveSessionColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -337,17 +350,17 @@ class _StudentItemTile extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE2E8F0),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
             child: Text(
               student.initials,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF334155),
+                color: isDark ? Colors.white : const Color(0xFF334155),
               ),
             ),
           ),
@@ -360,10 +373,10 @@ class _StudentItemTile extends StatelessWidget {
               children: [
                 Text(
                   student.fullName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: LiveSessionColors.textDark,
+                    color: textDark,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -371,9 +384,9 @@ class _StudentItemTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${student.rollNumber} · ${student.methodText}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: LiveSessionColors.textMuted,
+                    color: textMuted,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -388,9 +401,9 @@ class _StudentItemTile extends StatelessWidget {
           if (student.isPresent && student.checkinTime != null) ...[
             Text(
               student.checkinTime!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: LiveSessionColors.textMuted,
+                color: textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -407,7 +420,7 @@ class _StudentItemTile extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: LiveSessionColors.orangeLight,
+                  color: isDark ? const Color(0xFF431407) : LiveSessionColors.orangeLight,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: LiveSessionColors.orangePrimary.withValues(alpha: 0.4),

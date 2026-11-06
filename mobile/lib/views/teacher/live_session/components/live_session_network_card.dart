@@ -19,14 +19,20 @@ class LiveSessionNetworkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = LiveSessionColors.getCardBg(context);
+    final cardBorder = LiveSessionColors.getBorder(context);
+    final textDark = LiveSessionColors.getTextDark(context);
+    final textMuted = LiveSessionColors.getTextMuted(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: LiveSessionColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LiveSessionColors.borderSubtle),
-        boxShadow: LiveSessionColors.cardShadow,
+        border: Border.all(color: cardBorder),
+        boxShadow: isDark ? null : LiveSessionColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,7 +45,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
                 color: LiveSessionColors.tealNetwork,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: FittedBox(
                   alignment: Alignment.centerLeft,
                   fit: BoxFit.scaleDown,
@@ -48,7 +54,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: LiveSessionColors.textDark,
+                      color: textDark,
                     ),
                   ),
                 ),
@@ -58,7 +64,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
               if (onToggle != null)
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   padding: const EdgeInsets.all(3),
@@ -86,8 +92,8 @@ class LiveSessionNetworkCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isEnforced
-                        ? LiveSessionColors.orangeLight
-                        : const Color(0xFFF1F5F9),
+                        ? (isDark ? const Color(0xFF431407) : LiveSessionColors.orangeLight)
+                        : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -100,7 +106,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
                         size: 13,
                         color: isEnforced
                             ? LiveSessionColors.orangePrimary
-                            : LiveSessionColors.textMuted,
+                            : textMuted,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -110,7 +116,7 @@ class LiveSessionNetworkCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: isEnforced
                               ? LiveSessionColors.orangePrimary
-                              : LiveSessionColors.textMuted,
+                              : textMuted,
                         ),
                       ),
                     ],
@@ -126,9 +132,9 @@ class LiveSessionNetworkCard extends StatelessWidget {
               isEnforced
                   ? 'Sinh viên cần dùng cùng IP công khai với giảng viên (cố định trong phiên)'
                   : 'Không giới hạn IP mạng trong phiên điểm danh này',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: LiveSessionColors.textMuted,
+                color: textMuted,
                 fontWeight: FontWeight.w500,
               ),
             ),
