@@ -124,6 +124,15 @@ export function AdminShell({
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [selectedNotification])
 
+  useEffect(() => {
+    if (!mobileNav) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNav(false)
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [mobileNav])
+
   const handleMouseEnter = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current)
@@ -162,17 +171,6 @@ export function AdminShell({
           badge: null,
         },
         {
-          id: "academic",
-          label: "Quản lý Danh mục",
-          icon: <FolderKanban size={18} />,
-          badge:
-            classesCount !== null ? (
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {classesCount}
-              </span>
-            ) : null,
-        },
-        {
           id: "attendance",
           label: "Xét duyệt điểm danh",
           icon: <ClipboardCheck size={18} />,
@@ -185,7 +183,7 @@ export function AdminShell({
         },
         {
           id: "announcements",
-          label: "Đăng thông báo",
+          label: "Thông báo",
           icon: <Megaphone size={18} />,
           badge: (
             <span className="text-[10px] font-bold text-white bg-[#9A3412] px-2 py-0.5 rounded-full">
@@ -201,7 +199,7 @@ export function AdminShell({
         },
         {
           id: "feedback",
-          label: "Tiếp nhận báo lỗi",
+          label: "Báo cáo lỗi",
           icon: <Bug size={18} />,
           badge:
             pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
@@ -215,6 +213,17 @@ export function AdminShell({
           label: "Lịch sử góp ý",
           icon: <History size={18} />,
           badge: null,
+        },
+        {
+          id: "academic",
+          label: "Danh mục học vụ",
+          icon: <FolderKanban size={18} />,
+          badge:
+            classesCount !== null ? (
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {classesCount}
+              </span>
+            ) : null,
         },
       ],
     },
@@ -246,7 +255,7 @@ export function AdminShell({
   const userInitials = initials(profile.fullName || "HAC")
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
+    <div className="admin-shell min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
       {/* Mobile Drawer Backdrop */}
       {mobileNav && (
         <div
@@ -258,7 +267,10 @@ export function AdminShell({
       <div className="flex flex-1">
         {/* Left Sidebar */}
         <aside
+          id="admin-navigation"
           className={`admin-sidebar fixed top-0 bottom-0 left-0 z-50 w-[272px] bg-white border-r border-slate-200/90 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 ${
+            mobileNav ? "tablet-nav-open" : ""
+          } ${
             mobileNav ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -287,8 +299,10 @@ export function AdminShell({
                 </div>
               </div>
               <button
+                type="button"
                 className="lg:hidden text-slate-400 hover:text-slate-600 p-1"
                 onClick={() => setMobileNav(false)}
+                aria-label="Đóng điều hướng"
               >
                 <X size={18} />
               </button>
@@ -361,14 +375,18 @@ export function AdminShell({
         </aside>
 
         {/* Right Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-[72px] transition-all duration-300">
+        <div className="flex-1 flex flex-col min-w-0 md:pl-[72px] transition-[padding] duration-200">
           {/* Top Bar */}
           <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
             {/* Left: Mobile hamburger */}
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 className="lg:hidden p-2 text-slate-500 hover:text-slate-700 cursor-pointer"
                 onClick={() => setMobileNav(true)}
+                aria-label="Mở điều hướng"
+                aria-expanded={mobileNav}
+                aria-controls="admin-navigation"
               >
                 <Menu size={20} />
               </button>
