@@ -14,6 +14,10 @@ class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository;
   final GoogleAuthService _googleAuthService;
 
+  /// Called while Firebase Auth is still available so device-scoped data can
+  /// be removed from the account that is signing out.
+  Future<void> Function()? beforeSignOut;
+
   AuthViewModel(
     this._repository,
     this._googleAuthService, {
@@ -223,6 +227,11 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    try {
+      await beforeSignOut?.call();
+    } catch (_) {
+      // Token cleanup must not prevent the user from signing out.
+    }
     _session = null;
     _status = ViewStatus.idle;
     _errorMessage = null;

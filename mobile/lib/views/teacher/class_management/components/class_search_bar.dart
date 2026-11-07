@@ -16,18 +16,25 @@ class ClassSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        boxShadow: ClassManagementColors.cardShadow,
+        border: Border.all(
+          color: isDark
+              ? Theme.of(context).colorScheme.outline
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: isDark ? null : ClassManagementColors.cardShadow,
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: ClassManagementColors.textDark,
+        style: TextStyle(
+          color: isDark ? Colors.white : ClassManagementColors.textDark,
           fontSize: 13.5,
         ),
         decoration: InputDecoration(

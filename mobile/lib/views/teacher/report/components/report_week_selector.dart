@@ -19,26 +19,33 @@ class ReportWeekSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : ReportColors.cardBg;
+    final cardBorder = isDark ? const Color(0xFF334155) : ReportColors.borderSubtle;
+    final textDark = isDark ? Colors.white : ReportColors.textDark;
+    final textMuted = isDark ? const Color(0xFF94A3B8) : ReportColors.textMuted;
+    final iconColor = isDark ? Colors.white70 : const Color(0xFF334155);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: ReportColors.cardBg,
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ReportColors.borderSubtle),
-          boxShadow: ReportColors.cardShadow,
+          border: Border.all(color: cardBorder),
+          boxShadow: isDark ? null : ReportColors.cardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_month_outlined,
                   size: 18,
-                  color: Color(0xFF334155),
+                  color: iconColor,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -47,19 +54,19 @@ class ReportWeekSelector extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       weekLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: ReportColors.textDark,
+                        color: textDark,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Icon(
+                SizedBox(width: 6),
+                Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 20,
-                  color: ReportColors.textMuted,
+                  color: textMuted,
                 ),
               ],
             ),
@@ -69,9 +76,9 @@ class ReportWeekSelector extends StatelessWidget {
               fit: BoxFit.scaleDown,
               child: Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: ReportColors.textMuted,
+                  color: textMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),

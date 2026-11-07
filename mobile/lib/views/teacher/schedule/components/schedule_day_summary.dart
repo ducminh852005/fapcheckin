@@ -28,6 +28,14 @@ class ScheduleDaySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : ScheduleColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ScheduleColors.textMuted;
+
     final dayName = _dayFullNames[date.weekday - 1];
     final dateFormatted =
         '$dayName, ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
@@ -40,8 +48,8 @@ class ScheduleDaySummary extends StatelessWidget {
             dateFormatted,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: ScheduleColors.textDark,
+            style: TextStyle(
+              color: textColor,
               fontSize: 16,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
@@ -54,8 +62,8 @@ class ScheduleDaySummary extends StatelessWidget {
             '$sessionCount ca dạy • $semester',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: ScheduleColors.textMuted,
+            style: TextStyle(
+              color: mutedColor,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),

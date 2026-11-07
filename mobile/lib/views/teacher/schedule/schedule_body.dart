@@ -242,6 +242,11 @@ class _ScheduleBodyState extends State<ScheduleBody> {
               if (created != null && mounted) {
                 await _loadPlans();
                 if (!context.mounted) return;
+                // The schedule repository and dashboard use separate queries.
+                // Refresh both so a newly-created makeup class is immediately
+                // visible on Overview and available to auto-session handling.
+                await context.read<DashboardViewModel>().loadClasses();
+                if (!context.mounted) return;
                 context.read<LiveSessionViewModel>().triggerToast(
                   type: ToastType.custom,
                   title: 'Đã tạo lịch học bổ sung',

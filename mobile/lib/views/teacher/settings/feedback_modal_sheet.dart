@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:fapcheckin_core/repositories/account_features_repository.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+import '../../../core/widgets/app_toast.dart';
 
 Future<T?> showFeedbackBottomSheet<T>(BuildContext context) {
   return showModalBottomSheet<T>(
@@ -135,8 +136,10 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
   Future<void> _pickImages() async {
     if (_attachments.length >= 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Chỉ đính kèm tối đa 3 ảnh minh chứng.')),
+      showAppToast(
+        context,
+        message: 'Chỉ đính kèm tối đa 3 ảnh minh chứng.',
+        type: AppToastType.warning,
       );
       return;
     }
@@ -166,8 +169,10 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
       setState(() {});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi chọn ảnh: $e')),
+        showAppToast(
+          context,
+          message: 'Lỗi chọn ảnh: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -205,7 +210,18 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
       if (uploadRes is ApiSuccess<String>) {
         uploadedUrls.add(uploadRes.data);
       } else {
-        if (mounted) setState(() { _saving = false; _error = (uploadRes as ApiFailure<String>).error.message; });
+        if (mounted) {
+          final message = (uploadRes as ApiFailure<String>).error.message;
+          setState(() {
+            _saving = false;
+            _error = message;
+          });
+          showAppToast(
+            context,
+            message: message,
+            type: AppToastType.error,
+          );
+        }
         return;
       }
     }
@@ -239,25 +255,24 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
     if (!mounted) return;
     if (result is ApiSuccess<String>) {
+      final toastContext = Navigator.of(context).context;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Cảm ơn bạn! Góp ý đã được gửi thành công.'),
-          backgroundColor: const Color(0xFF10B981),
-          action: SnackBarAction(
-            label: 'Xem lịch sử',
-            textColor: Colors.white,
-            onPressed: () => showFeedbackHistoryBottomSheet(context),
-          ),
-        ),
+      showAppToast(
+        toastContext,
+        message: 'Cảm ơn bạn! Góp ý đã được gửi thành công.',
+        type: AppToastType.success,
+        actionLabel: 'Xem lịch sử',
+        onAction: () => showFeedbackHistoryBottomSheet(toastContext),
       );
       return;
     }
 
+    final message = (result as ApiFailure<String>).error.message;
     setState(() {
       _saving = false;
-      _error = (result as ApiFailure<String>).error.message;
+      _error = message;
     });
+    showAppToast(context, message: message, type: AppToastType.error);
   }
 
   Widget _buildPopupMenuCard() {
@@ -432,11 +447,19 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modalBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final fieldBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final fieldBorder = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final labelColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155);
+
     return Container(
       key: _sheetKey,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: modalBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SafeArea(
         top: false,
@@ -459,11 +482,11 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     // Drag handle pill
                     Center(
                       child: Container(
-                        width: 42,
-                        height: 4.5,
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFCBD5E1),
-                          borderRadius: BorderRadius.circular(2.5),
+                          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
@@ -481,25 +504,25 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Góp ý / Feedback',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: titleColor,
                             letterSpacing: -0.3,
                           ),
                         ),
                         const Spacer(),
                         IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 20,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                          splashRadius: 22,
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.close_rounded,
                             size: 22,
-                            color: Color(0xFF64748B),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
@@ -509,12 +532,12 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     // Subtitle
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'FAP Check-in luôn lắng nghe để cải thiện trải nghiệm điểm danh.',
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF64748B),
+                              color: subtitleColor,
                               height: 1.35,
                             ),
                           ),
@@ -558,12 +581,12 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     const SizedBox(height: 18),
 
                     // Category Section
-                    const Text(
+                    Text(
                       'Loại phản hồi / Category',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155),
+                        color: labelColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -582,12 +605,12 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: fieldBg,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: _isMenuOpen
                                 ? const Color(0xFFFA5A1E)
-                                : const Color(0xFFE2E8F0),
+                                : fieldBorder,
                             width: _isMenuOpen ? 1.5 : 1,
                           ),
                         ),
@@ -613,10 +636,10 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                             Expanded(
                               child: Text(
                                 _selectedCategory.title,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0F172A),
+                                  color: titleColor,
                                 ),
                               ),
                             ),
@@ -637,13 +660,13 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     Row(
                       children: [
                         RichText(
-                          text: const TextSpan(
+                          text: TextSpan(
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF334155),
+                              color: labelColor,
                             ),
-                            children: [
+                            children: const [
                               TextSpan(text: 'Nội dung / Message '),
                               TextSpan(
                                 text: '*',
@@ -656,12 +679,15 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          '${_textController.text.length}/2000',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _textController,
+                          builder: (context, value, _) => Text(
+                            '${value.text.length}/2000',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: subtitleColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -670,33 +696,30 @@ class _FeedbackModalSheetState extends State<FeedbackModalSheet> {
                     TextField(
                       controller: _textController,
                       enabled: !_saving,
-                      maxLength: 2000,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      autocorrect: true,
+                      enableSuggestions: true,
+                      textInputAction: TextInputAction.newline,
                       maxLines: 4,
-                      buildCounter: (_,
-                              {required currentLength,
-                              required isFocused,
-                              maxLength}) =>
-                          null,
-                      onChanged: (_) => setState(() {}),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13.5,
-                        color: Color(0xFF0F172A),
+                        color: titleColor,
                       ),
                       decoration: InputDecoration(
                         hintText:
                             'Mô tả cụ thể sự cố (Mã môn, ca học, lỗi hiển thị...) để kỹ thuật viên hỗ trợ ngay...',
-                        hintStyle: const TextStyle(
+                        hintStyle: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF94A3B8),
+                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                           height: 1.45,
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: fieldBg,
                         contentPadding: const EdgeInsets.all(14),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide: BorderSide(color: fieldBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),

@@ -20,6 +20,32 @@ class LiveSessionColors {
   static const Color cardBorder = Color(0xFFF1F5F9);
   static const Color borderSubtle = Color(0xFFE2E8F0);
 
+  // Helper hỗ trợ Dynamic Theme (Dark Mode)
+  static Color getCardBg(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E293B)
+          : cardBg;
+
+  static Color getPageBg(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF0F172A)
+          : pageBg;
+
+  static Color getBorder(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF334155)
+          : borderSubtle;
+
+  static Color getTextDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? Colors.white
+          : textDark;
+
+  static Color getTextMuted(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF94A3B8)
+          : textMuted;
+
   // Trạng thái xanh & mạng
   static const Color statusGreen = Color(0xFF16A34A);
   static const Color statusGreenLight = Color(0xFFDCFCE7);

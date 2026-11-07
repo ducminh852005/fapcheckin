@@ -18,11 +18,17 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final iconColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF334155);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Flexible(
+        Flexible(
           child: FittedBox(
             alignment: Alignment.centerLeft,
             fit: BoxFit.scaleDown,
@@ -31,7 +37,7 @@ class ProfileHeader extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: ProfileColors.textDark,
+                color: textColor,
                 letterSpacing: -0.5,
               ),
             ),
@@ -41,26 +47,12 @@ class ProfileHeader extends StatelessWidget {
         // Nút icon răng cưa (Cài đặt & Trợ giúp)
         Tooltip(
           message: 'Cài đặt & Trợ giúp',
-          child: Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
-              onTap: onSettings,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: ProfileColors.borderSubtle),
-                  boxShadow: ProfileColors.cardShadow,
-                ),
-                child: const Icon(
-                  Icons.settings_outlined,
-                  size: 21,
-                  color: Color(0xFF334155),
-                ),
-              ),
+          child: IconButton(
+            onPressed: onSettings,
+            icon: Icon(
+              Icons.settings_outlined,
+              size: 25,
+              color: iconColor,
             ),
           ),
         ),

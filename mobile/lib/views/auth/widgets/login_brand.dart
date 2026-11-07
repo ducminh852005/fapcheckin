@@ -34,39 +34,24 @@ class LoginHeader extends StatelessWidget {
 /// Hình vuông bo góc màu cam chuyển sắc (squircle gradient),
 /// bên trong là khung quét QR đa sắc kèm dấu tích hoàn thành.
 class FapCheckinLogoBadge extends StatelessWidget {
-  const FapCheckinLogoBadge({super.key, this.size = 92});
+  const FapCheckinLogoBadge({super.key, this.size = 112});
 
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFF8533),
-            Color(0xFFFF6600),
-            Color(0xFFE65100),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFEA580C).withValues(alpha: 0.35),
-            blurRadius: 26,
-            offset: const Offset(0, 10),
-            spreadRadius: 1,
+      child: Image.asset(
+        'assets/logos/logo-fap.png',
+        fit: BoxFit.contain,
+        semanticLabel: 'Logo FAP Check-in',
+        errorBuilder: (_, __, ___) => Center(
+          child: CustomPaint(
+            size: Size(size * 0.55, size * 0.55),
+            painter: const _FapLogoPainter(),
           ),
-        ],
-      ),
-      child: Center(
-        child: CustomPaint(
-          size: Size(size * 0.48, size * 0.48),
-          painter: const _FapLogoPainter(),
         ),
       ),
     );
@@ -184,7 +169,7 @@ class LoginBrandCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: const [
-          FapCheckinLogoBadge(size: 92),
+          FapCheckinLogoBadge(size: 112),
           SizedBox(height: 18),
           Text(
             'FAP Check-in',

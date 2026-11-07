@@ -86,28 +86,38 @@ class AttendanceStudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Viền đặc biệt nếu vắng hoặc vắng phép
-    Color borderColor = const Color(0xFFF1F5F9);
+    Color borderColor = isDark
+        ? Theme.of(context).colorScheme.outline
+        : const Color(0xFFF1F5F9);
     if (student.state == StudentAttendanceState.absentUnscanned) {
-      borderColor = const Color(0xFFFFE0D2); // Viền cam nhạt
+      borderColor = isDark
+          ? const Color(0xFF7C2D12)
+          : const Color(0xFFFFE0D2); // Viền cam nhạt
     } else if (student.state == StudentAttendanceState.absentExcused) {
-      borderColor = const Color(0xFFFEF08A); // Viền vàng nhạt
+      borderColor = isDark
+          ? const Color(0xFF713F12)
+          : const Color(0xFFFEF08A); // Viền vàng nhạt
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -142,7 +152,10 @@ class AttendanceStudentCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: _getStatusDotColor(student.state),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -164,10 +177,12 @@ class AttendanceStudentCard extends StatelessWidget {
                         student.fullName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
-                          color: AttendanceHistoryColors.textDark,
+                          color: isDark
+                              ? Colors.white
+                              : AttendanceHistoryColors.textDark,
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -257,6 +272,7 @@ class AttendanceStudentCard extends StatelessWidget {
   }
 
   Widget _buildTrailingAction(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (student.state) {
       case StudentAttendanceState.presentQr:
         return Row(
@@ -398,19 +414,21 @@ class AttendanceStudentCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF334155) : Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: const Color(0xFFCBD5E1),
+                    color: isDark
+                        ? const Color(0xFF475569)
+                        : const Color(0xFFCBD5E1),
                     width: 1,
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Đổi',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
                 ),
               ),

@@ -54,6 +54,7 @@ dependencies:
   firebase_crashlytics: ^6.0.1
   dio: ^5.11.1
   firebase_messaging: ^17.0.1
+  lottie: ^3.8.2
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +78,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/animations/
     - assets/images/
     - assets/logos/
 

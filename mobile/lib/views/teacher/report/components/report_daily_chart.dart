@@ -43,13 +43,25 @@ class ReportDailyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ReportColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ReportColors.borderSubtle;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final subtleColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ReportColors.textSubtle;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReportColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: ReportColors.borderSubtle),
-        boxShadow: ReportColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ReportColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,7 +69,7 @@ class ReportDailyChart extends StatelessWidget {
           // Header (đảm bảo không bị overflow với font kiểm thử)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -67,12 +79,12 @@ class ReportDailyChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: ReportColors.textDark,
+                      color: textColor,
                     ),
                   ),
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -81,7 +93,7 @@ class ReportDailyChart extends StatelessWidget {
                     'Tỷ lệ có mặt (%)',
                     style: TextStyle(
                       fontSize: 11,
-                      color: ReportColors.textSubtle,
+                      color: subtleColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -112,9 +124,9 @@ class ReportDailyChart extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               note,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: ReportColors.textSubtle,
+                color: subtleColor,
                 fontStyle: FontStyle.italic,
               ),
             ),
@@ -132,6 +144,12 @@ class _DailyBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ReportColors.textMuted;
+
     // Chiều cao tối đa của thanh cột là 80dp (tương ứng ~100%)
     const maxBarHeight = 80.0;
     final fillHeight = (item.rate / 100.0 * maxBarHeight).clamp(
@@ -140,48 +158,56 @@ class _DailyBarItem extends StatelessWidget {
     );
     final barColor = item.isHighlighted
         ? ReportColors.barOrange
-        : ReportColors.barBlueMuted;
+        : (isDark
+              ? ReportColors.barOrange.withValues(alpha: 0.35)
+              : ReportColors.barBlueMuted);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        // Value text
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            item.rateText,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: ReportColors.textDark,
+    return Semantics(
+      label: '${item.dayLabel}: Tỷ lệ có mặt ${item.rateText}%',
+      container: true,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Value text
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              item.rateText,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 6),
+          const SizedBox(height: 6),
 
-        // Bar container
-        Container(
-          height: fillHeight,
-          decoration: BoxDecoration(
-            color: barColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Day label
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            item.dayLabel,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: ReportColors.textMuted,
+          // Bar container
+          Container(
+            height: fillHeight,
+            decoration: BoxDecoration(
+              color: barColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+
+          // Day label
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              item.dayLabel,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: mutedColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

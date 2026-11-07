@@ -220,20 +220,40 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     return selected == null || selected.sessionDate == _todayInVietnam();
   }
 
-  void _showExpiredManualAttendanceGuidance() {
+  void _showFloatingSnackBar(
+    BuildContext context,
+    String message, {
+    Color? backgroundColor,
+    Duration duration = const Duration(seconds: 3),
+    SnackBarAction? action,
+  }) {
+    if (!mounted) return;
+    final isMobile = MediaQuery.sizeOf(context).width < 768;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Đã qua ngày học. Hãy vào Cài đặt & Trợ giúp → Yêu cầu điểm danh / nghỉ phép để gửi admin duyệt.',
-        ),
-        backgroundColor: AttendanceHistoryColors.statusRed,
-        duration: const Duration(seconds: 6),
-        action: SnackBarAction(
-          label: 'MỞ CÀI ĐẶT',
-          textColor: Colors.white,
-          onPressed: () =>
-              context.read<DashboardViewModel>().navigate('cai-dat-tro-giup'),
-        ),
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.fromLTRB(16, 0, 16, isMobile ? 88 : 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: duration,
+        action: action,
+      ),
+    );
+  }
+
+  void _showExpiredManualAttendanceGuidance() {
+    _showFloatingSnackBar(
+      context,
+      'Đã qua ngày học. Hãy vào Cài đặt & Trợ giúp → Yêu cầu điểm danh / nghỉ phép để gửi admin duyệt.',
+      backgroundColor: AttendanceHistoryColors.statusRed,
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: 'MỞ CÀI ĐẶT',
+        textColor: Colors.white,
+        onPressed: () =>
+            context.read<DashboardViewModel>().navigate('cai-dat-tro-giup'),
       ),
     );
   }
@@ -413,11 +433,10 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
     if (sessionId == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không thể xác định phiên điểm danh để lưu dữ liệu.'),
-          backgroundColor: AttendanceHistoryColors.statusRed,
-        ),
+      _showFloatingSnackBar(
+        context,
+        'Không thể xác định phiên điểm danh để lưu dữ liệu.',
+        backgroundColor: AttendanceHistoryColors.statusRed,
       );
       return;
     }
@@ -447,13 +466,11 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✓ Đã điểm danh thủ công cho ${student.fullName}'),
-        backgroundColor: AttendanceHistoryColors.statusGreen,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
+    _showFloatingSnackBar(
+      context,
+      '✓ Đã điểm danh thủ công cho ${student.fullName}',
+      backgroundColor: AttendanceHistoryColors.statusGreen,
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -485,11 +502,10 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         return true;
       case ApiFailure<HistoryDetail>(:final error):
         if (!silentSuccess && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error.message),
-              backgroundColor: AttendanceHistoryColors.statusRed,
-            ),
+          _showFloatingSnackBar(
+            context,
+            error.message,
+            backgroundColor: AttendanceHistoryColors.statusRed,
           );
         }
         return false;
@@ -708,14 +724,10 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                     ];
                     final ok = await _commitChangesToFirestore(changes);
                     if (mounted && ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '✓ Đã điểm danh và lưu ${absentUnscanned.length} sinh viên lên Firebase!',
-                          ),
-                          backgroundColor: AttendanceHistoryColors.statusGreen,
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      _showFloatingSnackBar(
+                        context,
+                        '✓ Đã điểm danh và lưu ${absentUnscanned.length} sinh viên lên Firebase!',
+                        backgroundColor: AttendanceHistoryColors.statusGreen,
                       );
                     }
                   },
@@ -761,10 +773,9 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       sessionId = await _ensureSession(classCode);
       if (sessionId == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Không thể khởi tạo buổi học để lưu điểm danh.'),
-            ),
+          _showFloatingSnackBar(
+            context,
+            'Không thể khởi tạo buổi học để lưu điểm danh.',
           );
         }
         return;
@@ -1012,6 +1023,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
 
     final subtitle = _buildHeaderSubtitle(vm, sessions, sessionNumber);
     final isShortScreen = MediaQuery.sizeOf(context).height < 500;
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     if (isShortScreen) {
       // Khi xoay ngang màn hình (chiều cao hẹp < 500dp), cuộn chung toàn bộ trang
@@ -1065,6 +1077,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                     rate: rate,
                     selectedSession: selectedSession,
                     allStudents: allStudents,
+                    isKeyboardOpen: isKeyboardOpen,
                   ),
                   const SizedBox(height: 12),
                   ..._buildStudentItems(
@@ -1138,6 +1151,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 rate: rate,
                 selectedSession: selectedSession,
                 allStudents: allStudents,
+                isKeyboardOpen: isKeyboardOpen,
               ),
             ),
 
@@ -1192,6 +1206,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
     required double rate,
     required SessionModel? selectedSession,
     required List<StudentAttendanceModel> allStudents,
+    bool isKeyboardOpen = false,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1258,17 +1273,18 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
           const SizedBox(height: 10),
         ],
 
-        // Thẻ thống kê tóm tắt (Sĩ số & phần trăm)
-        AttendanceSummaryCard(
-          totalStudents: totalStudents,
-          presentCount: presentCount,
-          absentCount: absentCount,
-          excusedAbsentCount: excusedCount,
-          attendanceRate: rate,
-          isOngoing: selectedSession?.isOpen ?? sessions.isNotEmpty,
-        ),
-
-        const SizedBox(height: 12),
+        // Thẻ thống kê tóm tắt (Sĩ số & phần trăm) - tự ẩn khi mở bàn phím để tối ưu không gian danh sách
+        if (!isKeyboardOpen) ...[
+          AttendanceSummaryCard(
+            totalStudents: totalStudents,
+            presentCount: presentCount,
+            absentCount: absentCount,
+            excusedAbsentCount: excusedCount,
+            attendanceRate: rate,
+            isOngoing: selectedSession?.isOpen ?? sessions.isNotEmpty,
+          ),
+          const SizedBox(height: 12),
+        ],
 
         // Thanh tìm kiếm và bộ lọc chip (Tất cả, Có mặt, Vắng...)
         AttendanceSearchFilterBar(
