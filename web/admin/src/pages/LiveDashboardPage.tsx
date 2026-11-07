@@ -128,7 +128,7 @@ export function LiveDashboard({
       {/* Row of 4 KPI Metric Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Tài khoản hoạt động */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
+        <div className="dashboard-surface bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
           <div>
             <div className="flex items-start justify-between">
               <div>
@@ -162,7 +162,7 @@ export function LiveDashboard({
         </div>
 
         {/* Card 2: Lớp đang quản lý */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
+        <div className="dashboard-surface bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
           <div>
             <div className="flex items-start justify-between">
               <div>
@@ -197,7 +197,7 @@ export function LiveDashboard({
         </div>
 
         {/* Card 3: Phiên đang mở (ĐƯỢC HIGHLIGHT VIỀN CAM) */}
-        <div className="bg-gradient-to-b from-orange-50/30 to-white border-2 border-[#EA580C] rounded-2xl p-5 shadow-xs flex flex-col justify-between relative hover:shadow-md transition-all">
+        <div className="dashboard-surface bg-gradient-to-b from-orange-50/30 to-white border-2 border-[#EA580C] rounded-2xl p-5 shadow-xs flex flex-col justify-between relative hover:shadow-md transition-all">
           <div>
             <div className="flex items-start justify-between">
               <div>
@@ -233,7 +233,7 @@ export function LiveDashboard({
         </div>
 
         {/* Card 4: Tài khoản chưa liên kết */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
+        <div className="dashboard-surface bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
           <div>
             <div className="flex items-start justify-between">
               <div>
@@ -267,7 +267,7 @@ export function LiveDashboard({
       </section>
 
       {/* Section: Công việc quản trị */}
-      <section className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs">
+      <section className="dashboard-surface bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-2 gap-2 border-b border-slate-100">
           <div>
             <h2 className="text-base font-bold text-slate-900">Công việc quản trị</h2>
@@ -411,7 +411,7 @@ export function LiveDashboard({
       {/* Two-Column Lower Grid (Slot Timeline & Phiên trực tiếp) */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Giám sát ca học trong ngày (Slot Timeline) */}
-        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        <div className="dashboard-surface lg:col-span-8 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 gap-2 border-b border-slate-100">
               <div>
@@ -525,7 +525,7 @@ export function LiveDashboard({
         </div>
 
         {/* Right Column: Phiên trực tiếp tiêu biểu */}
-        <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+        <div className="dashboard-surface lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -622,7 +622,7 @@ export function LiveDashboard({
       </section>
 
       {/* Infrastructure & Cloud Status Banner */}
-      <section className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <section className="dashboard-surface bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
             <Server size={19} />
