@@ -209,9 +209,9 @@ class DashboardViewModel extends ChangeNotifier {
       if (generation != _generation) return;
       switch (result) {
         case ApiSuccess<List<ClassSectionModel>>(:final data):
-          _classes = _sortClassesByCheckinPriority(
-            data.where((c) => !c.isMakeup).toList(),
-          );
+          // Keep today's one-off classes so the automatic session manager can
+          // start them even when they do not match the slot's recurring day.
+          _classes = _sortClassesByCheckinPriority(data);
           _status = ViewStatus.success;
         case ApiFailure<List<ClassSectionModel>>(:final error):
           _status = ViewStatus.error;

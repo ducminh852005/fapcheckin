@@ -19,9 +19,10 @@ class UpcomingSessionsList extends StatelessWidget {
         .where(
           (c) =>
               !c.isActive &&
-              (SlotCodeParser.parse(c.slotCode)?.weekdays
-                      .contains(DateTime.now().weekday) ??
-                  false),
+              (c.isMakeup ||
+                  (SlotCodeParser.parse(c.slotCode)?.weekdays
+                          .contains(DateTime.now().weekday) ??
+                      false)),
         )
         .toList()
       ..sort(
