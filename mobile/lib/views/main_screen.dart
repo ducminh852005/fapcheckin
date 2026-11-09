@@ -1,4 +1,5 @@
 import './teacher/requests/requests_body.dart';
+
 import 'dart:async';
 import 'dart:ui';
 
@@ -13,7 +14,6 @@ import './teacher/schedule/schedule_body.dart';
 import './teacher/live_session/live_session_body.dart';
 import './teacher/class_management/class_management_body.dart';
 import './teacher/attendance_history/attendance_history_body.dart';
-import './teacher/report/report_body.dart';
 import './teacher/profile/profile_body.dart';
 import './teacher/profile/personal_info_body.dart';
 import './teacher/profile/work_info_body.dart';
@@ -121,9 +121,6 @@ class _MainScreenState extends State<MainScreen> {
         break;
       case 'yeu-cau':
         body = const RequestsBody();
-        break;
-      case 'bao-cao':
-        body = ReportBody();
         break;
       case 'tong-quan':
       default:
