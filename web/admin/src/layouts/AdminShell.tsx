@@ -161,96 +161,96 @@ export function AdminShell({
       badge: ReactNode
     }>
   }> = [
-    {
-      title: "DANH MỤC NGHIỆP VỤ",
-      items: [
-        {
-          id: "dashboard",
-          label: "Tổng quan",
-          icon: <LayoutDashboard size={18} />,
-          badge: null,
-        },
-        {
-          id: "attendance",
-          label: "Xét duyệt điểm danh",
-          icon: <ClipboardCheck size={18} />,
-          badge:
-            openSessionsCount !== null && openSessionsCount > 0 ? (
-              <span className="text-[11px] font-bold text-white bg-[#EA580C] px-1.5 py-0.2 rounded-full min-w-[20px] text-center">
-                {openSessionsCount}
+      {
+        title: "DANH MỤC NGHIỆP VỤ",
+        items: [
+          {
+            id: "dashboard",
+            label: "Tổng quan",
+            icon: <LayoutDashboard size={18} />,
+            badge: null,
+          },
+          {
+            id: "attendance",
+            label: "Xét duyệt điểm danh",
+            icon: <ClipboardCheck size={18} />,
+            badge:
+              openSessionsCount !== null && openSessionsCount > 0 ? (
+                <span className="text-[11px] font-bold text-white bg-[#EA580C] px-1.5 py-0.2 rounded-full min-w-[20px] text-center">
+                  {openSessionsCount}
+                </span>
+              ) : null,
+          },
+          {
+            id: "announcements",
+            label: "Thông báo",
+            icon: <Megaphone size={18} />,
+            badge: (
+              <span className="text-[10px] font-bold text-white bg-[#9A3412] px-2 py-0.5 rounded-full">
+                New
               </span>
-            ) : null,
-        },
-        {
-          id: "announcements",
-          label: "Thông báo",
-          icon: <Megaphone size={18} />,
-          badge: (
-            <span className="text-[10px] font-bold text-white bg-[#9A3412] px-2 py-0.5 rounded-full">
-              New
-            </span>
-          ),
-        },
-        {
-          id: "reports",
-          label: "Báo cáo chuyên cần",
-          icon: <LineChart size={18} />,
-          badge: null,
-        },
-        {
-          id: "feedback",
-          label: "Báo cáo lỗi",
-          icon: <Bug size={18} />,
-          badge:
-            pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
-              <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
-                {pendingFeedbackCount > 99 ? "99+" : pendingFeedbackCount}
-              </span>
-            ) : null,
-        },
-        {
-          id: "feedback-history",
-          label: "Lịch sử góp ý",
-          icon: <History size={18} />,
-          badge: null,
-        },
-        {
-          id: "academic",
-          label: "Danh mục học vụ",
-          icon: <FolderKanban size={18} />,
-          badge:
-            classesCount !== null ? (
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {classesCount}
-              </span>
-            ) : null,
-        },
-      ],
-    },
-    {
-      title: "HỆ THỐNG",
-      items: [
-        {
-          id: "accounts",
-          label: "Quyền truy cập",
-          icon: <KeyRound size={18} />,
-          badge: null,
-        },
-        {
-          id: "crashlytics",
-          label: "Firebase Crashlytics",
-          icon: <Activity size={18} />,
-          badge: null,
-        },
-        {
-          id: "settings",
-          label: "Cài đặt hệ thống",
-          icon: <Settings size={18} />,
-          badge: null,
-        },
-      ],
-    },
-  ]
+            ),
+          },
+          {
+            id: "reports",
+            label: "Báo cáo chuyên cần",
+            icon: <LineChart size={18} />,
+            badge: null,
+          },
+          {
+            id: "feedback",
+            label: "Báo cáo lỗi",
+            icon: <Bug size={18} />,
+            badge:
+              pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
+                <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
+                  {pendingFeedbackCount > 99 ? "99+" : pendingFeedbackCount}
+                </span>
+              ) : null,
+          },
+          {
+            id: "feedback-history",
+            label: "Lịch sử góp ý",
+            icon: <History size={18} />,
+            badge: null,
+          },
+          {
+            id: "academic",
+            label: "Danh mục học vụ",
+            icon: <FolderKanban size={18} />,
+            badge:
+              classesCount !== null ? (
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {classesCount}
+                </span>
+              ) : null,
+          },
+        ],
+      },
+      {
+        title: "HỆ THỐNG",
+        items: [
+          {
+            id: "accounts",
+            label: "Quyền truy cập",
+            icon: <KeyRound size={18} />,
+            badge: null,
+          },
+          {
+            id: "crashlytics",
+            label: "Firebase Crashlytics",
+            icon: <Activity size={18} />,
+            badge: null,
+          },
+          {
+            id: "settings",
+            label: "Cài đặt hệ thống",
+            icon: <Settings size={18} />,
+            badge: null,
+          },
+        ],
+      },
+    ]
 
   const userInitials = initials(profile.fullName || "HAC")
 
@@ -268,14 +268,12 @@ export function AdminShell({
         {/* Left Sidebar */}
         <aside
           id="admin-navigation"
-          className={`admin-sidebar fixed top-0 bottom-0 left-0 z-50 w-[272px] bg-white border-r border-slate-200/90 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 ${
-            mobileNav ? "tablet-nav-open" : ""
-          } ${
-            mobileNav ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`admin-sidebar fixed top-0 bottom-0 left-0 z-50 w-[272px] bg-white border-r border-slate-200/90 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 ${mobileNav ? "tablet-nav-open" : ""
+            } ${mobileNav ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
-          {/* Top of Sidebar */}
-          <div>
+          {/* Top & Nav of Sidebar (scrollable if screen height is small) */}
+          <div className="flex-1 min-h-0 flex flex-col">
             {/* Logo & Campus header */}
             <div className="h-16 px-[18px] border-b border-slate-200/90 flex items-center justify-between shrink-0 overflow-hidden">
               <div className="flex items-center gap-3 shrink-0">
@@ -309,7 +307,7 @@ export function AdminShell({
             </div>
 
             {/* Navigation links */}
-            <nav className="p-3 space-y-2">
+            <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 space-y-2">
               {navGroups.map((group, groupIdx) => (
                 <div key={group.title} className="space-y-1">
                   {groupIdx > 0 && (
@@ -329,20 +327,18 @@ export function AdminShell({
                         key={item.id}
                         onClick={() => go(item.id)}
                         title={item.label}
-                        className={`sidebar-nav-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer overflow-hidden ${
-                          isActive
+                        className={`sidebar-nav-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer overflow-hidden ${isActive
                             ? "bg-[#FFF0E6] text-[#C2410C]"
                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3 shrink-0">
                           {isActive && (
                             <span className="sidebar-active-indicator w-1.5 h-4 bg-[#EA580C] rounded-full shrink-0 -ml-1 mr-0" />
                           )}
                           <span
-                            className={`w-6 h-6 flex items-center justify-center shrink-0 ${
-                              isActive ? "text-[#C2410C]" : "text-slate-400"
-                            }`}
+                            className={`w-6 h-6 flex items-center justify-center shrink-0 ${isActive ? "text-[#C2410C]" : "text-slate-400"
+                              }`}
                           >
                             {item.icon}
                           </span>
@@ -399,11 +395,10 @@ export function AdminShell({
                 <button
                   type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className={`relative p-2 rounded-full cursor-pointer transition-colors ${
-                    showNotifications
+                  className={`relative p-2 rounded-full cursor-pointer transition-colors ${showNotifications
                       ? "bg-orange-50 text-[#C2410C]"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                  }`}
+                    }`}
                   title="Thông báo hệ thống"
                   aria-label="Thông báo"
                 >
@@ -458,11 +453,10 @@ export function AdminShell({
                           key={tab.id}
                           type="button"
                           onClick={() => setNotifFilter(tab.id)}
-                          className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
-                            notifFilter === tab.id
+                          className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${notifFilter === tab.id
                               ? "bg-slate-900 text-white font-semibold"
                               : "text-slate-600 hover:bg-slate-100"
-                          }`}
+                            }`}
                         >
                           {tab.label}
                         </button>
@@ -489,20 +483,18 @@ export function AdminShell({
                               type="button"
                               key={item.id}
                               onClick={() => handleItemClick(item)}
-                              className={`w-full text-left p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${
-                                item.unread ? "bg-orange-50/25" : ""
-                              }`}
+                              className={`w-full text-left p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${item.unread ? "bg-orange-50/25" : ""
+                                }`}
                             >
                               <div
-                                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                  item.type === "announcement"
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.type === "announcement"
                                     ? "bg-blue-50 text-blue-600"
                                     : item.type === "attendance"
                                       ? "bg-orange-50 text-[#EA580C]"
                                       : item.type === "request"
                                         ? "bg-amber-50 text-amber-600"
                                         : "bg-purple-50 text-purple-600"
-                                }`}
+                                  }`}
                               >
                                 {item.type === "announcement" ? (
                                   <Megaphone size={15} />
@@ -517,11 +509,10 @@ export function AdminShell({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
                                   <h4
-                                    className={`text-xs truncate ${
-                                      item.unread
+                                    className={`text-xs truncate ${item.unread
                                         ? "font-bold text-slate-900"
                                         : "font-semibold text-slate-700"
-                                    }`}
+                                      }`}
                                   >
                                     {item.title}
                                   </h4>
