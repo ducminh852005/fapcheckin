@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../viewmodels/report_viewmodel.dart';
+import '../report/report_section.dart';
 import '../../../viewmodels/live_session_viewmodel.dart' show ViewStatus;
 import 'dashboard_colors.dart';
 import 'components/dashboard_header.dart';
@@ -16,6 +18,7 @@ import 'components/upcoming_sessions_list.dart';
 /// 2. Ca đang diễn ra (ActiveSessionCard - Tiến độ & Thao tác nhanh)
 /// 3. Tổng quan tuần này (WeeklyOverviewCards - Lớp phụ trách & Chuyên cần)
 /// 4. Ca dạy kế tiếp (UpcomingSessionsList - Danh sách ca học tiếp theo)
+/// 5. Báo cáo chuyên cần (ReportSection - KPI, biểu đồ, tổng hợp theo môn)
 class DashboardBody extends StatefulWidget {
   const DashboardBody({super.key});
 
@@ -27,6 +30,11 @@ class _DashboardBodyState extends State<DashboardBody> {
   @override
   Widget build(BuildContext context) {
     final dashboardVm = context.watch<DashboardViewModel>();
+    final reportVm = context.read<ReportViewModel>();
+    Future<void> refreshAll() async {
+      await Future.wait([dashboardVm.loadClasses(), reportVm.load(force: true)]);
+    }
+
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isShortScreen = MediaQuery.sizeOf(context).height < 500;
@@ -149,6 +157,8 @@ class _DashboardBodyState extends State<DashboardBody> {
             dashboardVm.classes.isNotEmpty)
           // 4. Ca dạy kế tiếp
           const UpcomingSessionsList(),
+        // 5. Báo cáo chuyên cần
+        const ReportSection(),
       ],
     );
 
@@ -175,7 +185,7 @@ class _DashboardBodyState extends State<DashboardBody> {
                 child: isShortScreen
                     ? RefreshIndicator(
                         color: DashboardColors.orangePrimary,
-                        onRefresh: dashboardVm.loadClasses,
+                        onRefresh: refreshAll,
                         child: SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(
@@ -208,7 +218,7 @@ class _DashboardBodyState extends State<DashboardBody> {
                           Expanded(
                             child: RefreshIndicator(
                               color: DashboardColors.orangePrimary,
-                              onRefresh: dashboardVm.loadClasses,
+                              onRefresh: refreshAll,
                               child: SingleChildScrollView(
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: EdgeInsets.fromLTRB(

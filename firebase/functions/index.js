@@ -3,6 +3,7 @@
 // nhắc lịch dạy theo lịch hẹn (Cloud Scheduler + FCM) và xử lý góp ý (thông báo admin/người gửi).
 import { randomUUID } from 'node:crypto';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { initializeApp } from 'firebase-admin/app';
@@ -16,6 +17,7 @@ import {
   FeedbackError, notifyAdminsOfFeedback, notifyAuthorOfResolution, resolveFeedback as resolveFeedbackImpl,
 } from './src/feedback.js';
 import { FapSyncError, runFapSync } from './src/fap_sync.js';
+import { AiError, runAiAssistant } from './src/ai_assistant.js';
 
 initializeApp();
 
@@ -119,3 +121,28 @@ export const syncToFap = onCall({ region: REGION, maxInstances: 5 }, async (requ
     throw new HttpsError('internal', 'Không thể đồng bộ FAP lúc này.', { code: 'INTERNAL' });
   }
 });
+
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
+
+/**
+ * Callable cho giảng viên: trợ lý AI (Gemini function-calling). Body { history } — xem src/ai_assistant.js.
+ * Function chỉ proxy LLM; việc đọc/ghi điểm danh do app thực thi với quyền của GV.
+ * Emulator/e2e: đặt GEMINI_API_BASE trỏ về stub và GEMINI_API_KEY bất kỳ (env hoặc .secret.local).
+ */
+export const aiAssistant = onCall(
+  { region: REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 60, memory: '256MiB', maxInstances: 5 },
+  async (request) => {
+    try {
+      return await runAiAssistant(
+        { db: getFirestore(), apiKey: process.env.GEMINI_API_KEY },
+        { uid: request.auth?.uid, history: request.data?.history },
+      );
+    } catch (error) {
+      if (error instanceof AiError) {
+        throw new HttpsError(error.status, error.message, { code: error.code });
+      }
+      console.error('aiAssistant failed', error);
+      throw new HttpsError('internal', 'Trợ lý AI gặp lỗi, vui lòng thử lại.', { code: 'INTERNAL' });
+    }
+  },
+);

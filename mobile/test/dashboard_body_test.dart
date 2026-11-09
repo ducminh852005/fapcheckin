@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
+import 'package:fapcheckin_core/repositories/report_repository.dart';
 import 'package:fapcheckin_core/session/current_user.dart';
 import 'package:fapcheckin_core/models/class_section_model.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
@@ -10,6 +11,8 @@ import 'package:fapcheckin/core/services/google_auth_service.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/viewmodels/report_viewmodel.dart';
+import 'package:fapcheckin/views/teacher/report/report_section.dart';
 import 'package:fapcheckin/views/teacher/dashboard/dashboard_body.dart';
 import 'package:fapcheckin/views/teacher/dashboard/components/dashboard_header.dart';
 
@@ -47,6 +50,9 @@ void main() {
             ChangeNotifierProvider.value(value: authVm),
             ChangeNotifierProvider.value(value: dashboardVm),
             ChangeNotifierProvider.value(value: liveSessionVm),
+            ChangeNotifierProvider.value(
+              value: ReportViewModel(ReportRepository(currentUser: user)),
+            ),
           ],
           child: const MaterialApp(home: Scaffold(body: DashboardBody())),
         ),
@@ -67,7 +73,20 @@ void main() {
 
       // Verify WeeklyOverviewCards keeps 0.0% and navigates to lich-su-diem-danh on tap
       expect(find.text('Chuyên cần'), findsOneWidget);
-      expect(find.text('0.0%'), findsOneWidget);
+      expect(find.text('0.0%'), findsWidgets);
+      // Báo cáo chuyên cần nằm trong Tổng quan (không còn tab riêng).
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('report-section')),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.byType(ReportSection), findsOneWidget);
+      expect(find.text('Báo cáo chuyên cần'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Lịch sử'),
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.tap(find.text('Lịch sử'));
       await tester.pump();
       expect(dashboardVm.currentRoute, 'lich-su-diem-danh');

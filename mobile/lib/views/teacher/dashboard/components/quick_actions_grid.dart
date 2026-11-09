@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
 import '../dashboard_colors.dart';
 
-/// Mục "CHỨC NĂNG CHÍNH" với 4 phím tắt: Lịch dạy, Quản lý lớp, Báo cáo, Lịch sử ca.
+/// Mục "CHỨC NĂNG CHÍNH" với 4 phím tắt: Lịch dạy, Quản lý lớp, Trợ lý AI, Lịch sử ca.
 class QuickActionsGrid extends StatelessWidget {
   const QuickActionsGrid({super.key});
 
@@ -27,11 +27,11 @@ class QuickActionsGrid extends StatelessWidget {
         onTap: () => dashboardVm.navigate('lop-hoc'),
       ),
       _QuickActionItem(
-        icon: Icons.bar_chart_rounded,
-        label: 'Báo cáo',
+        icon: Icons.auto_awesome_rounded,
+        label: 'Trợ lý AI',
         iconColor: DashboardColors.quickActionReport,
         bgColor: DashboardColors.quickActionReportBg,
-        onTap: () => dashboardVm.navigate('bao-cao'),
+        onTap: () => dashboardVm.navigate('ai'),
       ),
       _QuickActionItem(
         icon: Icons.access_time_rounded,

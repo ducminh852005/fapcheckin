@@ -2,6 +2,7 @@
 
 Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. **Toàn bộ backend và cơ sở dữ liệu là Firebase** (Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting, và một Cloud Function cho OCR); phân quyền theo vai trò `user` / `staff` / `admin` được kiểm thử trên Firebase Emulator. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
 
+**Trợ lý AI:** [docs/ai-assistant.md](docs/ai-assistant.md) ·
 **Tài liệu kiến trúc đầy đủ:** [docs/README.md](docs/README.md) ·
 **Pattern code:** [docs/quick-start.md](docs/quick-start.md) ·
 **Chạy & build app mobile:** [docs/quick-start-mobile.md](docs/quick-start-mobile.md) ·
@@ -30,7 +31,7 @@ fapcheckin/
 
 | Vai trò | Ứng dụng | Quyền chính |
 |---|---|---|
-| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử, báo cáo |
+| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat + giọng nói) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
 | `user` (sinh viên) | `web/checkin/` (quét QR) | Tạo bản ghi điểm danh của chính mình; xem dữ liệu của mình |
 | `admin` | `web/admin/` (UI prototype, chưa nối Firebase) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
 
@@ -54,6 +55,7 @@ node scripts/seed-admin.mjs --emulator --email admin@fpt.edu.vn --password Passw
 cd firebase && npm test              # Security Rules (Firestore + Storage) trên Emulator — 77 test
 cd firebase/functions && npm test    # Parser/OCR của Cloud Function
 cd e2e_test && npm test              # Luồng end-to-end trên Emulator
+cd e2e_test && npm run test:ai       # Trợ lý AI: callable + Rules trên Emulator (Gemini giả)
 cd packages/core && flutter test     # Repository (fake_cloud_firestore)
 cd mobile && flutter test            # Model, ViewModel, widget (xem lưu ý 2 test lỗi sẵn có ở docs/quick-start-mobile.md §7)
 ```

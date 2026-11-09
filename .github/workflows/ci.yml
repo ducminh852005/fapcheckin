@@ -69,6 +69,9 @@ jobs:
       - name: End-to-end flow
         run: npm test --prefix e2e_test
 
+      - name: End-to-end AI assistant (Functions emulator + fake Gemini)
+        run: npm run test:ai --prefix e2e_test
+
       - name: Syntax check student check-in page and scripts
         run: |
           cp web/checkin/app.js "$RUNNER_TEMP/checkin-app.mjs"

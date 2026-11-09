@@ -16,3 +16,6 @@ Screenshot và XML màn hình cuối được lưu theo run ID. Cần bổ sung 
 
 ## ARTEMIS
 Đã xác minh repo chính thức: https://github.com/google/artemis (31/10/2026). README mô tả Android automation và artemis-client qua uv. Chưa cài hoặc xác nhận tương thích Windows/thiết bị ở phiên này; không dựng API giả. Nếu giảng viên bắt buộc ARTEMIS, triển khai adapter theo SDK thực tế và chạy lại 30 lượt. Không tự coi Appium đã được chấp thuận.
+
+## Trợ lý AI (tab AI)
+Có thể chạy ngay, không cần thiết bị hay Gemini key: `npm run test:ai` (thư mục e2e_test). Script `run-ai-e2e.mjs` bật Auth+Firestore+Functions emulator, trỏ Cloud Function `aiAssistant` về Gemini giả (`support/fake_gemini.mjs`) rồi chạy `ai_assistant.e2e.test.mjs`: xác thực/phân quyền, kiểm tra đầu vào, định dạng tool_calls, lỗi upstream, rate-limit và Security Rules cho thao tác ghi. Luồng giao diện nằm ở `mobile/test/ai_assistant_flow_test.dart` (flutter test). Xem `docs/ai-assistant.md`.

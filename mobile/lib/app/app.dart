@@ -14,6 +14,7 @@ import '../core/services/auto_session_manager.dart';
 import '../core/services/google_auth_service.dart';
 import '../core/services/push_notification_service.dart';
 import '../core/services/remote_settings.dart';
+import '../core/services/speech_service.dart';
 import '../core/services/timetable_ocr_service.dart';
 
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
@@ -23,6 +24,8 @@ import 'package:fapcheckin_core/session/current_user.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/repositories/attendance_history_repository.dart';
 import 'package:fapcheckin_core/repositories/report_repository.dart';
+import 'package:fapcheckin_core/repositories/ai_assistant_repository.dart';
+import 'package:fapcheckin_core/ai/ai_tool_executor.dart';
 
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
@@ -30,6 +33,7 @@ import '../viewmodels/live_session_viewmodel.dart';
 import '../viewmodels/attendance_history_viewmodel.dart';
 import '../viewmodels/preferences_viewmodel.dart';
 import '../viewmodels/report_viewmodel.dart';
+import '../viewmodels/ai_chat_viewmodel.dart';
 
 class FapCheckinApp extends StatefulWidget {
   const FapCheckinApp({
@@ -58,6 +62,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   late final AccountFeaturesRepository _accountFeaturesRepo;
   late final PreferencesViewModel _preferencesViewModel;
   late final ReportViewModel _reportViewModel;
+  late final AiChatViewModel _aiChatViewModel;
   late final GoRouter _router;
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -92,11 +97,19 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         qrCycleSeconds: widget.remoteSettings.qrRefreshSeconds,
         ipCheckDefault: widget.remoteSettings.ipCheckDefault,
       );
-    _attendanceHistoryViewModel = AttendanceHistoryViewModel(
-      AttendanceHistoryRepository(currentUser: _currentUser),
-    );
-    _reportViewModel = ReportViewModel(
-      ReportRepository(currentUser: _currentUser),
+    final historyRepo = AttendanceHistoryRepository(currentUser: _currentUser);
+    final reportRepo = ReportRepository(currentUser: _currentUser);
+    _attendanceHistoryViewModel = AttendanceHistoryViewModel(historyRepo);
+    _reportViewModel = ReportViewModel(reportRepo);
+    _aiChatViewModel = AiChatViewModel(
+      repository: AiAssistantRepository(),
+      executor: AiToolExecutor(
+        teacher: _teacherRepo,
+        history: historyRepo,
+        report: reportRepo,
+        currentUser: _currentUser,
+      ),
+      speech: DeviceSpeechService(),
     );
     _autoSessionManager = AutoSessionManager(
       liveSessionViewModel: _liveSessionViewModel,
@@ -191,6 +204,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       _dashboardViewModel.clearTeacherInfo();
       _liveSessionViewModel.resetSession();
       _reportViewModel.reset();
+      _aiChatViewModel.reset();
     }
     if (session != null && session.user.isTeacher) {
       _dashboardViewModel.setTeacherInfo(
@@ -228,6 +242,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _preferencesViewModel.dispose();
     unawaited(_pushNotificationService.dispose());
     _reportViewModel.dispose();
+    _aiChatViewModel.dispose();
     super.dispose();
   }
 
@@ -247,6 +262,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         ChangeNotifierProvider.value(value: _attendanceHistoryViewModel),
         ChangeNotifierProvider.value(value: _preferencesViewModel),
         ChangeNotifierProvider.value(value: _reportViewModel),
+        ChangeNotifierProvider.value(value: _aiChatViewModel),
       ],
       child: Consumer<PreferencesViewModel>(
         builder: (context, prefsVm, _) => MaterialApp.router(

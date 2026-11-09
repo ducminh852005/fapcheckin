@@ -39,7 +39,12 @@ Project mặc định: `fapcheckin-3bn2di` (`.firebaserc`).
    ```powershell
    cd firebase; npm ci; cd functions; npm ci; cd ../../e2e_test; npm ci; cd ..
    ```
-5. **Domain được phép cho Auth**: *Authentication → Settings → Authorized domains* đã có `<project-id>.web.app`; thêm `localhost` nếu chạy thử cục bộ.
+5. **Trợ lý AI (tab AI)**: tạo API key Gemini tại [Google AI Studio](https://aistudio.google.com/apikey) rồi lưu làm secret (key không nằm trong app/repo):
+   ```powershell
+   firebase functions:secrets:set GEMINI_API_KEY
+   ```
+   Chưa đặt secret thì deploy `aiAssistant` sẽ báo thiếu secret; app vẫn chạy, tab AI trả lỗi "chưa được cấu hình". Đổi model bằng biến môi trường `GEMINI_MODEL` (mặc định `gemini-2.5-flash`). Chi tiết: [ai-assistant.md](ai-assistant.md).
+6. **Domain được phép cho Auth**: *Authentication → Settings → Authorized domains* đã có `<project-id>.web.app`; thêm `localhost` nếu chạy thử cục bộ.
 
 ## 3. Tài khoản Admin đầu tiên
 
