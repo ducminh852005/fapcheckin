@@ -257,6 +257,9 @@ class DashboardViewModel extends ChangeNotifier {
       _routeHistory.isNotEmpty || _currentRoute != 'tong-quan';
 
   void navigate(String route) {
+    // Trang Báo cáo đã được gộp vào Tổng quan. Giữ tương thích với liên kết
+    // cũ nhưng không tạo lại một màn hình Báo cáo độc lập.
+    if (route == 'bao-cao') route = 'tong-quan';
     if (route == _currentRoute) return;
     _routeHistory.add(_currentRoute);
     if (_routeHistory.length > 20) {

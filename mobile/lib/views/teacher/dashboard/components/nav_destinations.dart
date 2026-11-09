@@ -44,12 +44,6 @@ const List<NavDestination> kNavDestinations = [
     activeRoutes: {'diem-danh-qr', 'lich-su-diem-danh'},
   ),
   NavDestination(
-    icon: Icons.bar_chart_outlined,
-    selectedIcon: Icons.bar_chart_rounded,
-    label: 'Báo cáo',
-    route: 'bao-cao',
-  ),
-  NavDestination(
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,
     label: 'Hồ sơ',

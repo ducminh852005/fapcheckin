@@ -108,7 +108,6 @@ void main() {
         'tong-quan',
         'lich-hoc',
         'lop-hoc',
-        'bao-cao',
         'cai-dat',
         'thong-tin-ca-nhan',
         'thong-tin-cong-tac',

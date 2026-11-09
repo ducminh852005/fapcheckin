@@ -4,11 +4,13 @@ import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/dashboard_viewmodel.dart';
 import '../../../viewmodels/live_session_viewmodel.dart' show ViewStatus;
+import '../../../viewmodels/report_viewmodel.dart';
 import 'dashboard_colors.dart';
 import 'components/dashboard_header.dart';
 import 'components/active_session_card.dart';
 import 'components/weekly_overview_cards.dart';
 import 'components/upcoming_sessions_list.dart';
+import '../report/report_body.dart';
 
 /// Màn hình Dashboard (Tổng quan) sau khi giảng viên đăng nhập thành công.
 /// Tổ chức các khối giao diện:
@@ -24,12 +26,16 @@ class DashboardBody extends StatefulWidget {
 }
 
 class _DashboardBodyState extends State<DashboardBody> {
+  Future<void> _refreshAll() => Future.wait([
+    context.read<DashboardViewModel>().loadClasses(),
+    context.read<ReportViewModel>().load(force: true),
+  ]);
+
   @override
   Widget build(BuildContext context) {
     final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isShortScreen = MediaQuery.sizeOf(context).height < 500;
 
     final topSection = Padding(
       padding: EdgeInsets.fromLTRB(
@@ -67,20 +73,22 @@ class _DashboardBodyState extends State<DashboardBody> {
             margin: const EdgeInsets.symmetric(vertical: 8),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: dashboardVm.errorCode == 'FORBIDDEN' ||
+              color:
+                  dashboardVm.errorCode == 'FORBIDDEN' ||
                       dashboardVm.errorMessage!.contains('quyền')
                   ? const Color(0xFFFEF2F2)
                   : (isDark
-                      ? Theme.of(context).colorScheme.surface
-                      : DashboardColors.cardBg),
+                        ? Theme.of(context).colorScheme.surface
+                        : DashboardColors.cardBg),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                color:
+                    dashboardVm.errorCode == 'FORBIDDEN' ||
                         dashboardVm.errorMessage!.contains('quyền')
                     ? const Color(0xFFFECACA)
                     : (isDark
-                        ? Theme.of(context).colorScheme.outline
-                        : DashboardColors.cardBorder),
+                          ? Theme.of(context).colorScheme.outline
+                          : DashboardColors.cardBorder),
               ),
             ),
             child: Column(
@@ -92,7 +100,8 @@ class _DashboardBodyState extends State<DashboardBody> {
                       ? Icons.lock_person_outlined
                       : Icons.wifi_off_rounded,
                   size: 40,
-                  color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                  color:
+                      dashboardVm.errorCode == 'FORBIDDEN' ||
                           dashboardVm.errorMessage!.contains('quyền')
                       ? const Color(0xFFDC2626)
                       : DashboardColors.orangePrimary,
@@ -115,12 +124,13 @@ class _DashboardBodyState extends State<DashboardBody> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
-                    color: dashboardVm.errorCode == 'FORBIDDEN' ||
+                    color:
+                        dashboardVm.errorCode == 'FORBIDDEN' ||
                             dashboardVm.errorMessage!.contains('quyền')
                         ? const Color(0xFFB91C1C)
                         : (isDark
-                            ? const Color(0xFF94A3B8)
-                            : DashboardColors.textMuted),
+                              ? const Color(0xFF94A3B8)
+                              : DashboardColors.textMuted),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -149,6 +159,9 @@ class _DashboardBodyState extends State<DashboardBody> {
             dashboardVm.classes.isNotEmpty)
           // 4. Ca dạy kế tiếp
           const UpcomingSessionsList(),
+        const SizedBox(height: 24),
+        // 5. Phân tích chuyên cần trong cùng luồng Tổng quan.
+        const ReportBody(embedded: true),
       ],
     );
 
@@ -172,57 +185,33 @@ class _DashboardBodyState extends State<DashboardBody> {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 800),
-                child: isShortScreen
-                    ? RefreshIndicator(
-                        color: DashboardColors.orangePrimary,
-                        onRefresh: dashboardVm.loadClasses,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
+                child: RefreshIndicator(
+                  color: DashboardColors.orangePrimary,
+                  onRefresh: _refreshAll,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: EdgeInsets.only(
+                      bottom: context.isMobile ? 108 : 36,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        topSection,
+                        Padding(
                           padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
                             0,
+                            horizontalPadding,
                             0,
-                            0,
-                            context.isMobile ? 108 : 36,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              topSection,
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: horizontalPadding,
-                                ),
-                                child: bottomContent,
-                              ),
-                            ],
-                          ),
+                          child: bottomContent,
                         ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // PHẦN CỐ ĐỊNH (HEADER + CA ĐANG DIỄN RA + TỔNG QUAN TUẦN NÀY)
-                          topSection,
-
-                          // PHẦN CUỘN (CHỈ DANH SÁCH CA DẠY KẾ TIẾP PHÍA DƯỚI)
-                          Expanded(
-                            child: RefreshIndicator(
-                              color: DashboardColors.orangePrimary,
-                              onRefresh: dashboardVm.loadClasses,
-                              child: SingleChildScrollView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: EdgeInsets.fromLTRB(
-                                  horizontalPadding,
-                                  4,
-                                  horizontalPadding,
-                                  context.isMobile ? 108 : 36,
-                                ),
-                                child: bottomContent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
