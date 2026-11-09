@@ -16,12 +16,14 @@ export type AnnouncementPayload = {
   title: string
   content: string
   richContent?: string
-  targetAudience: "teachers"
+  targetAudience: "teachers" | "subject_teachers"
   priority: "normal" | "important" | "urgent"
   pinToTop: boolean
   recipientCount?: number
   createdBy?: string
   createdAt?: string
+  subjectCode?: string
+  teacherMemberCodes?: string[]
 }
 
 export type AnnouncementHistoryItem = {
@@ -38,6 +40,12 @@ export type AnnouncementHistoryItem = {
 export type AnnouncementTargetsData = {
   teacherCount: number
   linkedTeachers: number
+}
+
+export type SubjectTeacherTarget = {
+  subjectCode: string
+  subjectName: string
+  teachers: Array<{ memberCode: string; fullName: string }>
 }
 
 function formatFirestoreDate(val: unknown): string {
@@ -86,6 +94,41 @@ export async function getAnnouncementTargets(): Promise<AnnouncementTargetsData>
   }
 }
 
+export async function getAnnouncementSubjectTargets(): Promise<SubjectTeacherTarget[]> {
+  const [classesSnap, subjectsSnap, usersSnap] = await Promise.all([
+    getDocs(collection(firestore, "classes")),
+    getDocs(collection(firestore, "subjects")),
+    getDocs(query(collection(firestore, "users"), where("role", "==", "staff"))),
+  ])
+  const teacherNames = new Map(usersSnap.docs.map((docSnap) => [
+    String(docSnap.data().memberCode ?? ""),
+    String(docSnap.data().fullName ?? ""),
+  ]))
+  const subjects = new Map(subjectsSnap.docs.map((docSnap) => {
+    const data = docSnap.data()
+    return [String(data.subjectCode ?? docSnap.id), String(data.subjectName ?? "")]
+  }))
+  const teachersBySubject = new Map<string, Set<string>>()
+  classesSnap.docs.forEach((docSnap) => {
+    const data = docSnap.data()
+    const subjectCode = String(data.subjectCode ?? "").trim()
+    const teacherMemberCode = String(data.teacherMemberCode ?? "").trim()
+    if (!subjectCode || !teacherMemberCode) return
+    const assigned = teachersBySubject.get(subjectCode) ?? new Set<string>()
+    assigned.add(teacherMemberCode)
+    teachersBySubject.set(subjectCode, assigned)
+  })
+  return [...teachersBySubject.entries()]
+    .map(([subjectCode, teacherCodes]) => ({
+      subjectCode,
+      subjectName: subjects.get(subjectCode) || "Chưa có tên môn học",
+      teachers: [...teacherCodes]
+        .map((memberCode) => ({ memberCode, fullName: teacherNames.get(memberCode) || memberCode }))
+        .sort((a, b) => a.fullName.localeCompare(b.fullName, "vi")),
+    }))
+    .sort((a, b) => a.subjectCode.localeCompare(b.subjectCode))
+}
+
 export async function sendAnnouncement(payload: AnnouncementPayload): Promise<string> {
   const audience = "staff"
   const docRef = await addDoc(collection(firestore, "announcements"), {
@@ -95,6 +138,8 @@ export async function sendAnnouncement(payload: AnnouncementPayload): Promise<st
     richContent: payload.richContent ?? null,
     audience,
     targetAudience: payload.targetAudience,
+    subjectCode: payload.subjectCode ?? null,
+    teacherMemberCodes: payload.teacherMemberCodes ?? [],
     priority: payload.priority,
     deliveryChannel: "teacher_app",
     pinToTop: payload.pinToTop,
@@ -125,6 +170,8 @@ export async function saveAnnouncementDraft(payload: AnnouncementPayload): Promi
     richContent: payload.richContent ?? null,
     audience: "admin",
     targetAudience: payload.targetAudience,
+    subjectCode: payload.subjectCode ?? null,
+    teacherMemberCodes: payload.teacherMemberCodes ?? [],
     priority: payload.priority,
     deliveryChannel: "teacher_app",
     pinToTop: payload.pinToTop,

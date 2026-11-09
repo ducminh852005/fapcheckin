@@ -19,11 +19,16 @@ class UpcomingSessionsList extends StatelessWidget {
         .where(
           (c) =>
               !c.isActive &&
-              (SlotCodeParser.parse(c.slotCode)?.weekdays
-                      .contains(DateTime.now().weekday) ??
-                  false),
+              (c.isMakeup ||
+                  (SlotCodeParser.parse(c.slotCode)?.weekdays
+                          .contains(DateTime.now().weekday) ??
+                      false)),
         )
-        .toList();
+        .toList()
+      ..sort(
+        (a, b) => (SlotCodeParser.parse(a.slotCode)?.slot ?? 99)
+            .compareTo(SlotCodeParser.parse(b.slotCode)?.slot ?? 99),
+      );
 
     final List<_UpcomingSessionItemData> items = [];
     if (upcomingFromClasses.isNotEmpty) {
@@ -410,10 +415,10 @@ class _UpcomingSessionItemData {
   });
 
   factory _UpcomingSessionItemData.fromModel(ClassSectionModel model) {
-    String slot = model.slotCode.isNotEmpty ? model.slotCode : '—';
-    // Xóa chữ "Ca" nếu có trong slotCode
-    slot = slot.replaceAll(RegExp(r'[^0-9]'), '');
-    if (slot.isEmpty) slot = '—';
+    // Mã slot dạng chữ + số (vd: A4, P4) — số là cặp ngày, KHÔNG phải số ca.
+    // Dùng chung SlotCodeParser với màn Lịch dạy để ra đúng số ca.
+    final parsedSlot = SlotCodeParser.parse(model.slotCode)?.slot;
+    final slot = parsedSlot != null ? '$parsedSlot' : '—';
 
     return _UpcomingSessionItemData(
       slot: slot,

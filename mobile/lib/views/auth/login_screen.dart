@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_router.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/dashboard_viewmodel.dart';
 import 'layouts/login_desktop_layout.dart';
@@ -37,12 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await auth.initializeGoogleSignIn();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Không thể khởi tạo Google. Vui lòng thử đăng nhập lại.',
-          ),
-        ),
+      showAppToast(
+        context,
+        message: 'Không thể khởi tạo Google. Vui lòng thử đăng nhập lại.',
+        type: AppToastType.error,
       );
     }
   }
@@ -126,18 +125,15 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showAuthError() {
     final message =
         context.read<AuthViewModel>().errorMessage ??
-        'Kh\u00f4ng th\u1ec3 \u0111\u0103ng nh\u1eadp b\u1eb1ng Google.';
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+        'Không thể đăng nhập bằng Google.';
+    showAppToast(context, message: message, type: AppToastType.error);
   }
 
   void _showUnsupportedLogin() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Ch\u1ee9c n\u0103ng n\u00e0y ch\u01b0a \u0111\u01b0\u1ee3c k\u1ebft n\u1ed1i.',
-        ),
-      ),
+    showAppToast(
+      context,
+      message: 'Chức năng này chưa được kết nối.',
+      type: AppToastType.warning,
     );
   }
 }

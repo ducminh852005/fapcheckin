@@ -43,6 +43,11 @@ class AttendanceSessionSelector extends StatelessWidget {
                   ? 'Buổi $numLabel ($dateShort)'
                   : 'Buổi $numLabel';
 
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final unselectedBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+          final unselectedBorder = isDark ? const Color(0xFF334155) : AttendanceHistoryColors.cardBorder;
+          final unselectedText = isDark ? Colors.white : AttendanceHistoryColors.textDark;
+
           return InkWell(
             onTap: () => onSelectSession(session.sessionId),
             borderRadius: BorderRadius.circular(20),
@@ -55,12 +60,12 @@ class AttendanceSessionSelector extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AttendanceHistoryColors.orangePrimary
-                    : Colors.white,
+                    : unselectedBg,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected
                       ? AttendanceHistoryColors.orangePrimary
-                      : AttendanceHistoryColors.cardBorder,
+                      : unselectedBorder,
                   width: 1,
                 ),
                 boxShadow: isSelected
@@ -72,14 +77,15 @@ class AttendanceSessionSelector extends StatelessWidget {
                           offset: const Offset(0, 3),
                         ),
                       ]
-                    : [
-                        BoxShadow(
-                          color:
-                              const Color(0xFF0F172A).withValues(alpha: 0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
+                    : (isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -92,7 +98,7 @@ class AttendanceSessionSelector extends StatelessWidget {
                           isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected
                           ? Colors.white
-                          : AttendanceHistoryColors.textDark,
+                          : unselectedText,
                     ),
                   ),
                   if (isSelected) ...[

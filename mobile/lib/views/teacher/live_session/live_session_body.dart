@@ -500,10 +500,15 @@ class LiveSessionBody extends StatelessWidget {
   }
 
   void _showFullscreenQr(BuildContext context, String qrData) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textDark = isDark ? Colors.white : LiveSessionColors.textDark;
+    final closeIconColor = isDark ? Colors.white70 : LiveSessionColors.textDark;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: dialogBg,
         insetPadding: const EdgeInsets.all(24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
@@ -514,16 +519,16 @@ class LiveSessionBody extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Mã QR Điểm danh',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: LiveSessionColors.textDark,
+                      color: textDark,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: Icon(Icons.close_rounded, color: closeIconColor),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],

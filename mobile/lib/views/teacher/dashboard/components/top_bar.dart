@@ -23,17 +23,21 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? const Color(0xF50F172A) : const Color(0xF5FFFFFF);
+    final shadowColor = isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x0D142433);
+
     return Consumer<DashboardViewModel>(
       builder: (context, vm, _) {
         return Container(
           height: AppSpacing.topBarHeight,
           decoration: BoxDecoration(
-            color: Color(0xF5FFFFFF), // surface/95
+            color: topBarBg,
             boxShadow: [
               BoxShadow(
-                color: Color(0x0D142433),
+                color: shadowColor,
                 blurRadius: 4,
-                offset: Offset(0, 1),
+                offset: const Offset(0, 1),
               ),
             ],
           ),

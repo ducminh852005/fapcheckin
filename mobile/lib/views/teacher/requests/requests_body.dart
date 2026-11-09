@@ -110,11 +110,11 @@ class _RequestsBodyState extends State<RequestsBody> {
                       ),
                       child: Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'ĐƠN TỪ & HỖ TRỢ',
                                   style: TextStyle(
                                     fontSize: 11,
@@ -123,7 +123,7 @@ class _RequestsBodyState extends State<RequestsBody> {
                                     color: AppPalette.primary,
                                   ),
                                 ),
-                                SizedBox(height: 2),
+                                const SizedBox(height: 2),
                                 Text(
                                   'Yêu cầu điểm danh / nghỉ phép',
                                   maxLines: 1,
@@ -131,7 +131,7 @@ class _RequestsBodyState extends State<RequestsBody> {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
-                                    color: AppPalette.textDark,
+                                    color: isDark ? const Color(0xFFF8FAFC) : AppPalette.textDark,
                                     letterSpacing: -0.4,
                                   ),
                                 ),
@@ -141,9 +141,9 @@ class _RequestsBodyState extends State<RequestsBody> {
                           IconButton(
                             tooltip: 'Thông báo',
                             onPressed: () => showNotificationModal(context),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.notifications_outlined,
-                              color: AppPalette.textDark,
+                              color: isDark ? const Color(0xFFF8FAFC) : AppPalette.textDark,
                             ),
                           ),
                         ],
@@ -219,12 +219,18 @@ class _RequestsBodyState extends State<RequestsBody> {
                                     vertical: 32,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: isDark
+                                        ? Theme.of(context).colorScheme.surface
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: AppPalette.borderSubtle,
+                                      color: isDark
+                                          ? Theme.of(context).colorScheme.outline
+                                          : AppPalette.borderSubtle,
                                     ),
-                                    boxShadow: AppPalette.cardShadow,
+                                    boxShadow: isDark
+                                        ? const []
+                                        : AppPalette.cardShadow,
                                   ),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -233,7 +239,9 @@ class _RequestsBodyState extends State<RequestsBody> {
                                         width: 52,
                                         height: 52,
                                         decoration: BoxDecoration(
-                                          color: AppPalette.orangeLight,
+                                          color: isDark
+                                              ? const Color(0xFF334155)
+                                              : AppPalette.orangeLight,
                                           borderRadius: BorderRadius.circular(
                                             16,
                                           ),
@@ -245,22 +253,26 @@ class _RequestsBodyState extends State<RequestsBody> {
                                         ),
                                       ),
                                       const SizedBox(height: 14),
-                                      const Text(
+                                      Text(
                                         'Bạn chưa gửi yêu cầu nào.',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w700,
-                                          color: AppPalette.textDark,
+                                          color: isDark
+                                              ? const Color(0xFFF8FAFC)
+                                              : AppPalette.textDark,
                                         ),
                                       ),
                                       const SizedBox(height: 6),
-                                      const Text(
+                                      Text(
                                         'Nhấn nút "Gửi yêu cầu" bên dưới để tạo đơn xin nghỉ phép hoặc xác nhận điểm danh.',
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: 12.5,
-                                          color: AppPalette.textMuted,
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : AppPalette.textMuted,
                                           height: 1.4,
                                         ),
                                       ),
@@ -300,12 +312,18 @@ class _RequestsBodyState extends State<RequestsBody> {
                               return Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: isDark
+                                      ? Theme.of(context).colorScheme.surface
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: AppPalette.borderSubtle,
+                                    color: isDark
+                                        ? Theme.of(context).colorScheme.outline
+                                        : AppPalette.borderSubtle,
                                   ),
-                                  boxShadow: AppPalette.cardShadow,
+                                  boxShadow: isDark
+                                      ? const []
+                                      : AppPalette.cardShadow,
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,10 +335,12 @@ class _RequestsBodyState extends State<RequestsBody> {
                                         Expanded(
                                           child: Text(
                                             '${isLeave ? 'Nghỉ phép' : 'Sửa điểm danh'}${classCode.isNotEmpty ? ' · $classCode' : ''}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w800,
-                                              color: AppPalette.textDark,
+                                              color: isDark
+                                                  ? const Color(0xFFF8FAFC)
+                                                  : AppPalette.textDark,
                                             ),
                                           ),
                                         ),
@@ -353,9 +373,11 @@ class _RequestsBodyState extends State<RequestsBody> {
                                     const SizedBox(height: 8),
                                     Text(
                                       '${row['reason'] ?? ''}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13.5,
-                                        color: AppPalette.textBody,
+                                        color: isDark
+                                            ? const Color(0xFFCBD5E1)
+                                            : AppPalette.textBody,
                                         height: 1.4,
                                       ),
                                     ),
@@ -363,9 +385,11 @@ class _RequestsBodyState extends State<RequestsBody> {
                                       const SizedBox(height: 6),
                                       Text(
                                         'Mã phiên: $sessionId',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
-                                          color: AppPalette.textMuted,
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : AppPalette.textMuted,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -376,19 +400,25 @@ class _RequestsBodyState extends State<RequestsBody> {
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF8FAFC),
+                                          color: isDark
+                                              ? const Color(0xFF0F172A)
+                                              : const Color(0xFFF8FAFC),
                                           borderRadius: BorderRadius.circular(
                                             10,
                                           ),
                                           border: Border.all(
-                                            color: AppPalette.borderSubtle,
+                                            color: isDark
+                                                ? const Color(0xFF334155)
+                                                : AppPalette.borderSubtle,
                                           ),
                                         ),
                                         child: Text(
                                           'Phản hồi: $adminNote',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 12.5,
-                                            color: AppPalette.textDark,
+                                            color: isDark
+                                                ? const Color(0xFFF8FAFC)
+                                                : AppPalette.textDark,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),

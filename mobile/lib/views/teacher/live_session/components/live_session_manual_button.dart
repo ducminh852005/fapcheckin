@@ -12,28 +12,35 @@ class LiveSessionManualButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = LiveSessionColors.getCardBg(context);
+    final textDark = LiveSessionColors.getTextDark(context);
+
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: const Icon(
+        icon: Icon(
           Icons.person_add_outlined,
           size: 20,
-          color: LiveSessionColors.textDark,
+          color: textDark,
         ),
-        label: const Text(
+        label: Text(
           'Điểm danh tay',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: LiveSessionColors.textDark,
+            color: textDark,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: LiveSessionColors.textDark,
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+          backgroundColor: cardBg,
+          foregroundColor: textDark,
+          side: BorderSide(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

@@ -33,6 +33,7 @@ import {
 import type { AdminProfile } from "../firebase/admin-auth"
 import { readError, useAsyncData } from "../hooks/useAsyncData"
 import { Pagination } from "../components/Pagination"
+import { ToastMessage } from "../components/ToastMessage"
 import {
   createInvite,
   listAllAccountsForExport,
@@ -112,7 +113,15 @@ export function AccountControl({
         totalAuditLogs: auditRes.totalLogs,
         metrics: accountsRes.metrics,
       })),
-    [userPage, invitePage, auditPage, search, roleFilter, linkFilter, statusFilter]
+    [
+      userPage,
+      invitePage,
+      auditPage,
+      search,
+      roleFilter,
+      linkFilter,
+      statusFilter,
+    ],
   )
   const { data, loading, error, reload } = useAsyncData(loader)
 
@@ -144,18 +153,20 @@ export function AccountControl({
       new Set(
         (data?.accounts ?? [])
           .filter((item) => item.canonical)
-          .map((item) => item.email.toLowerCase())
+          .map((item) => item.email.toLowerCase()),
       ),
-    [data]
+    [data],
   )
 
   const inviteEmails = useMemo(
-    () => new Set((data?.invites ?? []).map((item) => item.email.toLowerCase())),
-    [data]
+    () =>
+      new Set((data?.invites ?? []).map((item) => item.email.toLowerCase())),
+    [data],
   )
 
   // Calculations for KPI Cards from real Firestore metrics
-  const totalUsersCount = data?.metrics?.totalAccounts ?? data?.totalAccounts ?? 0
+  const totalUsersCount =
+    data?.metrics?.totalAccounts ?? data?.totalAccounts ?? 0
   const canonicalCount = data?.metrics?.canonicalAccounts ?? 0
   const legacyCount = data?.metrics?.legacyAccounts ?? 0
   const lockedCount = data?.metrics?.lockedAccounts ?? 0
@@ -167,7 +178,11 @@ export function AccountControl({
     setMessage(null)
   }
 
-  const run = async (action: () => Promise<unknown>, success: string, close = false) => {
+  const run = async (
+    action: () => Promise<unknown>,
+    success: string,
+    close = false,
+  ) => {
     setBusy(true)
     setActionError(null)
     setMessage(null)
@@ -199,9 +214,11 @@ export function AccountControl({
           fullName: account.fullName,
           memberCode: account.memberCode,
           role: account.role === "staff" ? "staff" : "user",
-          ...(account.role === "staff" ? {} : { rollNumber: account.rollNumber }),
+          ...(account.role === "staff"
+            ? {}
+            : { rollNumber: account.rollNumber }),
         }),
-      "Đã tạo quyền đăng nhập từ hồ sơ dữ liệu cũ."
+      "Đã tạo quyền đăng nhập từ hồ sơ dữ liệu cũ.",
     )
 
   const openEdit = (account: AccountRow) =>
@@ -221,7 +238,7 @@ export function AccountControl({
         setEdit(null)
       },
       "Đã cập nhật tài khoản.",
-      true
+      true,
     )
   }
 
@@ -229,7 +246,15 @@ export function AccountControl({
     showToast("Đang tạo tệp danh sách tài khoản CSV...")
     const exportAccounts = await listAllAccountsForExport()
     const rows = [
-      ["MemberCode", "RollNumber", "FullName", "Email", "Role", "Active", "Canonical"],
+      [
+        "MemberCode",
+        "RollNumber",
+        "FullName",
+        "Email",
+        "Role",
+        "Active",
+        "Canonical",
+      ],
       ...exportAccounts.map((a) => [
         a.memberCode,
         a.rollNumber,
@@ -241,7 +266,8 @@ export function AccountControl({
       ]),
     ]
     const csvContent =
-      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((e) => e.map(csvCell).join(",")).join("\n")
+      "data:text/csv;charset=utf-8,\uFEFF" +
+      rows.map((e) => e.map(csvCell).join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
@@ -264,16 +290,16 @@ export function AccountControl({
     <div className="space-y-6 text-slate-800 pb-12">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="ml-2 text-slate-400 hover:text-white"
-          >
-            <X size={14} />
-          </button>
-        </div>
+        <ToastMessage
+          toast={{
+            title: toastMessage.startsWith("Lỗi:")
+              ? "Có lỗi xảy ra"
+              : "Thông báo",
+            detail: toastMessage,
+            tone: toastMessage.startsWith("Lỗi:") ? "error" : "success",
+          }}
+          close={() => setToastMessage(null)}
+        />
       )}
 
       {/* Header */}
@@ -288,7 +314,9 @@ export function AccountControl({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Cấp quyền đăng nhập lần đầu, kiểm tra hồ sơ xác thực, phân quyền vai trò (Giảng viên, Sinh viên, Ban Đào tạo) và quản lý trạng thái khóa/kích hoạt tài khoản người dùng.
+            Cấp quyền đăng nhập lần đầu, kiểm tra hồ sơ xác thực, phân quyền vai
+            trò (Giảng viên, Sinh viên, Ban Đào tạo) và quản lý trạng thái
+            khóa/kích hoạt tài khoản người dùng.
           </p>
         </div>
 
@@ -320,7 +348,9 @@ export function AccountControl({
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500">Tổng tài khoản hệ thống</span>
+              <span className="text-xs font-medium text-slate-500">
+                Tổng tài khoản hệ thống
+              </span>
               <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
                 <Users size={16} />
               </span>
@@ -334,7 +364,9 @@ export function AccountControl({
               <Check size={13} className="text-emerald-600" />
               100% đồng bộ
             </span>
-            <span className="text-slate-400 text-[11px]">• Sinh viên &amp; GV</span>
+            <span className="text-slate-400 text-[11px]">
+              • Sinh viên &amp; GV
+            </span>
           </div>
         </div>
 
@@ -342,7 +374,9 @@ export function AccountControl({
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500">Đã liên kết Auth UID</span>
+              <span className="text-xs font-medium text-slate-500">
+                Đã liên kết Auth UID
+              </span>
               <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <ShieldCheck size={16} />
               </span>
@@ -353,7 +387,9 @@ export function AccountControl({
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
             <span className="text-emerald-700 font-semibold">92.3%</span>
-            <span className="text-slate-400 text-[11px]">Google SSO @fpt.edu.vn</span>
+            <span className="text-slate-400 text-[11px]">
+              Google SSO @fpt.edu.vn
+            </span>
           </div>
         </div>
 
@@ -384,7 +420,9 @@ export function AccountControl({
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500">Tài khoản bị khóa</span>
+              <span className="text-xs font-medium text-slate-500">
+                Tài khoản bị khóa
+              </span>
               <span className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
                 <Lock size={16} />
               </span>
@@ -394,8 +432,12 @@ export function AccountControl({
             </div>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
-            <span className="text-red-600 font-semibold text-[11px]">active = false</span>
-            <span className="text-slate-400 text-[11px]">• Tạm ngưng học vụ</span>
+            <span className="text-red-600 font-semibold text-[11px]">
+              active = false
+            </span>
+            <span className="text-slate-400 text-[11px]">
+              • Tạm ngưng học vụ
+            </span>
           </div>
         </div>
       </section>
@@ -417,7 +459,9 @@ export function AccountControl({
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed max-w-4xl">
-          Quản lý quyền truy cập hệ thống mà không cần biết mật khẩu của người dùng. Cấp quyền đăng nhập một lần, kiểm tra hồ sơ gắn Auth UID, khóa và thu hồi quyền truy cập tức thì.
+          Quản lý quyền truy cập hệ thống mà không cần biết mật khẩu của người
+          dùng. Cấp quyền đăng nhập một lần, kiểm tra hồ sơ gắn Auth UID, khóa
+          và thu hồi quyền truy cập tức thì.
         </p>
 
         {/* 4 Process Cards */}
@@ -430,7 +474,8 @@ export function AccountControl({
               <span>Quản lý tài khoản</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-normal">
-              Xem hồ sơ, vai trò và trạng thái; khóa/mở hoặc đổi giữa Sinh viên và Giảng viên.
+              Xem hồ sơ, vai trò và trạng thái; khóa/mở hoặc đổi giữa Sinh viên
+              và Giảng viên.
             </p>
           </div>
 
@@ -442,7 +487,8 @@ export function AccountControl({
               <span>Cấp quyền đăng nhập</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-normal">
-              Cho phép một email Google đăng nhập lần đầu. Không phải email mời và không tự gửi thư.
+              Cho phép một email Google đăng nhập lần đầu. Không phải email mời
+              và không tự gửi thư.
             </p>
           </div>
 
@@ -454,7 +500,8 @@ export function AccountControl({
               <span>Hiểu trạng thái liên kết</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-normal">
-              &quot;Đã liên kết&quot; là hồ sơ đã gắn Auth UID. &quot;Dữ liệu cũ&quot; cần cấp quyền để liên kết khi đăng nhập.
+              &quot;Đã liên kết&quot; là hồ sơ đã gắn Auth UID. &quot;Dữ liệu
+              cũ&quot; cần cấp quyền để liên kết khi đăng nhập.
             </p>
           </div>
 
@@ -466,14 +513,18 @@ export function AccountControl({
               <span>Khóa và thu hồi</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-normal">
-              Khóa sẽ chặn truy cập bằng active = false. Thu hồi chỉ xóa quyền đăng nhập chưa dùng.
+              Khóa sẽ chặn truy cập bằng active = false. Thu hồi chỉ xóa quyền
+              đăng nhập chưa dùng.
             </p>
           </div>
         </div>
 
         <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pt-1">
           <Info size={13} className="shrink-0" />
-          <span>Lưu ý: xóa hoàn toàn một người dùng khỏi Firebase Authentication cần backend Admin SDK; trang này không xóa tài khoản Google.</span>
+          <span>
+            Lưu ý: xóa hoàn toàn một người dùng khỏi Firebase Authentication cần
+            backend Admin SDK; trang này không xóa tài khoản Google.
+          </span>
         </div>
       </section>
 
@@ -494,10 +545,12 @@ export function AccountControl({
               <span>Tài khoản người dùng</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  tab === "users" ? "bg-[#FFF0E6] text-[#EA580C]" : "bg-slate-100 text-slate-500"
+                  tab === "users"
+                    ? "bg-[#FFF0E6] text-[#EA580C]"
+                    : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {data?.totalAccounts ?? (data?.metrics?.totalAccounts ?? 2904)}
+                {data?.totalAccounts ?? data?.metrics?.totalAccounts ?? 2904}
               </span>
             </button>
 
@@ -513,7 +566,9 @@ export function AccountControl({
               <span>Quyền đăng nhập chờ duyệt</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  tab === "invites" ? "bg-[#FFF0E6] text-[#EA580C]" : "bg-slate-100 text-slate-500"
+                  tab === "invites"
+                    ? "bg-[#FFF0E6] text-[#EA580C]"
+                    : "bg-slate-100 text-slate-500"
                 }`}
               >
                 {data?.totalInvites ?? data?.metrics?.totalInvites ?? 0}
@@ -532,7 +587,9 @@ export function AccountControl({
               <span>Nhật ký truy cập (Audit Log)</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  tab === "audit" ? "bg-[#FFF0E6] text-[#EA580C]" : "bg-slate-100 text-slate-500"
+                  tab === "audit"
+                    ? "bg-[#FFF0E6] text-[#EA580C]"
+                    : "bg-slate-100 text-slate-500"
                 }`}
               >
                 {data?.totalAuditLogs ?? 0}
@@ -557,7 +614,10 @@ export function AccountControl({
         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap items-center gap-3 text-xs">
           {/* Search Box */}
           <div className="relative flex-1 min-w-[240px]">
-            <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+            <Search
+              size={14}
+              className="absolute left-3 top-2.5 text-slate-400"
+            />
             <input
               type="text"
               value={search}
@@ -586,7 +646,10 @@ export function AccountControl({
               <option value="staff">Giảng viên</option>
               <option value="admin">Quản trị viên (Admin)</option>
             </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
+            <ChevronDown
+              size={12}
+              className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none"
+            />
           </div>
 
           {/* Link Status Filter */}
@@ -603,7 +666,10 @@ export function AccountControl({
               <option value="canonical">Đã liên kết UID</option>
               <option value="legacy">Chưa liên kết (Dữ liệu cũ)</option>
             </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
+            <ChevronDown
+              size={12}
+              className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none"
+            />
           </div>
 
           {/* Status Filter */}
@@ -620,7 +686,10 @@ export function AccountControl({
               <option value="active">Đang hoạt động</option>
               <option value="inactive">Đã khóa</option>
             </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
+            <ChevronDown
+              size={12}
+              className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none"
+            />
           </div>
 
           {/* Reset Filters */}
@@ -651,16 +720,25 @@ export function AccountControl({
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={6}
+                      className="py-12 text-center text-slate-400"
+                    >
                       <div className="flex items-center justify-center gap-2">
-                        <LoaderCircle className="animate-spin text-[#EA580C]" size={18} />
+                        <LoaderCircle
+                          className="animate-spin text-[#EA580C]"
+                          size={18}
+                        />
                         <span>Đang tải danh sách tài khoản...</span>
                       </div>
                     </td>
                   </tr>
                 ) : accounts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={6}
+                      className="py-12 text-center text-slate-400"
+                    >
                       Không tìm thấy tài khoản nào phù hợp với bộ lọc.
                     </td>
                   </tr>
@@ -690,7 +768,9 @@ export function AccountControl({
 
                       {/* MemberCode / RollNumber */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800 text-sm">{row.memberCode}</div>
+                        <div className="font-bold text-slate-800 text-sm">
+                          {row.memberCode}
+                        </div>
                         {row.rollNumber && (
                           <div className="text-xs text-slate-400 font-mono">
                             {row.rollNumber}
@@ -789,7 +869,10 @@ export function AccountControl({
               <tbody className="divide-y divide-slate-100">
                 {invites.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={5}
+                      className="py-12 text-center text-slate-400"
+                    >
                       Chưa có lời cấp quyền đăng nhập nào đang chờ.
                     </td>
                   </tr>
@@ -797,10 +880,17 @@ export function AccountControl({
                   paginatedInvites.map((row) => {
                     const used = canonicalEmails.has(row.email.toLowerCase())
                     return (
-                      <tr key={row.id} className="hover:bg-slate-50/70 transition">
+                      <tr
+                        key={row.id}
+                        className="hover:bg-slate-50/70 transition"
+                      >
                         <td className="py-3.5 px-5">
-                          <div className="font-bold text-slate-900 text-sm">{row.fullName}</div>
-                          <div className="text-xs text-slate-400">{row.email}</div>
+                          <div className="font-bold text-slate-900 text-sm">
+                            {row.fullName}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {row.email}
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-800 text-sm">
                           {row.memberCode}
@@ -825,7 +915,7 @@ export function AccountControl({
                             onClick={() =>
                               void run(
                                 () => revokeInvite(row.id),
-                                "Đã thu hồi quyền đăng nhập."
+                                "Đã thu hồi quyền đăng nhập.",
                               )
                             }
                             className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-semibold transition cursor-pointer"
@@ -859,13 +949,21 @@ export function AccountControl({
               <tbody className="divide-y divide-slate-100">
                 {paginatedAuditLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
-                      {loading ? "Đang tải nhật ký truy cập từ Firestore..." : "Chưa có nhật ký truy cập nào trên Firestore."}
+                    <td
+                      colSpan={6}
+                      className="py-12 text-center text-slate-400"
+                    >
+                      {loading
+                        ? "Đang tải nhật ký truy cập từ Firestore..."
+                        : "Chưa có nhật ký truy cập nào trên Firestore."}
                     </td>
                   </tr>
                 ) : (
                   paginatedAuditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50/70 transition">
+                    <tr
+                      key={log.id}
+                      className="hover:bg-slate-50/70 transition"
+                    >
                       <td className="py-3.5 px-5 font-mono text-slate-500 text-xs">
                         {log.time}
                       </td>
@@ -973,7 +1071,9 @@ export function AccountControl({
                   <div className="font-bold text-slate-900 text-sm">
                     {selected.memberCode}
                   </div>
-                  <div className="text-slate-500">{roleLabel(selected.role)}</div>
+                  <div className="text-slate-500">
+                    {roleLabel(selected.role)}
+                  </div>
                 </div>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
@@ -1007,15 +1107,15 @@ export function AccountControl({
                       selected.active === false
                         ? "text-red-600"
                         : selected.active
-                        ? "text-emerald-600"
-                        : "text-amber-600"
+                          ? "text-emerald-600"
+                          : "text-amber-600"
                     }`}
                   >
                     {selected.active === null
                       ? "Chưa liên kết đăng nhập"
                       : selected.active
-                      ? "Đang hoạt động"
-                      : "Đã khóa"}
+                        ? "Đang hoạt động"
+                        : "Đã khóa"}
                   </span>
                 </div>
               </div>
@@ -1043,7 +1143,9 @@ export function AccountControl({
                           <select
                             value={selectedRole}
                             onChange={(e) =>
-                              setSelectedRole(e.target.value as "user" | "staff")
+                              setSelectedRole(
+                                e.target.value as "user" | "staff",
+                              )
                             }
                             className="flex-1 h-9 px-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-semibold focus:outline-none focus:border-[#EA580C]"
                           >
@@ -1057,7 +1159,7 @@ export function AccountControl({
                             onClick={() =>
                               void run(
                                 () => setAccountRole(selected, selectedRole),
-                                "Đã cập nhật vai trò tài khoản."
+                                "Đã cập nhật vai trò tài khoản.",
                               )
                             }
                             className="h-9 px-4 bg-[#C2410C] hover:bg-[#9A3412] text-white rounded-xl font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
@@ -1074,9 +1176,15 @@ export function AccountControl({
                       disabled={busy || selected.id === currentAdmin.uid}
                       onClick={() =>
                         void run(
-                          () => setAccountActive(selected, selected.active !== true),
-                          selected.active ? "Đã khóa tài khoản." : "Đã mở khóa tài khoản.",
-                          true
+                          () =>
+                            setAccountActive(
+                              selected,
+                              selected.active !== true,
+                            ),
+                          selected.active
+                            ? "Đã khóa tài khoản."
+                            : "Đã mở khóa tài khoản.",
+                          true,
                         )
                       }
                       className={`w-full h-9 flex items-center justify-center gap-2 rounded-xl font-semibold transition cursor-pointer shadow-xs disabled:opacity-50 ${
@@ -1085,9 +1193,15 @@ export function AccountControl({
                           : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
                       }`}
                     >
-                      {selected.active ? <Lock size={14} /> : <Unlock size={14} />}
+                      {selected.active ? (
+                        <Lock size={14} />
+                      ) : (
+                        <Unlock size={14} />
+                      )}
                       <span>
-                        {selected.active ? "Khóa tài khoản (Chặn đăng nhập)" : "Mở khóa tài khoản"}
+                        {selected.active
+                          ? "Khóa tài khoản (Chặn đăng nhập)"
+                          : "Mở khóa tài khoản"}
                       </span>
                     </button>
 
@@ -1100,7 +1214,8 @@ export function AccountControl({
                 ) : (
                   <div className="space-y-2.5 bg-amber-50/60 border border-amber-200/80 rounded-xl p-3.5">
                     <p className="text-[11px] text-amber-900 leading-relaxed font-normal">
-                      Hồ sơ này chưa gắn Firebase Auth UID. Bạn có thể cấp quyền để người dùng liên kết khi đăng nhập Google lần đầu.
+                      Hồ sơ này chưa gắn Firebase Auth UID. Bạn có thể cấp quyền
+                      để người dùng liên kết khi đăng nhập Google lần đầu.
                     </p>
                     <button
                       type="button"
@@ -1152,7 +1267,8 @@ export function AccountControl({
                   Lời mời đăng nhập mới
                 </span>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                  Tạo dữ liệu để liên kết khi người dùng đăng nhập Google lần đầu
+                  Tạo dữ liệu để liên kết khi người dùng đăng nhập Google lần
+                  đầu
                 </h3>
               </div>
               <button
@@ -1171,7 +1287,9 @@ export function AccountControl({
                 <input
                   type="email"
                   value={invite.email}
-                  onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+                  onChange={(e) =>
+                    setInvite({ ...invite, email: e.target.value })
+                  }
                   placeholder="VD: kiethn@fpt.edu.vn"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                 />
@@ -1184,7 +1302,9 @@ export function AccountControl({
                 <input
                   type="text"
                   value={invite.fullName}
-                  onChange={(e) => setInvite({ ...invite, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setInvite({ ...invite, fullName: e.target.value })
+                  }
                   placeholder="VD: Nguyễn Tuấn Kiệt"
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                 />
@@ -1198,7 +1318,9 @@ export function AccountControl({
                   <input
                     type="text"
                     value={invite.memberCode}
-                    onChange={(e) => setInvite({ ...invite, memberCode: e.target.value })}
+                    onChange={(e) =>
+                      setInvite({ ...invite, memberCode: e.target.value })
+                    }
                     placeholder="VD: KietNT"
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                   />
@@ -1227,12 +1349,15 @@ export function AccountControl({
               {invite.role === "user" && (
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
-                    Roll Number (Mã sinh viên) <span className="text-[#EA580C]">*</span>
+                    Roll Number (Mã sinh viên){" "}
+                    <span className="text-[#EA580C]">*</span>
                   </label>
                   <input
                     type="text"
                     value={invite.rollNumber}
-                    onChange={(e) => setInvite({ ...invite, rollNumber: e.target.value })}
+                    onChange={(e) =>
+                      setInvite({ ...invite, rollNumber: e.target.value })
+                    }
                     placeholder="VD: HE170241"
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                   />
@@ -1283,7 +1408,9 @@ export function AccountControl({
 
             <div className="p-5 space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-slate-500 block mb-1">Email Google</label>
+                <label className="font-bold text-slate-500 block mb-1">
+                  Email Google
+                </label>
                 <input
                   type="email"
                   value={edit.email}
@@ -1299,7 +1426,9 @@ export function AccountControl({
                 <input
                   type="text"
                   value={edit.fullName}
-                  onChange={(e) => setEdit({ ...edit, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setEdit({ ...edit, fullName: e.target.value })
+                  }
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                 />
               </div>
@@ -1312,7 +1441,9 @@ export function AccountControl({
                   <input
                     type="text"
                     value={edit.memberCode}
-                    onChange={(e) => setEdit({ ...edit, memberCode: e.target.value })}
+                    onChange={(e) =>
+                      setEdit({ ...edit, memberCode: e.target.value })
+                    }
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                   />
                 </div>
@@ -1345,7 +1476,9 @@ export function AccountControl({
                   <input
                     type="text"
                     value={edit.rollNumber}
-                    onChange={(e) => setEdit({ ...edit, rollNumber: e.target.value })}
+                    onChange={(e) =>
+                      setEdit({ ...edit, rollNumber: e.target.value })
+                    }
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-[#EA580C]"
                   />
                 </div>

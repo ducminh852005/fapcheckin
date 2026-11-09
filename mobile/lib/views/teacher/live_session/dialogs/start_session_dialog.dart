@@ -42,17 +42,23 @@ Future<bool?> showStartSessionDialog(
                 ),
               ),
               SizedBox(height: 12),
-              CheckboxListTile(
-                key: Key('ip-check-toggle'),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: ipCheck,
-                onChanged: (value) => setState(() => ipCheck = value ?? false),
-                title: Text('Kiểm tra IP mạng (tùy chọn)'),
-                subtitle: Text(
-                  'Bật: sinh viên phải dùng cùng mạng Wi-Fi (cùng IP công khai) '
-                  'với giảng viên mới điểm danh được. '
-                  'Tắt: sinh viên quét QR ở bất kỳ mạng nào.',
+              Semantics(
+                label: 'Kiểm tra IP mạng',
+                hint: 'Yêu cầu sinh viên dùng cùng mạng Wi-Fi với giảng viên',
+                toggled: ipCheck,
+                child: CheckboxListTile(
+                  key: Key('ip-check-toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: ipCheck,
+                  onChanged: (value) =>
+                      setState(() => ipCheck = value ?? false),
+                  title: Text('Kiểm tra IP mạng (tùy chọn)'),
+                  subtitle: Text(
+                    'Bật: sinh viên phải dùng cùng mạng Wi-Fi (cùng IP công khai) '
+                    'với giảng viên mới điểm danh được. '
+                    'Tắt: sinh viên quét QR ở bất kỳ mạng nào.',
+                  ),
                 ),
               ),
             ],

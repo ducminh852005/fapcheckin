@@ -93,12 +93,16 @@ class _ManualAttendanceBottomSheetState
     final afterConfirmCount = currentPresent + _selectedIds.length;
     final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.90;
     final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxSheetHeight),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: isDark
+            ? Border.all(color: Theme.of(context).colorScheme.outline)
+            : null,
       ),
       child: SafeArea(
         top: false,
@@ -116,10 +120,12 @@ class _ManualAttendanceBottomSheetState
               // Thanh kéo drag handle
               Center(
                 child: Container(
-                  width: 38,
+                  width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
+                    color: isDark
+                        ? const Color(0xFF475569)
+                        : const Color(0xFFCBD5E1),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -134,20 +140,24 @@ class _ManualAttendanceBottomSheetState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Điểm danh tay',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: LiveSessionColors.textDark,
+                            color: isDark
+                                ? const Color(0xFFF8FAFC)
+                                : LiveSessionColors.textDark,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           '$classTitle · $currentPresent/$totalCount đã có mặt',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: LiveSessionColors.textMuted,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : LiveSessionColors.textMuted,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -167,13 +177,17 @@ class _ManualAttendanceBottomSheetState
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.close_rounded,
                             size: 20,
-                            color: Color(0xFF475569),
+                            color: isDark
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -200,9 +214,13 @@ class _ManualAttendanceBottomSheetState
                 height: 44,
                 padding: const EdgeInsets.only(left: 12, right: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: LiveSessionColors.borderSubtle),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : LiveSessionColors.borderSubtle,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -220,9 +238,11 @@ class _ManualAttendanceBottomSheetState
                             _searchQuery = val.trim();
                           });
                         },
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: LiveSessionColors.textDark,
+                          color: isDark
+                              ? const Color(0xFFF8FAFC)
+                              : LiveSessionColors.textDark,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'Tìm tên sinh viên hoặc mã số...',
@@ -266,7 +286,9 @@ class _ManualAttendanceBottomSheetState
               // 2 Tab lọc: Chưa điểm danh / Tất cả
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 padding: const EdgeInsets.all(3),
@@ -501,6 +523,7 @@ class _ManualAttendanceBottomSheetState
 
   Widget _buildFilterTab({required int index, required String title}) {
     final isSelected = _selectedFilterIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -510,7 +533,9 @@ class _ManualAttendanceBottomSheetState
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
+          color: isSelected
+              ? (isDark ? const Color(0xFF1E293B) : Colors.white)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           boxShadow: isSelected
               ? [
@@ -531,8 +556,8 @@ class _ManualAttendanceBottomSheetState
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
-                    ? LiveSessionColors.textDark
-                    : LiveSessionColors.textMuted,
+                    ? (isDark ? const Color(0xFFF8FAFC) : LiveSessionColors.textDark)
+                    : (isDark ? const Color(0xFF94A3B8) : LiveSessionColors.textMuted),
               ),
             ),
           ),
@@ -606,18 +631,23 @@ class _StudentSelectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onToggle,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF9F5) : Colors.white,
+          color: isSelected
+              ? (isDark ? const Color(0xFF334155) : const Color(0xFFFFF9F5))
+              : (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFFFED7AA)
-                : LiveSessionColors.borderSubtle,
+                ? (isDark ? const Color(0xFFC2410C) : const Color(0xFFFED7AA))
+                : (isDark
+                    ? Theme.of(context).colorScheme.outline
+                    : LiveSessionColors.borderSubtle),
             width: isSelected ? 1.3 : 1.0,
           ),
         ),
@@ -629,18 +659,22 @@ class _StudentSelectionTile extends StatelessWidget {
                 children: [
                   Text(
                     student.fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: LiveSessionColors.textDark,
+                      color: isDark
+                          ? const Color(0xFFF8FAFC)
+                          : LiveSessionColors.textDark,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${student.rollNumber} · ${student.statusText}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: LiveSessionColors.textMuted,
+                      color: isDark
+                          ? const Color(0xFF94A3B8)
+                          : LiveSessionColors.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

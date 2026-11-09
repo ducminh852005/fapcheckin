@@ -21,6 +21,34 @@ class _EmptyRepository extends TeacherRepository {
   }) async => ApiSuccess([]);
 }
 
+class _MakeupRepository extends TeacherRepository {
+  _MakeupRepository() : super(currentUser: CurrentUser());
+
+  @override
+  Future<ApiResult<List<ClassSectionModel>>> getClasses({
+    required String teacherMemberCode,
+  }) async =>
+      ApiSuccess([
+        const ClassSectionModel(
+          classCode: 'PRM393_SE1917',
+          subjectCode: 'PRM393',
+          subjectName: 'Mobile Programming',
+          room: '602',
+          studentCount: 35,
+          teacherMemberCode: 'GV001',
+          slotCode: 'A1',
+          startTime: '07:00',
+          endTime: '09:15',
+          timeLabel: '[Makeup] A1 (07:00 - 09:15)',
+          completedSessions: 0,
+          totalSessions: 30,
+          averageAttendance: 0,
+          isActive: false,
+          isMakeup: true,
+        ),
+      ]);
+}
+
 void main() {
   testWidgets(
     'DashboardBody shows an explicit empty state without a misleading toast',
@@ -73,4 +101,40 @@ void main() {
       expect(dashboardVm.currentRoute, 'lich-su-diem-danh');
     },
   );
+
+  testWidgets('DashboardBody shows today makeup class regardless of weekday', (
+    tester,
+  ) async {
+    final user = CurrentUser();
+    final authVm = AuthViewModel(
+      AuthRepository(currentUser: user),
+      GoogleAuthService(),
+    );
+    final teacherRepo = _MakeupRepository();
+    final dashboardVm = DashboardViewModel(teacherRepo);
+    final liveSessionVm = LiveSessionViewModel(teacherRepo);
+    dashboardVm.setTeacherInfo(
+      name: 'Teacher',
+      email: 'teacher@example.test',
+      memberCode: 'GV001',
+    );
+    await dashboardVm.loadClasses();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: authVm),
+          ChangeNotifierProvider.value(value: dashboardVm),
+          ChangeNotifierProvider.value(value: liveSessionVm),
+        ],
+        child: const MaterialApp(home: Scaffold(body: DashboardBody())),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.textContaining('PRM393_SE1917', findRichText: true),
+      findsOneWidget,
+    );
+  });
 }
