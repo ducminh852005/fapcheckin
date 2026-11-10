@@ -12,6 +12,8 @@ const _statuses = {
   'pending': 'Chờ duyệt',
   'approved': 'Đã duyệt',
   'rejected': 'Đã từ chối',
+  'resolved': 'Đã giải quyết',
+  'dismissed': 'Không hợp lệ',
 };
 
 class RequestsBody extends StatefulWidget {
@@ -47,12 +49,12 @@ class _RequestsBodyState extends State<RequestsBody> {
 
   (Color bg, Color fg, Color border) _statusStyle(String? status) {
     return switch (status) {
-      'approved' => (
+      'approved' || 'resolved' => (
         AppPalette.statusGreenBg,
         AppPalette.statusGreen,
         const Color(0xFFBBF7D0),
       ),
-      'rejected' => (
+      'rejected' || 'dismissed' => (
         AppPalette.statusRedBg,
         AppPalette.statusRed,
         const Color(0xFFFECACA),
@@ -296,6 +298,8 @@ class _RequestsBodyState extends State<RequestsBody> {
                             itemBuilder: (context, index) {
                               final row = snapshot.data![index];
                               final isLeave = row['type'] == 'leave';
+                              final isAbsenceEscalation =
+                                  row['type'] == 'absence_escalation';
                               final statusKey =
                                   row['status']?.toString() ?? 'pending';
                               final statusLabel =
@@ -334,7 +338,7 @@ class _RequestsBodyState extends State<RequestsBody> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            '${isLeave ? 'Nghỉ phép' : 'Sửa điểm danh'}${classCode.isNotEmpty ? ' · $classCode' : ''}',
+                                            '${isAbsenceEscalation ? 'Báo cáo vượt ngưỡng vắng' : isLeave ? 'Nghỉ phép' : 'Sửa điểm danh'}${classCode.isNotEmpty ? ' · $classCode' : ''}',
                                             style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w800,

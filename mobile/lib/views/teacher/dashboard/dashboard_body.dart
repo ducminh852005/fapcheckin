@@ -11,6 +11,7 @@ import '../../../core/services/auto_session_manager.dart';
 import '../live_session/dialogs/start_session_dialog.dart';
 import 'components/dashboard_header.dart';
 import 'components/weekly_timetable.dart';
+import '../report/components/warning_table.dart';
 import 'dashboard_colors.dart';
 
 /// Dashboard mobile compact: hành động hiện tại ở trên, phân tích ở dưới.
@@ -131,6 +132,10 @@ class _DashboardBodyState extends State<DashboardBody> {
                       _WeeklyAttendanceCard(report: report),
                       const SizedBox(height: 12),
                       _SubjectAnalysisCard(report: report),
+                      if (report != null && report.warnings.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        WarningTable(data: report),
+                      ],
                     ],
                   ),
                 ),

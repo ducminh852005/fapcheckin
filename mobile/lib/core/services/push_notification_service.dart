@@ -85,6 +85,9 @@ class PushNotificationService {
 
 String routeForPushMessage(RemoteMessage message) {
   final type = message.data['type']?.toString().toLowerCase() ?? '';
+  if (type.startsWith('absence_escalation_')) {
+    return 'yeu-cau';
+  }
   if (type == 'teaching_reminder' || type.contains('schedule')) {
     return 'lich-hoc';
   }

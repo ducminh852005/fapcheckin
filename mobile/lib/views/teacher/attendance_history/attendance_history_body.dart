@@ -1481,32 +1481,65 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       );
       return;
     }
-    final selectedSession = _detail?.selectedSession;
-    final status = student.isPresent ? 'Có mặt' : 'Vắng mặt';
+    final info = _detail?.classInfo ?? vm.summary?.classInfo;
+    final summary = vm.summary?.students
+        .where((item) => item.rollNumber == student.rollNumber)
+        .firstOrNull;
+    final detailStudent = _detail?.students
+        .where((item) => item.rollNumber == student.rollNumber)
+        .firstOrNull;
+    if (info == null || summary == null) {
+      showAppToast(
+        context,
+        message: 'Chưa có đủ dữ liệu chuyên cần để gửi báo cáo.',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
+    final totalSessions = summary.closedSessions > 0
+        ? summary.closedSessions
+        : summary.totalSessions;
+    final absentCount = summary.absentCount;
+    final allowedAbsences = (totalSessions * .2).floor();
+    if (totalSessions <= 0 || absentCount <= allowedAbsences) {
+      showAppToast(
+        context,
+        message:
+            'Sinh viên chưa vượt ngưỡng vắng 20% '
+            '($absentCount/$totalSessions buổi).',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
     final repository = RequestRepository(
       uid: session.token,
       memberCode: session.user.memberCode,
     );
-    final result = await repository.submit(
-      id: '${session.token}_${DateTime.now().microsecondsSinceEpoch}',
-      type: 'attendance_fix',
+    final result = await repository.submitAbsenceEscalation(
       classCode: classCode,
-      sessionId: _selectedSessionId,
-      reason:
-          'Báo cáo trạng thái điểm danh sinh viên ${student.fullName} '
-          '(${student.rollNumber}) tại lớp $classCode, '
-          'buổi ${selectedSession?.sessionDate ?? _selectedSessionId ?? 'đang chọn'}: '
-          '$status. Giảng viên đề nghị quản trị viên kiểm tra.',
+      subjectName: info.subjectName,
+      studentMemberCode: student.rollNumber,
+      studentName: student.fullName,
+      studentEmail: (detailStudent?.email.isNotEmpty ?? false)
+          ? detailStudent!.email
+          : summary.email,
+      absentCount: absentCount,
+      totalSessions: totalSessions,
+      absenceRate: absentCount / totalSessions,
     );
     if (!mounted) return;
     switch (result) {
-      case ApiSuccess<void>():
+      case ApiSuccess<String>():
         showAppToast(
           context,
-          message: 'Đã gửi báo cáo lên quản trị viên.',
+          message:
+              'Đã gửi báo cáo vượt ngưỡng vắng của '
+              '${student.fullName} lên quản trị viên.',
           type: AppToastType.success,
         );
-      case ApiFailure<void>(:final error):
+      case ApiFailure<String>(:final error):
         showAppToast(context, message: error.message, type: AppToastType.error);
     }
   }
