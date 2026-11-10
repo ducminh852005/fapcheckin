@@ -11,6 +11,9 @@ import 'tts_service.dart';
 /// Phát âm thanh đã tạo sẵn. Tách interface để test thay bằng bản giả.
 abstract class AudioOutput {
   /// Phát [bytes] và hoàn thành khi phát xong (hoặc bị [stop]).
+  ///
+  /// QUY ƯỚC QUAN TRỌNG: chỉ được ném lỗi nếu CHƯA phát được. Một khi âm thanh đã bắt đầu phát thì mọi lỗi sau đó
+  /// phải bị nuốt — nếu không lớp dự phòng sẽ tưởng giọng Google thất bại và đọc thêm giọng của máy, hai giọng đè lên nhau.
   Future<void> play(Uint8List bytes, String mimeType);
 
   Future<void> stop();
@@ -21,18 +24,40 @@ class AudioplayersOutput implements AudioOutput {
   AudioplayersOutput({AudioPlayer? player}) : _player = player ?? AudioPlayer();
 
   final AudioPlayer _player;
+  Completer<void>? _finished;
 
   @override
   Future<void> play(Uint8List bytes, String mimeType) async {
     await _player.stop();
-    final done = _player.onPlayerComplete.first;
-    await _player.play(BytesSource(bytes, mimeType: mimeType));
-    // Chờ phát xong; có trần thời gian để vòng hội thoại không treo nếu thiết bị không báo "xong".
-    await done.timeout(const Duration(seconds: 90), onTimeout: () {});
+    _finished?.complete(); // câu trước (nếu còn chờ) coi như kết thúc
+    final finished = Completer<void>();
+    _finished = finished;
+    final sub = _player.onPlayerComplete.listen((_) {
+      if (!finished.isCompleted) finished.complete();
+    });
+    try {
+      await _player.play(BytesSource(bytes, mimeType: mimeType)); // lỗi ở đây = chưa phát được -> ném ra
+    } catch (_) {
+      await sub.cancel();
+      if (!finished.isCompleted) finished.complete();
+      rethrow;
+    }
+    // Đã bắt đầu phát: từ đây KHÔNG ném lỗi nữa. Chờ phát xong (hoặc bị stop); có trần để không treo hội thoại.
+    try {
+      await finished.future.timeout(const Duration(seconds: 90));
+    } catch (_) {
+      // hết giờ chờ: coi như xong
+    } finally {
+      await sub.cancel();
+    }
   }
 
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> stop() async {
+    final f = _finished;
+    if (f != null && !f.isCompleted) f.complete();
+    await _player.stop();
+  }
 }
 
 /// Nguồn đọc "chất lượng cao" có thể thất bại (mạng/API) để lớp dự phòng chuyển sang giọng của máy.
@@ -124,10 +149,17 @@ class FallbackTtsService implements TtsService {
   /// Đã dùng giọng của máy cho câu gần nhất (để chẩn đoán/kiểm thử).
   bool lastUsedDevice = false;
 
+  int _speakId = 0;
+
   @override
   Future<void> speak(String text) async {
     final value = text.trim();
     if (value.isEmpty) return;
+    // Chỉ MỘT giọng được phát tại một thời điểm: tắt hết âm thanh còn đang chạy của câu trước trước khi đọc câu mới.
+    final id = ++_speakId;
+    await cloud.stop();
+    await device.stop();
+    if (id != _speakId) return; // đã có câu mới hơn / bị stop trong lúc tắt
     final down = _cloudDownUntil;
     if (down == null || _now().isAfter(down)) {
       _cloudDownUntil = null;
@@ -135,6 +167,9 @@ class FallbackTtsService implements TtsService {
         lastUsedDevice = false;
         return;
       }
+      // Giọng Google thất bại. Nếu trong lúc đó đã có câu mới/bị ngắt thì KHÔNG đọc bằng giọng máy nữa.
+      if (id != _speakId) return;
+      await cloud.stop(); // chắc chắn không còn âm thanh đám mây nào đang phát trước khi giọng máy lên tiếng
       _cloudDownUntil = _now().add(cooldown);
       _note = 'Giọng Google đám mây chưa dùng được nên đang dùng giọng của máy '
           '(kiểm tra đã bật Cloud Text-to-Speech API và đã deploy hàm aiSpeak).';
@@ -145,6 +180,7 @@ class FallbackTtsService implements TtsService {
 
   @override
   Future<void> stop() async {
+    _speakId++; // huỷ mọi câu đang chờ (kể cả câu đang chờ mạng để rơi sang giọng máy)
     await cloud.stop();
     await device.stop();
   }

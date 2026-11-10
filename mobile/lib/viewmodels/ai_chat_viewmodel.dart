@@ -47,6 +47,7 @@ class AiChatViewModel extends ChangeNotifier {
     required this.executor,
     SpeechService? speech,
     TtsService? tts,
+    this.speechTail = const Duration(milliseconds: 600),
   }) : _speech = speech,
        _tts = tts;
 
@@ -54,6 +55,10 @@ class AiChatViewModel extends ChangeNotifier {
   final AiToolExecutor executor;
   final SpeechService? _speech;
   final TtsService? _tts;
+
+  /// Nghỉ sau khi đọc xong rồi mới mở micro: tiếng vang còn lại của loa không bị nhận nhầm là người nói
+  /// (nếu không, Live tự gửi lại chính câu AI vừa đọc và các câu trả lời đè lên nhau).
+  final Duration speechTail;
 
   /// Số vòng model↔tool tối đa cho một câu hỏi (chặn vòng lặp vô hạn).
   static const maxRounds = 6;
@@ -690,6 +695,7 @@ class AiChatViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await tts.speak(text);
+      if (speechTail > Duration.zero && !_disposed) await Future<void>.delayed(speechTail);
     } finally {
       speaking = false;
       final problem = tts.takeError();

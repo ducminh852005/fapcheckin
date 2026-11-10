@@ -138,7 +138,7 @@ cd e2e_test && npm run test:ai                          # trợ lý AI: Function
 
 **Ba test của `mobile/` đang thất bại sẵn** (đã kiểm chứng trên cây chưa có tính năng AI): `create_class_dialog_test.dart › real options, required fields and idempotent timeout retry`, `create_schedule_bottom_sheet_test.dart › CreateScheduleBottomSheet selects options and submits to backend` và `requests_test.dart › TC08: submit request and display subsequent approval/rejection from stream` (lỗi `RangeError`/layout trong test, chưa điều tra). Job `flutter-mobile` trong CI đặt `continue-on-error` cho tới khi sửa.
 
-Trợ lý AI: `test/ai_assistant_flow_test.dart` (36 test: luồng chat/xác nhận, Live, câu dài, ngắt AI, lỗi giọng đọc; Gemini, Firestore, micro và loa giả) và `test/voice_vietnamese_test.dart` (20 test: locale tiếng Việt cho nhận dạng/đọc, hàm xử lý chữ) — xem [ai-assistant.md](ai-assistant.md). Nhận dạng và giọng đọc tiếng Việt thật cần thử tay trên thiết bị có gói giọng `vi-VN` và đã cấp quyền micro.
+Trợ lý AI: `test/ai_assistant_flow_test.dart` (luồng chat/xác nhận, Live, câu dài, ngắt AI, lỗi giọng đọc; Gemini, Firestore, micro và loa giả) và `test/voice_vietnamese_test.dart` (locale tiếng Việt cho nhận dạng/đọc, hàm xử lý chữ) — xem [ai-assistant.md](ai-assistant.md). Nhận dạng và giọng đọc tiếng Việt thật cần thử tay trên thiết bị có gói giọng `vi-VN` và đã cấp quyền micro.
 
 ## 8. Lỗi thường gặp
 

@@ -285,6 +285,7 @@ class _Rig {
     this.writeFailure,
     SpeechService? speech,
     TtsService? tts,
+    Duration speechTail = Duration.zero,
   }) {
     final user = CurrentUser();
     teacher = _FakeTeacher(failWith: writeFailure);
@@ -296,7 +297,7 @@ class _Rig {
       currentUser: user,
       now: () => _now,
     );
-    vm = AiChatViewModel(repository: ai, executor: executor, speech: speech, tts: tts);
+    vm = AiChatViewModel(repository: ai, executor: executor, speech: speech, tts: tts, speechTail: speechTail);
     this.user = user;
   }
 
@@ -680,6 +681,26 @@ void main() {
       await settle(tester);
       expect(speech.starts, 2);
       expect(rig.vm.speaking, isFalse);
+    });
+
+    testWidgets('Live: sau khi đọc xong còn NGHỈ một nhịp (speechTail) rồi mới mở micro — tránh thu lại giọng loa', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final rig = _Rig(ai: _ScriptedAi([_say('Xin chào thầy cô.')]), speech: speech, tts: tts, speechTail: const Duration(milliseconds: 600));
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      speech.say('xin chào', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tts.spoken, hasLength(1));
+      expect(speech.starts, 1); // đọc xong rồi nhưng chưa hết nhịp nghỉ: micro vẫn đóng
+      expect(rig.vm.speaking, isTrue);
+      await tester.pump(const Duration(milliseconds: 600));
+      await settle(tester);
+      expect(speech.starts, 2);
+      expect(speech.isListening, isTrue);
     });
 
     testWidgets('Live: lệnh điểm danh -> AI đọc thẻ -> nói "xác nhận" -> ghi đúng 1 lần -> đọc kết quả -> nghe tiếp', (tester) async {

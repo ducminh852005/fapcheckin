@@ -113,7 +113,9 @@ class DeviceTtsService implements TtsService {
                 'Hãy cài gói giọng nói Tiếng Việt (Google Text-to-speech) trong cài đặt Text-to-speech.';
       }
       _tts.setErrorHandler((message) => _error = 'Giọng đọc báo lỗi: $message');
-      await _tts.setSpeechRate(0.5);
+      // Thang tốc độ khác nhau: Android/iOS 0.5 ≈ bình thường; trình duyệt (Web Speech) 1.0 = bình thường
+      // (đặt 0.5 trên web sẽ đọc rất chậm).
+      await _tts.setSpeechRate(kIsWeb ? 1.0 : 0.5);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
     } catch (e) {
