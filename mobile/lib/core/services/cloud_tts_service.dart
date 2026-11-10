@@ -1,0 +1,158 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:typed_data';
+
+import 'package:audioplayers/audioplayers.dart';
+import 'package:fapcheckin_core/repositories/ai_assistant_repository.dart';
+import 'package:fapcheckin_core/result/api_result.dart';
+
+import 'tts_service.dart';
+
+/// Phát âm thanh đã tạo sẵn. Tách interface để test thay bằng bản giả.
+abstract class AudioOutput {
+  /// Phát [bytes] và hoàn thành khi phát xong (hoặc bị [stop]).
+  Future<void> play(Uint8List bytes, String mimeType);
+
+  Future<void> stop();
+}
+
+/// Cài đặt thật bằng `audioplayers` (web, Android, iOS, Windows…).
+class AudioplayersOutput implements AudioOutput {
+  AudioplayersOutput({AudioPlayer? player}) : _player = player ?? AudioPlayer();
+
+  final AudioPlayer _player;
+
+  @override
+  Future<void> play(Uint8List bytes, String mimeType) async {
+    await _player.stop();
+    final done = _player.onPlayerComplete.first;
+    await _player.play(BytesSource(bytes, mimeType: mimeType));
+    // Chờ phát xong; có trần thời gian để vòng hội thoại không treo nếu thiết bị không báo "xong".
+    await done.timeout(const Duration(seconds: 90), onTimeout: () {});
+  }
+
+  @override
+  Future<void> stop() => _player.stop();
+}
+
+/// Nguồn đọc "chất lượng cao" có thể thất bại (mạng/API) để lớp dự phòng chuyển sang giọng của máy.
+abstract class CloudSpeaker {
+  /// `true` nếu đã đọc xong (hoặc bị ngắt có chủ đích); `false` nếu giọng đám mây KHÔNG dùng được.
+  Future<bool> trySpeak(String text);
+
+  Future<void> stop();
+}
+
+/// Giọng tiếng Việt của Google Cloud Text-to-Speech (qua Cloud Function `aiSpeak`).
+class CloudTtsService implements CloudSpeaker {
+  CloudTtsService({
+    required this.repository,
+    AudioOutput? output,
+    this.cacheSize = 24,
+  }) : _output = output ?? AudioplayersOutput();
+
+  final AiSpeakRepository repository;
+  final AudioOutput _output;
+  final int cacheSize;
+
+  final LinkedHashMap<String, AiSpeech> _cache = LinkedHashMap();
+  int _epoch = 0; // tăng khi stop(): yêu cầu đang chờ mạng sẽ không phát nữa
+
+  /// Lý do thất bại gần nhất (để chẩn đoán/hiển thị).
+  String? lastFailure;
+
+  @override
+  Future<bool> trySpeak(String text) async {
+    final value = text.trim();
+    if (value.isEmpty) return true;
+    final epoch = ++_epoch;
+    try {
+      var speech = _cache.remove(value);
+      if (speech == null) {
+        final result = await repository.synthesize(value);
+        switch (result) {
+          case ApiSuccess<AiSpeech>(:final data):
+            speech = data;
+          case ApiFailure<AiSpeech>(:final error):
+            lastFailure = '${error.code}: ${error.message}';
+            return false;
+          default:
+            lastFailure = 'Không nhận được âm thanh.';
+            return false;
+        }
+      }
+      _cache[value] = speech; // giữ câu mới dùng gần đây
+      while (_cache.length > cacheSize) {
+        _cache.remove(_cache.keys.first);
+      }
+      if (epoch != _epoch) return true; // bị ngắt trong lúc chờ mạng: coi như đã xong, không phát
+      await _output.play(speech.bytes, speech.mimeType);
+      return true;
+    } catch (e) {
+      lastFailure = e.toString();
+      return false;
+    }
+  }
+
+  @override
+  Future<void> stop() async {
+    _epoch++;
+    try {
+      await _output.stop();
+    } catch (_) {}
+  }
+}
+
+/// Đọc bằng giọng Google đám mây; lỗi/chậm thì chuyển sang giọng của máy và tạm bỏ qua đám mây một lúc
+/// ([cooldown]) để các câu sau không phải chờ lại lỗi.
+class FallbackTtsService implements TtsService {
+  FallbackTtsService({
+    required this.cloud,
+    required this.device,
+    this.cooldown = const Duration(seconds: 60),
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now;
+
+  final CloudSpeaker cloud;
+  final TtsService device;
+  final Duration cooldown;
+  final DateTime Function() _now;
+
+  DateTime? _cloudDownUntil;
+  String? _note;
+
+  /// Đã dùng giọng của máy cho câu gần nhất (để chẩn đoán/kiểm thử).
+  bool lastUsedDevice = false;
+
+  @override
+  Future<void> speak(String text) async {
+    final value = text.trim();
+    if (value.isEmpty) return;
+    final down = _cloudDownUntil;
+    if (down == null || _now().isAfter(down)) {
+      _cloudDownUntil = null;
+      if (await cloud.trySpeak(value)) {
+        lastUsedDevice = false;
+        return;
+      }
+      _cloudDownUntil = _now().add(cooldown);
+      _note = 'Giọng Google đám mây chưa dùng được nên đang dùng giọng của máy '
+          '(kiểm tra đã bật Cloud Text-to-Speech API và đã deploy hàm aiSpeak).';
+    }
+    lastUsedDevice = true;
+    await device.speak(value);
+  }
+
+  @override
+  Future<void> stop() async {
+    await cloud.stop();
+    await device.stop();
+  }
+
+  @override
+  String? takeError() {
+    final parts = [?_note, ?device.takeError()];
+    _note = null;
+    return parts.isEmpty ? null : parts.join(' ');
+  }
+}

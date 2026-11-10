@@ -120,6 +120,7 @@ Tab **AI** gọi Cloud Function `aiAssistant` (Gemini; có thể tự chuyển s
 - **Điện thoại Android**: cắm máy bật USB debugging (`flutter devices`), `flutter run -d <id>`. Cần quyền micro (hỏi lúc bấm mic/Live) và nên cài gói giọng nói **Tiếng Việt** (Cài đặt → Text-to-speech) cùng Google Speech Services.
 - **Lần đầu thêm plugin giọng nói** (`speech_to_text`, `flutter_tts`) hoặc sau khi sửa `AndroidManifest.xml`/`Info.plist`: phải **dừng và chạy lại** `flutter run` (hot reload không nạp plugin native). Triệu chứng nếu quên: nghe được nhưng không có tiếng đọc, kèm toast "Giọng đọc chưa được nạp".
 - **Dùng**: mic = nói một câu (gửi sau khi im lặng ~2 giây, hoặc bấm mic lần nữa để gửi ngay); **Live** = hội thoại liên tục, AI đọc to phần tóm tắt rồi tự nghe tiếp; nút **Dừng** ngắt AI đang đọc/xử lý. Lệnh ghi điểm danh luôn hiện thẻ xác nhận (bấm hoặc nói "xác nhận"/"huỷ").
+- **Giọng đọc**: mặc định dùng Google Cloud Text-to-Speech (giọng Việt `vi-VN`) qua hàm `aiSpeak`, tự chuyển sang giọng của máy khi hàm lỗi. Cần bật `texttospeech.googleapis.com` và deploy `aiSpeak` ([deploy-firebase.md](deploy-firebase.md)). Muốn chỉ dùng giọng của máy: `flutter run ... --dart-define=AI_TTS_DEVICE_ONLY=true`.
 - **Demo khi Gemini quá tải**: `./scripts/ai-fallback.ps1 up` rồi `switch ollama` (một lệnh, không cần deploy) — xem [ai-assistant.md §G](ai-assistant.md).
 
 ## 7. Kiểm tra

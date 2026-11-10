@@ -13,8 +13,9 @@ flowchart LR
     SV --> FS
     ADM -.-> FS
     GV --> ST[(Cloud Storage<br/>ảnh TKB tạm)]
-    GV --> FN["Cloud Functions<br/>scanTimetable · syncToFap · aiAssistant"]
+    GV --> FN["Cloud Functions<br/>scanTimetable · syncToFap · aiAssistant · aiSpeak"]
     FN --> GEM[Gemini API]
+    FN --> TTS[Cloud Text-to-Speech]
     FN --> ST
     FN --> VIS[Cloud Vision API]
     FN --> FS
@@ -31,7 +32,7 @@ flowchart LR
 | Trang điểm danh SV | HTML + Firebase JS SDK | [`web/checkin/`](../web/checkin) | SV quét QR → đăng nhập Google → ghi `attendance_records`. Host trên Firebase Hosting. |
 | Web Admin | (chưa triển khai) | [`web/admin/`](../web/admin) | Cấp tài khoản, quản lý lớp, duyệt `requests`, phát `announcements`. |
 | Backend | Firestore + Security Rules, Auth, Storage, Remote Config, Hosting | [`firebase/`](../firebase), `firebase.json` | Nguồn dữ liệu duy nhất và nơi thực thi phân quyền. |
-| Cloud Functions | Node 22 (`onCall`, `onSchedule`, trigger Firestore) | [`firebase/functions/`](../firebase/functions) | `scanTimetable` (OCR), `sendTeachingReminders` (nhắc lịch dạy, FCM), `onFeedbackCreated/Updated` + `resolveFeedback` (góp ý), `syncToFap` (đồng bộ FAP), `aiAssistant` (proxy Gemini cho tab AI — [ai-assistant.md](ai-assistant.md)). Cần gói Blaze. |
+| Cloud Functions | Node 22 (`onCall`, `onSchedule`, trigger Firestore) | [`firebase/functions/`](../firebase/functions) | `scanTimetable` (OCR), `sendTeachingReminders` (nhắc lịch dạy, FCM), `onFeedbackCreated/Updated` + `resolveFeedback` (góp ý), `syncToFap` (đồng bộ FAP), `aiAssistant` (proxy Gemini cho tab AI) và `aiSpeak` (giọng đọc Google Cloud Text-to-Speech) — [ai-assistant.md](ai-assistant.md). Cần gói Blaze. |
 | Test | `node:test` + Emulator | [`firebase/tests/`](../firebase/tests), [`e2e_test/`](../e2e_test) | Test Security Rules (allowed/denied theo role) và một luồng end-to-end. |
 
 ## Vì sao "Rules-first", không có backend riêng?

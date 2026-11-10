@@ -15,6 +15,7 @@ import '../core/services/google_auth_service.dart';
 import '../core/services/push_notification_service.dart';
 import '../core/services/remote_settings.dart';
 import '../core/services/speech_service.dart';
+import '../core/services/cloud_tts_service.dart';
 import '../core/services/tts_service.dart';
 import '../core/services/timetable_ocr_service.dart';
 
@@ -111,7 +112,14 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         currentUser: _currentUser,
       ),
       speech: DeviceSpeechService(),
-      tts: DeviceTtsService(),
+      // Giọng đọc: Google Cloud Text-to-Speech (vi-VN) là chính, giọng của máy là dự phòng. Chạy với
+      // --dart-define=AI_TTS_DEVICE_ONLY=true để chỉ dùng giọng của máy (không gọi hàm aiSpeak).
+      tts: const bool.fromEnvironment('AI_TTS_DEVICE_ONLY')
+          ? DeviceTtsService()
+          : FallbackTtsService(
+              cloud: CloudTtsService(repository: AiSpeakRepository()),
+              device: DeviceTtsService(),
+            ),
     );
     _autoSessionManager = AutoSessionManager(
       liveSessionViewModel: _liveSessionViewModel,

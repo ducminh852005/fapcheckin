@@ -32,7 +32,7 @@ fapcheckin/
 
 | Vai trò | Ứng dụng | Quyền chính |
 |---|---|---|
-| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat, giọng nói tiếng Việt, chế độ Live rảnh tay, đọc to tóm tắt, ngắt AI giữa chừng) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên, lệnh ghi luôn qua xác nhận; tự chuyển sang AI dự phòng (Ollama local) khi Gemini quá tải — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
+| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat, giọng nói tiếng Việt, chế độ Live rảnh tay, đọc to tóm tắt bằng giọng Google Cloud TTS, ngắt AI giữa chừng) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên, lệnh ghi luôn qua xác nhận; tự chuyển sang AI dự phòng (Ollama local) khi Gemini quá tải — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
 | `user` (sinh viên) | `web/checkin/` (quét QR) | Tạo bản ghi điểm danh của chính mình; xem dữ liệu của mình |
 | `admin` | `web/admin/` (UI prototype, chưa nối Firebase) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
 

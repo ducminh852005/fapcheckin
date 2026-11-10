@@ -57,6 +57,7 @@ dependencies:
   lottie: ^3.8.2
   speech_to_text: ^7.5.0
   flutter_tts: ^4.2.5
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:

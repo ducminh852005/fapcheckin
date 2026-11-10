@@ -54,6 +54,15 @@ async function idTokenFor(key) {
   return (await res.json()).idToken;
 }
 
+/** Gọi callable `aiSpeak` (giọng đọc Google Cloud TTS). */
+async function callSpeak(text, key) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (key) headers.Authorization = `Bearer ${await idTokenFor(key)}`;
+  const res = await fetch(`${FUNCTIONS_URL}/aiSpeak`, { method: 'POST', headers, body: JSON.stringify({ data: { text } }) });
+  const json = await res.json();
+  return { http: res.status, result: json.result, error: json.error };
+}
+
 /** Gọi callable theo giao thức https callable: POST { data } -> { result } | { error }. */
 async function callAi(history, key) {
   const headers = { 'Content-Type': 'application/json' };
@@ -235,6 +244,38 @@ describe('Trợ lý AI end-to-end (Functions + Rules trên Emulator)', () => {
     it('client không đọc/ghi được ai_usage (chỉ Admin SDK)', async () => {
       await assert.rejects(setDoc(doc(teacher.db, 'ai_usage', teacher.uid), { windowStart: 0, count: 0 }));
       await assert.rejects(getDoc(doc(teacher.db, 'ai_usage', teacher.uid)));
+    });
+  });
+
+  // Giọng đọc Google Cloud TTS: kiểm tra phần xác thực/phân quyền/đầu vào (xảy ra TRƯỚC khi gọi Google nên không cần API thật).
+  describe('callable aiSpeak (giọng đọc)', () => {
+    it('chưa đăng nhập -> UNAUTHENTICATED', async () => {
+      const r = await callSpeak('xin chào', null);
+      assert.equal(r.error?.status, 'UNAUTHENTICATED');
+    });
+
+    it('sinh viên -> PERMISSION_DENIED', async () => {
+      const r = await callSpeak('xin chào', 'student');
+      assert.equal(r.error?.status, 'PERMISSION_DENIED');
+      assert.equal(r.error?.details?.code, 'FORBIDDEN');
+    });
+
+    it('nội dung rỗng/quá dài -> INVALID_ARGUMENT', async () => {
+      for (const text of ['', '   ', '**', 'a'.repeat(601)]) {
+        const r = await callSpeak(text, 'teacher');
+        assert.equal(r.error?.status, 'INVALID_ARGUMENT', `text=${text.slice(0, 10)}`);
+      }
+    });
+
+    it('GV hợp lệ: nếu Cloud TTS chưa dùng được (emulator không có Google) -> UNAVAILABLE mã TTS_UNAVAILABLE để app dùng giọng máy, hoặc thành công với MP3', async () => {
+      const r = await callSpeak('xin chào', 'teacher');
+      if (r.error) {
+        assert.equal(r.error.status, 'UNAVAILABLE');
+        assert.equal(r.error.details?.code, 'TTS_UNAVAILABLE');
+      } else {
+        assert.equal(r.result.mimeType, 'audio/mpeg');
+        assert.ok(r.result.audioBase64.length > 0);
+      }
     });
   });
 

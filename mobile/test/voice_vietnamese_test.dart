@@ -44,7 +44,11 @@ class _FakeEngine extends Fake implements SpeechToText {
 }
 
 class _FakeFlutterTts extends Fake implements FlutterTts {
-  _FakeFlutterTts({this.languageOk = const {'vi-VN': 1}, this.voices = const []});
+  _FakeFlutterTts({this.languageOk = const {'vi-VN': 1}, this.voices = const [], this.emptyCalls = 0});
+
+  /// Số lần đầu `getVoices` trả danh sách RỖNG (trình duyệt nạp giọng không đồng bộ).
+  final int emptyCalls;
+  int voiceCalls = 0;
 
   final Map<String, int> languageOk;
   final List<Map<String, String>> voices;
@@ -59,13 +63,16 @@ class _FakeFlutterTts extends Fake implements FlutterTts {
   }
 
   @override
-  Future<dynamic> get getVoices async => voices;
+  Future<dynamic> get getVoices async => ++voiceCalls <= emptyCalls ? <dynamic>[] : voices;
 
   @override
   Future<dynamic> setVoice(Map<String, String> voice) async {
     chosenVoice = voice;
     return 1;
   }
+
+  @override
+  void setErrorHandler(Function handler) {}
 
   @override
   Future<dynamic> setSpeechRate(double rate) async => 1;
@@ -129,7 +136,7 @@ void main() {
   group('đọc to (TTS) luôn là tiếng Việt', () {
     test('đặt vi-VN trước; nếu máy không nhận thì thử vi_VN', () async {
       final engine = _FakeFlutterTts(languageOk: const {'vi_VN': 1});
-      final tts = DeviceTtsService(engine: engine);
+      final tts = DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 3);
       await tts.speak('Xin chào');
       expect(engine.triedLanguages.take(2), ['vi-VN', 'vi_VN']);
       expect(engine.spoken, ['Xin chào']);
@@ -140,7 +147,7 @@ void main() {
         {'name': 'en-us-x-sfg', 'locale': 'en-US'},
         {'name': 'vi-vn-x-gft', 'locale': 'vi-VN'},
       ]);
-      final tts = DeviceTtsService(engine: engine);
+      final tts = DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 3);
       await tts.speak('Xin chào');
       expect(engine.chosenVoice, {'name': 'vi-vn-x-gft', 'locale': 'vi-VN'});
       expect(tts.vietnameseVoiceFound, isTrue);
@@ -150,17 +157,82 @@ void main() {
       final engine = _FakeFlutterTts(languageOk: const {}, voices: const [
         {'name': 'en-us-x-sfg', 'locale': 'en-US'},
       ]);
-      final tts = DeviceTtsService(engine: engine);
+      final tts = DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 3);
       await tts.speak('Xin chào');
       expect(tts.vietnameseVoiceFound, isFalse);
       expect(engine.chosenVoice, isNull);
       expect(engine.spoken, ['Xin chào']); // vẫn đọc bằng giọng mặc định
     });
 
+    test('danh sách giọng nạp muộn (Chrome trả rỗng lần đầu) -> chờ rồi vẫn chọn đúng giọng Việt, không rơi về giọng Anh', () async {
+      final engine = _FakeFlutterTts(emptyCalls: 2, voices: const [
+        {'name': 'Google US English', 'locale': 'en-US'},
+        {'name': 'Google Tiếng Việt', 'locale': 'vi-VN'},
+      ]);
+      final tts = DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 5);
+      await tts.speak('Xin chào');
+      expect(engine.voiceCalls, 3); // 2 lần rỗng + 1 lần có giọng
+      expect(engine.chosenVoice, {'name': 'Google Tiếng Việt', 'locale': 'vi-VN'});
+      expect(tts.selectedVoiceName, 'Google Tiếng Việt');
+      expect(tts.takeError(), isNull);
+    });
+
+    test('hết số lần chờ mà vẫn chưa có giọng Việt -> đọc mặc định + báo lỗi rõ ràng (một lần)', () async {
+      final engine = _FakeFlutterTts(languageOk: const {}, emptyCalls: 99);
+      final tts = DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 3);
+      await tts.speak('Xin chào');
+      expect(engine.voiceCalls, 3);
+      expect(tts.vietnameseVoiceFound, isFalse);
+      expect(tts.takeError(), contains('giọng đọc tiếng Việt'));
+      await tts.speak('Lần hai');
+      expect(tts.takeError(), isNull); // không nhắc lặp lại mỗi câu
+    });
+
     test('chữ rỗng thì không đọc', () async {
       final engine = _FakeFlutterTts();
-      await DeviceTtsService(engine: engine).speak('   ');
+      await DeviceTtsService(engine: engine, voiceLoadDelay: Duration.zero, voiceLoadAttempts: 3).speak('   ');
       expect(engine.spoken, isEmpty);
+    });
+  });
+
+  group('pickVietnameseVoice (chọn giọng tiếng Việt tốt nhất)', () {
+    Map<String, String>? pick(List<Map<String, String>> v) => DeviceTtsService.pickVietnameseVoice(v);
+
+    test('chỉ chọn giọng vi, bỏ giọng ngôn ngữ khác', () {
+      expect(pick(const [{'name': 'Samantha', 'locale': 'en-US'}, {'name': 'Thomas', 'locale': 'fr-FR'}]), isNull);
+      expect(pick(const []), isNull);
+    });
+
+    test('ưu tiên giọng Google/Natural hơn giọng thường; vi-VN hơn biến thể vi', () {
+      expect(
+        pick(const [
+          {'name': 'Microsoft An - Vietnamese', 'locale': 'vi-VN'},
+          {'name': 'Microsoft HoaiMy Online (Natural) - Vietnamese (Vietnam)', 'locale': 'vi-VN'},
+          {'name': 'Google Tiếng Việt', 'locale': 'vi-VN'},
+        ])!['name'],
+        'Google Tiếng Việt',
+      );
+      expect(
+        pick(const [
+          {'name': 'Voice A', 'locale': 'vi'},
+          {'name': 'Voice B', 'locale': 'vi-VN'},
+        ])!['name'],
+        'Voice B',
+      );
+    });
+
+    test('tránh giọng compact (iOS) khi có giọng tốt hơn; định dạng locale vi_VN của Android vẫn nhận', () {
+      expect(
+        pick(const [
+          {'name': 'Linh (compact)', 'locale': 'vi-VN'},
+          {'name': 'vi-vn-x-gft-network', 'locale': 'vi_VN'},
+        ])!['name'],
+        'vi-vn-x-gft-network',
+      );
+    });
+
+    test('nhận ra giọng tiếng Việt theo tên khi locale thiếu', () {
+      expect(pick(const [{'name': 'Google Tiếng Việt', 'locale': ''}])!['locale'], 'vi-VN');
     });
   });
 

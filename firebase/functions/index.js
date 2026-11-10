@@ -18,6 +18,8 @@ import {
 } from './src/feedback.js';
 import { FapSyncError, runFapSync } from './src/fap_sync.js';
 import { AiError, runAiAssistant } from './src/ai_assistant.js';
+import { SpeakError, runSpeak } from './src/ai_speak.js';
+import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 
 initializeApp();
 
@@ -143,6 +145,31 @@ export const aiAssistant = onCall(
       }
       console.error('aiAssistant failed', error);
       throw new HttpsError('internal', 'Trợ lý AI gặp lỗi, vui lòng thử lại.', { code: 'INTERNAL' });
+    }
+  },
+);
+
+let ttsClient;
+
+/**
+ * Callable cho giảng viên: giọng đọc tiếng Việt của Google Cloud Text-to-Speech cho Trợ lý AI. Body { text }.
+ * Trả { audioBase64, mimeType, voice }. Cần bật "Cloud Text-to-Speech API"; app tự dùng giọng của máy khi lỗi.
+ */
+export const aiSpeak = onCall(
+  { region: REGION, timeoutSeconds: 30, memory: '256MiB', maxInstances: 5 },
+  async (request) => {
+    try {
+      ttsClient ??= new TextToSpeechClient();
+      return await runSpeak(
+        { db: getFirestore(), synthesize: (req) => ttsClient.synthesizeSpeech(req) },
+        { uid: request.auth?.uid, text: request.data?.text },
+      );
+    } catch (error) {
+      if (error instanceof SpeakError) {
+        throw new HttpsError(error.status, error.message, { code: error.code });
+      }
+      console.error('aiSpeak failed', error);
+      throw new HttpsError('internal', 'Giọng đọc gặp lỗi.', { code: 'INTERNAL' });
     }
   },
 );

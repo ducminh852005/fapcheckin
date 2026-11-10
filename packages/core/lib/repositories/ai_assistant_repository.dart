@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../result/api_result.dart';
@@ -111,4 +114,41 @@ class AiAssistantRepository {
         }
         return AiTurn.fromJson(Map<String, dynamic>.from(raw));
       });
+}
+
+/// Âm thanh giọng đọc do Google Cloud Text-to-Speech tạo (qua Cloud Function `aiSpeak`).
+class AiSpeech {
+  const AiSpeech({required this.bytes, required this.mimeType, required this.voice});
+
+  final Uint8List bytes;
+  final String mimeType;
+  final String voice;
+}
+
+/// Gọi Cloud Function `aiSpeak`: giọng tiếng Việt chất lượng cao (vi-VN Neural2). Thất bại -> `ApiFailure`
+/// (mã `TTS_UNAVAILABLE` khi API chưa bật/thiếu quyền) để app dùng giọng của máy.
+class AiSpeakRepository {
+  AiSpeakRepository({FirebaseFunctions? functions}) : _injectedFunctions = functions;
+
+  final FirebaseFunctions? _injectedFunctions;
+
+  FirebaseFunctions get _functions =>
+      _injectedFunctions ?? FirebaseFunctions.instanceFor(region: 'asia-southeast1');
+
+  Future<ApiResult<AiSpeech>> synthesize(String text) => guardApi(() async {
+    final response = await _functions
+        .httpsCallable('aiSpeak', options: HttpsCallableOptions(timeout: const Duration(seconds: 20)))
+        .call({'text': text});
+    final raw = response.data;
+    if (raw is! Map || raw['audioBase64'] is! String) {
+      throw ApiException('INVALID_RESPONSE', 'Giọng đọc trả về dữ liệu không hợp lệ.');
+    }
+    final bytes = base64Decode(raw['audioBase64'] as String);
+    if (bytes.isEmpty) throw ApiException('INVALID_RESPONSE', 'Giọng đọc trả về âm thanh rỗng.');
+    return AiSpeech(
+      bytes: bytes,
+      mimeType: raw['mimeType']?.toString() ?? 'audio/mpeg',
+      voice: raw['voice']?.toString() ?? '',
+    );
+  });
 }

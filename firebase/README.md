@@ -9,7 +9,7 @@ Backend của FAP Check-in: Security Rules, test Rules, script vận hành và C
 | `firestore.indexes.json` | Composite index cho truy vấn có sắp xếp |
 | `remoteconfig.template.json` | `qr_refresh_seconds`, `ip_check_default`, `maintenance_mode` |
 | `tests/` | Test Rules (`@firebase/rules-unit-testing` + `node:test`) chạy trên Emulator |
-| `functions/` | Cloud Functions: `scanTimetable` (OCR), `sendTeachingReminders`, `onFeedbackCreated/Updated`, `resolveFeedback`, `syncToFap`, `aiAssistant` (trợ lý AI, Gemini — cần secret `GEMINI_API_KEY`, xem [docs/ai-assistant.md](../docs/ai-assistant.md)). `npm test` chạy unit test với Vision/Gemini giả |
+| `functions/` | Cloud Functions: `scanTimetable` (OCR), `sendTeachingReminders`, `onFeedbackCreated/Updated`, `resolveFeedback`, `syncToFap`, `aiAssistant` (trợ lý AI, Gemini — cần secret `GEMINI_API_KEY`), `aiSpeak` (giọng đọc Google Cloud Text-to-Speech — cần bật API; xem [docs/ai-assistant.md](../docs/ai-assistant.md)). `npm test` chạy unit test với Vision/Gemini giả |
 | `scripts/` | `seed-reference.mjs`, `seed-admin.mjs`, `migrate-legacy.mjs` (Node + Admin SDK) |
 
 ```bash
