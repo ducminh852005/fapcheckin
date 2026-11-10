@@ -16,7 +16,13 @@ export const MAX_TOOL_RESULT_CHARS = 24_000;
 export const RATE_LIMIT_MAX = 60;
 export const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 export const GEMINI_TIMEOUT_MS = 40_000;
-export const DEFAULT_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_MODEL = 'gemini-3.5-flash';
+/** Dự phòng khi model chính vẫn quá tải/hỏng sau các lần thử lại. */
+export const DEFAULT_FALLBACK_MODEL = 'gemini-flash-lite-latest';
+/** Gemini báo bận/quá tải tạm thời -> thử lại vài lần với khoảng chờ tăng dần. */
+export const RETRY_STATUSES = [429, 500, 502, 503, 504];
+export const MAX_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [700, 1500];
 export const DEFAULT_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
 /** Trạng thái điểm danh mà app/Security Rules chấp nhận. */
@@ -273,6 +279,28 @@ async function checkRateLimit(db, uid, nowMs) {
   await ref.set({ windowStart: inWindow ? cur.windowStart : nowMs, count: count + 1 });
 }
 
+/** Gọi generateContent, tự thử lại khi bận (429/5xx) hoặc mất kết nối. Trả response cuối (hoặc null nếu không kết nối được). */
+async function callGemini({ fetchImpl, sleep, apiBase, apiKey, model, request }) {
+  let response = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      response = await fetchImpl(`${apiBase}/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+      });
+    } catch (error) {
+      console.error('aiAssistant: không kết nối được Gemini', error?.message ?? error);
+      response = null;
+    }
+    const retryable = !response || RETRY_STATUSES.includes(response.status);
+    if (response?.ok || !retryable || attempt === MAX_ATTEMPTS) break;
+    await sleep(RETRY_DELAYS_MS[attempt - 1] ?? 1500);
+  }
+  return response;
+}
+
 /**
  * @param deps {db, apiKey, fetchImpl?, model?, apiBase?, now?: () => Date}
  * @param input {uid, history}
@@ -283,8 +311,10 @@ export async function runAiAssistant(deps, { uid, history } = {}) {
     apiKey,
     fetchImpl = globalThis.fetch,
     model = process.env.GEMINI_MODEL || DEFAULT_MODEL,
+    fallbackModel = process.env.GEMINI_FALLBACK_MODEL || DEFAULT_FALLBACK_MODEL,
     apiBase = process.env.GEMINI_API_BASE || DEFAULT_API_BASE,
     now = () => new Date(),
+    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   } = deps;
 
   if (!uid) throw new AiError('unauthenticated', 'UNAUTHORIZED', 'Vui lòng đăng nhập lại.');
@@ -305,18 +335,22 @@ export async function runAiAssistant(deps, { uid, history } = {}) {
     console.error('aiAssistant: rate-limit unavailable', error);
   }
 
-  let response;
-  try {
-    response = await fetchImpl(`${apiBase}/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(buildGeminiRequest(clean, now())),
-      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-    });
-  } catch (error) {
+  let response = null;
+  let usedModel = model;
+  const models = fallbackModel && fallbackModel !== model ? [model, fallbackModel] : [model];
+  for (const candidate of models) {
+    usedModel = candidate;
+    response = await callGemini({ fetchImpl, sleep, apiBase, apiKey, model: candidate, request: buildGeminiRequest(clean, now()) });
+    if (response?.ok) break;
+    console.error(`aiAssistant: model ${candidate} không dùng được (${response ? `HTTP ${response.status}` : 'mất kết nối'})`);
+  }
+  if (!response) {
     throw new AiError('unavailable', 'AI_UNAVAILABLE', 'Không kết nối được trợ lý AI, vui lòng thử lại.');
   }
   if (!response.ok) {
+    // Ghi mã + phần đầu nội dung lỗi (không chứa key) để chẩn đoán: key sai, hết quota, model không tồn tại...
+    const detail = await response.text?.().catch(() => '') ?? '';
+    console.error(`aiAssistant: Gemini trả HTTP ${response.status} (model ${usedModel})`, String(detail).slice(0, 500));
     throw new AiError('unavailable', 'AI_UNAVAILABLE', 'Trợ lý AI đang bận, vui lòng thử lại sau.');
   }
   let body;

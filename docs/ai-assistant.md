@@ -131,7 +131,7 @@ Khai báo ở server ([ai_assistant.js:36](../firebase/functions/src/ai_assistan
 
 ```bash
 firebase functions:secrets:set GEMINI_API_KEY      # bắt buộc trước khi deploy aiAssistant
-# tuỳ chọn: GEMINI_MODEL (mặc định gemini-2.5-flash), GEMINI_API_BASE (e2e trỏ về Gemini giả)
+# tuỳ chọn: GEMINI_MODEL (mặc định gemini-3.5-flash, dự phòng GEMINI_FALLBACK_MODEL = gemini-flash-lite-latest; Gemini bận 429/5xx được tự thử lại 3 lần), GEMINI_API_BASE (e2e trỏ về Gemini giả)
 ```
 
 Quyền micro: Android `RECORD_AUDIO` + `<queries>` RecognitionService ([AndroidManifest.xml](../mobile/android/app/src/main/AndroidManifest.xml)); iOS `NSMicrophoneUsageDescription` + `NSSpeechRecognitionUsageDescription` ([Info.plist](../mobile/ios/Runner/Info.plist)). Nhận dạng tiếng Việt cần thiết bị có gói giọng nói `vi-VN`; không có thì ô nhập vẫn dùng bình thường.

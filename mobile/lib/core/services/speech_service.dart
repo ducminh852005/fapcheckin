@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// Nhận dạng giọng nói cho ô chat của Trợ lý AI. Tách interface để test thay bằng bản giả.
@@ -52,6 +53,9 @@ class DeviceSpeechService implements SpeechService {
                 .where((l) => l.localeId.toLowerCase().startsWith('vi'))
                 .map((l) => l.localeId)
                 .firstOrNull;
+        // Trình duyệt (Chrome) thường trả danh sách locale rỗng -> vẫn phải ép tiếng Việt,
+        // nếu không bộ nhận dạng dùng ngôn ngữ mặc định của trình duyệt (thường là tiếng Anh).
+        _localeId ??= kIsWeb ? 'vi-VN' : 'vi_VN';
       }
     } catch (_) {
       _ready = false;

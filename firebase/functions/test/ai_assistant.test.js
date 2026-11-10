@@ -211,4 +211,50 @@ describe('runAiAssistant', () => {
       console.error = orig;
     }
   });
+
+  it('Gemini bận (503) rồi hồi phục -> tự thử lại và trả lời', async () => {
+    let n = 0;
+    const flaky = async () => (++n < 3 ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, status: 200, json: async () => textBody('ok') });
+    const r = await runAiAssistant({ db: teacherDb(), apiKey: 'k', fetchImpl: flaky, sleep: async () => {} }, { uid: 'gv1', history: [user('a')] });
+    assert.equal(r.type, 'text');
+    assert.equal(n, 3);
+  });
+
+  it('lỗi không thể thử lại (404 model/401 key), không có model dự phòng -> không lặp, báo AI_UNAVAILABLE', async () => {
+    let n = 0;
+    const notFound = async () => { n++; return { ok: false, status: 404, text: async () => 'model not found' }; };
+    const orig = console.error;
+    console.error = () => {};
+    try {
+      await rejects(
+        runAiAssistant({ db: teacherDb(), apiKey: 'k', fallbackModel: '', fetchImpl: notFound, sleep: async () => {} }, { uid: 'gv1', history: [user('a')] }),
+        'unavailable',
+        'AI_UNAVAILABLE',
+      );
+    } finally {
+      console.error = orig;
+    }
+    assert.equal(n, 1);
+  });
+
+  it('model chính quá tải kéo dài -> chuyển sang model dự phòng', async () => {
+    const urls = [];
+    const f = async (url) => {
+      urls.push(url);
+      return url.includes('/models/primary:') ? { ok: false, status: 503, text: async () => 'busy' } : { ok: true, status: 200, json: async () => textBody('từ dự phòng') };
+    };
+    const orig = console.error;
+    console.error = () => {};
+    try {
+      const r = await runAiAssistant(
+        { db: teacherDb(), apiKey: 'k', apiBase: 'http://stub', model: 'primary', fallbackModel: 'backup', fetchImpl: f, sleep: async () => {} },
+        { uid: 'gv1', history: [user('a')] },
+      );
+      assert.equal(r.text, 'từ dự phòng');
+    } finally {
+      console.error = orig;
+    }
+    assert.equal(urls.filter((u) => u.includes('/models/primary:')).length, 3);
+    assert.equal(urls.filter((u) => u.includes('/models/backup:')).length, 1);
+  });
 });
