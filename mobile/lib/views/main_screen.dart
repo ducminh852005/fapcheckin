@@ -36,6 +36,36 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   Timer? _timer;
+  Offset _aiButtonDragOffset = Offset.zero;
+
+  static const double _aiButtonSize = 56;
+  static const double _aiButtonMargin = 8;
+
+  Offset _clampAiButtonOffset({
+    required Size area,
+    required double right,
+    required double bottom,
+    Offset? offset,
+  }) {
+    final defaultPosition = Offset(
+      area.width - right - _aiButtonSize,
+      area.height - bottom - _aiButtonSize,
+    );
+    final requested = defaultPosition + (offset ?? _aiButtonDragOffset);
+    final maxX = (area.width - _aiButtonSize - _aiButtonMargin)
+        .clamp(_aiButtonMargin, double.infinity)
+        .toDouble();
+    // Không cho nút trôi xuống vùng Bottom Navigation; vị trí mặc định là
+    // giới hạn thấp nhất an toàn.
+    final maxY = defaultPosition.dy
+        .clamp(_aiButtonMargin, double.infinity)
+        .toDouble();
+    final clamped = Offset(
+      requested.dx.clamp(_aiButtonMargin, maxX).toDouble(),
+      requested.dy.clamp(_aiButtonMargin, maxY).toDouble(),
+    );
+    return clamped - defaultPosition;
+  }
 
   @override
   void initState() {
@@ -147,34 +177,120 @@ class _MainScreenState extends State<MainScreen> {
         }
       },
       child: Scaffold(
-        extendBody: showBottomNav,
+        // Màn chat có ô nhập neo ở đáy, vì vậy không kéo nội dung xuống phía
+        // sau thanh điều hướng như các màn cuộn thông thường.
+        extendBody: showBottomNav && currentRoute != 'ai',
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         bottomNavigationBar: showBottomNav
             ? _MobileNavBar(currentRoute: currentRoute)
             : null,
         body: SafeArea(
           bottom: !showBottomNav,
-          child: Stack(
-            children: [
-              Row(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final aiButtonRight = isDesktop ? 24.0 : 16.0;
+              final aiButtonBottom = isDesktop
+                  ? 24.0
+                  : MediaQuery.paddingOf(context).bottom + 88;
+              final aiButtonOffset = _clampAiButtonOffset(
+                area: constraints.biggest,
+                right: aiButtonRight,
+                bottom: aiButtonBottom,
+              );
+
+              return Stack(
                 children: [
-                  if (isDesktop) const Sidebar(),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        if (isDesktop)
-                          TopBar(
-                            isDesktop: isDesktop,
-                            currentRoute: currentRoute,
-                          ),
-                        Expanded(child: body),
-                      ],
-                    ),
+                  Row(
+                    children: [
+                      if (isDesktop) const Sidebar(),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            if (isDesktop)
+                              TopBar(
+                                isDesktop: isDesktop,
+                                currentRoute: currentRoute,
+                              ),
+                            Expanded(child: body),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
+                  if (currentRoute != 'ai')
+                    Positioned(
+                      right: aiButtonRight,
+                      bottom: aiButtonBottom,
+                      child: Transform.translate(
+                        offset: aiButtonOffset,
+                        child: _AiAssistantButton(
+                          onPanUpdate: (details) {
+                            setState(() {
+                              _aiButtonDragOffset = _clampAiButtonOffset(
+                                area: constraints.biggest,
+                                right: aiButtonRight,
+                                bottom: aiButtonBottom,
+                                offset: aiButtonOffset + details.delta,
+                              );
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  const ToastNotification(),
                 ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiAssistantButton extends StatelessWidget {
+  const _AiAssistantButton({required this.onPanUpdate});
+
+  final GestureDragUpdateCallback onPanUpdate;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: onPanUpdate,
+      child: Tooltip(
+        message: 'Mở Trợ lý AI',
+        child: Semantics(
+          button: true,
+          label: 'Mở Trợ lý AI',
+          child: Material(
+            key: const Key('global-ai-assistant'),
+            elevation: 8,
+            shadowColor: const Color(0xFFFA5A1E).withValues(alpha: 0.35),
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => context.read<DashboardViewModel>().navigate('ai'),
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 56,
+                height: 56,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppPalette.primary.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Image.asset(
+                  'assets/logos/logo-fap.png',
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Logo Fapcheckin',
+                ),
               ),
-              const ToastNotification(),
-            ],
+            ),
           ),
         ),
       ),
@@ -187,13 +303,16 @@ class _MobileNavBar extends StatelessWidget {
 
   const _MobileNavBar({required this.currentRoute});
 
+  static final List<NavDestination> _destinations = kNavDestinations
+      .where((destination) => destination.route != 'ai')
+      .toList(growable: false);
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selected = kNavDestinations.indexWhere(
+    final selected = _destinations.indexWhere(
       (d) => d.isActive(currentRoute),
     );
-    final activeIndex = selected < 0 ? 0 : selected;
 
     return SafeArea(
       top: false,
@@ -238,14 +357,14 @@ class _MobileNavBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                 child: Row(
                   children: [
-                    for (int i = 0; i < kNavDestinations.length; i++)
+                    for (int i = 0; i < _destinations.length; i++)
                       Expanded(
                         child: _NavBarItem(
-                          destination: kNavDestinations[i],
-                          isSelected: i == activeIndex,
+                          destination: _destinations[i],
+                          isSelected: i == selected,
                           onTap: () => context
                               .read<DashboardViewModel>()
-                              .navigate(kNavDestinations[i].route),
+                              .navigate(_destinations[i].route),
                         ),
                       ),
                   ],

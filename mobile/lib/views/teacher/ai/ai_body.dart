@@ -109,8 +109,9 @@ class _AiBodyState extends State<AiBody> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hPad = context.isMobile ? 16.0 : context.pagePadding;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    // Chừa chỗ cho thanh điều hướng nổi ở dưới khi là điện thoại.
-    final bottomPad = context.isMobile ? (keyboardOpen ? 8.0 : 92.0) : 16.0;
+    // MainScreen không cho màn chat nằm sau Bottom Navigation, nên ở đây chỉ
+    // cần khoảng thở cho ô nhập. Khi bàn phím mở thì thu gọn khoảng này.
+    final bottomPad = context.isMobile && keyboardOpen ? 8.0 : 16.0;
 
     // Lỗi micro/giọng đọc phát sinh giữa chừng (không do người dùng bấm) cũng phải hiện ra.
     final voiceError = vm.voiceError;
