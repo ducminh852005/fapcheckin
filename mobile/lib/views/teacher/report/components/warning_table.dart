@@ -8,6 +8,8 @@ import 'package:fapcheckin_core/models/report_model.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
 import 'package:fapcheckin_core/models/sync_result_model.dart';
 import '../../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../../viewmodels/auth_viewmodel.dart';
+import 'package:fapcheckin_core/repositories/request_repository.dart';
 
 class WarningTable extends StatefulWidget {
   final ReportData data;
@@ -19,6 +21,9 @@ class WarningTable extends StatefulWidget {
 
 class _WarningTableState extends State<WarningTable> {
   bool _syncing = false;
+  bool _reportingAll = false;
+  final Set<String> _submitting = {};
+  final Set<String> _reported = {};
   static const _pageSize = 8;
   int _currentPage = 0;
 
@@ -43,71 +48,103 @@ class _WarningTableState extends State<WarningTable> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 680;
-
-        return Container(
-          padding: EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              SizedBox(height: AppSpacing.md),
-              _buildActionBar(),
-              SizedBox(height: AppSpacing.md),
-              if (widget.data.warnings.isEmpty)
-                _buildEmptyState()
-              else if (compact)
-                _buildWarningCards()
-              else
-                _buildTable(),
-              if (widget.data.warnings.length > _pageSize) ...[
-                SizedBox(height: AppSpacing.sm),
-                _buildPagination(),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA),
+        ),
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x140F172A),
+                  blurRadius: 18,
+                  offset: Offset(0, 7),
+                ),
               ],
-            ],
-          ),
-        );
-      },
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 14),
+          if (widget.data.warnings.isEmpty)
+            _buildEmptyState()
+          else
+            _buildWarningCards(),
+          if (widget.data.warnings.length > _pageSize) ...[
+            const SizedBox(height: 4),
+            _buildPagination(),
+          ],
+          const SizedBox(height: 12),
+          _buildActionBar(),
+        ],
+      ),
     );
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.xs,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 360),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF1F2),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFFFD4D8)),
+          ),
+          child: const Icon(
+            Icons.warning_amber_rounded,
+            size: 19,
+            color: Color(0xFFE11D48),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Cảnh báo vắng quá quy định',
-                style: AppTextStyles.headlineSm,
+                style: TextStyle(
+                  color: Color(0xFF9F1239),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .5,
+                ),
               ),
-              SizedBox(height: 2),
-              Text(
-                'Sinh viên có tỷ lệ vắng trên 15% trong các phiên đã kết thúc',
-                style: AppTextStyles.caption,
+              const SizedBox(height: 5),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE4E6),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: const Text(
+                  'Vượt ngưỡng >20%',
+                  style: TextStyle(
+                    color: Color(0xFFBE123C),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Danh sách sinh viên có nguy cơ cấm thi cần lưu ý học vụ',
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 11,
+                  height: 1.35,
+                ),
               ),
             ],
-          ),
-        ),
-        TextButton.icon(
-          onPressed: () {},
-          icon: Icon(Icons.filter_list, size: 16),
-          label: Text('Lọc nâng cao'),
-          style: TextButton.styleFrom(
-            foregroundColor: ReportColors.primary,
-            textStyle: AppTextStyles.labelSm,
           ),
         ),
       ],
@@ -115,57 +152,56 @@ class _WarningTableState extends State<WarningTable> {
   }
 
   Widget _buildActionBar() {
-    return Container(
-      padding: EdgeInsets.all(AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: ReportColors.background,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      child: Wrap(
-        spacing: AppSpacing.xs,
-        runSpacing: AppSpacing.xs,
-        children: [
-          _buildActionBtn(
-            'Gửi cảnh báo Email FPT',
-            Icons.mail,
-            AppColors.statusAbsent,
-            AppColors.onError,
-          ),
-          GestureDetector(
-            onTap: _syncing ? null : _syncToFap,
-            child: _syncing
-                ? Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        SizedBox(width: 6),
-                        Text('Đang đồng bộ...'),
-                      ],
-                    ),
-                  )
-                : _buildActionBtn(
-                    'Đồng bộ Cổng Khảo Thí',
-                    Icons.sync,
-                    AppColors.surface,
-                    ReportColors.text,
-                    iconColor: ReportColors.primary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton.icon(
+          onPressed: _reportingAll ? null : _reportAll,
+          icon: _reportingAll
+              ? const SizedBox(
+                  width: 17,
+                  height: 17,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
+                )
+              : const Icon(Icons.send_rounded, size: 18),
+          label: Text(
+            _reportingAll ? 'Đang gửi báo cáo...' : 'Báo cáo tất cả cho Admin',
           ),
-        ],
-      ),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(46),
+            backgroundColor: const Color(0xFFEA1748),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _syncing ? null : _syncToFap,
+          icon: _syncing
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.sync_rounded, size: 18),
+          label: Text(
+            _syncing ? 'Đang đồng bộ...' : 'Đồng bộ Cổng Khảo Thí',
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+            foregroundColor: const Color(0xFF475569),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -214,79 +250,13 @@ class _WarningTableState extends State<WarningTable> {
           .map(
             (warning) => Padding(
               padding: EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _WarningCard(warning: warning),
+              child: _WarningCard(
+                warning: warning,
+                action: _reportButton(warning),
+              ),
             ),
           )
           .toList(),
-    );
-  }
-
-  Widget _buildTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: 640),
-        child: Table(
-          columnWidths: {
-            0: FlexColumnWidth(3),
-            1: FlexColumnWidth(1.35),
-            2: FlexColumnWidth(1),
-            3: FlexColumnWidth(1.45),
-            4: FlexColumnWidth(1),
-          },
-          children: [
-            TableRow(
-              decoration: BoxDecoration(color: ReportColors.background),
-              children: [
-                _headerCell('Sinh viên'),
-                _headerCell('Lớp'),
-                _headerCell('Vắng'),
-                _headerCell('Trạng thái'),
-                _headerCell('Thao tác'),
-              ],
-            ),
-            ..._visibleWarnings.map(
-              (warning) => TableRow(
-                children: [
-                  _dataCell(
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(warning.fullName),
-                        Text(warning.rollNumber, style: AppTextStyles.caption),
-                      ],
-                    ),
-                  ),
-                  _dataCell(Text(warning.classCode)),
-                  _dataCell(
-                    Text(
-                      '${warning.absent}/${warning.total}\n'
-                      '${(warning.absenceRate * 100).toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        color: warning.absenceRate > .2
-                            ? AppColors.statusAbsent
-                            : AppColors.statusLate,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  _dataCell(
-                    Text(
-                      warning.status,
-                      style: TextStyle(
-                        color: warning.absenceRate > .2
-                            ? AppColors.statusAbsent
-                            : AppColors.statusLate,
-                      ),
-                    ),
-                  ),
-                  _dataCell(SizedBox.shrink()),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -339,151 +309,236 @@ class _WarningTableState extends State<WarningTable> {
     );
   }
 
-  Widget _headerCell(String label) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSm.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _dataCell(Widget child) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: child,
-    );
-  }
-
-  Widget _buildActionBtn(
-    String label,
-    IconData icon,
-    Color bgColor,
-    Color fgColor, {
-    Color? iconColor,
-  }) {
-    return Container(
-      constraints: BoxConstraints(maxWidth: 260),
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 8),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: iconColor ?? fgColor),
-          SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.labelSm.copyWith(color: fgColor),
-            ),
+  Future<void> _reportAll() async {
+    setState(() => _reportingAll = true);
+    final exceeded = widget.data.warnings.where((warning) {
+      final key = '${warning.classCode}|${warning.rollNumber}';
+      return warning.absent > (warning.total * .2).floor() &&
+          !_reported.contains(key);
+    }).toList();
+    var succeeded = 0;
+    var failed = 0;
+    for (final warning in exceeded) {
+      if (!mounted) return;
+      if (await _report(warning, showMessage: false)) {
+        succeeded++;
+      } else {
+        failed++;
+      }
+    }
+    if (mounted) {
+      setState(() => _reportingAll = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            exceeded.isEmpty
+                ? 'Tất cả trường hợp vượt ngưỡng đã được báo cáo.'
+                : failed == 0
+                    ? 'Đã gửi $succeeded trường hợp vượt ngưỡng cho Admin.'
+                    : 'Đã gửi $succeeded trường hợp, $failed trường hợp gửi thất bại.',
           ),
-        ],
-      ),
+          backgroundColor: failed == 0
+              ? AppColors.statusPresent
+              : AppColors.statusAbsent,
+        ),
+      );
+    }
+  }
+
+  Widget _reportButton(ReportWarning warning) {
+    final key = '${warning.classCode}|${warning.rollNumber}';
+    final loading = _submitting.contains(key);
+    final done = _reported.contains(key);
+    final exceeded = warning.absent > (warning.total * .2).floor();
+    return IconButton(
+      tooltip: done
+          ? 'Đã gửi Admin'
+          : exceeded
+              ? 'Báo cáo sinh viên này cho Admin'
+              : 'Sinh viên đang ở mức nguy cơ',
+      onPressed: loading || done || !exceeded ? null : () => _report(warning),
+      icon: loading
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              done ? Icons.check_circle_rounded : Icons.flag_outlined,
+              size: 18,
+            ),
+      color: const Color(0xFFE11D48),
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
     );
+  }
+
+  Future<bool> _report(
+    ReportWarning warning, {
+    bool showMessage = true,
+  }) async {
+    final session = context.read<AuthViewModel>().session;
+    if (session == null) return false;
+    final key = '${warning.classCode}|${warning.rollNumber}';
+    setState(() => _submitting.add(key));
+    final repo = RequestRepository(
+      uid: session.token,
+      memberCode: session.user.memberCode,
+    );
+    final result = await repo.submitAbsenceEscalation(
+      classCode: warning.classCode,
+      subjectName: warning.subjectName,
+      studentMemberCode: warning.rollNumber,
+      studentName: warning.fullName,
+      studentEmail: warning.email,
+      absentCount: warning.absent,
+      totalSessions: warning.total,
+      absenceRate: warning.absenceRate,
+    );
+    if (!mounted) return false;
+    final succeeded = result is ApiSuccess<String>;
+    setState(() {
+      _submitting.remove(key);
+      if (succeeded) _reported.add(key);
+    });
+    if (showMessage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result is ApiSuccess<String>
+                ? 'Đã gửi báo cáo ${warning.rollNumber} cho Admin.'
+                : 'Không thể gửi báo cáo: ${(result as ApiFailure<String>).error.message}',
+          ),
+        ),
+      );
+    }
+    return succeeded;
   }
 }
 
 class _WarningCard extends StatelessWidget {
   final ReportWarning warning;
-  const _WarningCard({required this.warning});
+  final Widget action;
+  const _WarningCard({required this.warning, required this.action});
 
   @override
   Widget build(BuildContext context) {
-    final alertColor = warning.absenceRate > .2
-        ? AppColors.statusAbsent
-        : AppColors.statusLate;
+    final exceeded = warning.absenceRate > .2;
+    final alertColor = exceeded
+        ? const Color(0xFFE11D48)
+        : const Color(0xFFD97706);
+    final percentage = (warning.absenceRate * 100).toStringAsFixed(1);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
-        color: ReportColors.background,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        color: isDark ? const Color(0xFF30191F) : const Color(0xFFFFF6F6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFFD5D8),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       warning.fullName,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.bodyMd.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(warning.rollNumber, style: AppTextStyles.caption),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Text(
+                        warning.rollNumber,
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+                const SizedBox(height: 3),
+                Text(
+                  '${warning.classCode} (${warning.subjectName})',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: exceeded
+                          ? const Color(0xFFFFE4E6)
+                          : const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      exceeded ? 'Quá 20%' : 'Nguy cơ',
+                      style: TextStyle(
+                        color: alertColor,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  action,
+                ],
               ),
-              SizedBox(width: AppSpacing.sm),
               Text(
-                '${warning.absent}/${warning.total}',
-                style: AppTextStyles.labelSm.copyWith(
+                'Vắng ${warning.absent}/${warning.total} buổi ($percentage%)',
+                style: TextStyle(
                   color: alertColor,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _MetaPill(text: warning.classCode),
-              _MetaPill(
-                text: '${(warning.absenceRate * 100).toStringAsFixed(1)}%',
-                color: alertColor,
-              ),
-              _MetaPill(text: warning.status, color: alertColor),
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  final String text;
-  final Color? color;
-  const _MetaPill({required this.text, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-      ),
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.caption.copyWith(
-          color: color ?? AppColors.textSecondary,
-          fontWeight: color == null ? FontWeight.w400 : FontWeight.w600,
-        ),
       ),
     );
   }

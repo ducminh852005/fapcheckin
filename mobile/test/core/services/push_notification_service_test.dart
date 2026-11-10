@@ -4,6 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('routeForPushMessage', () {
+    test('mở trang yêu cầu khi báo cáo vắng được admin xử lý', () {
+      final message = RemoteMessage(
+        data: {'type': 'absence_escalation_resolved'},
+      );
+      expect(routeForPushMessage(message), 'yeu-cau');
+    });
+
     test('opens the teaching schedule for lesson reminders', () {
       final message = RemoteMessage(data: const {'type': 'teaching_reminder'});
 

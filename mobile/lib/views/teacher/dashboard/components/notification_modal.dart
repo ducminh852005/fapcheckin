@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/repositories/account_features_repository.dart';
 import 'package:fapcheckin_core/repositories/announcement_repository.dart';
@@ -164,6 +165,12 @@ class _NotificationModalState extends State<NotificationModal> {
         row['id'] != null &&
         row['_source'] != 'announcements') {
       await accountRepo.markRead(row['id'].toString());
+    }
+    final type = (row['type'] ?? '').toString().toLowerCase();
+    if (mounted && type.startsWith('absence_escalation_')) {
+      final router = GoRouter.of(context);
+      Navigator.of(context).pop();
+      router.go('/teacher/yeu-cau');
     }
   }
 
