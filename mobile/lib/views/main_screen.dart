@@ -265,29 +265,21 @@ class _AiAssistantButton extends StatelessWidget {
           label: 'Mở Trợ lý AI',
           child: Material(
             key: const Key('global-ai-assistant'),
-            elevation: 8,
-            shadowColor: const Color(0xFFFA5A1E).withValues(alpha: 0.35),
             color: Colors.transparent,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => context.read<DashboardViewModel>().navigate('ai'),
-              customBorder: const CircleBorder(),
-              child: Container(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
                 width: 56,
                 height: 56,
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppPalette.primary.withValues(alpha: 0.28),
+                child: Center(
+                  child: Image.asset(
+                    'assets/logos/logo-fap.png',
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'Logo Fapcheckin',
                   ),
-                ),
-                child: Image.asset(
-                  'assets/logos/logo-fap.png',
-                  fit: BoxFit.contain,
-                  semanticLabel: 'Logo Fapcheckin',
                 ),
               ),
             ),
