@@ -1,0 +1,70 @@
+%% Slide 13 — Class design (chỉ class cốt lõi; TÊN ĐÚNG MÃ NGUỒN).
+%% Business rule nằm ở Repository/helper (packages/core) + Security Rules, KHÔNG nằm ở View.
+%% Domain model Dart (SessionModel) ≠ bảng/collection Firestore (sessions) — không ánh xạ 1:1.
+classDiagram
+  direction LR
+  class LiveSessionBody {
+    <<View · mobile/lib/views/teacher/live_session>>
+  }
+  class LiveSessionViewModel {
+    <<ViewModel · mobile/lib/viewmodels>>
+    +startSession()
+    +closeCurrentSession()
+    +manualCheckin(rollNumber)
+    +refreshQrNow()
+    +tickTimers()
+  }
+  class AutoSessionManager {
+    <<mobile/lib/core/services>>
+    +checkRealtimeSessions()
+  }
+  class TeacherRepository {
+    <<Repository · packages/core>>
+    +startSession(classCode, slotCode, ipCheck)
+    +closeSession(sessionId)
+    +rotateQr(sessionId)
+    +manualCheckin(sessionId, rollNumber)
+    +manualCheckinBulk(sessionId, changes)
+  }
+  class SessionOps {
+    <<internal/session_ops.dart>>
+    +createSession()
+  }
+  class TeacherData {
+    <<internal/teacher_data.dart>>
+    +canManuallyAttendOn()
+    +effectiveSessionStatusAt()
+    +randomSecret()
+  }
+  class RequestRepository {
+    <<Repository>>
+    +submit()
+    +watchMine()
+  }
+  class SessionModel {
+    <<Model>>
+    sessionId
+    classCode
+    sessionStatus
+    qrToken
+    ipCheck
+  }
+  class AiToolExecutor {
+    <<packages/core/lib/ai>>
+    +run(call)
+    +confirm(action)
+  }
+  class FirestoreRules {
+    <<firestore.rules — chốt chặn cuối>>
+    studentCheckin()
+    teacherCreatesRecord()
+  }
+  LiveSessionBody --> LiveSessionViewModel
+  AutoSessionManager --> LiveSessionViewModel
+  LiveSessionViewModel --> TeacherRepository
+  LiveSessionViewModel --> RequestRepository
+  TeacherRepository --> SessionOps : BR-02 BR-03 BR-04
+  TeacherRepository --> TeacherData : BR-09 BR-10
+  TeacherRepository ..> SessionModel
+  AiToolExecutor --> TeacherRepository : manualCheckinBulk sau thẻ xác nhận BR-12
+  TeacherRepository ..> FirestoreRules : mọi lệnh ghi đều bị Rules kiểm lại

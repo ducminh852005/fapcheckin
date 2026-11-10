@@ -1,0 +1,32 @@
+%% Slide 12 (TÙY CHỌN) — Sequence: Sinh viên điểm danh.
+%% Tên message = hàm/API thật trong web/checkin/app.js (loadProfile, checkin, diagnoseDenied, fetchPublicIp)
+%% và điều kiện studentCheckin() trong firebase/firestore.rules.
+sequenceDiagram
+  actor SV as Sinh viên
+  participant UI as web/checkin (app.js)
+  participant AUTH as Firebase Auth
+  participant FS as Firestore + Rules
+  SV->>UI: quét QR → /?s={sessionId}&t={qrSecret}&ic={0|1}
+  UI->>AUTH: signInWithPopup(GoogleAuthProvider)
+  UI->>FS: loadProfile(): getDoc(users/{uid}), getDoc(user_invites/{email})
+  alt không có lời mời [BR-01]
+    FS-->>UI: DOMAIN_NOT_ALLOWED
+  else hồ sơ hợp lệ, role = user
+    UI->>FS: getDocs(enrollments where rollNumber == mine)
+    alt không có ghi danh [BR-06]
+      UI-->>SV: NOT_ENROLLED
+    else đã ghi danh
+      opt ic = 1 [BR-08]
+        UI->>UI: fetchPublicIp() — ipify
+      end
+      UI->>FS: setDoc(attendance_records/{sessionId}_{rollNumber}, qrToken, status=Present)
+      alt studentCheckin() đạt [BR-05, BR-06, BR-07, BR-08]
+        FS-->>UI: OK
+        UI-->>SV: ĐIỂM DANH THÀNH CÔNG + giờ
+      else permission-denied
+        UI->>FS: diagnoseDenied(): getDoc(attendance_records của mình)
+        FS-->>UI: có → ALREADY_CHECKED_IN · không → IP_MISMATCH (ic=1) hoặc SESSION_NOT_FOUND
+        UI-->>SV: thông báo lý do
+      end
+    end
+  end

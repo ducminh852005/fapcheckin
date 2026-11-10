@@ -1,0 +1,11 @@
+%% Slide 14 (TÙY CHỌN — gộp vào 15) — ERD KHÁI NIỆM: chỉ thực thể + cardinality + BR.
+%% KHÔNG đưa kiểu dữ liệu hay khóa vật lý. ERD vật lý đầy đủ: docs/db-erd.mermaid
+erDiagram
+  NGUOI_DUNG ||--o{ LOP_HOC : "giảng viên phụ trách (BR-13)"
+  LOP_HOC ||--o{ GHI_DANH : "có sinh viên"
+  NGUOI_DUNG ||--o{ GHI_DANH : "sinh viên thuộc lớp"
+  LOP_HOC ||--o{ PHIEN_DIEM_DANH : "mở nhiều phiên, tối đa 1 đang mở (BR-04)"
+  PHIEN_DIEM_DANH ||--o{ BAN_GHI_DIEM_DANH : "mỗi SV tối đa 1 bản ghi mỗi phiên (BR-07)"
+  NGUOI_DUNG ||--o{ BAN_GHI_DIEM_DANH : "sinh viên điểm danh"
+  NGUOI_DUNG ||--o{ YEU_CAU : "gửi — pending thành approved hoặc rejected (BR-11)"
+  LOI_MOI ||--o| NGUOI_DUNG : "tạo hồ sơ ở lần đăng nhập đầu (BR-01)"

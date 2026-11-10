@@ -63,7 +63,7 @@ class _AiBodyState extends State<AiBody> {
 
   Future<void> _send(AiChatViewModel vm, [String? text]) async {
     final value = (text ?? _controller.text).trim();
-    if (value.isEmpty || vm.pendingAction != null) return;
+    if (value.isEmpty) return; // luôn gửi được: lúc AI đang xử lý thì gộp, lúc đang ghi/chờ xác nhận thì xếp hàng
     _controller.clear();
     _focus.unfocus();
     await vm.send(value);
@@ -493,7 +493,7 @@ class _InputBar extends StatelessWidget {
     final hint = listening
         ? 'Đang nghe… hãy nói'
         : awaitingConfirm
-        ? 'Xác nhận hoặc huỷ thẻ phía trên trước'
+        ? 'Xác nhận/huỷ thẻ phía trên, hoặc gõ thêm yêu cầu…'
         : 'Nhập hoặc nói yêu cầu của bạn…';
 
     final bar = Container(
@@ -522,7 +522,6 @@ class _InputBar extends StatelessWidget {
               key: const Key('ai-input'),
               controller: controller,
               focusNode: focus,
-              enabled: !awaitingConfirm,
               minLines: 1,
               maxLines: 4,
               maxLength: 1000,
@@ -548,7 +547,7 @@ class _InputBar extends StatelessWidget {
                 key: const Key('ai-live'),
                 tooltip: live ? 'Tắt Live' : 'Trợ lý Live',
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                onPressed: awaitingConfirm ? null : onLive,
+                onPressed: onLive,
                 style: live
                     ? IconButton.styleFrom(backgroundColor: AppPalette.primary.withValues(alpha: 0.14))
                     : null,
@@ -566,7 +565,7 @@ class _InputBar extends StatelessWidget {
               child: IconButton(
                 key: const Key('ai-mic'),
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                onPressed: busy ? null : onMic,
+                onPressed: onMic, // luôn dùng được: nói thêm lúc AI đang xử lý sẽ được gộp vào ngữ cảnh
                 icon: Icon(
                   listening ? Icons.stop_circle_rounded : Icons.mic_rounded,
                   color: listening ? AppPalette.statusRed : AppPalette.primary,
@@ -602,7 +601,7 @@ class _InputBar extends StatelessWidget {
                 child: IconButton.filled(
                   key: const Key('ai-send'),
                   constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                  onPressed: awaitingConfirm ? null : onSend,
+                  onPressed: onSend,
                   style: IconButton.styleFrom(
                     backgroundColor: AppPalette.primary,
                     foregroundColor: Colors.white,

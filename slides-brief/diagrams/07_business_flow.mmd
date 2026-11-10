@@ -1,0 +1,45 @@
+%% Slide 07 — Business Flow tổng thể (activity có swimlane).
+%% Mã BR: xem SLIDE_CONTENT.md Phụ lục B.1. Mỗi điểm rẽ gắn mã BR. Nhánh đỏ = ngoại lệ.
+%% Lưu ý: BR-xx và WF-xx là [MÃ MỚI — ĐỀ XUẤT] (repo chưa có mã BR/WF).
+flowchart LR
+  subgraph ADMIN["QUẢN TRỊ VIÊN"]
+    A0(["Tạo lời mời<br/>user_invites"])
+    A9["Duyệt / từ chối<br/>yêu cầu (pending)"]
+  end
+  subgraph GV["GIẢNG VIÊN (mobile)"]
+    G1(["Mở phiên điểm danh<br/>WF-01"])
+    G2["Chiếu QR<br/>xoay mỗi 60 s"]
+    G3["Đóng phiên hoặc<br/>hết giờ ca — WF-03"]
+    G4{"Cần sửa?<br/>BR-10 còn trong ngày"}
+    G5["Điểm danh tay"]
+    G6["Gửi yêu cầu<br/>sửa điểm danh"]
+  end
+  subgraph HT["HỆ THỐNG (Firestore Rules + Functions)"]
+    H1{"BR-02 lớp của GV?<br/>BR-03 trong giờ ca?"}
+    H2["Tạo session = open<br/>+ qrSecret"]
+    H3{"Rules check-in<br/>BR-05 QR · BR-06 phiên open + ghi danh<br/>BR-07 chưa điểm danh · BR-08 IP"}
+    H4["Ghi attendance_records<br/>status = Present"]
+    H5["session = closed<br/>sinh Absent cho SV chưa quét<br/>BR-09"]
+    H6["Lưu requests<br/>status = pending · BR-11"]
+  end
+  subgraph SV["SINH VIÊN (web check-in)"]
+    S1(["Quét QR bằng camera<br/>WF-02"])
+    S2["Đăng nhập Google<br/>BR-01 có lời mời"]
+    S3["Thấy: ĐIỂM DANH THÀNH CÔNG"]
+    S4["Thấy lý do bị từ chối<br/>NOT_ENROLLED · IP_MISMATCH · SESSION_NOT_FOUND"]
+  end
+
+  A0 -.precondition.-> S2
+  G1 --> H1
+  H1 -- hợp lệ --> H2 --> G2
+  H1 -- "FORBIDDEN / SESSION_OUTSIDE_SLOT_TIME" --> E1["Báo lỗi, không tạo phiên"]
+  G2 -. QR .-> S1 --> S2 --> H3
+  H3 -- đạt --> H4 --> S3
+  H3 -- permission-denied --> S4
+  H4 --> G3
+  G3 --> H5 --> G4
+  G4 -- "còn hạn" --> G5 --> H4
+  G4 -- "quá hạn: MANUAL_ATTENDANCE_EXPIRED" --> G6 --> H6 --> A9
+
+  classDef ex fill:#fde8e8,stroke:#c0392b,color:#7b241c;
+  class E1,S4 ex;

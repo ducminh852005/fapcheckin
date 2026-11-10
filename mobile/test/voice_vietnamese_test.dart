@@ -31,9 +31,21 @@ class _FakeEngine extends Fake implements SpeechToText {
   @override
   bool get isListening => false;
 
+  /// Số lần `listen` đầu tiên sẽ ném lỗi giống Web Speech API khi phiên trước chưa kết thúc hẳn.
+  int alreadyStartedFailures = 0;
+  int listenCalls = 0;
+  int cancels = 0;
+
+  @override
+  Future<void> cancel() async => cancels++;
+
   @override
   dynamic noSuchMethod(Invocation invocation) {
     if (invocation.memberName == #listen) {
+      listenCalls++;
+      if (listenCalls <= alreadyStartedFailures) {
+        throw StateError("InvalidStateError: Failed to execute 'start' on 'SpeechRecognition': recognition has already started.");
+      }
       final options = invocation.namedArguments[#listenOptions] as SpeechListenOptions?;
       listenedLocale = options?.localeId;
       listenedPause = options?.pauseFor;
@@ -130,6 +142,41 @@ void main() {
       await service.initialize();
       await service.start(onResult: (_, _) {}, pauseFor: const Duration(milliseconds: 1500));
       expect(engine.listenedPause, const Duration(milliseconds: 1500));
+    });
+  });
+
+  group('micro: lỗi "recognition has already started"', () {
+    test('nhận diện đúng thông báo của trình duyệt', () {
+      expect(DeviceSpeechService.isAlreadyStartedError(StateError("recognition has already started.")), isTrue);
+      expect(DeviceSpeechService.isAlreadyStartedError('InvalidStateError: x'), isTrue);
+      expect(DeviceSpeechService.isAlreadyStartedError('error_permission'), isFalse);
+    });
+
+    test('phiên cũ chưa kết thúc hẳn: huỷ phiên cũ, chờ rồi thử lại và bật được micro', () async {
+      final engine = _FakeEngine([LocaleName('vi_VN', 'Tiếng Việt')])..alreadyStartedFailures = 2;
+      final service = DeviceSpeechService(engine: engine);
+      await service.initialize();
+      await service.start(onResult: (_, _) {});
+      expect(engine.listenCalls, 3); // 2 lần lỗi + 1 lần thành công
+      expect(engine.cancels, 2); // mỗi lần lỗi huỷ phiên cũ
+      expect(engine.listenedLocale, 'vi_VN');
+    });
+
+    test('lỗi vẫn kéo dài quá số lần thử -> báo lỗi (không treo)', () async {
+      final engine = _FakeEngine([LocaleName('vi_VN', 'Tiếng Việt')])..alreadyStartedFailures = 99;
+      final service = DeviceSpeechService(engine: engine);
+      await service.initialize();
+      await expectLater(service.start(onResult: (_, _) {}), throwsStateError);
+      expect(engine.listenCalls, DeviceSpeechService.maxStartRetries + 1);
+    });
+
+    test('lỗi khác (không phải already started) không được thử lại', () async {
+      final engine = _FakeEngine([LocaleName('vi_VN', 'Tiếng Việt')]);
+      final service = DeviceSpeechService(engine: engine);
+      await service.initialize();
+      await service.start(onResult: (_, _) {}); // thành công ngay
+      expect(engine.listenCalls, 1);
+      expect(engine.cancels, 0);
     });
   });
 

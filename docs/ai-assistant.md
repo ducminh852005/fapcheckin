@@ -203,6 +203,8 @@ bấm Live ─► NGHE ─(nói xong: im lặng ≥ sendDelay)─► tự gửi 
 
 **Xác nhận bằng giọng nói**: AI đọc tên, MSSV, trạng thái, lớp, slot (`confirmPrompt`) rồi nghe: *xác nhận / đồng ý / ok / được rồi / làm đi / chốt / đúng rồi / ghi đi* → ghi; *huỷ / thôi / không / bỏ / dừng lại* → huỷ (huỷ ưu tiên khi câu mơ hồ, "không sao" bị coi là chưa rõ). Nghe không rõ thì nhắc lại, sau `maxConfirmRetries` = 2 lần để thẻ chờ bấm tay và thoát Live. Nút Xác nhận/Huỷ dùng được bất cứ lúc nào; tiếng nói muộn của lượt cũ bị bỏ qua (không ghi hai lần).
 
+**Giữ Live bền qua nhiều lượt.** Bộ nhận dạng dùng chung một bộ lắng nghe trạng thái nên sau khi mở lại micro nó hay bắn tín hiệu "đã dừng" **muộn của phiên trước**; nếu coi đó là người dùng im lặng thì hai lần liền Live tự thoát (triệu chứng "chỉ nói được một lần rồi về trạng thái thường"). Vì vậy: trong `engineWarmup` = 1,2 giây đầu của mỗi phiên nghe, tín hiệu dừng khi chưa nghe được gì bị coi là tín hiệu muộn → mở lại (tối đa `maxStaleSignals` = 6 lần), chỉ im lặng SAU mốc này mới tính; phiên cũ được huỷ hẳn trước khi mở phiên mới; lỗi **tạm thời** (busy, mạng chập chờn) được mở lại sau 0,5 giây, tối đa `maxTransientErrors` = 3 lần liên tiếp; chỉ lỗi **nghiêm trọng** (thiếu quyền micro, dịch vụ/ngôn ngữ không hỗ trợ) mới thoát ngay.
+
 **Tự thoát Live** khi: im lặng `maxSilentTurns` = 2 lượt liên tiếp (mỗi lượt tối đa `noSpeechLimit` = 12 giây không tiếng), lỗi micro nghiêm trọng, bấm Live lần nữa, hoặc rời tab AI. Lỗi "không có tiếng/không khớp" của bộ nhận dạng chỉ tính là im lặng.
 
 **Phần đọc.** Chat hiện đầy đủ, chỉ phần **tóm tắt** được đọc (`spokenSummary`: đoạn đầu, ≤ 2 câu, bỏ markdown/emoji, ≤ 240 ký tự). System prompt bắt AI mở đầu câu trả lời cuối bằng 1–2 câu tóm tắt rồi xuống dòng trống mới đến chi tiết.
@@ -223,8 +225,22 @@ firebase deploy --only functions:aiSpeak --project ducminh-41459
 ```
 Hàm xác thực với Google Cloud bằng **tài khoản dịch vụ của hàm** (không cần API key riêng); project cần billing (giọng Neural2 có hạn mức miễn phí hằng tháng, vượt thì tính phí theo số ký tự). Không thấy giọng Google (app báo "đang dùng giọng của máy") thì xem log: `firebase functions:log --only aiSpeak --project ducminh-41459 -n 15` — lỗi thường gặp là `PERMISSION_DENIED ... has not been used` (chưa bật API) hoặc tài khoản dịch vụ thiếu quyền.
 
+### Độ bền của giọng đọc và micro trên trình duyệt
+
+- **Mỗi câu một bộ phát âm thanh mới** (`AudioplayersOutput`): dùng lại một `AudioPlayer` cho nhiều câu liên tiếp làm lần phát thứ hai trở đi lỗi trên web, khiến câu đầu đọc bằng giọng Google còn câu sau rơi sang giọng của máy. Khi giọng Google thất bại, thông báo nêu **lý do cụ thể** (ví dụ `TTS_UNAVAILABLE: …`), và tạm bỏ qua đám mây `cooldown` = 20 giây.
+- **"recognition has already started"** (Web Speech API chỉ cho một phiên nhận dạng tại một thời điểm, mà plugin báo "không còn nghe" sớm hơn thực tế): `DeviceSpeechService.start` huỷ phiên cũ, chờ 0,35 giây rồi thử lại tối đa `maxStartRetries` = 3 lần; nếu vẫn lỗi, ViewModel coi là lỗi tạm thời (mở lại sau 0,6 giây, tính chung vào `maxTransientErrors`) chứ không thoát Live.
+
 ### Lỗi giọng nói không bị nuốt
 Lỗi micro/giọng đọc được đưa vào `voiceError` và hiện **toast** (kể cả khi phát sinh giữa chừng): thiếu quyền micro, giọng đọc báo lỗi, máy không có giọng tiếng Việt, hoặc **`flutter_tts`/`speech_to_text` chưa được nạp** (`MissingPluginException`). Plugin mới thêm vào `pubspec.yaml` **không nạp được bằng hot reload/hot restart**: phải dừng và chạy lại `flutter run` (Android cần build lại để áp dụng quyền/`<queries>`). Nếu nghe được nhưng không có tiếng đọc, kiểm tra toast này trước tiên.
+
+### Nói/gửi thêm khi AI đang xử lý: gộp vào cùng ngữ cảnh
+
+Bạn không phải chờ AI trả lời xong mới nói tiếp:
+- **Mic và Live luôn nghe lúc AI đang xử lý**; dòng trạng thái ghi "Đang nghe thêm · AI đang xử lý, câu mới sẽ được gộp". Ở Live, gửi xong là nghe tiếp **ngay**, im lặng lúc AI còn đang chạy không bị tính để thoát Live. Mic thường (một lượt) bấm lúc đang xử lý cũng được.
+- **Gộp**: yêu cầu mới huỷ lượt gọi AI đang chạy (kết quả về muộn bị bỏ), các tin đã gửi được giữ nguyên, rồi AI trả lời **chung một lần** cho tất cả yêu cầu (lượt sau thấy đủ `user, user…` trong ngữ cảnh) và chỉ đọc **một** câu trả lời.
+- **Không nói đè lên bạn**: nếu AI trả lời đúng lúc bạn đang nói dở thì câu trả lời vẫn hiện trong chat nhưng **không đọc to**; phần bạn nói tiếp sau đó được gộp vào ngữ cảnh (lượt sau thấy `user, model, user`).
+- **Đóng mic trước khi AI đọc** (và mở lại sau khi đọc xong + nghỉ `speechTail`) để loa không bị nhận nhầm thành người nói.
+- **Đang ghi điểm danh hoặc đang chờ thẻ xác nhận** thì yêu cầu thêm **xếp hàng**: hiện ngay trong chat, dòng trạng thái báo "N yêu cầu đang chờ", và được gửi gộp sau khi ghi/xác nhận/huỷ xong (kết quả ghi đã nằm trong ngữ cảnh). Lúc chờ thẻ: gõ hoặc nói câu ngắn kiểu "xác nhận"/"huỷ" thì hiểu là quyết định; bấm mic = nói quyết định bằng giọng; câu khác xếp hàng.
 
 ## I. Ngắt AI giữa chừng
 

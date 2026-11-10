@@ -1,0 +1,41 @@
+%% Slide 09 — Container diagram.
+%% Nguồn: docs/01-kien-truc-tong-the.md, firebase.json, firebase/functions/index.js
+%% Nét liền = đồng bộ (sync); nét đứt = bất đồng bộ / tùy chọn / chưa nối.
+flowchart LR
+  subgraph CLIENT["CLIENT"]
+    GVAPP["App Giảng viên<br/>Flutter (MVVM) — mobile/"]
+    SVWEB["Trang điểm danh SV<br/>HTML + Firebase JS SDK — web/checkin/"]
+    ADMWEB["Web Admin<br/>React + Vite — web/admin/<br/>(một phần còn dữ liệu mẫu)"]
+  end
+  subgraph FIREBASE["FIREBASE — backend duy nhất"]
+    AUTH["Authentication<br/>Google Sign-In"]
+    FS[("Cloud Firestore<br/>+ Security Rules deny-by-default")]
+    ST[("Cloud Storage<br/>ảnh TKB tạm")]
+    RC["Remote Config<br/>qr_refresh_seconds · ip_check_default · maintenance_mode"]
+    FN["Cloud Functions (Node 22, asia-southeast1)<br/>scanTimetable · sendTeachingReminders · syncToFap<br/>aiAssistant · aiSpeak · feedback · getCrashlyticsDashboard"]
+    HOST["Hosting<br/>phục vụ web/checkin"]
+  end
+  subgraph EXT["HỆ THỐNG NGOÀI"]
+    GEM["Gemini API"]
+    VIS["Cloud Vision (OCR)"]
+    TTS["Cloud Text-to-Speech"]
+    OLL["Ollama local (AI dự phòng)"]
+    FAP["API FAP (chưa có — stub)"]
+  end
+  GVAPP -- "Firebase SDK" --> FS
+  GVAPP --> AUTH
+  GVAPP --> RC
+  GVAPP -- "httpsCallable" --> FN
+  GVAPP --> ST
+  SVWEB -- "HTTPS" --> FS
+  SVWEB --> AUTH
+  HOST --> SVWEB
+  ADMWEB --> FS
+  ADMWEB --> AUTH
+  FN --> GEM
+  FN -.fallback.-> OLL
+  FN --> VIS
+  FN --> TTS
+  FN --> ST
+  FN --> FS
+  FS -.syncToFap — chờ API.-> FAP

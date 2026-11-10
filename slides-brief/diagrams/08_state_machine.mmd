@@ -1,0 +1,25 @@
+%% Slide 08 — State machine. Nguồn: sessions.sessionStatus, attendance_records.status
+%% (firebase/firestore.rules, packages/core/lib/repositories/teacher_repository.dart).
+%% Quy ước chuyển: Event [Guard] / Action. Đây là trạng thái NGHIỆP VỤ, không phải trạng thái UI.
+stateDiagram-v2
+  direction LR
+  state "Session (sessions.sessionStatus)" as SES {
+    [*] --> open : startSession [BR-02 lớp của GV, BR-03 trong giờ ca] / tạo qrSecret
+    open --> open : rotateQr [mỗi qr_refresh_seconds = 60] / đổi qrSecret
+    open --> closed : closeSession [GV chủ phiên] / sinh Absent (BR-09)
+    open --> closed : AutoSessionManager hết giờ ca / closeCurrentSession
+    open --> expired : quá giờ ca mà chưa đóng (suy ra khi đọc, effectiveSessionStatusAt)
+  }
+  state "AttendanceRecord (attendance_records.status)" as REC {
+    [*] --> Present : checkin [BR-05 QR đúng, BR-06 phiên open và đã ghi danh, BR-07 chưa có bản ghi, BR-08 IP] / create Match hoặc Skipped
+    [*] --> Absent : closeSession [chưa có bản ghi] / create AutoAbsent
+    Absent --> ManualByGV : manualCheckin [BR-10 còn trong ngày VN, SV thuộc lớp] / update Manual
+    Present --> Present : CẤM — SV quét lần hai, sửa hoặc xóa
+  }
+  note right of REC
+    CHUYỂN BỊ CẤM (có test Rules):
+    1) Quét lần hai / sửa / xóa bản ghi của SV
+    2) Check-in khi session = closed
+    3) Điểm danh tay sau deadline (00:00 VN ngày kế tiếp) → phải gửi yêu cầu (BR-11)
+    CHƯA có rule/test chặn closed → open (xem SLIDE_CONTENT.md Phụ lục C, G-12)
+  end note

@@ -20,26 +20,33 @@ abstract class AudioOutput {
 }
 
 /// Cài đặt thật bằng `audioplayers` (web, Android, iOS, Windows…).
+///
+/// Mỗi câu dùng MỘT BỘ PHÁT MỚI rồi giải phóng: tái sử dụng cùng một `AudioPlayer` cho nhiều câu liên tiếp hay làm lần phát
+/// thứ hai trở đi lỗi trên web (trạng thái "completed" + nguồn Blob cũ), khiến giọng Google thất bại và app rơi sang giọng máy.
 class AudioplayersOutput implements AudioOutput {
-  AudioplayersOutput({AudioPlayer? player}) : _player = player ?? AudioPlayer();
-
-  final AudioPlayer _player;
+  AudioPlayer? _current;
   Completer<void>? _finished;
 
   @override
   Future<void> play(Uint8List bytes, String mimeType) async {
-    await _player.stop();
-    _finished?.complete(); // câu trước (nếu còn chờ) coi như kết thúc
+    await stop(); // câu trước (nếu còn) kết thúc hẳn trước khi phát câu mới
+    final player = AudioPlayer();
     final finished = Completer<void>();
+    _current = player;
     _finished = finished;
-    final sub = _player.onPlayerComplete.listen((_) {
+    final sub = player.onPlayerComplete.listen((_) {
       if (!finished.isCompleted) finished.complete();
     });
     try {
-      await _player.play(BytesSource(bytes, mimeType: mimeType)); // lỗi ở đây = chưa phát được -> ném ra
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.play(BytesSource(bytes, mimeType: mimeType)); // lỗi ở đây = chưa phát được -> ném ra
     } catch (_) {
       await sub.cancel();
       if (!finished.isCompleted) finished.complete();
+      if (identical(_current, player)) _current = null;
+      try {
+        await player.dispose();
+      } catch (_) {}
       rethrow;
     }
     // Đã bắt đầu phát: từ đây KHÔNG ném lỗi nữa. Chờ phát xong (hoặc bị stop); có trần để không treo hội thoại.
@@ -49,6 +56,10 @@ class AudioplayersOutput implements AudioOutput {
       // hết giờ chờ: coi như xong
     } finally {
       await sub.cancel();
+      if (identical(_current, player)) _current = null;
+      try {
+        await player.dispose();
+      } catch (_) {}
     }
   }
 
@@ -56,7 +67,12 @@ class AudioplayersOutput implements AudioOutput {
   Future<void> stop() async {
     final f = _finished;
     if (f != null && !f.isCompleted) f.complete();
-    await _player.stop();
+    final p = _current;
+    if (p != null) {
+      try {
+        await p.stop();
+      } catch (_) {}
+    }
   }
 }
 
@@ -66,6 +82,9 @@ abstract class CloudSpeaker {
   Future<bool> trySpeak(String text);
 
   Future<void> stop();
+
+  /// Lý do thất bại gần nhất (null nếu chưa lỗi) — đưa vào thông báo để biết vì sao phải dùng giọng của máy.
+  String? get lastFailure;
 }
 
 /// Giọng tiếng Việt của Google Cloud Text-to-Speech (qua Cloud Function `aiSpeak`).
@@ -84,6 +103,7 @@ class CloudTtsService implements CloudSpeaker {
   int _epoch = 0; // tăng khi stop(): yêu cầu đang chờ mạng sẽ không phát nữa
 
   /// Lý do thất bại gần nhất (để chẩn đoán/hiển thị).
+  @override
   String? lastFailure;
 
   @override
@@ -134,7 +154,7 @@ class FallbackTtsService implements TtsService {
   FallbackTtsService({
     required this.cloud,
     required this.device,
-    this.cooldown = const Duration(seconds: 60),
+    this.cooldown = const Duration(seconds: 20),
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
@@ -171,8 +191,10 @@ class FallbackTtsService implements TtsService {
       if (id != _speakId) return;
       await cloud.stop(); // chắc chắn không còn âm thanh đám mây nào đang phát trước khi giọng máy lên tiếng
       _cloudDownUntil = _now().add(cooldown);
-      _note = 'Giọng Google đám mây chưa dùng được nên đang dùng giọng của máy '
-          '(kiểm tra đã bật Cloud Text-to-Speech API và đã deploy hàm aiSpeak).';
+      final why = cloud.lastFailure;
+      _note = 'Giọng Google đám mây chưa dùng được nên đang dùng giọng của máy'
+          '${why == null || why.isEmpty ? '' : ' ($why)'}. '
+          'Kiểm tra đã bật Cloud Text-to-Speech API và đã deploy hàm aiSpeak.';
     }
     lastUsedDevice = true;
     await device.speak(value);

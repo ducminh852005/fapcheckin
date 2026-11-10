@@ -42,6 +42,9 @@ class _FakeCloud implements CloudSpeaker {
   Completer<void>? hold; // mô phỏng đang chờ mạng
 
   @override
+  String? lastFailure;
+
+  @override
   Future<bool> trySpeak(String text) async {
     spoken.add(text);
     log?.add('cloud:$text');
@@ -178,6 +181,34 @@ void main() {
       expect(tts.lastUsedDevice, isFalse);
     });
 
+    test('LIÊN TIẾP nhiều câu: giọng Google vẫn đọc từng câu (không rơi sang giọng máy từ câu thứ hai)', () async {
+      final repo = _FakeSpeakRepo();
+      final out = _FakeOutput();
+      final device = _FakeDevice();
+      final tts = FallbackTtsService(cloud: CloudTtsService(repository: repo, output: out), device: device);
+      await tts.speak('Câu một');
+      await tts.speak('Câu hai');
+      await tts.speak('Câu ba');
+      expect(out.played, hasLength(3));
+      expect(device.spoken, isEmpty);
+      expect(tts.lastUsedDevice, isFalse);
+      expect(tts.takeError(), isNull);
+    });
+
+    test('phát lại lỗi ở câu thứ hai -> thông báo NÊU RÕ lý do để chẩn đoán, rồi dùng giọng máy', () async {
+      final repo = _FakeSpeakRepo();
+      final out = _FlakyOutput(failOnPlay: 2);
+      final device = _FakeDevice();
+      final tts = FallbackTtsService(cloud: CloudTtsService(repository: repo, output: out), device: device);
+      await tts.speak('Câu một');
+      expect(device.spoken, isEmpty);
+      await tts.speak('Câu hai');
+      expect(device.spoken, ['Câu hai']);
+      final note = tts.takeError()!;
+      expect(note, contains('giọng của máy'));
+      expect(note, contains('audio device busy')); // lý do cụ thể
+    });
+
     test('lỗi của giọng máy cũng được gộp vào takeError', () async {
       final device = _FakeDevice()..error = 'Thiết bị chưa có giọng tiếng Việt';
       final tts = FallbackTtsService(cloud: _FakeCloud([false]), device: device);
@@ -265,12 +296,32 @@ class _SlowFailCloud implements CloudSpeaker {
   final Completer<void> gate = Completer<void>();
 
   @override
+  String? get lastFailure => null;
+
+  @override
   Future<bool> trySpeak(String text) async {
     if (text == 'Câu cũ') {
       await gate.future;
       return false;
     }
     return true;
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
+/// Đầu phát lỗi ở lần phát thứ [failOnPlay] (đếm từ 1) — mô phỏng bộ phát web hỏng từ lần thứ hai.
+class _FlakyOutput implements AudioOutput {
+  _FlakyOutput({required this.failOnPlay});
+
+  final int failOnPlay;
+  int plays = 0;
+
+  @override
+  Future<void> play(Uint8List bytes, String mimeType) async {
+    plays++;
+    if (plays == failOnPlay) throw StateError('audio device busy');
   }
 
   @override

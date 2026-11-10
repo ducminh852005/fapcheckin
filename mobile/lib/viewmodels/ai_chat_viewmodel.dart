@@ -81,6 +81,17 @@ class AiChatViewModel extends ChangeNotifier {
   /// Số lần mở lại bộ nhận dạng tối đa trong một lượt nói.
   static const maxEngineRestarts = 12;
 
+  /// Sau khi mở bộ nhận dạng, trong khoảng này mọi tín hiệu "đã dừng/không có tiếng" bị coi là TÍN HIỆU MUỘN của phiên
+  /// trước (plugin dùng chung một bộ lắng nghe trạng thái) chứ không phải người dùng im lặng — nếu không, lượt nghe mới
+  /// bị kết thúc ngay và hai lần liền thì Live tự thoát ("chỉ nói được một lần"). Im lặng thật chỉ được tính sau mốc này.
+  static const engineWarmup = Duration(milliseconds: 1200);
+
+  /// Số tín hiệu muộn tối đa được bỏ qua (rồi mở lại) trong một lượt trước khi coi là bộ nhận dạng hỏng.
+  static const maxStaleSignals = 6;
+
+  /// Số lỗi tạm thời liên tiếp (busy, network chập chờn…) được thử lại trước khi thoát Live.
+  static const maxTransientErrors = 3;
+
   /// Không nói gì trong khoảng này thì kết thúc lượt nghe.
   static const noSpeechLimit = Duration(seconds: 12);
 
@@ -122,6 +133,12 @@ class AiChatViewModel extends ChangeNotifier {
   /// Có thể ngắt: AI đang đọc hoặc đang xử lý.
   bool get canInterrupt => sending || speaking;
 
+  // Yêu cầu gửi lúc AI đang GHI điểm danh hoặc đang chờ xác nhận: xếp hàng rồi gửi ngay sau đó (không bị bỏ mất).
+  final List<String> _queued = [];
+
+  /// Số yêu cầu đang xếp hàng (để giao diện báo).
+  int get queuedCount => _queued.length;
+
   // Điểm cắt của history: ngắt giữa chừng thì bỏ phần model/tool dở dang để history luôn hợp lệ.
   int _checkpoint = 0;
 
@@ -147,10 +164,15 @@ class AiChatViewModel extends ChangeNotifier {
 
   int _turnId = 0; // mỗi lượt nghe một mã; callback của lượt cũ bị bỏ qua
   bool _turnDone = true;
-  int _voiceEpoch = 0; // tăng khi dừng Live/reset để vòng đọc→nghe đang chạy tự huỷ
+  int _voiceEpoch =
+      0; // tăng khi dừng Live/reset để vòng đọc→nghe đang chạy tự huỷ
   String _heard = ''; // đoạn đang nói (chưa chốt)
   String _committed = ''; // các đoạn đã chốt trong cùng một lượt nói
   int _restarts = 0;
+  int _staleSignals = 0;
+  int _transientErrors = 0;
+  bool _engineWarm = false;
+  Timer? _warmTimer;
   Timer? _sendTimer;
   int _silentTurns = 0;
   int _confirmRetries = 0;
@@ -160,20 +182,57 @@ class AiChatViewModel extends ChangeNotifier {
 
   /// Dòng trạng thái cho giao diện (null khi rảnh).
   String? get statusText {
+    final base = _baseStatus;
+    if (base == null || _queued.isEmpty) return base;
+    return '$base · ${_queued.length} yêu cầu đang chờ';
+  }
+
+  String? get _baseStatus {
     if (speaking) return 'Đang đọc…';
-    if (listening) return confirmingByVoice ? 'Nói "xác nhận" hoặc "huỷ"' : 'Đang nghe…';
+    if (listening) {
+      if (confirmingByVoice) return 'Nói "xác nhận" hoặc "huỷ"';
+      return sending
+          ? 'Đang nghe thêm · AI đang xử lý, câu mới sẽ được gộp'
+          : 'Đang nghe…';
+    }
     if (sending) return 'Đang xử lý…';
     return null;
   }
 
   // ── gửi tin ────────────────────────────────────────────────────────────────
 
+  /// Gửi một yêu cầu. Lúc AI đang xử lý, yêu cầu mới được GỘP vào cùng ngữ cảnh (huỷ lượt đang chạy rồi trả lời chung
+  /// cả hai); lúc AI đang ghi điểm danh hoặc chờ xác nhận thì xếp hàng và gửi ngay sau đó.
   Future<void> send(String rawText, {bool fromVoice = false}) async {
     final text = rawText.trim();
-    if (text.isEmpty || pendingAction != null) return;
+    if (text.isEmpty) return;
+
+    if (pendingAction != null) {
+      // Đang chờ xác nhận: câu ngắn kiểu "xác nhận"/"huỷ" được hiểu là quyết định; câu khác xếp hàng.
+      if (text.split(RegExp(r'\s+')).length <= 4) {
+        switch (parseVoiceDecision(text)) {
+          case VoiceDecision.confirm:
+            await confirmPending();
+            return;
+          case VoiceDecision.cancel:
+            await cancelPending();
+            return;
+          case VoiceDecision.unknown:
+            break;
+        }
+      }
+      _enqueue(text, fromVoice);
+      return;
+    }
+    if (sending && _writing) {
+      _enqueue(
+        text,
+        fromVoice,
+      ); // đang ghi điểm danh: không chen ngang, gửi ngay sau khi ghi xong
+      return;
+    }
     if (sending) {
-      if (_writing) return; // đang ghi điểm danh: không chen ngang
-      // Câu mới chen vào lúc AI đang xử lý: bỏ yêu cầu cũ rồi trả lời câu mới.
+      // Gộp: huỷ lượt đang chạy (kết quả về muộn bị bỏ), giữ nguyên các tin đã gửi; AI sẽ thấy cả hai yêu cầu cùng lúc.
       await interrupt(relisten: false, announce: false);
     } else if (speaking) {
       await _tts?.stop();
@@ -184,6 +243,26 @@ class AiChatViewModel extends ChangeNotifier {
     _add(AiMessage(id: _nextId++, role: AiMessageRole.user, text: text));
     _history.add(AiHistory.user(text));
     _checkpoint = _history.length;
+    _round = 0;
+    await _drive();
+  }
+
+  void _enqueue(String text, bool fromVoice) {
+    _queued.add(text);
+    if (fromVoice) _lastInputWasVoice = true;
+    _add(AiMessage(id: _nextId++, role: AiMessageRole.user, text: text));
+  }
+
+  /// Gửi các yêu cầu đã xếp hàng (cùng một lượt gọi AI để AI xử lý gộp).
+  Future<void> _flushQueued() async {
+    if (_queued.isEmpty || busy || _disposed) return;
+    final texts = List<String>.of(_queued);
+    _queued.clear();
+    for (final t in texts) {
+      _history.add(AiHistory.user(t));
+    }
+    _checkpoint = _history.length;
+    _retryable = false;
     _round = 0;
     await _drive();
   }
@@ -202,6 +281,11 @@ class AiChatViewModel extends ChangeNotifier {
     final generation = _generation;
     await _driveCore(generation);
     if (_disposed || generation != _generation) return;
+    if (_queued.isNotEmpty && pendingAction == null && !_writing) {
+      // Có yêu cầu bổ sung đang chờ: câu trả lời vừa rồi sắp bị thay thế nên không đọc to, trả lời gộp luôn.
+      await _flushQueued();
+      return;
+    }
     await _afterDrive();
   }
 
@@ -221,7 +305,13 @@ class AiChatViewModel extends ChangeNotifier {
             lastProvider = data.provider;
             _history.add(AiHistory.model(data));
             if (data.text.isNotEmpty) {
-              _add(AiMessage(id: _nextId++, role: AiMessageRole.assistant, text: data.text));
+              _add(
+                AiMessage(
+                  id: _nextId++,
+                  role: AiMessageRole.assistant,
+                  text: data.text,
+                ),
+              );
             }
             if (!data.hasToolCalls) {
               _postReply = data.text;
@@ -242,8 +332,11 @@ class AiChatViewModel extends ChangeNotifier {
             return;
         }
       }
-      const giveUp = 'Mình chưa hoàn tất được yêu cầu này. Bạn thử diễn đạt cụ thể hơn nhé.';
-      _add(AiMessage(id: _nextId++, role: AiMessageRole.assistant, text: giveUp));
+      const giveUp =
+          'Mình chưa hoàn tất được yêu cầu này. Bạn thử diễn đạt cụ thể hơn nhé.';
+      _add(
+        AiMessage(id: _nextId++, role: AiMessageRole.assistant, text: giveUp),
+      );
       _postReply = giveUp;
     } finally {
       if (!_disposed && generation == _generation) {
@@ -285,7 +378,9 @@ class AiChatViewModel extends ChangeNotifier {
     final action = pendingAction;
     final call = _pendingCall;
     final message = _pendingMessage;
-    if (action == null || call == null || message == null || sending) return false;
+    if (action == null || call == null || message == null || sending) {
+      return false;
+    }
     await _haltListen();
     await _tts?.stop();
     final generation = _generation;
@@ -308,7 +403,9 @@ class AiChatViewModel extends ChangeNotifier {
   Future<void> cancelPending() async {
     final call = _pendingCall;
     final message = _pendingMessage;
-    if (pendingAction == null || call == null || message == null || sending) return;
+    if (pendingAction == null || call == null || message == null || sending) {
+      return;
+    }
     await _haltListen();
     await _tts?.stop();
     final generation = _generation;
@@ -353,15 +450,24 @@ class AiChatViewModel extends ChangeNotifier {
   /// Ngắt AI: cắt giọng đang đọc và huỷ yêu cầu đang xử lý (kết quả trả về muộn bị bỏ qua).
   /// Lệnh ghi điểm danh đang thực thi thì KHÔNG huỷ (chỉ cắt giọng). Ở chế độ Live, ngắt xong tự nghe tiếp.
   Future<void> interrupt({bool relisten = true, bool announce = true}) async {
-    await _tts?.stop(); // speak() hoàn thành -> vòng đọc→nghe đang chờ tự đi tiếp
+    await _tts
+        ?.stop(); // speak() hoàn thành -> vòng đọc→nghe đang chờ tự đi tiếp
     if (!sending || _writing) return;
     _generation++;
-    if (_history.length > _checkpoint) _history.removeRange(_checkpoint, _history.length);
+    if (_history.length > _checkpoint) {
+      _history.removeRange(_checkpoint, _history.length);
+    }
     _postReply = null;
     _postConfirm = false;
     sending = false;
     if (announce) {
-      _add(AiMessage(id: _nextId++, role: AiMessageRole.assistant, text: 'Đã dừng.'));
+      _add(
+        AiMessage(
+          id: _nextId++,
+          role: AiMessageRole.assistant,
+          text: 'Đã dừng.',
+        ),
+      );
     } else {
       notifyListeners();
     }
@@ -383,24 +489,35 @@ class AiChatViewModel extends ChangeNotifier {
       }
       return true;
     }
-    if (busy) return false;
     if (!await _ensureSpeech()) return false;
     _onTranscript = onTranscript;
     live = false;
     _silentTurns = 0;
-    await _listenTurn();
+    if (pendingAction != null) {
+      _confirmRetries = 0;
+      await _listenTurn(
+        forConfirm: true,
+      ); // đang chờ xác nhận: mic = nói "xác nhận"/"huỷ"
+      return true;
+    }
+    await _listenTurn(); // kể cả lúc AI đang xử lý: câu nói thêm được gộp vào ngữ cảnh
     return true;
   }
 
   /// Bật chế độ Live: hội thoại liên tục (nghe → xử lý → đọc → nghe tiếp) tới khi [stopLive].
   Future<bool> startLive(void Function(String text) onTranscript) async {
-    if (_speech == null || busy) return false;
+    if (_speech == null) return false;
     if (!await _ensureSpeech()) return false;
     _onTranscript = onTranscript;
     live = true;
     _silentTurns = 0;
     _lastInputWasVoice = true;
     notifyListeners();
+    if (pendingAction != null) {
+      _confirmRetries = 0;
+      await _listenTurn(forConfirm: true);
+      return true;
+    }
     await _listenTurn();
     return true;
   }
@@ -421,6 +538,7 @@ class AiChatViewModel extends ChangeNotifier {
     _turnDone = true;
     _noSpeechTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     listening = false;
     speaking = false;
     confirmingByVoice = false;
@@ -440,8 +558,7 @@ class AiChatViewModel extends ChangeNotifier {
     final ready = await _speech!.initialize();
     if (_disposed) return false;
     if (!ready) {
-      voiceError =
-          'Không dùng được micro. Hãy cấp quyền micro/nhận dạng giọng nói cho ứng dụng rồi thử lại.';
+      voiceError = 'Không dùng được micro. Hãy cấp quyền micro/nhận dạng giọng nói cho ứng dụng rồi thử lại.';
       notifyListeners();
       return false;
     }
@@ -454,6 +571,7 @@ class AiChatViewModel extends ChangeNotifier {
     _turnDone = true;
     _noSpeechTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     if (listening) {
       listening = false;
       confirmingByVoice = false;
@@ -483,7 +601,10 @@ class AiChatViewModel extends ChangeNotifier {
     _heard = '';
     _committed = '';
     _restarts = 0;
+    _staleSignals = 0;
+    _transientErrors = 0;
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     confirmingByVoice = forConfirm;
     listening = true;
     notifyListeners();
@@ -504,10 +625,22 @@ class AiChatViewModel extends ChangeNotifier {
     final speech = _speech;
     if (speech == null || !_current(id)) return;
     try {
+      // Phiên trước (nếu còn) phải dừng hẳn rồi mới mở phiên mới — mở chồng làm plugin báo lỗi "busy".
+      if (speech.isListening) await speech.cancel();
+      if (!_current(id)) return;
+      _engineWarm = false;
+      _warmTimer?.cancel();
+      _warmTimer = Timer(engineWarmup, () {
+        if (id == _turnId) _engineWarm = true;
+      });
       await speech.start(
         pauseFor: enginePause,
         onResult: (text, isFinal) {
           if (!_current(id)) return;
+          _transientErrors = 0;
+          _staleSignals = 0;
+          _engineWarm =
+              true; // đã nghe được tiếng thật: bộ nhận dạng đang chạy đúng
           if (isFinal) {
             _committed = _join(_committed, text);
             _heard = '';
@@ -527,15 +660,28 @@ class AiChatViewModel extends ChangeNotifier {
             _engineEnded(id, forConfirm);
             return;
           }
-          voiceError = 'Lỗi nhận dạng giọng nói: $message';
-          _turnDone = true;
-          _noSpeechTimer?.cancel();
-          _sendTimer?.cancel();
-          listening = false;
-          confirmingByVoice = false;
-          live = false;
-          _voiceEpoch++;
-          notifyListeners();
+          if (_isFatalSpeechError(message) ||
+              _transientErrors >= maxTransientErrors) {
+            voiceError = 'Lỗi nhận dạng giọng nói: $message';
+            _turnDone = true;
+            _noSpeechTimer?.cancel();
+            _sendTimer?.cancel();
+            _warmTimer?.cancel();
+            listening = false;
+            confirmingByVoice = false;
+            live = false;
+            _voiceEpoch++;
+            notifyListeners();
+            return;
+          }
+          // Lỗi tạm thời (busy, mạng chập chờn…): đừng bỏ cuộc hội thoại, mở lại sau một nhịp.
+          _transientErrors++;
+          unawaited(
+            Future<void>.delayed(
+              const Duration(milliseconds: 500),
+              () => _startEngine(id, forConfirm),
+            ),
+          );
         },
         onDone: () {
           if (!_current(id)) return;
@@ -544,9 +690,23 @@ class AiChatViewModel extends ChangeNotifier {
       );
     } catch (e) {
       if (_disposed) return;
+      if (DeviceSpeechService.isAlreadyStartedError(e) &&
+          _transientErrors < maxTransientErrors &&
+          _current(id)) {
+        // "recognition has already started": phiên cũ chưa kết thúc hẳn — tạm thời, thử lại sau một nhịp thay vì thoát Live.
+        _transientErrors++;
+        unawaited(
+          Future<void>.delayed(
+            const Duration(milliseconds: 600),
+            () => _startEngine(id, forConfirm),
+          ),
+        );
+        return;
+      }
       voiceError = 'Không bật được micro: $e';
       _turnDone = true;
       _sendTimer?.cancel();
+      _warmTimer?.cancel();
       listening = false;
       live = false;
       _voiceEpoch++;
@@ -558,6 +718,17 @@ class AiChatViewModel extends ChangeNotifier {
   void _engineEnded(int id, bool forConfirm) {
     if (!_current(id)) return;
     if (_fullHeard.isEmpty) {
+      if (!_engineWarm && _staleSignals < maxStaleSignals) {
+        // Chưa qua giai đoạn 'ấm máy' và chưa nghe được gì: đây là tín hiệu muộn của phiên trước, KHÔNG phải im lặng thật.
+        _staleSignals++;
+        unawaited(
+          Future<void>.delayed(
+            const Duration(milliseconds: 300),
+            () => _startEngine(id, forConfirm),
+          ),
+        );
+        return;
+      }
       _endTurn(id, forConfirm); // không có tiếng -> đường "im lặng"
       return;
     }
@@ -569,15 +740,32 @@ class AiChatViewModel extends ChangeNotifier {
     // Chữ đang dở (chưa chốt) được giữ lại để không mất khi mở lại.
     _committed = _fullHeard;
     _heard = '';
-    unawaited(Future<void>.delayed(const Duration(milliseconds: 120), () => _startEngine(id, forConfirm)));
+    unawaited(
+      Future<void>.delayed(
+        const Duration(milliseconds: 120),
+        () => _startEngine(id, forConfirm),
+      ),
+    );
   }
 
   void _armSendTimer(int id, bool forConfirm) {
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     final delay = forConfirm
         ? confirmDelay
         : (looksIncomplete(_fullHeard) ? sendDelayIncomplete : sendDelay);
     _sendTimer = Timer(delay, () => _endTurn(id, forConfirm));
+  }
+
+  /// Lỗi không thể tự hết bằng cách thử lại (thiếu quyền micro, dịch vụ/ngôn ngữ không hỗ trợ).
+  static bool _isFatalSpeechError(String message) {
+    final m = message.toLowerCase();
+    return m.contains('permission') ||
+        m.contains('not-allowed') ||
+        m.contains('not_allowed') ||
+        m.contains('service-not-allowed') ||
+        m.contains('language-not-supported') ||
+        m.contains('insufficient');
   }
 
   static bool _isSoftSpeechError(String message) {
@@ -598,7 +786,9 @@ class AiChatViewModel extends ChangeNotifier {
     _turnDone = true;
     _noSpeechTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     listening = false;
     final text = _fullHeard.trim();
     _heard = '';
@@ -612,7 +802,20 @@ class AiChatViewModel extends ChangeNotifier {
     }
     _silentTurns = 0;
     _onTranscript?.call(''); // xoá bản chép tạm trong ô nhập: câu đã được gửi
-    unawaited(forConfirm ? _handleDecision(text, epoch) : send(text, fromVoice: true));
+    unawaited(
+      forConfirm ? _handleDecision(text, epoch) : send(text, fromVoice: true),
+    );
+    if (live && !forConfirm) {
+      // Live: gửi xong là nghe tiếp ngay, không chờ AI xử lý — nói thêm lúc này sẽ được gộp vào cùng ngữ cảnh.
+      unawaited(
+        Future<void>.microtask(() {
+          // Không mở mic nếu AI đã trả lời xong và đang đọc (khi đó _afterDrive sẽ mở lại sau khi đọc xong).
+          if (epoch == _voiceEpoch && live && !listening && !speaking && !_disposed) {
+            return _listenTurn();
+          }
+        }),
+      );
+    }
   }
 
   /// Người dùng bấm mic khi đang nghe: coi như nói xong, gửi ngay những gì đã nói (không chờ im lặng).
@@ -625,6 +828,10 @@ class AiChatViewModel extends ChangeNotifier {
     if (epoch != _voiceEpoch) return;
     if (forConfirm) {
       await _confirmUnclear(epoch);
+      return;
+    }
+    if (live && sending) {
+      await _listenTurn(); // AI còn đang xử lý: chờ tiếp, không tính là im lặng
       return;
     }
     _silentTurns++;
@@ -655,7 +862,9 @@ class AiChatViewModel extends ChangeNotifier {
     if (_confirmRetries >= maxConfirmRetries) {
       confirmingByVoice = false;
       notifyListeners();
-      if (voiceReplies) await _speak('Mình giữ nguyên thẻ, bạn bấm xác nhận hoặc huỷ nhé.');
+      if (voiceReplies) {
+        await _speak('Mình giữ nguyên thẻ, bạn bấm xác nhận hoặc huỷ nhé.');
+      }
       if (live) await stopLive(); // thẻ vẫn còn, bấm tay được
       return;
     }
@@ -673,19 +882,37 @@ class AiChatViewModel extends ChangeNotifier {
     if (_speech == null || !(_lastInputWasVoice || live)) return;
     final epoch = _voiceEpoch;
 
+    // Mic có thể đang mở để nghe thêm yêu cầu trong lúc AI xử lý (một lượt nói thường, không phải lượt xác nhận).
+    final openTurn = listening && !confirmingByVoice;
+    final userIsTalking = openTurn && _fullHeard.isNotEmpty;
+
     final action = pendingAction;
     if (wantsConfirm && action != null) {
+      if (userIsTalking) {
+        // Người dùng đang nói dở: chốt câu đó ngay (nếu là "xác nhận"/"huỷ" thì hiểu là quyết định, còn lại xếp hàng).
+        _endTurn(_turnId, false);
+        await Future<void>.delayed(Duration.zero);
+        if (pendingAction == null) return;
+      } else if (openTurn) {
+        await _haltListen(); // đóng mic trước khi đọc để không thu lại giọng máy
+      }
       if (voiceReplies) await _speak(confirmPrompt(action));
       if (epoch != _voiceEpoch || _disposed || pendingAction == null) return;
       _confirmRetries = 0;
       await _listenTurn(forConfirm: true);
       return;
     }
+
+    if (userIsTalking) {
+      // Không nói đè lên người đang nói. Câu trả lời đã hiện trong chat; câu họ đang nói sẽ được gộp vào ngữ cảnh.
+      return;
+    }
     if (reply != null && reply.isNotEmpty && voiceReplies) {
+      if (openTurn) await _haltListen(); // đóng mic trước khi đọc (tránh vang loa bị nhận nhầm)
       await _speak(spokenSummary(reply));
     }
     if (epoch != _voiceEpoch || _disposed) return;
-    if (live) await _listenTurn();
+    if (live && !listening) await _listenTurn();
   }
 
   Future<void> _speak(String text) async {
@@ -695,11 +922,15 @@ class AiChatViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await tts.speak(text);
-      if (speechTail > Duration.zero && !_disposed) await Future<void>.delayed(speechTail);
+      if (speechTail > Duration.zero && !_disposed) {
+        await Future<void>.delayed(speechTail);
+      }
     } finally {
       speaking = false;
       final problem = tts.takeError();
-      if (problem != null) voiceError = problem; // hiện cho người dùng (toast) thay vì im lặng
+      if (problem != null) {
+        voiceError = problem; // hiện cho người dùng (toast) thay vì im lặng
+      }
       if (!_disposed) notifyListeners();
     }
   }
@@ -714,6 +945,7 @@ class AiChatViewModel extends ChangeNotifier {
     _turnDone = true;
     _noSpeechTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     unawaited(_tts?.stop());
     unawaited(_speech?.cancel());
     messages.clear();
@@ -724,6 +956,7 @@ class AiChatViewModel extends ChangeNotifier {
     _remainingCalls = const [];
     _postReply = null;
     _postConfirm = false;
+    _queued.clear();
     _checkpoint = 0;
     _writing = false;
     sending = false;
@@ -745,12 +978,14 @@ class AiChatViewModel extends ChangeNotifier {
 
   void _fail(String message) {
     _retryable = true;
-    _add(AiMessage(
-      id: _nextId++,
-      role: AiMessageRole.assistant,
-      text: message,
-      isError: true,
-    ));
+    _add(
+      AiMessage(
+        id: _nextId++,
+        role: AiMessageRole.assistant,
+        text: message,
+        isError: true,
+      ),
+    );
   }
 
   Map<String, dynamic> _bounded(Map<String, dynamic> result) {
@@ -777,6 +1012,7 @@ class AiChatViewModel extends ChangeNotifier {
     _turnId++;
     _noSpeechTimer?.cancel();
     _sendTimer?.cancel();
+    _warmTimer?.cancel();
     unawaited(_tts?.stop());
     unawaited(_speech?.cancel());
     super.dispose();

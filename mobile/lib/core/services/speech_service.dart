@@ -75,17 +75,40 @@ class DeviceSpeechService implements SpeechService {
   }) async {
     _onError = onError;
     _onDone = onDone;
-    await _speech.listen(
-      onResult: (r) => onResult(r.recognizedWords, r.finalResult),
-      listenOptions: SpeechListenOptions(
-        localeId: _localeId,
-        listenFor: const Duration(seconds: 45),
-        pauseFor: pauseFor ?? const Duration(seconds: 4),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.dictation,
-      ),
-    );
+    // Trình duyệt chỉ cho MỘT phiên nhận dạng chạy tại một thời điểm và hay báo "recognition has already started" khi
+    // phiên trước chưa kịp kết thúc hẳn (plugin báo "không còn nghe" sớm hơn thực tế). Huỷ phiên cũ rồi thử lại.
+    for (var attempt = 0;; attempt++) {
+      try {
+        await _speech.listen(
+          onResult: (r) => onResult(r.recognizedWords, r.finalResult),
+          listenOptions: SpeechListenOptions(
+            localeId: _localeId,
+            listenFor: const Duration(seconds: 45),
+            pauseFor: pauseFor ?? const Duration(seconds: 4),
+            partialResults: true,
+            cancelOnError: true,
+            listenMode: ListenMode.dictation,
+          ),
+        );
+        return;
+      } catch (e) {
+        if (!isAlreadyStartedError(e) || attempt >= maxStartRetries) rethrow;
+        try {
+          await _speech.cancel();
+        } catch (_) {}
+        await Future<void>.delayed(startRetryDelay);
+      }
+    }
+  }
+
+  /// Số lần thử lại `start` khi trình duyệt báo phiên cũ chưa kết thúc.
+  static const maxStartRetries = 3;
+  static const startRetryDelay = Duration(milliseconds: 350);
+
+  /// Lỗi "recognition has already started" (InvalidStateError) của Web Speech API.
+  static bool isAlreadyStartedError(Object error) {
+    final m = error.toString().toLowerCase();
+    return m.contains('already started') || m.contains('already_started') || m.contains('invalidstate');
   }
 
   @override
