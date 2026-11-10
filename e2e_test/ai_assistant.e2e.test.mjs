@@ -13,7 +13,10 @@ import { Timestamp, getFirestore as getAdminDb } from 'firebase-admin/firestore'
 import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { connectFirestoreEmulator, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { callReply, endsWithToolResult, lastUserText, startFakeGemini, textReply } from './support/fake_gemini.mjs';
+import { startFakeOllama } from './support/fake_ollama.mjs';
 
 const PROJECT = 'demo-fapcheckin';
 const FS_HOST = '127.0.0.1';
@@ -89,10 +92,12 @@ const manualRecord = (sessionId, roll, over = {}) => ({
 
 describe('Trợ lý AI end-to-end (Functions + Rules trên Emulator)', () => {
   let gemini;
+  let ollama;
   let teacher;
 
   before(async () => {
     gemini = await startFakeGemini({ port: Number(process.env.FAKE_GEMINI_PORT ?? 5599) });
+    ollama = await startFakeOllama({ port: Number(process.env.FAKE_OLLAMA_PORT ?? 5598) });
     initAdmin({ projectId: PROJECT });
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
@@ -131,6 +136,7 @@ describe('Trợ lý AI end-to-end (Functions + Rules trên Emulator)', () => {
   after(async () => {
     await Promise.all(clients.map((app) => deleteApp(app)));
     await gemini?.close();
+    await ollama?.close();
   });
 
   describe('callable aiAssistant', () => {
@@ -229,6 +235,105 @@ describe('Trợ lý AI end-to-end (Functions + Rules trên Emulator)', () => {
     it('client không đọc/ghi được ai_usage (chỉ Admin SDK)', async () => {
       await assert.rejects(setDoc(doc(teacher.db, 'ai_usage', teacher.uid), { windowStart: 0, count: 0 }));
       await assert.rejects(getDoc(doc(teacher.db, 'ai_usage', teacher.uid)));
+    });
+  });
+
+  // Chuyển nguồn AI không cần deploy: script set-ai-provider.mjs ghi ai_config/provider, hàm đọc ở mỗi lượt.
+  describe('AI dự phòng Ollama (chuyển nguồn nhanh)', () => {
+    const firebaseDir = path.resolve(import.meta.dirname, '..', 'firebase');
+    const setProvider = (...args) => {
+      const r = spawnSync(process.execPath, ['scripts/set-ai-provider.mjs', '--emulator', ...args], { cwd: firebaseDir, env: process.env, encoding: 'utf8' });
+      assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
+      return r.stdout;
+    };
+    const geminiCalls = () => gemini.requests.length;
+
+    after(async () => {
+      await getAdminDb().doc('ai_config/provider').delete();
+    });
+
+    it('script từ chối chế độ/URL sai và ollama thiếu URL', () => {
+      const run = (...args) => spawnSync(process.execPath, ['scripts/set-ai-provider.mjs', '--emulator', ...args], { cwd: firebaseDir, env: process.env, encoding: 'utf8' });
+      assert.notEqual(run('--provider', 'banana').status, 0);
+      assert.notEqual(run('--url', 'ftp://x').status, 0);
+      assert.notEqual(run('--provider', 'ollama').status, 0); // chưa có URL
+    });
+
+    it('chế độ ollama: trả lời bằng Ollama, KHÔNG gọi Gemini', async () => {
+      setProvider('--provider', 'ollama', '--url', ollama.url, '--model', 'qwen2.5:7b');
+      const before = geminiCalls();
+      const r = await callAi([user('xin chào')], 'teacher');
+      assert.equal(r.http, 200, JSON.stringify(r.error));
+      assert.equal(r.result.provider, 'ollama');
+      assert.match(r.result.text, /dự phòng/);
+      assert.equal(geminiCalls(), before);
+      const req = ollama.requests.filter((x) => x.url === '/api/chat').at(-1);
+      assert.equal(req.body.model, 'qwen2.5:7b');
+      assert.equal(req.body.tools.length, 6);
+      assert.equal(req.body.tools[0].function.parameters.type, 'object'); // kiểu viết thường
+      assert.equal(req.body.messages[0].role, 'system');
+    });
+
+    it('Ollama trả tool_calls đúng định dạng như Gemini (app dùng chung một executor)', async () => {
+      const r = await callAi([user('điểm danh SE1001 lớp PRN232_SE1917')], 'teacher');
+      assert.equal(r.result.type, 'tool_calls');
+      assert.equal(r.result.provider, 'ollama');
+      assert.deepEqual(r.result.calls, [{
+        name: 'mark_attendance',
+        args: { classCode: 'PRN232_SE1917', students: [{ rollNumber: 'SE1001', status: 'ManualByGV' }] },
+      }]);
+    });
+
+    it('vòng tool qua Ollama: kết quả tool gửi đúng role tool', async () => {
+      const call = { name: 'mark_attendance', args: { classCode: 'PRN232_SE1917', students: [{ rollNumber: 'SE1001', status: 'ManualByGV' }] } };
+      const r = await callAi([user('điểm danh SE1001'), { role: 'model', toolCalls: [call] }, { role: 'tool', name: 'mark_attendance', result: { ok: true } }], 'teacher');
+      assert.equal(r.result.type, 'text');
+      const msgs = ollama.requests.filter((x) => x.url === '/api/chat').at(-1).body.messages;
+      assert.deepEqual(msgs.at(-1), { role: 'tool', tool_name: 'mark_attendance', content: '{"ok":true}' });
+    });
+
+    it('chế độ auto: Gemini quá tải (503) -> tự chuyển Ollama, fallback=true', async () => {
+      setProvider('--provider', 'auto');
+      gemini.setResponder(() => ({ status: 503, json: { error: { message: 'high demand' } } }));
+      try {
+        const r = await callAi([user('xin chào')], 'teacher');
+        assert.equal(r.http, 200, JSON.stringify(r.error));
+        assert.equal(r.result.provider, 'ollama');
+        assert.equal(r.result.fallback, true);
+      } finally {
+        gemini.setResponder(null);
+      }
+    });
+
+    it('chế độ auto: Gemini ổn thì vẫn dùng Gemini (không fallback)', async () => {
+      const r = await callAi([user('xin chào')], 'teacher');
+      assert.equal(r.result.provider, 'gemini');
+      assert.equal(r.result.fallback, undefined);
+    });
+
+    it('chế độ gemini: Gemini hỏng thì báo lỗi, không sang Ollama', async () => {
+      setProvider('--provider', 'gemini');
+      gemini.setResponder(() => ({ status: 503, json: {} }));
+      const before = ollama.requests.length;
+      try {
+        const r = await callAi([user('xin chào')], 'teacher');
+        assert.equal(r.error?.status, 'UNAVAILABLE');
+        assert.equal(ollama.requests.length, before);
+      } finally {
+        gemini.setResponder(null);
+      }
+    });
+
+    it('Ollama tắt/không với tới được (tunnel chết) -> lỗi rõ ràng, không treo', async () => {
+      setProvider('--provider', 'ollama', '--url', 'http://127.0.0.1:1');
+      const r = await callAi([user('xin chào')], 'teacher');
+      assert.equal(r.error?.status, 'UNAVAILABLE');
+      assert.equal(r.error?.details?.code, 'AI_UNAVAILABLE');
+    });
+
+    it('client không đọc được ai_config/provider (URL tunnel là bí mật)', async () => {
+      await assert.rejects(getDoc(doc(teacher.db, 'ai_config', 'provider')));
+      await assert.rejects(setDoc(doc(teacher.db, 'ai_config', 'provider'), { provider: 'ollama', ollamaUrl: 'http://evil' }));
     });
   });
 

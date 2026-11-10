@@ -1,8 +1,11 @@
 // Luồng đầu-cuối của Trợ lý AI ở tầng app: MainScreen thật + AiChatViewModel thật + AiToolExecutor thật,
 // chỉ thay phần ngoài (Gemini bằng kịch bản, Firestore bằng repository giả, micro bằng SpeechService giả).
 // Phần Cloud Function + Security Rules được kiểm trong e2e_test/ai_assistant.e2e.test.mjs (Emulator).
+import 'dart:async';
+
 import 'package:fapcheckin/core/services/google_auth_service.dart';
 import 'package:fapcheckin/core/services/speech_service.dart';
+import 'package:fapcheckin/core/services/tts_service.dart';
 import 'package:fapcheckin/viewmodels/ai_chat_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/attendance_history_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
@@ -94,6 +97,7 @@ class _FakeTeacher extends TeacherRepository {
 
   final String? failWith;
   final List<Map<String, dynamic>> writes = [];
+  Completer<void>? writeHold;
 
   @override
   Future<ApiResult<List<ClassSectionModel>>> getClasses({required String teacherMemberCode}) async =>
@@ -104,6 +108,7 @@ class _FakeTeacher extends TeacherRepository {
     required String sessionId,
     required List<Map<String, dynamic>> changes,
   }) async {
+    if (writeHold != null) await writeHold!.future;
     if (failWith != null) {
       return ApiFailure(ApiError(code: failWith!, message: 'Đã quá hạn điểm danh tay.'));
     }
@@ -160,11 +165,21 @@ class _ScriptedAi implements AiAssistantRepository {
   final List<ApiResult<AiTurn>> script;
   final List<List<Map<String, dynamic>>> received = [];
 
+  /// Nếu đặt, lời gọi kế tiếp chờ tới khi hoàn thành (mô phỏng AI đang xử lý lâu).
+  Completer<void>? hold;
+  int holdAtCall = 1; // giữ ở lời gọi thứ mấy (đếm từ 1)
+
   @override
   Future<ApiResult<AiTurn>> chat(List<Map<String, dynamic>> history) async {
     received.add([for (final m in history) Map<String, dynamic>.from(m)]);
-    if (script.isEmpty) return ApiSuccess(const AiTurn(text: '(hết kịch bản)'));
-    return script.removeAt(0);
+    // Lấy phản hồi theo thứ tự GỌI (như server thật): lời gọi bị giữ vẫn "thuộc" câu hỏi của nó.
+    final response = script.isEmpty ? ApiSuccess(const AiTurn(text: '(hết kịch bản)')) : script.removeAt(0);
+    final gate = hold;
+    if (gate != null && received.length == holdAtCall) {
+      hold = null;
+      await gate.future;
+    }
+    return response;
   }
 }
 
@@ -173,13 +188,18 @@ ApiResult<AiTurn> _say(String text) => ApiSuccess(AiTurn(text: text));
 ApiResult<AiTurn> _call(String name, Map<String, dynamic> args) =>
     ApiSuccess(AiTurn(calls: [AiToolCall(name: name, args: args)]));
 
+/// Micro giả: ghi lại các lượt nghe; test "nói" bằng [say].
 class _FakeSpeech implements SpeechService {
-  _FakeSpeech({this.allowed = true});
+  _FakeSpeech({this.allowed = true, this.log});
 
   final bool allowed;
+  final List<String>? log; // thứ tự sự kiện chung với TTS giả
   void Function(String, bool)? _onResult;
+  void Function(String)? _onError;
   void Function()? _onDone;
   bool _listening = false;
+  int starts = 0;
+  Duration? lastPauseFor;
 
   @override
   bool get isListening => _listening;
@@ -192,13 +212,26 @@ class _FakeSpeech implements SpeechService {
     required void Function(String text, bool isFinal) onResult,
     void Function(String message)? onError,
     void Function()? onDone,
+    Duration? pauseFor,
   }) async {
     _listening = true;
+    starts++;
+    lastPauseFor = pauseFor;
+    log?.add('listen');
     _onResult = onResult;
+    _onError = onError;
     _onDone = onDone;
   }
 
   void say(String text, {bool isFinal = false}) => _onResult?.call(text, isFinal);
+
+  /// Hết lượt nghe mà không có tiếng (bộ nhận dạng tự dừng).
+  void endSilently() {
+    _listening = false;
+    _onDone?.call();
+  }
+
+  void fail(String message) => _onError?.call(message);
 
   @override
   Future<void> stop() async {
@@ -210,6 +243,38 @@ class _FakeSpeech implements SpeechService {
   Future<void> cancel() async => _listening = false;
 }
 
+/// Loa giả: ghi lại các câu được đọc; [hold] giữ lại để test "không nghe khi đang đọc".
+class _FakeTts implements TtsService {
+  _FakeTts({this.log});
+
+  final List<String>? log;
+  final List<String> spoken = [];
+  int stops = 0;
+  Completer<void>? hold;
+  String? error;
+
+  @override
+  String? takeError() {
+    final e = error;
+    error = null;
+    return e;
+  }
+
+  @override
+  Future<void> speak(String text) async {
+    spoken.add(text);
+    log?.add('speak');
+    if (hold != null) await hold!.future;
+    log?.add('spoken');
+  }
+
+  @override
+  Future<void> stop() async {
+    stops++;
+    if (hold != null && !hold!.isCompleted) hold!.complete();
+  }
+}
+
 // ── harness ──────────────────────────────────────────────────────────────────
 
 class _Rig {
@@ -219,6 +284,7 @@ class _Rig {
     this.previous = const {},
     this.writeFailure,
     SpeechService? speech,
+    TtsService? tts,
   }) {
     final user = CurrentUser();
     teacher = _FakeTeacher(failWith: writeFailure);
@@ -230,7 +296,7 @@ class _Rig {
       currentUser: user,
       now: () => _now,
     );
-    vm = AiChatViewModel(repository: ai, executor: executor, speech: speech);
+    vm = AiChatViewModel(repository: ai, executor: executor, speech: speech, tts: tts);
     this.user = user;
   }
 
@@ -498,16 +564,15 @@ void main() {
   });
 
   group('giọng nói', () {
-    testWidgets('nói -> bản chép hiện vào ô nhập -> gửi chạy cùng luồng thẻ xác nhận', (tester) async {
+    testWidgets('nói xong -> TỰ GỬI (không bấm Gửi) -> thẻ xác nhận; bản chép tạm hiện khi đang nói', (tester) async {
       final speech = _FakeSpeech();
       final ai = _ScriptedAi([
         _call('mark_attendance', {
           'classCode': 'SWP391_SE1801',
           'students': [{'rollNumber': 'HE123456', 'status': 'ManualByGV'}],
         }),
-        _say('Xong.'),
       ]);
-      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: _FakeTts());
       await _pumpApp(tester, rig);
 
       await tester.tap(find.byKey(const Key('ai-mic')));
@@ -521,15 +586,17 @@ void main() {
         tester.widget<TextField>(find.byKey(const Key('ai-input'))).controller!.text,
         'điểm danh sinh viên HE123456',
       );
+      expect(ai.received, isEmpty); // chưa nói xong -> chưa gửi
 
       speech.say('điểm danh sinh viên HE123456 có mặt', isFinal: true);
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('ai-send'))); // gửi sẽ tự dừng micro
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(ai.received, isEmpty); // vừa dứt lời: còn chờ xem có nói tiếp không
+      await tester.pump(AiChatViewModel.sendDelay);
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(speech.isListening, isFalse);
+      expect(speech.isListening, isTrue); // đang nghe lượt xác nhận
       expect(ai.received.first.first['text'], 'điểm danh sinh viên HE123456 có mặt');
+      expect(tester.widget<TextField>(find.byKey(const Key('ai-input'))).controller!.text, isEmpty);
       expect(find.byKey(const Key('ai-confirm-card')), findsOneWidget);
       expect(rig.teacher.writes, isEmpty);
     });
@@ -554,6 +621,536 @@ void main() {
       final rig = _Rig(ai: _ScriptedAi([]));
       await _pumpApp(tester, rig);
       expect(find.byKey(const Key('ai-mic')), findsNothing);
+    });
+  });
+
+  group('trợ lý Live (rảnh tay)', () {
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    // Nói xong một câu: chờ qua khoảng im lặng (sendDelay) để ứng dụng tự gửi/thực thi.
+    Future<void> say(WidgetTester tester, _FakeSpeech speech, String text) async {
+      speech.say(text, isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await settle(tester);
+    }
+
+    testWidgets('Live: nói -> tự gửi -> AI đọc TÓM TẮT -> chat hiện đầy đủ -> tự nghe tiếp (đúng thứ tự)', (tester) async {
+      final log = <String>[];
+      final speech = _FakeSpeech(log: log);
+      final tts = _FakeTts(log: log);
+      const full = 'Có **1** sinh viên cần lưu ý.\n\n- HE123457 vắng 4/10 buổi\n- Tỷ lệ chung 91%';
+      final ai = _ScriptedAi([_call('get_attendance_report', {}), _say(full)]);
+      final rig = _Rig(ai: ai, speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      expect(rig.vm.live, isTrue);
+      expect(speech.lastPauseFor, AiChatViewModel.enginePause);
+      expect(find.byKey(const Key('ai-status')), findsOneWidget);
+
+      await say(tester, speech, 'báo cáo chuyên cần tổng quan');
+
+      // Chat hiện ĐẦY ĐỦ; chỉ phần tóm tắt được đọc (không ký hiệu markdown, không chi tiết).
+      expect(find.textContaining('HE123457 vắng 4/10 buổi'), findsOneWidget);
+      expect(tts.spoken, ['Có 1 sinh viên cần lưu ý.']);
+      // Không nghe khi đang đọc: listen -> speak -> spoken -> listen.
+      expect(log, ['listen', 'speak', 'spoken', 'listen']);
+      expect(speech.isListening, isTrue);
+      expect(rig.vm.live, isTrue);
+    });
+
+    testWidgets('Live: micro chỉ mở lại SAU khi đọc xong', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts()..hold = Completer<void>();
+      final rig = _Rig(ai: _ScriptedAi([_say('Xin chào thầy cô.')]), speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'xin chào');
+
+      expect(rig.vm.speaking, isTrue);
+      expect(speech.starts, 1); // đang đọc: chưa mở lại micro
+      expect(find.textContaining('Đang đọc'), findsOneWidget);
+      tts.hold!.complete();
+      await settle(tester);
+      expect(speech.starts, 2);
+      expect(rig.vm.speaking, isFalse);
+    });
+
+    testWidgets('Live: lệnh điểm danh -> AI đọc thẻ -> nói "xác nhận" -> ghi đúng 1 lần -> đọc kết quả -> nghe tiếp', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final ai = _ScriptedAi([
+        _call('mark_attendance', {
+          'classCode': 'SWP391_SE1801',
+          'students': [{'rollNumber': 'HE123456', 'status': 'ManualByGV'}],
+        }),
+        _say('Đã điểm danh Nguyễn Văn An có mặt.'),
+      ]);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'điểm danh HE123456 lớp SWP391 có mặt');
+
+      expect(find.byKey(const Key('ai-confirm-card')), findsOneWidget);
+      expect(tts.spoken.single, contains('Nguyễn Văn An'));
+      expect(tts.spoken.single, contains('HE123456'));
+      expect(tts.spoken.single, contains('xác nhận hoặc huỷ'));
+      expect(rig.vm.confirmingByVoice, isTrue);
+      expect(find.textContaining('Nói "xác nhận" hoặc "huỷ"'), findsWidgets);
+      expect(rig.teacher.writes, isEmpty);
+
+      await say(tester, speech, 'xác nhận');
+
+      expect(rig.teacher.writes, hasLength(1));
+      expect(rig.teacher.writes.single['changes'], [
+        {'rollNumber': 'HE123456', 'status': 'ManualByGV'},
+      ]);
+      expect(find.byKey(const Key('ai-result-confirmed')), findsOneWidget);
+      expect(tts.spoken.last, 'Đã điểm danh Nguyễn Văn An có mặt.');
+      expect(rig.vm.live, isTrue);
+      expect(speech.isListening, isTrue); // nghe tiếp sau khi đọc xong
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('Live: nói "huỷ" -> không ghi gì', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([
+        _call('mark_attendance', {
+          'classCode': 'SWP391_SE1801',
+          'students': [{'rollNumber': 'HE123456', 'status': 'Absent'}],
+        }),
+        _say('Ok, mình không ghi gì.'),
+      ]);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'đánh vắng HE123456');
+      await say(tester, speech, 'huỷ đi');
+
+      expect(rig.teacher.writes, isEmpty);
+      expect(find.byKey(const Key('ai-result-cancelled')), findsOneWidget);
+      expect((ai.received.last.last['result'] as Map)['cancelled'], true);
+    });
+
+    testWidgets('Live: câu xác nhận mơ hồ -> nhắc lại; sau 2 lần để thẻ chờ bấm tay và thoát Live', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final ai = _ScriptedAi([
+        _call('mark_attendance', {
+          'classCode': 'SWP391_SE1801',
+          'students': [{'rollNumber': 'HE123456', 'status': 'ManualByGV'}],
+        }),
+      ]);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'điểm danh HE123456');
+
+      await say(tester, speech, 'ừm để xem');
+      expect(tts.spoken.last, contains('chưa nghe rõ'));
+      expect(rig.vm.pendingAction, isNotNull);
+      expect(speech.isListening, isTrue);
+
+      await say(tester, speech, 'hmm');
+      expect(tts.spoken.last, contains('giữ nguyên thẻ'));
+      expect(rig.vm.live, isFalse);
+      expect(rig.vm.pendingAction, isNotNull); // thẻ còn, bấm tay được
+      expect(rig.teacher.writes, isEmpty);
+
+      await tester.tap(find.byKey(const Key('ai-confirm')));
+      await settle(tester);
+      expect(rig.teacher.writes, hasLength(1));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('Live: bấm nút Xác nhận khi đang nghe xác nhận bằng giọng nói -> ghi đúng 1 lần', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([
+        _call('mark_attendance', {
+          'classCode': 'SWP391_SE1801',
+          'students': [{'rollNumber': 'HE123456', 'status': 'ManualByGV'}],
+        }),
+        _say('Xong.'),
+      ]);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'điểm danh HE123456');
+      expect(speech.isListening, isTrue);
+
+      await tester.tap(find.byKey(const Key('ai-confirm')));
+      await settle(tester);
+      speech.say('xác nhận', isFinal: true); // tiếng nói muộn của lượt cũ không được ghi lần hai
+      await settle(tester);
+      expect(rig.teacher.writes, hasLength(1));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('Live: im lặng 2 lượt liên tiếp -> tự thoát, không treo micro', (tester) async {
+      final speech = _FakeSpeech();
+      final rig = _Rig(ai: _ScriptedAi([]), speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      expect(rig.vm.live, isTrue);
+
+      speech.endSilently();
+      await settle(tester);
+      expect(rig.vm.live, isTrue); // lượt 1: nghe lại
+      expect(speech.starts, 2);
+
+      speech.endSilently();
+      await settle(tester);
+      expect(rig.vm.live, isFalse); // lượt 2: thoát
+      expect(speech.isListening, isFalse);
+    });
+
+    testWidgets('Dừng Live giữa chừng: dừng đọc + dừng nghe, không gửi gì', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final ai = _ScriptedAi([]);
+      final rig = _Rig(ai: ai, speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      speech.say('xin chào'); // mới có bản chép tạm, chưa nói xong
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+
+      expect(rig.vm.live, isFalse);
+      expect(speech.isListening, isFalse);
+      expect(tts.stops, greaterThan(0));
+      expect(ai.received, isEmpty);
+    });
+
+    testWidgets('Lỗi micro nghiêm trọng -> thoát Live; lỗi "không có tiếng" chỉ coi là im lặng', (tester) async {
+      final speech = _FakeSpeech();
+      final rig = _Rig(ai: _ScriptedAi([]), speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+
+      speech.fail('error_no_match');
+      await settle(tester);
+      expect(rig.vm.live, isTrue);
+      expect(speech.starts, 2);
+
+      speech.fail('error_permission');
+      await settle(tester);
+      expect(rig.vm.live, isFalse);
+      expect(rig.vm.voiceError, contains('error_permission'));
+      await tester.pump(const Duration(seconds: 5)); // toast lỗi tự tắt
+    });
+
+    testWidgets('gõ chữ: KHÔNG đọc to; tắt loa thì Live vẫn hiện chữ nhưng im lặng', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final rig = _Rig(ai: _ScriptedAi([_say('Chào bạn'), _say('Lại chào')]), speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await _type(tester, 'hi');
+      await _tapSend(tester);
+      expect(find.text('Chào bạn'), findsOneWidget);
+      expect(tts.spoken, isEmpty);
+
+      await tester.tap(find.byKey(const Key('ai-voice-mode'))); // tắt đọc to
+      await tester.pump();
+      expect(rig.vm.voiceReplies, isFalse);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      await say(tester, speech, 'chào');
+      expect(find.text('Lại chào'), findsOneWidget);
+      expect(tts.spoken, isEmpty); // tắt loa: vẫn hiện chữ nhưng không đọc
+      expect(speech.isListening, isTrue); // Live vẫn tiếp tục nghe
+    });
+
+    testWidgets('rời tab AI khi đang Live -> tắt micro và loa', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts();
+      final rig = _Rig(ai: _ScriptedAi([]), speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      expect(speech.isListening, isTrue);
+
+      await tester.pumpWidget(const SizedBox()); // AiBody bị gỡ khỏi cây (đổi tab)
+      await tester.pump();
+      expect(rig.vm.live, isFalse);
+      expect(speech.isListening, isFalse);
+    });
+  });
+
+  group('nói câu dài: không được gửi khi chưa nói hết', () {
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('nói nhiều đoạn, nghỉ ngắn giữa chừng -> gom thành MỘT câu, chỉ gửi một lần sau khi im lặng', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([_say('Ok.')]);
+      final rig = _Rig(ai: ai, speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+
+      speech.say('điểm danh sinh viên', isFinal: true); // bộ nhận dạng chốt sớm ở nhịp ngắt
+      await tester.pump(const Duration(milliseconds: 1000)); // nghỉ chưa đủ lâu
+      expect(ai.received, isEmpty);
+      speech.say('HE123456 lớp SWP391', isFinal: true);
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(ai.received, isEmpty);
+      expect(tester.widget<TextField>(find.byKey(const Key('ai-input'))).controller!.text, 'điểm danh sinh viên HE123456 lớp SWP391');
+
+      await tester.pump(AiChatViewModel.sendDelayIncomplete); // câu trọn -> im lặng đủ thì gửi
+      await settle(tester);
+      expect(ai.received, hasLength(1));
+      expect(ai.received.single.single['text'], 'điểm danh sinh viên HE123456 lớp SWP391');
+    });
+
+    testWidgets('bộ nhận dạng tự ngắt giữa câu (Chrome) -> mở lại, KHÔNG gửi, nối tiếp chữ', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([_say('Ok.')]);
+      final rig = _Rig(ai: ai, speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+
+      speech.say('báo cáo chuyên cần', isFinal: true);
+      speech.endSilently(); // phiên nhận dạng tự kết thúc
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(speech.starts, 2); // đã mở lại
+      expect(ai.received, isEmpty); // chưa gửi
+
+      speech.say('của hôm nay', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await settle(tester);
+      expect(ai.received.single.single['text'], 'báo cáo chuyên cần của hôm nay');
+    });
+
+    testWidgets('câu chưa trọn ("...lớp") chờ lâu hơn trước khi gửi', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([_say('Ok.')]);
+      final rig = _Rig(ai: ai, speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+
+      speech.say('điểm danh sinh viên lớp', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 200));
+      expect(ai.received, isEmpty); // thường thì đã gửi, nhưng câu dở nên còn chờ
+      await tester.pump(AiChatViewModel.sendDelayIncomplete - AiChatViewModel.sendDelay);
+      await settle(tester);
+      expect(ai.received, hasLength(1));
+    });
+
+    testWidgets('bấm mic lần nữa khi đang nghe = nói xong, gửi ngay (không chờ im lặng)', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([_say('Ok.')]);
+      final rig = _Rig(ai: ai, speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+      speech.say('xin chào', isFinal: true);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(ai.received, isEmpty);
+
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+      expect(ai.received.single.single['text'], 'xin chào');
+    });
+
+    testWidgets('mic: nói một câu -> AI trả lời -> dừng (không nghe tiếp); Live thì nghe tiếp', (tester) async {
+      final speech = _FakeSpeech();
+      final rig = _Rig(ai: _ScriptedAi([_say('Chào.'), _say('Chào lại.')]), speech: speech, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await settle(tester);
+      speech.say('xin chào', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await settle(tester);
+      expect(find.text('Chào.'), findsOneWidget);
+      expect(speech.isListening, isFalse); // mic một lượt: dừng
+      expect(rig.vm.live, isFalse);
+
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      expect(find.byKey(const Key('ai-mic')), findsNothing); // Live: ẩn mic, chỉ còn nút Live đang bật
+      speech.say('chào nữa', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await settle(tester);
+      expect(find.text('Chào lại.'), findsOneWidget);
+      expect(speech.isListening, isTrue); // Live: tự nghe tiếp
+    });
+  });
+
+  group('giọng đọc: lỗi phải hiện ra, không im lặng', () {
+    testWidgets('TTS lỗi/không nạp được -> toast cho người dùng, hội thoại vẫn chạy', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts()..error = 'Giọng đọc chưa được nạp: hãy dừng và chạy lại ứng dụng';
+      final rig = _Rig(ai: _ScriptedAi([_say('Xin chào thầy cô.')]), speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-mic')));
+      await tester.pump();
+      speech.say('xin chào', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Xin chào thầy cô.'), findsOneWidget);
+      expect(rig.vm.voiceError, contains('chạy lại ứng dụng'));
+      expect(find.textContaining('chạy lại ứng dụng'), findsOneWidget); // toast
+      await tester.pump(const Duration(seconds: 5));
+    });
+  });
+
+  group('ngắt AI giữa chừng', () {
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('đang ĐỌC: bấm Dừng -> cắt giọng ngay; Live thì nghe tiếp luôn', (tester) async {
+      final speech = _FakeSpeech();
+      final tts = _FakeTts()..hold = Completer<void>();
+      final rig = _Rig(ai: _ScriptedAi([_say('Một câu trả lời rất dài.')]), speech: speech, tts: tts);
+      await _pumpApp(tester, rig);
+      await tester.tap(find.byKey(const Key('ai-live')));
+      await settle(tester);
+      speech.say('xin chào', isFinal: true);
+      await tester.pump(AiChatViewModel.sendDelay + const Duration(milliseconds: 100));
+      await settle(tester);
+      expect(rig.vm.speaking, isTrue);
+      expect(find.byKey(const Key('ai-stop')), findsOneWidget);
+      final startsBefore = speech.starts;
+
+      await tester.tap(find.byKey(const Key('ai-stop')));
+      await settle(tester);
+
+      expect(tts.stops, greaterThan(0));
+      expect(rig.vm.speaking, isFalse);
+      expect(speech.starts, startsBefore + 1); // nghe tiếp ngay để GV nói câu mới
+      expect(find.byKey(const Key('ai-send')), findsOneWidget); // nút Dừng đổi lại thành Gửi
+    });
+
+    testWidgets('đang XỬ LÝ: bấm Dừng -> huỷ yêu cầu, kết quả về muộn bị bỏ qua, history không còn mảnh dở', (tester) async {
+      final ai = _ScriptedAi([_say('Trả lời muộn không được hiện.'), _say('Trả lời cho câu hai.')]);
+      final gate = Completer<void>();
+      ai.hold = gate;
+      final rig = _Rig(ai: ai, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+
+      await _type(tester, 'câu một');
+      await tester.tap(find.byKey(const Key('ai-send')));
+      await tester.pump();
+      expect(rig.vm.sending, isTrue);
+      expect(find.byKey(const Key('ai-stop')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('ai-stop')));
+      await tester.pump();
+      expect(rig.vm.sending, isFalse);
+      expect(find.text('Đã dừng.'), findsOneWidget);
+
+      gate.complete(); // kết quả của lượt bị ngắt vẫn về muộn, nhưng phải bị bỏ qua
+      await settle(tester);
+      expect(find.text('Trả lời muộn không được hiện.'), findsNothing);
+
+      await _type(tester, 'câu hai');
+      await _tapSend(tester);
+      expect(find.text('Trả lời cho câu hai.'), findsOneWidget);
+      // history gửi lượt 2: hai tin người dùng, không có tin model/tool dở dang của lượt bị ngắt.
+      expect(ai.received.last.map((m) => m['role']), ['user', 'user']);
+    });
+
+    testWidgets('gõ câu mới khi AI đang xử lý -> tự ngắt câu cũ rồi trả lời câu mới', (tester) async {
+      final ai = _ScriptedAi([_say('Trả lời cho câu một (bị bỏ).'), _say('Trả lời cho câu hai.')]);
+      final gate = Completer<void>();
+      ai.hold = gate;
+      final rig = _Rig(ai: ai, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+
+      await _type(tester, 'câu một');
+      await tester.tap(find.byKey(const Key('ai-send')));
+      await tester.pump();
+      expect(rig.vm.sending, isTrue);
+
+      await _type(tester, 'câu hai');
+      expect(find.byKey(const Key('ai-send')), findsOneWidget); // đã gõ chữ: hiện Gửi thay vì Dừng
+      await _tapSend(tester);
+      gate.complete(); // câu một về muộn: phải bị bỏ qua
+      await settle(tester);
+
+      expect(find.text('Trả lời cho câu hai.'), findsOneWidget);
+      expect(find.text('Trả lời cho câu một (bị bỏ).'), findsNothing);
+    });
+
+    testWidgets('ngắt giữa chuỗi tool: history bị cắt về trước lượt dở (không còn functionCall mồ côi)', (tester) async {
+      final ai = _ScriptedAi([
+        _call('list_my_classes', {}),
+        _say('Không bao giờ hiện.'),
+        _say('Câu trả lời kế tiếp.'),
+      ]);
+      ai.hold = Completer<void>();
+      ai.holdAtCall = 2; // lượt 1 trả tool call, lượt 2 (sau khi tool chạy xong) bị giữ lại
+      final rig = _Rig(ai: ai, tts: _FakeTts());
+      await _pumpApp(tester, rig);
+
+      await _type(tester, 'hôm nay dạy lớp nào');
+      await tester.tap(find.byKey(const Key('ai-send')));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(ai.received, hasLength(2)); // đã chạy tool, đang chờ lượt 2
+      expect(rig.vm.sending, isTrue);
+
+      await tester.tap(find.byKey(const Key('ai-stop')));
+      await tester.pump();
+      expect(rig.vm.sending, isFalse);
+
+      await _type(tester, 'thôi hỏi câu khác');
+      await _tapSend(tester);
+      expect(find.text('Không bao giờ hiện.'), findsNothing);
+      // Lượt sau chỉ có hai tin người dùng: không còn model(toolCalls)/tool dở dang của lượt bị ngắt.
+      expect(ai.received.last.map((m) => m['role']), ['user', 'user']);
+    });
+
+    testWidgets('lệnh GHI đang thực thi: ngắt KHÔNG huỷ ghi (chỉ cắt giọng) và ghi vẫn hoàn tất đúng 1 lần', (tester) async {
+      final speech = _FakeSpeech();
+      final ai = _ScriptedAi([
+        _call('mark_attendance', {
+          'classCode': 'SWP391_SE1801',
+          'students': [{'rollNumber': 'HE123456', 'status': 'ManualByGV'}],
+        }),
+        _say('Đã ghi xong.'),
+      ]);
+      final rig = _Rig(ai: ai, sessions: [_session()], speech: speech, tts: _FakeTts());
+      rig.teacher.writeHold = Completer<void>();
+      await _pumpApp(tester, rig);
+
+      await _type(tester, 'điểm danh HE123456');
+      await _tapSend(tester);
+      await tester.tap(find.byKey(const Key('ai-confirm')));
+      await tester.pump();
+      expect(rig.vm.sending, isTrue);
+
+      await rig.vm.interrupt(); // cố ngắt giữa lúc đang ghi
+      expect(rig.vm.sending, isTrue); // không huỷ ghi
+      expect(find.text('Đã dừng.'), findsNothing);
+
+      rig.teacher.writeHold!.complete();
+      await settle(tester);
+      expect(rig.teacher.writes, hasLength(1));
+      expect(find.byKey(const Key('ai-result-confirmed')), findsOneWidget);
+      expect(find.text('Đã ghi xong.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
     });
   });
 

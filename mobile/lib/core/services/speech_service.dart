@@ -10,10 +10,13 @@ abstract class SpeechService {
 
   /// Bắt đầu nghe; [onResult] được gọi liên tục với bản chép tạm (`isFinal=false`) rồi bản cuối.
   /// [onDone] gọi khi phiên nghe kết thúc (hết lượt nói, dừng tay hoặc lỗi).
+  ///
+  /// [pauseFor]: im lặng bao lâu thì coi là nói xong (mặc định của bộ nhận dạng nếu null).
   Future<void> start({
     required void Function(String text, bool isFinal) onResult,
     void Function(String message)? onError,
     void Function()? onDone,
+    Duration? pauseFor,
   });
 
   Future<void> stop();
@@ -68,6 +71,7 @@ class DeviceSpeechService implements SpeechService {
     required void Function(String text, bool isFinal) onResult,
     void Function(String message)? onError,
     void Function()? onDone,
+    Duration? pauseFor,
   }) async {
     _onError = onError;
     _onDone = onDone;
@@ -76,7 +80,7 @@ class DeviceSpeechService implements SpeechService {
       listenOptions: SpeechListenOptions(
         localeId: _localeId,
         listenFor: const Duration(seconds: 45),
-        pauseFor: const Duration(seconds: 4),
+        pauseFor: pauseFor ?? const Duration(seconds: 4),
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.dictation,

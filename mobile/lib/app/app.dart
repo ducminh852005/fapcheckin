@@ -15,6 +15,7 @@ import '../core/services/google_auth_service.dart';
 import '../core/services/push_notification_service.dart';
 import '../core/services/remote_settings.dart';
 import '../core/services/speech_service.dart';
+import '../core/services/tts_service.dart';
 import '../core/services/timetable_ocr_service.dart';
 
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
@@ -110,6 +111,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         currentUser: _currentUser,
       ),
       speech: DeviceSpeechService(),
+      tts: DeviceTtsService(),
     );
     _autoSessionManager = AutoSessionManager(
       liveSessionViewModel: _liveSessionViewModel,

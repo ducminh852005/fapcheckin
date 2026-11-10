@@ -130,7 +130,7 @@ const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
  * Emulator/e2e: đặt GEMINI_API_BASE trỏ về stub và GEMINI_API_KEY bất kỳ (env hoặc .secret.local).
  */
 export const aiAssistant = onCall(
-  { region: REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 60, memory: '256MiB', maxInstances: 5 },
+  { region: REGION, secrets: [GEMINI_API_KEY], timeoutSeconds: 90, memory: '256MiB', maxInstances: 5 },
   async (request) => {
     try {
       return await runAiAssistant(

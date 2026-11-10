@@ -25,13 +25,14 @@ fapcheckin/
 │  └─ scripts/        # seed-admin, seed-reference, migrate-legacy (Node + Admin SDK)
 ├─ e2e_test/          # Luồng end-to-end trên Emulator: admin → GV mở phiên → SV điểm danh → GV đóng phiên
 ├─ scripts/deploy.ps1 # Chạy test Rules rồi firebase deploy
+├─ scripts/ai-fallback.ps1 + ops/ollama/  # AI dự phòng (Ollama local + tunnel), đổi nguồn nhanh khi demo
 ├─ firebase.json, .firebaserc
 └─ docs/              # Blueprint kiến trúc (01–09) + quick-start
 ```
 
 | Vai trò | Ứng dụng | Quyền chính |
 |---|---|---|
-| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat + giọng nói) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
+| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat, giọng nói tiếng Việt, chế độ Live rảnh tay, đọc to tóm tắt, ngắt AI giữa chừng) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên, lệnh ghi luôn qua xác nhận; tự chuyển sang AI dự phòng (Ollama local) khi Gemini quá tải — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
 | `user` (sinh viên) | `web/checkin/` (quét QR) | Tạo bản ghi điểm danh của chính mình; xem dữ liệu của mình |
 | `admin` | `web/admin/` (UI prototype, chưa nối Firebase) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
 
@@ -57,7 +58,7 @@ cd firebase/functions && npm test    # Unit test Cloud Functions (OCR, nhắc l�
 cd e2e_test && npm test              # Luồng end-to-end trên Emulator
 cd e2e_test && npm run test:ai       # Trợ lý AI: callable + Rules trên Emulator (Gemini giả)
 cd packages/core && flutter test     # Repository (fake_cloud_firestore)
-cd mobile && flutter test            # Model, ViewModel, widget (xem lưu ý 2 test lỗi sẵn có ở docs/quick-start-mobile.md §7)
+cd mobile && flutter test            # Model, ViewModel, widget, trợ lý AI/giọng nói (xem lưu ý 3 test lỗi sẵn có ở docs/quick-start-mobile.md §7)
 ```
 
 ## Chạy app giảng viên

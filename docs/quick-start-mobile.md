@@ -112,6 +112,16 @@ File ra tại `mobile/build/app/outputs/flutter-apk/`. Quyền `INTERNET` đã c
 
 Crashlytics: để báo cáo sự cố có stack trace dễ đọc cần thêm plugin Gradle `com.google.firebase.crashlytics` theo hướng dẫn của FlutterFire; thiếu plugin thì app vẫn chạy bình thường. Crashlytics và Analytics chỉ bật trên Android/iOS (bản release; bị tắt ở chế độ debug).
 
+## Trợ lý AI & giọng nói (tab AI)
+
+Tab **AI** gọi Cloud Function `aiAssistant` (Gemini; có thể tự chuyển sang Ollama local khi Gemini quá tải). Cần trước khi dùng: secret `GEMINI_API_KEY` đã đặt và hàm đã deploy — xem [deploy-firebase.md](deploy-firebase.md) và [ai-assistant.md](ai-assistant.md).
+
+- **Chạy web để thử nhanh**: `flutter run -d chrome --web-port=5000 --web-hostname=localhost` (cổng cố định để đăng nhập Google không báo `origin_mismatch`; thêm `http://localhost:5000` vào *Authorized JavaScript origins* của OAuth client). Chrome cần cho phép micro; chỉ phát âm sau khi bạn bấm một nút.
+- **Điện thoại Android**: cắm máy bật USB debugging (`flutter devices`), `flutter run -d <id>`. Cần quyền micro (hỏi lúc bấm mic/Live) và nên cài gói giọng nói **Tiếng Việt** (Cài đặt → Text-to-speech) cùng Google Speech Services.
+- **Lần đầu thêm plugin giọng nói** (`speech_to_text`, `flutter_tts`) hoặc sau khi sửa `AndroidManifest.xml`/`Info.plist`: phải **dừng và chạy lại** `flutter run` (hot reload không nạp plugin native). Triệu chứng nếu quên: nghe được nhưng không có tiếng đọc, kèm toast "Giọng đọc chưa được nạp".
+- **Dùng**: mic = nói một câu (gửi sau khi im lặng ~2 giây, hoặc bấm mic lần nữa để gửi ngay); **Live** = hội thoại liên tục, AI đọc to phần tóm tắt rồi tự nghe tiếp; nút **Dừng** ngắt AI đang đọc/xử lý. Lệnh ghi điểm danh luôn hiện thẻ xác nhận (bấm hoặc nói "xác nhận"/"huỷ").
+- **Demo khi Gemini quá tải**: `./scripts/ai-fallback.ps1 up` rồi `switch ollama` (một lệnh, không cần deploy) — xem [ai-assistant.md §G](ai-assistant.md).
+
 ## 7. Kiểm tra
 
 ```bash
@@ -127,7 +137,7 @@ cd e2e_test && npm run test:ai                          # trợ lý AI: Function
 
 **Ba test của `mobile/` đang thất bại sẵn** (đã kiểm chứng trên cây chưa có tính năng AI): `create_class_dialog_test.dart › real options, required fields and idempotent timeout retry`, `create_schedule_bottom_sheet_test.dart › CreateScheduleBottomSheet selects options and submits to backend` và `requests_test.dart › TC08: submit request and display subsequent approval/rejection from stream` (lỗi `RangeError`/layout trong test, chưa điều tra). Job `flutter-mobile` trong CI đặt `continue-on-error` cho tới khi sửa.
 
-Trợ lý AI: bản đầu có test luồng giao diện đầu-cuối `test/ai_assistant_flow_test.dart` (Gemini, Firestore và micro giả) — xem [ai-assistant.md](ai-assistant.md). Nhận dạng giọng nói thật cần thử tay trên thiết bị có gói giọng `vi-VN` và cấp quyền micro.
+Trợ lý AI: `test/ai_assistant_flow_test.dart` (36 test: luồng chat/xác nhận, Live, câu dài, ngắt AI, lỗi giọng đọc; Gemini, Firestore, micro và loa giả) và `test/voice_vietnamese_test.dart` (20 test: locale tiếng Việt cho nhận dạng/đọc, hàm xử lý chữ) — xem [ai-assistant.md](ai-assistant.md). Nhận dạng và giọng đọc tiếng Việt thật cần thử tay trên thiết bị có gói giọng `vi-VN` và đã cấp quyền micro.
 
 ## 8. Lỗi thường gặp
 

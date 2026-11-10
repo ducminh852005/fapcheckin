@@ -34,10 +34,14 @@ class AiToolCall {
 
 /// Lượt trả lời của model: chữ (trả lời cuối) hoặc yêu cầu chạy tool.
 class AiTurn {
-  const AiTurn({this.text = '', this.calls = const []});
+  const AiTurn({this.text = '', this.calls = const [], this.provider = '', this.fallback = false});
 
   final String text;
   final List<AiToolCall> calls;
+
+  /// Nguồn AI đã trả lời: `gemini` | `ollama` (dự phòng). `fallback` = đã tự chuyển nguồn vì nguồn chính lỗi.
+  final String provider;
+  final bool fallback;
 
   bool get hasToolCalls => calls.isNotEmpty;
 
@@ -48,7 +52,12 @@ class AiTurn {
               if (c is Map) AiToolCall.fromJson(Map<String, dynamic>.from(c)),
           ]
         : <AiToolCall>[];
-    return AiTurn(text: json['text']?.toString() ?? '', calls: calls);
+    return AiTurn(
+      text: json['text']?.toString() ?? '',
+      calls: calls,
+      provider: json['provider']?.toString() ?? '',
+      fallback: json['fallback'] == true,
+    );
   }
 }
 
@@ -90,7 +99,7 @@ class AiAssistantRepository {
         final response = await _functions
             .httpsCallable(
               'aiAssistant',
-              options: HttpsCallableOptions(timeout: const Duration(seconds: 60)),
+              options: HttpsCallableOptions(timeout: const Duration(seconds: 100)),
             )
             .call({'history': history});
         final raw = response.data;

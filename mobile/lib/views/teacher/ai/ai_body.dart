@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/constants/app_palette.dart';
@@ -22,6 +24,8 @@ class _AiBodyState extends State<AiBody> {
   final _scroll = ScrollController();
   final _focus = FocusNode();
   int _lastCount = 0;
+  String? _shownVoiceError;
+  AiChatViewModel? _vm;
 
   static const _suggestions = [
     (Icons.insights_rounded, 'Báo cáo chuyên cần tổng quan', 'Báo cáo chuyên cần tổng quan của các lớp tôi'),
@@ -30,7 +34,16 @@ class _AiBodyState extends State<AiBody> {
   ];
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vm ??= context.read<AiChatViewModel>();
+  }
+
+  @override
   void dispose() {
+    // Rời tab AI thì tắt Live/đọc/nghe để micro không chạy ngầm.
+    final vm = _vm;
+    if (vm != null && (vm.live || vm.listening || vm.speaking)) unawaited(vm.stopLive());
     _controller.dispose();
     _scroll.dispose();
     _focus.dispose();
@@ -50,19 +63,30 @@ class _AiBodyState extends State<AiBody> {
 
   Future<void> _send(AiChatViewModel vm, [String? text]) async {
     final value = (text ?? _controller.text).trim();
-    if (value.isEmpty || vm.busy) return;
+    if (value.isEmpty || vm.pendingAction != null) return;
     _controller.clear();
     _focus.unfocus();
     await vm.send(value);
   }
 
+  void _setTranscript(String text) {
+    if (!mounted) return;
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   Future<void> _toggleMic(AiChatViewModel vm) async {
-    final ok = await vm.toggleListening((text) {
-      _controller.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
-    });
+    final ok = await vm.toggleListening(_setTranscript);
+    if (!mounted) return;
+    if (!ok && vm.voiceError != null) {
+      showAppToast(context, message: vm.voiceError!, type: AppToastType.warning, title: 'Micro');
+    }
+  }
+
+  Future<void> _toggleLive(AiChatViewModel vm) async {
+    final ok = await vm.toggleLive(_setTranscript);
     if (!mounted) return;
     if (!ok && vm.voiceError != null) {
       showAppToast(context, message: vm.voiceError!, type: AppToastType.warning, title: 'Micro');
@@ -87,6 +111,19 @@ class _AiBodyState extends State<AiBody> {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     // Chừa chỗ cho thanh điều hướng nổi ở dưới khi là điện thoại.
     final bottomPad = context.isMobile ? (keyboardOpen ? 8.0 : 92.0) : 16.0;
+
+    // Lỗi micro/giọng đọc phát sinh giữa chừng (không do người dùng bấm) cũng phải hiện ra.
+    final voiceError = vm.voiceError;
+    if (voiceError != null && voiceError != _shownVoiceError) {
+      _shownVoiceError = voiceError;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          showAppToast(context, message: voiceError, type: AppToastType.warning, title: 'Giọng nói');
+        }
+      });
+    } else if (voiceError == null) {
+      _shownVoiceError = null;
+    }
 
     if (vm.messages.length != _lastCount) {
       _lastCount = vm.messages.length;
@@ -114,6 +151,10 @@ class _AiBodyState extends State<AiBody> {
                       padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 6),
                       child: _Header(
                         hasMessages: vm.messages.isNotEmpty,
+                        backupAi: vm.usingBackupAi,
+                        voiceSupported: vm.voiceSupported,
+                        voiceReplies: vm.voiceReplies,
+                        onToggleReplies: () => vm.setVoiceReplies(!vm.voiceReplies),
                         onReset: vm.busy ? null : vm.reset,
                       ),
                     ),
@@ -168,6 +209,11 @@ class _AiBodyState extends State<AiBody> {
                         controller: _controller,
                         focus: _focus,
                         listening: vm.listening,
+                        live: vm.live,
+                        statusText: vm.statusText,
+                        onLive: () => _toggleLive(vm),
+                        canInterrupt: vm.canInterrupt,
+                        onStop: vm.interrupt,
                         busy: vm.busy,
                         awaitingConfirm: vm.pendingAction != null,
                         voiceSupported: vm.voiceSupported,
@@ -187,9 +233,20 @@ class _AiBodyState extends State<AiBody> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.hasMessages, required this.onReset});
+  const _Header({
+    required this.hasMessages,
+    required this.backupAi,
+    required this.voiceSupported,
+    required this.voiceReplies,
+    required this.onToggleReplies,
+    required this.onReset,
+  });
 
   final bool hasMessages;
+  final bool backupAi;
+  final bool voiceSupported;
+  final bool voiceReplies;
+  final VoidCallback onToggleReplies;
   final VoidCallback? onReset;
 
   @override
@@ -225,15 +282,30 @@ class _Header extends StatelessWidget {
                 ),
               ),
               Text(
-                'Nói hoặc gõ để điểm danh, tra cứu, xem báo cáo',
+                backupAi
+                    ? 'Đang dùng AI dự phòng (chạy local)'
+                    : 'Nói hoặc gõ để điểm danh, tra cứu, xem báo cáo',
+                key: const Key('ai-subtitle'),
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? const Color(0xFF94A3B8) : AppPalette.textMuted,
+                  color: backupAi
+                      ? const Color(0xFFD97706)
+                      : (isDark ? const Color(0xFF94A3B8) : AppPalette.textMuted),
                 ),
               ),
             ],
           ),
         ),
+        if (voiceSupported)
+          Tooltip(
+            message: voiceReplies ? 'Tắt đọc to câu trả lời' : 'Bật đọc to câu trả lời',
+            child: IconButton(
+              key: const Key('ai-voice-mode'),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: onToggleReplies,
+              icon: Icon(voiceReplies ? Icons.volume_up_rounded : Icons.volume_off_rounded),
+            ),
+          ),
         if (hasMessages)
           Tooltip(
             message: 'Cuộc trò chuyện mới',
@@ -282,7 +354,9 @@ class _Welcome extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Ví dụ: "Điểm danh sinh viên HE123456 lớp SWP391 slot 3 có mặt". '
-            'Mọi thao tác ghi đều cần bạn xác nhận trước.',
+            'Mọi thao tác ghi đều cần bạn xác nhận trước.\n\n'
+            'Mic: nói MỘT câu, AI trả lời rồi dừng (bấm mic lần nữa khi nói xong để gửi ngay).\n'
+            'Live: hội thoại liên tục, AI đọc to phần tóm tắt rồi tự nghe tiếp cho tới khi bạn bấm dừng.',
             style: TextStyle(fontSize: 13, height: 1.45, color: muted),
           ),
           const SizedBox(height: 16),
@@ -386,6 +460,11 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.focus,
     required this.listening,
+    required this.live,
+    required this.statusText,
+    required this.onLive,
+    required this.canInterrupt,
+    required this.onStop,
     required this.busy,
     required this.awaitingConfirm,
     required this.voiceSupported,
@@ -396,6 +475,11 @@ class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focus;
   final bool listening;
+  final bool live;
+  final String? statusText;
+  final VoidCallback onLive;
+  final bool canInterrupt;
+  final VoidCallback onStop;
   final bool busy;
   final bool awaitingConfirm;
   final bool voiceSupported;
@@ -412,7 +496,7 @@ class _InputBar extends StatelessWidget {
         ? 'Xác nhận hoặc huỷ thẻ phía trên trước'
         : 'Nhập hoặc nói yêu cầu của bạn…';
 
-    return Container(
+    final bar = Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
       decoration: BoxDecoration(
         color: isDark ? scheme.surface : Colors.white,
@@ -459,7 +543,26 @@ class _InputBar extends StatelessWidget {
           if (voiceSupported)
             Semantics(
               button: true,
-              label: listening ? 'Dừng ghi âm' : 'Nói bằng giọng nói',
+              label: live ? 'Tắt trợ lý Live' : 'Bật trợ lý Live (hội thoại liên tục)',
+              child: IconButton(
+                key: const Key('ai-live'),
+                tooltip: live ? 'Tắt Live' : 'Trợ lý Live',
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: awaitingConfirm ? null : onLive,
+                style: live
+                    ? IconButton.styleFrom(backgroundColor: AppPalette.primary.withValues(alpha: 0.14))
+                    : null,
+                icon: Icon(
+                  live ? Icons.graphic_eq_rounded : Icons.record_voice_over_rounded,
+                  color: AppPalette.primary,
+                  size: 24,
+                ),
+              ),
+            ),
+          if (voiceSupported && !live)
+            Semantics(
+              button: true,
+              label: listening ? 'Nói xong, gửi ngay' : 'Nói một câu',
               child: IconButton(
                 key: const Key('ai-mic'),
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
@@ -471,22 +574,75 @@ class _InputBar extends StatelessWidget {
                 ),
               ),
             ),
-          Semantics(
-            button: true,
-            label: 'Gửi',
-            child: IconButton.filled(
-              key: const Key('ai-send'),
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: busy ? null : onSend,
-              style: IconButton.styleFrom(
-                backgroundColor: AppPalette.primary,
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.arrow_upward_rounded),
-            ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              final empty = value.text.trim().isEmpty;
+              // AI đang đọc/xử lý và chưa gõ gì: nút Dừng. Đã gõ chữ: nút Gửi (gửi sẽ ngắt AI rồi trả lời câu mới).
+              if (canInterrupt && empty) {
+                return Semantics(
+                  button: true,
+                  label: 'Dừng AI',
+                  child: IconButton.filled(
+                    key: const Key('ai-stop'),
+                    tooltip: 'Dừng',
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                    onPressed: onStop,
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppPalette.statusRed,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.stop_rounded),
+                  ),
+                );
+              }
+              return Semantics(
+                button: true,
+                label: 'Gửi',
+                child: IconButton.filled(
+                  key: const Key('ai-send'),
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  onPressed: awaitingConfirm ? null : onSend,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppPalette.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.arrow_upward_rounded),
+                ),
+              );
+            },
           ),
         ],
       ),
+    );
+
+    if (statusText == null && !live) return bar;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: canInterrupt ? onStop : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 6, top: 4),
+          child: Row(
+            key: const Key('ai-status'),
+            children: [
+              Icon(live ? Icons.graphic_eq_rounded : Icons.info_outline_rounded, size: 16, color: AppPalette.primary),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  (live ? 'Live · ${statusText ?? 'Sẵn sàng'}' : statusText!) + (canInterrupt ? ' · chạm để dừng' : ''),
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppPalette.primary),
+                ),
+              ),
+            ],
+          ),
+          ),
+        ),
+        bar,
+      ],
     );
   }
 }

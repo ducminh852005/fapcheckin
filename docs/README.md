@@ -40,7 +40,7 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | 07 | [Import thời khóa biểu bằng ảnh (OCR)](07-timetable-ocr.md) |
 | 08 | [Security Rules & kiểm thử](08-security-rules.md) |
 | 09 | [Repository (cách app đọc/ghi dữ liệu)](09-repository-api.md) |
-| — | [Trợ lý AI (tab AI): kiến trúc, luồng, tool, triển khai, kiểm thử](ai-assistant.md) |
+| — | [Trợ lý AI (tab AI): kiến trúc, tool, AI dự phòng Ollama, giọng nói/Live/ngắt AI, triển khai, kiểm thử](ai-assistant.md) |
 | — | [Quick Start — Pattern MVVM + Repository trên Firebase](quick-start.md) |
 | — | [Quick Start Mobile — chạy & build app GV trên Android/iOS](quick-start-mobile.md) |
 | — | [Thiết lập & deploy Firebase, migrate dữ liệu cũ](deploy-firebase.md) |
@@ -48,6 +48,6 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | — | [ERD (Mermaid)](db-erd.mermaid) |
 | — | [Data model — đặc tả collection, quyền và rule](data-model.md) |
 | — | [Kết nối mobile ↔ Firebase: màn hình ↔ repository](mobile-api-integration.md) |
-| — | [Gap review — khoảng cách Lab 2/3 so với Final](gap-review.md) |
+| — | [Tài liệu bài nộp môn học (báo cáo cuối, persona, báo cáo test, gap review…)](course/README.md) |
 
 Mã nguồn tương ứng: [`firebase/`](../firebase) (rules, test, script, function) · [`packages/core/`](../packages/core) · [`mobile/`](../mobile) · [`web/`](../web) · [`e2e_test/`](../e2e_test).

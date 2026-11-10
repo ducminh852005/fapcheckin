@@ -143,7 +143,7 @@ describe('runAiAssistant', () => {
       { db: teacherDb(), apiKey: 'secret', apiBase: 'http://stub/v1beta', model: 'm1', fetchImpl: okFetch(textBody('ok'), calls) },
       { uid: 'gv1', history: [user('chào')] },
     );
-    assert.deepEqual(r, { type: 'text', text: 'ok' });
+    assert.deepEqual(r, { type: 'text', text: 'ok', provider: 'gemini' });
     assert.equal(calls[0].url, 'http://stub/v1beta/models/m1:generateContent');
     assert.equal(calls[0].init.headers['x-goog-api-key'], 'secret');
     assert.equal(JSON.parse(calls[0].init.body).contents[0].parts[0].text, 'chào');

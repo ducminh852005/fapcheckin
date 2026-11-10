@@ -43,7 +43,7 @@ Project mặc định: `fapcheckin-3bn2di` (`.firebaserc`).
    ```powershell
    firebase functions:secrets:set GEMINI_API_KEY
    ```
-   Chưa đặt secret thì deploy `aiAssistant` sẽ báo thiếu secret; app vẫn chạy, tab AI trả lỗi "chưa được cấu hình". Đổi model bằng biến môi trường `GEMINI_MODEL` (mặc định `gemini-3.5-flash`). Chi tiết: [ai-assistant.md](ai-assistant.md).
+   Chưa đặt secret thì deploy `aiAssistant` sẽ báo thiếu secret; app vẫn chạy, tab AI trả lỗi "chưa được cấu hình". Đổi model bằng biến môi trường `GEMINI_MODEL` (mặc định `gemini-3.5-flash`). AI dự phòng khi Gemini quá tải (Ollama local + tunnel, đổi nguồn không cần deploy): [ai-assistant.md §G](ai-assistant.md#g-ai-dự-phòng-ollama-local-khi-gemini-quá-tải). Chi tiết: [ai-assistant.md](ai-assistant.md).
 6. **Domain được phép cho Auth**: *Authentication → Settings → Authorized domains* đã có `<project-id>.web.app`; thêm `localhost` nếu chạy thử cục bộ.
 
 ## 3. Tài khoản Admin đầu tiên
