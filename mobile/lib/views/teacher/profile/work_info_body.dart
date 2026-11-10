@@ -3,14 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../viewmodels/auth_viewmodel.dart';
-import '../../../viewmodels/dashboard_viewmodel.dart';
 import 'components/profile_sub_header.dart';
 import 'components/work_summary_card.dart';
 import 'components/work_details_card.dart';
 import 'components/work_info_note_card.dart';
 
 /// Màn hình Thông tin công tác của Giảng viên:
-/// 1. Header có nút quay lại (Back), nhãn "HỒ SƠ" và tiêu đề "Thông tin công tác"
+/// 1. Header có nhãn "HỒ SƠ" và tiêu đề "Thông tin công tác"
 /// 2. Thẻ tóm tắt: Tên giảng viên, Chức vụ, Badge "Đang công tác"
 /// 3. Thẻ bảng chi tiết: Mã giảng viên, Khoa, Bộ môn, Chức vụ, Ngày vào làm, Hợp đồng
 /// 4. Thẻ ghi chú thông tin do quản trị viên quản lý
@@ -20,7 +19,6 @@ class WorkInfoBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authVm = context.watch<AuthViewModel>();
-    final dashboardVm = context.watch<DashboardViewModel>();
     final horizontalPadding = context.isMobile ? 18.0 : context.pagePadding;
 
     final user = authVm.session?.user;
@@ -47,11 +45,8 @@ class WorkInfoBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Header có nút quay lại
-                ProfileSubHeader(
-                  title: 'Thông tin công tác',
-                  onBack: () => dashboardVm.navigateBack('ho-so'),
-                ),
+                // 1. Header
+                const ProfileSubHeader(title: 'Thông tin công tác'),
                 const SizedBox(height: 16),
 
                 // 2. Thẻ tóm tắt

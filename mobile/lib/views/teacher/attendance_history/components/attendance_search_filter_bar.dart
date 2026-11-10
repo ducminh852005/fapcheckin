@@ -31,29 +31,37 @@ class AttendanceSearchFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         // ── Ô tìm kiếm ────────────────────────────────────────────────────────
         Container(
-          height: 44,
+          height: 46,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark
+                  ? Theme.of(context).colorScheme.outline
+                  : const Color(0xFFE2E8F0),
+            ),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: TextField(
             controller: searchController,
             onChanged: onSearchChanged,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13.5,
-              color: AttendanceHistoryColors.textDark,
+              color: isDark ? Colors.white : AttendanceHistoryColors.textDark,
             ),
             decoration: InputDecoration(
               hintText: 'Tìm tên hoặc MSSV...',
@@ -110,6 +118,56 @@ class AttendanceSearchFilterBar extends StatelessWidget {
                 isSelected: activeFilter == AttendanceFilterType.absent,
                 onTap: () => onFilterChanged(AttendanceFilterType.absent),
               ),
+              if (searchController.text.isNotEmpty ||
+                  activeFilter != AttendanceFilterType.all) ...[
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: 'Xóa bộ lọc tìm kiếm',
+                  child: InkWell(
+                    onTap: () {
+                      searchController.clear();
+                      onSearchChanged('');
+                      onFilterChanged(AttendanceFilterType.all);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.filter_alt_off_outlined,
+                            size: 14,
+                            color: isDark
+                                ? const Color(0xFFCBD5E1)
+                                : const Color(0xFF475569),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Xóa lọc',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? const Color(0xFFCBD5E1)
+                                  : const Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(width: 14),
               // Nút Chọn nhanh
               InkWell(
@@ -159,33 +217,49 @@ class _FilterChipItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+          color: isSelected
+              ? (isDark
+                  ? AttendanceHistoryColors.orangePrimary
+                  : const Color(0xFF0F172A))
+              : (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? (isDark
+                    ? AttendanceHistoryColors.orangePrimary
+                    : const Color(0xFF0F172A))
+                : (isDark
+                    ? Theme.of(context).colorScheme.outline
+                    : const Color(0xFFE2E8F0)),
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF334155),
+            color: isSelected
+                ? Colors.white
+                : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
           ),
         ),
       ),

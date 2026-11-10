@@ -30,25 +30,37 @@ class ProfileHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFFFE5D9);
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ProfileColors.textMuted;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -91,8 +103,8 @@ class ProfileHeroCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     fullName,
-                    style: const TextStyle(
-                      color: ProfileColors.textDark,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
@@ -101,8 +113,8 @@ class ProfileHeroCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   roleTitle,
-                  style: const TextStyle(
-                    color: ProfileColors.textMuted,
+                  style: TextStyle(
+                    color: mutedColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -112,8 +124,8 @@ class ProfileHeroCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   department,
-                  style: const TextStyle(
-                    color: ProfileColors.textMuted,
+                  style: TextStyle(
+                    color: mutedColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),

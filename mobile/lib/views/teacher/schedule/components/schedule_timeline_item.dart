@@ -42,6 +42,18 @@ class ScheduleTimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = status == ScheduleSessionStatus.active;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final cardBorder = isActive
+        ? ScheduleColors.orangePrimary
+        : (isDark ? const Color(0xFF334155) : ScheduleColors.cardBorder);
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ScheduleColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ScheduleColors.textMuted;
+    final subtleColor = isDark
+        ? const Color(0xFF64748B)
+        : ScheduleColors.textSubtle;
 
     return IntrinsicHeight(
       child: Row(
@@ -60,7 +72,9 @@ class ScheduleTimelineItem extends StatelessWidget {
                   height: isLast ? 16 : null,
                   child: Container(
                     width: 2,
-                    color: ScheduleColors.timelineLine,
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : ScheduleColors.timelineLine,
                   ),
                 ),
 
@@ -73,11 +87,13 @@ class ScheduleTimelineItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isActive
                           ? ScheduleColors.orangePrimary
-                          : ScheduleColors.slotBadgeBg,
+                          : (isDark
+                                ? const Color(0xFF1E293B)
+                                : ScheduleColors.slotBadgeBg),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: isActive
-                            ? Colors.white
+                            ? (isDark ? const Color(0xFF0F172A) : Colors.white)
                             : ScheduleColors.orangeBorder,
                         width: isActive ? 2 : 1.2,
                       ),
@@ -127,17 +143,15 @@ class ScheduleTimelineItem extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cardBg,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: isActive
-                          ? ScheduleColors.orangePrimary
-                          : ScheduleColors.cardBorder,
+                      color: cardBorder,
                       width: isActive ? 1.6 : 1.2,
                     ),
                     boxShadow: isActive
                         ? ScheduleColors.activeCardShadow
-                        : ScheduleColors.cardShadow,
+                        : (isDark ? null : ScheduleColors.cardShadow),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,15 +166,15 @@ class ScheduleTimelineItem extends StatelessWidget {
                               timeRange,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: ScheduleColors.textMuted,
+                              style: TextStyle(
+                                color: mutedColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                           const SizedBox(width: 6),
-                          _buildStatusBadge(),
+                          _buildStatusBadge(isDark),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -174,16 +188,16 @@ class ScheduleTimelineItem extends StatelessWidget {
                             children: [
                               TextSpan(
                                 text: subjectCode,
-                                style: const TextStyle(
-                                  color: ScheduleColors.textDark,
+                                style: TextStyle(
+                                  color: textColor,
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const TextSpan(
+                              TextSpan(
                                 text: '  •  ',
                                 style: TextStyle(
-                                  color: ScheduleColors.textSubtle,
+                                  color: subtleColor,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -193,7 +207,7 @@ class ScheduleTimelineItem extends StatelessWidget {
                                 style: TextStyle(
                                   color: isActive
                                       ? ScheduleColors.orangePrimary
-                                      : ScheduleColors.textDark,
+                                      : textColor,
                                   fontSize: 15.5,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -209,8 +223,8 @@ class ScheduleTimelineItem extends StatelessWidget {
                         '$subjectName • $room',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: ScheduleColors.textMuted,
+                        style: TextStyle(
+                          color: mutedColor,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -224,8 +238,8 @@ class ScheduleTimelineItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isActive
-                              ? ScheduleColors.statusDone
-                              : ScheduleColors.textMuted,
+                                ? ScheduleColors.statusDone
+                                : mutedColor,
                           fontSize: 11.5,
                           fontWeight:
                               isActive ? FontWeight.w600 : FontWeight.w500,
@@ -298,15 +312,20 @@ class ScheduleTimelineItem extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge() {
+  Widget _buildStatusBadge(bool isDark) {
     switch (status) {
       case ScheduleSessionStatus.completed:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: ScheduleColors.statusDoneBg,
+            color: isDark
+                ? const Color(0xFF14532D).withValues(alpha: 0.4)
+                : ScheduleColors.statusDoneBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFBBF7D0), width: 0.8),
+            border: Border.all(
+              color: isDark ? const Color(0xFF166534) : const Color(0xFFBBF7D0),
+              width: 0.8,
+            ),
           ),
           child: const Text(
             'Đã xong',
@@ -322,9 +341,16 @@ class ScheduleTimelineItem extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: ScheduleColors.statusActiveBg,
+            color: isDark
+                ? ScheduleColors.orangePrimary.withValues(alpha: 0.16)
+                : ScheduleColors.statusActiveBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: ScheduleColors.orangeBorder, width: 0.8),
+            border: Border.all(
+              color: isDark
+                  ? ScheduleColors.orangePrimary.withValues(alpha: 0.4)
+                  : ScheduleColors.orangeBorder,
+              width: 0.8,
+            ),
           ),
           child: const Text(
             'Đang dạy',
@@ -340,9 +366,16 @@ class ScheduleTimelineItem extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: ScheduleColors.statusPendingBg,
+            color: isDark
+                ? ScheduleColors.orangePrimary.withValues(alpha: 0.12)
+                : ScheduleColors.statusPendingBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFFFE0D3), width: 0.8),
+            border: Border.all(
+              color: isDark
+                  ? ScheduleColors.orangePrimary.withValues(alpha: 0.3)
+                  : const Color(0xFFFFE0D3),
+              width: 0.8,
+            ),
           ),
           child: const Text(
             'Chưa bắt đầu',

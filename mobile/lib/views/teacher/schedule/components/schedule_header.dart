@@ -11,14 +11,17 @@ class ScheduleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ScheduleColors.textDark;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Expanded(
+        Expanded(
           child: Text(
             'Lịch dạy của tôi',
             style: TextStyle(
-              color: ScheduleColors.textDark,
+              color: textColor,
               fontSize: 24,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
@@ -28,34 +31,14 @@ class ScheduleHeader extends StatelessWidget {
 
         // Nút Scan TKB
         if (onScanTimetable != null)
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: ScheduleColors.orangeBorder,
-                width: 1.2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+          IconButton(
+            icon: Icon(
+              Icons.document_scanner_rounded,
+              size: 26,
+              color: textColor,
             ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.document_scanner_outlined,
-                size: 20,
-                color: ScheduleColors.textDark,
-              ),
-              tooltip: 'Quét thời khóa biểu',
-              onPressed: onScanTimetable,
-              padding: EdgeInsets.zero,
-            ),
+            tooltip: 'Quét thời khóa biểu bằng OCR',
+            onPressed: onScanTimetable,
           ),
       ],
     );

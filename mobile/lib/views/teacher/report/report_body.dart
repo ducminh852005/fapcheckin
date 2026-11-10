@@ -25,7 +25,11 @@ import 'components/report_subject_summary.dart';
 /// 6. Thẻ danh sách: Tổng hợp theo môn (PRN231, SWP391, SWT301, PRM392)
 /// 7. Ghi chú chân trang cập nhật thời gian
 class ReportBody extends StatefulWidget {
-  const ReportBody({super.key});
+  const ReportBody({super.key, this.embedded = false});
+
+  /// Khi nhúng vào Tổng quan, chỉ dựng nội dung báo cáo, không tạo Scaffold
+  /// hoặc vùng cuộn riêng.
+  final bool embedded;
 
   @override
   State<ReportBody> createState() => _ReportBodyState();
@@ -56,6 +60,30 @@ class _ReportBodyState extends State<ReportBody> {
     final subjects = _getSubjects(report);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isShortScreen = MediaQuery.sizeOf(context).height < 500;
+
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildEmbeddedHeader(
+            context: context,
+            reportVm: reportVm,
+            report: report,
+            attendanceRate: attendanceRate,
+            attendanceRateText: attendanceRateText,
+            presentCount: presentCount,
+            absentCount: absentCount,
+          ),
+          const SizedBox(height: 12),
+          ..._buildScrollableItems(
+            context: context,
+            reportVm: reportVm,
+            report: report,
+            subjects: subjects,
+          ),
+        ],
+      );
+    }
 
     if (isShortScreen) {
       return Scaffold(
@@ -218,6 +246,102 @@ class _ReportBodyState extends State<ReportBody> {
     );
   }
 
+  Widget _buildEmbeddedHeader({
+    required BuildContext context,
+    required ReportViewModel reportVm,
+    required ReportData? report,
+    required double attendanceRate,
+    required String attendanceRateText,
+    required int presentCount,
+    required int absentCount,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? ReportColors.orangePrimary.withValues(alpha: .16)
+                    : const Color(0xFFFFEDE3),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Icon(
+                Icons.insights_rounded,
+                color: ReportColors.orangePrimary,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 11),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Phân tích chuyên cần',
+                    style: TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: ReportColors.textDark,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Theo dõi xu hướng và hiệu quả điểm danh',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: ReportColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton.filledTonal(
+              tooltip: 'Xuất báo cáo Excel',
+              onPressed: report == null
+                  ? null
+                  : () => _handleExportExcel(context),
+              icon: const Icon(Icons.download_rounded, size: 20),
+              style: IconButton.styleFrom(
+                foregroundColor: ReportColors.orangePrimary,
+                backgroundColor: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFFFF1EA),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ReportWeekSelector(
+          weekLabel: _formatWeekLabel(reportVm.from, reportVm.to),
+          subtitle:
+              '${report?.classCount ?? 0} lớp • ${report?.closedSessionCount ?? 0} buổi đã kết thúc',
+          onTap: () async {
+            final range = await showReportScopeBottomSheet(
+              context: context,
+              currentFrom: reportVm.from,
+              currentTo: reportVm.to,
+              totalClosedSessions: report?.closedSessionCount ?? 0,
+            );
+            if (!context.mounted || range == null) return;
+            await reportVm.setRange(range['start'], range['end']);
+          },
+        ),
+        const SizedBox(height: 10),
+        ReportMiniKpiBar(
+          attendanceRate: attendanceRate,
+          attendanceRateText: attendanceRateText,
+          presentCount: presentCount,
+          absentCount: absentCount,
+        ),
+      ],
+    );
+  }
+
   Widget _buildTopControls({
     required BuildContext context,
     required ReportViewModel reportVm,
@@ -232,9 +356,7 @@ class _ReportBodyState extends State<ReportBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 1. Header có nút xuất Excel ở góc phải
-        ReportCustomHeader(
-          onDownload: () => _handleExportExcel(context),
-        ),
+        ReportCustomHeader(onDownload: () => _handleExportExcel(context)),
         const SizedBox(height: 12),
 
         // 2. Chọn tuần / Phạm vi báo cáo
@@ -276,16 +398,11 @@ class _ReportBodyState extends State<ReportBody> {
       if (reportVm.loading)
         Container(
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFFFFF7ED),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFFED7AA),
-            ),
+            border: Border.all(color: const Color(0xFFFED7AA)),
           ),
           child: const Row(
             children: [
@@ -313,16 +430,11 @@ class _ReportBodyState extends State<ReportBody> {
         Container(
           width: double.infinity,
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: const Color(0xFFFEF2F2),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFFECACA),
-            ),
+            border: Border.all(color: const Color(0xFFFECACA)),
           ),
           child: Row(
             children: [
@@ -344,10 +456,7 @@ class _ReportBodyState extends State<ReportBody> {
               ),
               TextButton.icon(
                 onPressed: () => reportVm.load(force: true),
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                  size: 16,
-                ),
+                icon: const Icon(Icons.refresh_rounded, size: 16),
                 label: const Text('Thử lại'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFDC2626),
@@ -379,32 +488,8 @@ class _ReportBodyState extends State<ReportBody> {
       ReportSubjectSummary(subjects: subjects),
       const SizedBox(height: 18),
 
-      // 6. Chân trang thông tin cập nhật
-      Center(
-        child: Text(
-          report == null
-              ? 'Chưa có báo cáo.'
-              : 'Cập nhật: ${_formatGeneratedAt(report.generatedAt)}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            color: ReportColors.textSubtle,
-            height: 1.45,
-          ),
-        ),
-      ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 8),
     ];
-  }
-
-  String _formatGeneratedAt(String raw) {
-    final dt = DateTime.tryParse(raw)?.toLocal();
-    if (dt == null) return raw;
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    final dd = dt.day.toString().padLeft(2, '0');
-    final mo = dt.month.toString().padLeft(2, '0');
-    return '$hh:$mm · $dd/$mo/${dt.year}';
   }
 
   String _formatWeekLabel(DateTime? from, DateTime? to) {

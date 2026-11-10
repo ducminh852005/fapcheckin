@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
@@ -11,9 +12,8 @@ import 'package:fapcheckin_core/result/api_result.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 
 import '../../../core/services/telemetry.dart';
-
-
-
+import '../../../core/widgets/app_toast.dart';
+import '../../../viewmodels/live_session_viewmodel.dart';
 import '../../../viewmodels/preferences_viewmodel.dart';
 import '../profile/account_dialogs.dart';
 import '../profile/profile_colors.dart';
@@ -99,6 +99,49 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   }
 
 
+
+  void _showNotificationToast({
+    required bool isEnabled,
+    required bool success,
+    String? errorMessage,
+  }) {
+    final title = success
+        ? (isEnabled ? 'Đã bật nhắc lịch dạy' : 'Đã tắt nhắc lịch dạy')
+        : 'Không thể lưu cài đặt';
+    final message = success
+        ? (isEnabled
+            ? 'Hệ thống sẽ thông báo tự động 15 phút trước giờ dạy.'
+            : 'Đã tắt thông báo tự động trước giờ dạy.')
+        : (errorMessage ?? 'Không thể lưu cài đặt nhắc lịch.');
+
+    final liveVm = context.read<LiveSessionViewModel?>();
+    if (liveVm != null) {
+      liveVm.triggerToast(
+        type: ToastType.custom,
+        title: title,
+        message: message,
+        icon: success
+            ? (isEnabled
+                ? Icons.notifications_active_rounded
+                : Icons.notifications_off_rounded)
+            : Icons.error_outline_rounded,
+        accentColor: success
+            ? (isEnabled
+                ? const Color(0xFFFA5A1E)
+                : const Color(0xFF64748B))
+            : const Color(0xFFDC2626),
+        duration: const Duration(seconds: 4),
+      );
+    } else {
+      showAppToast(
+        context,
+        title: title,
+        message: message,
+        type: success ? AppToastType.success : AppToastType.error,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
 
   Future<void> _loadSupportConfig() async {
 
@@ -243,9 +286,10 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
                 const SizedBox(height: 24),
 
-                _buildCrashlyticsDemoCard(context),
-
-                const SizedBox(height: 24),
+                if (kDebugMode) ...[
+                  _buildCrashlyticsDemoCard(context),
+                  const SizedBox(height: 24),
+                ],
 
 
 
@@ -286,40 +330,45 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   }
 
   Widget _buildCrashlyticsDemoCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFF7ED),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFDBA74)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFFDBA74),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.bug_report_outlined, color: Color(0xFFC2410C)),
-              SizedBox(width: 10),
+              const Icon(Icons.bug_report_outlined, color: Color(0xFFC2410C)),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Demo Firebase Crashlytics',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9A3412),
+                    color: isDark
+                        ? const Color(0xFFFED7AA)
+                        : const Color(0xFF9A3412),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Nút này cố ý làm ứng dụng dừng. Hãy mở lại app để gửi báo cáo, '
             'sau đó kiểm tra trên Firebase Console.',
             style: TextStyle(
               height: 1.4,
               fontSize: 12.5,
-              color: Color(0xFF7C2D12),
+              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF7C2D12),
             ),
           ),
           const SizedBox(height: 14),
@@ -452,144 +501,82 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
 
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark ? Theme.of(context).colorScheme.outline : ProfileColors.cardBorder;
+
     return Container(
-
       decoration: BoxDecoration(
-
-        color: Colors.white,
-
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-
-        border: Border.all(color: ProfileColors.cardBorder),
-
-        boxShadow: ProfileColors.cardShadow,
-
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? const [] : ProfileColors.cardShadow,
       ),
-
       child: Column(
-
         children: [
-
           // Nhắc lịch dạy (Switch)
-
           Padding(
-
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
             child: Row(
-
               children: [
-
                 _buildTileIcon(Icons.notifications_none_rounded),
-
                 const SizedBox(width: 14),
-
-                const Expanded(
-
+                Expanded(
                   child: Column(
-
                     crossAxisAlignment: CrossAxisAlignment.start,
-
                     children: [
-
                       Text(
-
                         'Nhắc lịch dạy',
-
                         style: TextStyle(
-
                           fontSize: 15,
-
                           fontWeight: FontWeight.w700,
-
-                          color: ProfileColors.textDark,
-
+                          color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                         ),
-
                       ),
-
-                      SizedBox(height: 2),
-
+                      const SizedBox(height: 2),
                       Text(
-
                         'Thông báo tự động 15 phút trước giờ dạy',
-
                         style: TextStyle(
-
                           fontSize: 12.5,
-
                           fontWeight: FontWeight.w400,
-
-                          color: ProfileColors.textMuted,
-
+                          color: isDark ? const Color(0xFF94A3B8) : ProfileColors.textMuted,
                         ),
-
                       ),
-
                     ],
-
                   ),
-
                 ),
+                Semantics(
+                  label: 'Nhắc lịch dạy tự động 15 phút trước giờ dạy',
+                  value: reminderOn ? 'Đang bật' : 'Đang tắt',
+                  child: Switch.adaptive(
+                    value: reminderOn,
+                    activeThumbColor: ProfileColors.orangePrimary,
+                    activeTrackColor: ProfileColors.orangeLight,
+                    onChanged: isSaving
+                        ? null
+                        : (val) async {
+                            if (prefsVm == null) {
+                              setState(() => _localReminderEnabled = val);
+                              _showNotificationToast(
+                                isEnabled: val,
+                                success: true,
+                              );
+                              return;
+                            }
 
-                Switch.adaptive(
+                            final ok = await prefsVm.save(newReminders: val);
+                            if (!context.mounted) return;
 
-                  value: reminderOn,
-
-                  activeThumbColor: ProfileColors.orangePrimary,
-
-                  activeTrackColor: ProfileColors.orangeLight,
-
-                  onChanged: isSaving
-
-                      ? null
-
-                      : (val) async {
-
-                          if (prefsVm == null) {
-
-                            setState(() => _localReminderEnabled = val);
-
-                            return;
-
-                          }
-
-                          final ok = await prefsVm.save(newReminders: val);
-
-                          if (!context.mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-
-                            SnackBar(
-
-                              content: Text(
-
-                                ok
-
-                                    ? (val
-
-                                        ? 'Đã bật nhắc lịch trước giờ dạy 15 phút.'
-
-                                        : 'Đã tắt nhắc lịch dạy.')
-
-                                    : (prefsVm.error ??
-
-                                        'Không thể lưu cài đặt nhắc lịch.'),
-
-                              ),
-
-                            ),
-
-                          );
-
-                        },
-
+                            _showNotificationToast(
+                              isEnabled: val,
+                              success: ok,
+                              errorMessage: prefsVm.error,
+                            );
+                          },
+                  ),
                 ),
-
               ],
-
             ),
-
           ),
 
           _buildDivider(),
@@ -677,143 +664,78 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   /// 3. Thẻ Trợ giúp điểm danh
 
   Widget _buildAttendanceHelpCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark ? Theme.of(context).colorScheme.outline : ProfileColors.cardBorder;
 
     return Container(
-
       decoration: BoxDecoration(
-
-        color: Colors.white,
-
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-
-        border: Border.all(color: ProfileColors.cardBorder),
-
-        boxShadow: ProfileColors.cardShadow,
-
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? const [] : ProfileColors.cardShadow,
       ),
-
       child: Column(
-
         children: [
-
           // Hướng dẫn điểm danh QR
-
           _buildActionRow(
-
             icon: Icons.qr_code_2_rounded,
-
             title: 'Hướng dẫn điểm danh QR',
-
             subtitle: 'Tạo mã, kết thúc phiên, điểm danh tay',
-
             onTap: () => _showQrGuideSheet(context),
-
           ),
-
           _buildDivider(),
 
-
-
           // Sinh viên không quét được mã QR? (Expandable item)
-
           InkWell(
-
             onTap: () {
-
               setState(() {
-
                 _isFaqExpanded = !_isFaqExpanded;
-
               });
-
             },
-
             child: Padding(
-
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-
               child: Column(
-
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
-
                   Row(
-
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                     children: [
-
-                      const Expanded(
-
+                      Expanded(
                         child: Text(
-
                           'Sinh viên không quét được mã QR?',
-
                           style: TextStyle(
-
                             fontSize: 14.5,
-
                             fontWeight: FontWeight.w700,
-
-                            color: ProfileColors.textDark,
-
+                            color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                           ),
-
                         ),
-
                       ),
-
                       Icon(
-
                         _isFaqExpanded
-
                             ? Icons.keyboard_arrow_up_rounded
-
                             : Icons.keyboard_arrow_down_rounded,
-
                         color: ProfileColors.orangePrimary,
-
                         size: 22,
-
                       ),
-
                     ],
-
                   ),
-
                   if (_isFaqExpanded) ...[
-
                     const SizedBox(height: 8),
-
-                    const Text(
-
+                    Text(
                       'Kiểm tra kết nối mạng và mã QR còn hiệu lực. Nếu vẫn lỗi, dùng “Điểm danh tay” trong phiên đang mở.',
-
                       style: TextStyle(
-
                         fontSize: 13,
-
                         height: 1.45,
-
                         fontWeight: FontWeight.w400,
-
-                        color: Color(0xFF475569),
-
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                       ),
-
                     ),
-
                   ],
-
                 ],
-
               ),
-
             ),
-
           ),
-
           _buildDivider(),
 
 
@@ -877,121 +799,69 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
 
   /// 4. Thẻ Bạn cần thêm trợ giúp? (Banner cam nhạt)
-
   Widget _buildSupportBannerCard(BuildContext context) {
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hours = (_supportData['hours']?.toString().isNotEmpty ?? false)
-
         ? _supportData['hours'].toString()
-
         : 'Thứ 2–6, 08:00–17:00';
 
     return Container(
-
       padding: const EdgeInsets.all(18),
-
       decoration: BoxDecoration(
-
-        color: const Color(0xFFFFF7ED),
-
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFF7ED),
         borderRadius: BorderRadius.circular(16),
-
-        border: Border.all(color: const Color(0xFFFFEDD5)),
-
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFFFEDD5),
+        ),
       ),
-
       child: Column(
-
         crossAxisAlignment: CrossAxisAlignment.stretch,
-
         children: [
-
           Row(
-
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
-
               Container(
-
                 width: 38,
-
                 height: 38,
-
                 decoration: BoxDecoration(
-
-                  color: ProfileColors.orangeLight,
-
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : ProfileColors.orangeLight,
                   borderRadius: BorderRadius.circular(10),
-
                 ),
-
                 child: const Icon(
-
                   Icons.headset_mic_outlined,
-
                   size: 22,
-
                   color: ProfileColors.orangePrimary,
-
                 ),
-
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
-
                 child: Column(
-
                   crossAxisAlignment: CrossAxisAlignment.start,
-
                   children: [
-
-                    const Text(
-
-                      'Bạn cần thêm trợ giúp?',
-
-                      style: TextStyle(
-
-                        fontSize: 15,
-
-                        fontWeight: FontWeight.w700,
-
-                        color: ProfileColors.textDark,
-
-                      ),
-
-                    ),
-
-                    const SizedBox(height: 3),
-
                     Text(
-
-                      'Bộ phận hỗ trợ · $hours',
-
-                      style: const TextStyle(
-
-                        fontSize: 12.5,
-
-                        fontWeight: FontWeight.w400,
-
-                        color: ProfileColors.textMuted,
-
+                      'Bạn cần thêm trợ giúp?',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                       ),
-
                     ),
-
+                    const SizedBox(height: 3),
+                    Text(
+                      'Bộ phận hỗ trợ · $hours',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                        color: isDark ? const Color(0xFF94A3B8) : ProfileColors.textMuted,
+                      ),
+                    ),
                   ],
-
                 ),
-
               ),
-
             ],
-
           ),
-
           const SizedBox(height: 14),
 
 
@@ -1089,143 +959,76 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
   /// Dòng action item trong card
 
   Widget _buildActionRow({
-
     required IconData icon,
-
     required String title,
-
     required String subtitle,
-
     String? trailingText,
-
     required VoidCallback onTap,
-
   }) {
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
-
       onTap: onTap,
-
       borderRadius: BorderRadius.circular(12),
-
       child: Padding(
-
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
         child: Row(
-
           children: [
-
             _buildTileIcon(icon),
-
             const SizedBox(width: 14),
-
             Expanded(
-
               child: Column(
-
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
-
                   Text(
-
                     title,
-
-                    style: const TextStyle(
-
+                    style: TextStyle(
                       fontSize: 15,
-
                       fontWeight: FontWeight.w700,
-
-                      color: ProfileColors.textDark,
-
+                      color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                     ),
-
                   ),
-
                   const SizedBox(height: 2),
-
                   Text(
-
                     subtitle,
-
-                    style: const TextStyle(
-
+                    style: TextStyle(
                       fontSize: 12.5,
-
                       fontWeight: FontWeight.w400,
-
-                      color: ProfileColors.textMuted,
-
+                      color: isDark ? const Color(0xFF94A3B8) : ProfileColors.textMuted,
                     ),
-
                   ),
-
                 ],
-
               ),
-
             ),
-
             if (trailingText != null) ...[
-
               Text(
-
                 trailingText,
-
-                style: const TextStyle(
-
+                style: TextStyle(
                   fontSize: 13,
-
                   fontWeight: FontWeight.w500,
-
-                  color: ProfileColors.textMuted,
-
+                  color: isDark ? const Color(0xFF94A3B8) : ProfileColors.textMuted,
                 ),
-
               ),
-
               const SizedBox(width: 4),
-
             ],
-
             const Icon(
-
               Icons.chevron_right_rounded,
-
               size: 20,
-
               color: ProfileColors.textSubtle,
-
             ),
-
           ],
-
         ),
-
       ),
-
     );
-
   }
 
-
-
   Widget _buildDivider() {
-
-    return const Divider(
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Divider(
       height: 1,
-
       thickness: 1,
-
       indent: 70,
-
-      color: ProfileColors.cardBorder,
-
+      color: isDark ? Theme.of(context).colorScheme.outline : ProfileColors.cardBorder,
     );
-
   }
 
 
@@ -1553,67 +1356,37 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
 
   void _showQrGuideSheet(BuildContext context) {
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
-
       context: context,
-
-      backgroundColor: Colors.white,
-
+      backgroundColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
       isScrollControlled: true,
-
       shape: const RoundedRectangleBorder(
-
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-
       ),
-
       builder: (ctx) => SafeArea(
-
         child: Padding(
-
           padding: const EdgeInsets.all(20),
-
           child: Column(
-
             mainAxisSize: MainAxisSize.min,
-
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
-
               Row(
-
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                 children: [
-
-                  const Text(
-
+                  Text(
                     'Hướng dẫn điểm danh QR',
-
                     style: TextStyle(
-
                       fontSize: 18,
-
                       fontWeight: FontWeight.w800,
-
-                      color: ProfileColors.textDark,
-
+                      color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                     ),
-
                   ),
-
                   IconButton(
-
                     onPressed: () => Navigator.pop(ctx),
-
                     icon: const Icon(Icons.close_rounded),
-
                   ),
-
                 ],
-
               ),
 
               const SizedBox(height: 12),
@@ -1848,48 +1621,28 @@ class _SettingsHelpBodyState extends State<SettingsHelpBody> {
 
 
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     await showModalBottomSheet(
-
       context: context,
-
-      backgroundColor: Colors.white,
-
+      backgroundColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
       shape: const RoundedRectangleBorder(
-
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-
       ),
-
       builder: (ctx) => SafeArea(
-
         child: Padding(
-
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-
           child: Column(
-
             mainAxisSize: MainAxisSize.min,
-
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
-
-              const Text(
-
+              Text(
                 'Liên hệ hỗ trợ kỹ thuật',
-
                 style: TextStyle(
-
                   fontSize: 18,
-
                   fontWeight: FontWeight.w800,
-
-                  color: ProfileColors.textDark,
-
+                  color: isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark,
                 ),
-
               ),
-
               if (hours.isNotEmpty) ...[
 
                 const SizedBox(height: 4),

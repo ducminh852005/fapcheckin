@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,11 @@ import 'package:fapcheckin_core/theme/app_theme.dart';
 
 import '../core/services/auto_session_manager.dart';
 import '../core/services/google_auth_service.dart';
+import '../core/services/push_notification_service.dart';
 import '../core/services/remote_settings.dart';
+import '../core/services/speech_service.dart';
+import '../core/services/cloud_tts_service.dart';
+import '../core/services/tts_service.dart';
 import '../core/services/timetable_ocr_service.dart';
 
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
@@ -21,6 +26,8 @@ import 'package:fapcheckin_core/session/current_user.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/repositories/attendance_history_repository.dart';
 import 'package:fapcheckin_core/repositories/report_repository.dart';
+import 'package:fapcheckin_core/repositories/ai_assistant_repository.dart';
+import 'package:fapcheckin_core/ai/ai_tool_executor.dart';
 
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
@@ -28,6 +35,7 @@ import '../viewmodels/live_session_viewmodel.dart';
 import '../viewmodels/attendance_history_viewmodel.dart';
 import '../viewmodels/preferences_viewmodel.dart';
 import '../viewmodels/report_viewmodel.dart';
+import '../viewmodels/ai_chat_viewmodel.dart';
 
 class FapCheckinApp extends StatefulWidget {
   const FapCheckinApp({
@@ -56,7 +64,12 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   late final AccountFeaturesRepository _accountFeaturesRepo;
   late final PreferencesViewModel _preferencesViewModel;
   late final ReportViewModel _reportViewModel;
+  late final AiChatViewModel _aiChatViewModel;
   late final GoRouter _router;
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+  late final PushNotificationService _pushNotificationService;
+  RemoteMessage? _pendingPushMessage;
 
   @override
   void initState() {
@@ -79,17 +92,34 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       uid: () => _authViewModel.session?.token ?? '',
     );
     _preferencesViewModel = PreferencesViewModel(_accountFeaturesRepo);
+    _authViewModel.beforeSignOut = _preferencesViewModel.unregisterDevice;
     _dashboardViewModel = DashboardViewModel(_teacherRepo);
     _liveSessionViewModel = LiveSessionViewModel(_teacherRepo)
       ..applyRemoteSettings(
         qrCycleSeconds: widget.remoteSettings.qrRefreshSeconds,
         ipCheckDefault: widget.remoteSettings.ipCheckDefault,
       );
-    _attendanceHistoryViewModel = AttendanceHistoryViewModel(
-      AttendanceHistoryRepository(currentUser: _currentUser),
-    );
-    _reportViewModel = ReportViewModel(
-      ReportRepository(currentUser: _currentUser),
+    final historyRepo = AttendanceHistoryRepository(currentUser: _currentUser);
+    final reportRepo = ReportRepository(currentUser: _currentUser);
+    _attendanceHistoryViewModel = AttendanceHistoryViewModel(historyRepo);
+    _reportViewModel = ReportViewModel(reportRepo);
+    _aiChatViewModel = AiChatViewModel(
+      repository: AiAssistantRepository(),
+      executor: AiToolExecutor(
+        teacher: _teacherRepo,
+        history: historyRepo,
+        report: reportRepo,
+        currentUser: _currentUser,
+      ),
+      speech: DeviceSpeechService(),
+      // Giọng đọc: Google Cloud Text-to-Speech (vi-VN) là chính, giọng của máy là dự phòng. Chạy với
+      // --dart-define=AI_TTS_DEVICE_ONLY=true để chỉ dùng giọng của máy (không gọi hàm aiSpeak).
+      tts: const bool.fromEnvironment('AI_TTS_DEVICE_ONLY')
+          ? DeviceTtsService()
+          : FallbackTtsService(
+              cloud: CloudTtsService(repository: AiSpeakRepository()),
+              device: DeviceTtsService(),
+            ),
     );
     _autoSessionManager = AutoSessionManager(
       liveSessionViewModel: _liveSessionViewModel,
@@ -100,6 +130,15 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _liveSessionViewModel.addListener(_syncLiveSession);
 
     _router = createAppRouter(_authViewModel);
+    _pushNotificationService = PushNotificationService(
+      messengerKey: _messengerKey,
+      onOpenMessage: _handlePushMessage,
+    );
+    unawaited(
+      _pushNotificationService.start().catchError((Object error) {
+        debugPrint('Push notification init error: $error');
+      }),
+    );
     // Firebase Auth giữ phiên trên thiết bị: nạp lại hồ sơ để khỏi đăng nhập lại.
     _authViewModel.restoreSession();
 
@@ -123,6 +162,19 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
   AutoSessionManager? _autoSessionManager;
   String? _accountId;
   String? _liveSessionKey;
+
+  void _handlePushMessage(RemoteMessage message) {
+    if (!_authViewModel.isAuthenticated) {
+      _pendingPushMessage = message;
+      return;
+    }
+
+    final route = routeForPushMessage(message);
+    _pendingPushMessage = null;
+    _dashboardViewModel.navigate(route);
+    _router.go('${AppRoutes.teacher}/$route');
+  }
+
   void _syncLiveSession() {
     final vm = _liveSessionViewModel;
     _dashboardViewModel.updateActiveSession(
@@ -162,6 +214,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       _dashboardViewModel.clearTeacherInfo();
       _liveSessionViewModel.resetSession();
       _reportViewModel.reset();
+      _aiChatViewModel.reset();
     }
     if (session != null && session.user.isTeacher) {
       _dashboardViewModel.setTeacherInfo(
@@ -177,6 +230,12 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
       session?.user.isTeacher == true ? session?.token : null,
     );
     _preferencesViewModel.bindAccount(_authViewModel.session?.token);
+    final pendingMessage = _pendingPushMessage;
+    if (session != null && pendingMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handlePushMessage(pendingMessage);
+      });
+    }
   }
 
   @override
@@ -191,7 +250,9 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
     _liveSessionViewModel.dispose();
     _attendanceHistoryViewModel.dispose();
     _preferencesViewModel.dispose();
+    unawaited(_pushNotificationService.dispose());
     _reportViewModel.dispose();
+    _aiChatViewModel.dispose();
     super.dispose();
   }
 
@@ -211,6 +272,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
         ChangeNotifierProvider.value(value: _attendanceHistoryViewModel),
         ChangeNotifierProvider.value(value: _preferencesViewModel),
         ChangeNotifierProvider.value(value: _reportViewModel),
+        ChangeNotifierProvider.value(value: _aiChatViewModel),
       ],
       child: Consumer<PreferencesViewModel>(
         builder: (context, prefsVm, _) => MaterialApp.router(
@@ -219,6 +281,7 @@ class _FapCheckinAppState extends State<FapCheckinApp> {
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: prefsVm.themeMode,
+          scaffoldMessengerKey: _messengerKey,
           routerConfig: _router,
           builder: (context, child) {
             final mq = MediaQuery.of(context);

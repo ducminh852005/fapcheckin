@@ -28,6 +28,9 @@ class HistorySummary {
 class StudentSummary {
   final String rollNumber, fullName, email;
   final int presentCount, lateCount, absentCount, closedSessions, totalSessions;
+
+  /// Ngành và ảnh đại diện (nếu dữ liệu ghi danh có); rỗng khi chưa có.
+  final String major, avatarPath;
   const StudentSummary({
     required this.rollNumber,
     required this.fullName,
@@ -37,6 +40,8 @@ class StudentSummary {
     required this.absentCount,
     required this.closedSessions,
     required this.totalSessions,
+    this.major = '',
+    this.avatarPath = '',
   });
   factory StudentSummary.fromJson(Map<String, dynamic> json) => StudentSummary(
     rollNumber: jsonText(json['rollNumber']) ?? '',
@@ -47,6 +52,8 @@ class StudentSummary {
     absentCount: jsonNumber(json['absentCount'])?.toInt() ?? 0,
     closedSessions: jsonNumber(json['closedSessions'])?.toInt() ?? 0,
     totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 0,
+    major: jsonText(json['major']) ?? '',
+    avatarPath: jsonText(json['avatarPath']) ?? '',
   );
   double get attendanceRate =>
       closedSessions == 0 ? 0 : (presentCount + lateCount) / closedSessions;

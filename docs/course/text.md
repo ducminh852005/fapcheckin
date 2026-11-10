@@ -31,7 +31,7 @@ Bản phân công này đảm bảo **khối lượng công việc đồng đề
    - Viết `firestore.rules` và `storage.rules`: Tuân thủ nguyên tắc **Deny by default**, không dùng `allow read, write: if true;`, kiểm tra role và trạng thái hợp lệ.
    - Viết bộ unit test cho Security Rules trong `firebase/tests/` chạy trên **Firebase Local Emulator** (đủ case allowed và denied cho từng role/collection).
 4. **Tài liệu bàn giao:**
-   - `docs/gap-review.md` (đánh giá khoảng cách giữa Lab 2/3 và Final).
+   - `docs/course/gap-review.md` (đánh giá khoảng cách giữa Lab 2/3 và Final).
    - `docs/data-model.md` (đặc tả toàn bộ collections, permissions và rule).
 
 ---
@@ -101,7 +101,7 @@ Bản phân công này đảm bảo **khối lượng công việc đồng đề
    - Lập bảng quyết định (Accept / Modify / Reject) có giải thích lý do kỹ thuật.
    - **Tạo ít nhất 3 commits riêng biệt** để sửa 3 lỗi đã accept (đặt tên commit theo ID lỗi, ví dụ: `fix(review): resolve CR-01 MVVM violation`).
 3. **Hồ sơ nộp bài & Video:**
-   - Tổng hợp `docs/test-report.md`.
+   - Tổng hợp `docs/course/test-report.md`.
    - Viết **Final Report PDF (10–15 trang)** theo dàn ý chuẩn của trường.
    - Soạn **Slide thuyết trình (12–15 slide PDF)**.
    - Quay và biên tập **Video Demo (8–12 phút)**: Trình chiếu song song màn hình Mobile và Web Admin, demo luồng Cross-role real-time, demo tính năng AI (kèm thao tác tắt Remote Config để chứng minh fallback).

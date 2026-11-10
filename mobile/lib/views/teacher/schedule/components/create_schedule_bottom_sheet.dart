@@ -249,17 +249,21 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   }
 
   Widget _buildLessonTypeMenuCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark ? Theme.of(context).colorScheme.outline : const Color(0xFFE2E8F0);
+
     return Material(
       elevation: 10,
       shadowColor: const Color(0x33000000),
       borderRadius: BorderRadius.circular(16),
-      color: Colors.white,
+      color: cardBg,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -305,7 +309,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                     ),
                     decoration: BoxDecoration(
                       color: selected
-                          ? const Color(0xFFFFF7ED)
+                          ? (isDark ? const Color(0xFF334155) : const Color(0xFFFFF7ED))
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                       border: selected
@@ -343,7 +347,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                                   fontWeight: FontWeight.w700,
                                   color: selected
                                       ? const Color(0xFFFA5A1E)
-                                      : const Color(0xFF0F172A),
+                                      : (isDark
+                                          ? const Color(0xFFF8FAFC)
+                                          : const Color(0xFF0F172A)),
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -394,18 +400,22 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   }
 
   Widget _buildClassMenuCard(List<Map<String, dynamic>> classes) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final borderColor = isDark ? Theme.of(context).colorScheme.outline : const Color(0xFFE2E8F0);
+
     return Material(
       elevation: 10,
       shadowColor: const Color(0x33000000),
       borderRadius: BorderRadius.circular(16),
-      color: Colors.white,
+      color: cardBg,
       child: Container(
         constraints: const BoxConstraints(maxHeight: 380),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -456,7 +466,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                           ),
                           decoration: BoxDecoration(
                             color: selected
-                                ? const Color(0xFFFFF7ED)
+                                ? (isDark ? const Color(0xFF334155) : const Color(0xFFFFF7ED))
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: selected
@@ -495,7 +505,9 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                                         fontWeight: FontWeight.w700,
                                         color: selected
                                             ? const Color(0xFFFA5A1E)
-                                            : const Color(0xFF0F172A),
+                                            : (isDark
+                                                ? const Color(0xFFF8FAFC)
+                                                : const Color(0xFF0F172A)),
                                       ),
                                     ),
                                     if (subjectName.isNotEmpty) ...[
@@ -810,14 +822,18 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
       orElse: () => _kStandardSlots[1],
     );
     final visibleError = _regularConflictMessage ?? _error;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.94,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: isDark
+            ? Border.all(color: Theme.of(context).colorScheme.outline)
+            : null,
       ),
       child: SafeArea(
         top: false,
@@ -829,10 +845,12 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             const SizedBox(height: 12),
             Center(
               child: Container(
-                width: 44,
-                height: 4.5,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
+                  color: isDark
+                      ? const Color(0xFF475569)
+                      : const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -951,6 +969,7 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   // ── 1. Header ──────────────────────────────────────────────────────────────
   Widget _buildHeader() {
     final teacherName = _options?['teacherName'] ?? 'Giảng viên';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -959,9 +978,12 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFFFF7ED),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFFED7AA), width: 1.2),
+            border: Border.all(
+              color: isDark ? const Color(0xFFC2410C) : const Color(0xFFFED7AA),
+              width: 1.2,
+            ),
           ),
           child: const Icon(
             Icons.edit_calendar_rounded,
@@ -974,12 +996,12 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Tạo lịch học bổ sung',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
                   letterSpacing: -0.3,
                 ),
               ),
@@ -999,10 +1021,10 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
                     child: Text(
                       'Giảng viên: $teacherName · FPTU',
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       ),
                     ),
                   ),
@@ -1021,14 +1043,14 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             child: Container(
               width: 34,
               height: 34,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.close_rounded,
                 size: 18,
-                color: Color(0xFF64748B),
+                color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B),
               ),
             ),
           ),
@@ -1039,12 +1061,16 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
 
   // ── 2. Thẻ lưu ý FAP ───────────────────────────────────────────────────────
   Widget _buildFapNoticeCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9F5),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFF9F5),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFEDD5), width: 1.2),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFFFEDD5),
+          width: 1.2,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1063,15 +1089,15 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             ),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text.rich(
               TextSpan(
                 style: TextStyle(
                   fontSize: 11.8,
-                  color: Color(0xFF7C2D12),
+                  color: isDark ? const Color(0xFFFED7AA) : const Color(0xFF7C2D12),
                   height: 1.38,
                 ),
-                children: [
+                children: const [
                   TextSpan(
                     text: 'Lưu ý FAP: ',
                     style: TextStyle(
@@ -1761,11 +1787,20 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   // ── 10. Chân trang cố định ─────────────────────────────────────────────────
   Widget _buildFooter(double bottomPadding) {
     final hasRegularConflict = _regularConflictMessage != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.fromLTRB(20, 10, 20, 14 + bottomPadding),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? Theme.of(context).colorScheme.outline
+                : const Color(0xFFF1F5F9),
+            width: 1,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -1775,18 +1810,24 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
             child: TextButton(
               onPressed: _saving ? null : () => Navigator.pop(context),
               style: TextButton.styleFrom(
-                backgroundColor: const Color(0xFFF1F5F9),
-                foregroundColor: const Color(0xFF334155),
+                backgroundColor: isDark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFF1F5F9),
+                foregroundColor: isDark
+                    ? const Color(0xFFF8FAFC)
+                    : const Color(0xFF334155),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'Hủy bỏ',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF334155),
+                  color: isDark
+                      ? const Color(0xFFF8FAFC)
+                      : const Color(0xFF334155),
                 ),
               ),
             ),
@@ -1844,19 +1885,24 @@ class _CreateScheduleBottomSheetState extends State<CreateScheduleBottomSheet> {
   }
 
   InputDecoration _inputDecoration({String? hintText}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
+      fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: BorderSide(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

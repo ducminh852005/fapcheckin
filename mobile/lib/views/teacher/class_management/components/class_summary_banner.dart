@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../class_management_colors.dart';
 
 /// Thẻ tóm tắt tổng số lớp và số sinh viên phụ trách (Thẻ màu xanh đen - Dark Navy)
@@ -14,28 +15,45 @@ class ClassSummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final classCountStr =
-        classCount < 10 ? '0$classCount' : classCount.toString();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFFFE5D9);
+    final textColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : ClassManagementColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ClassManagementColors.textMuted;
+
+    final classCountStr = classCount < 10
+        ? '0$classCount'
+        : classCount.toString();
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFE5D9), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFFFA5A1E).withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -49,8 +67,8 @@ class ClassSummaryBanner extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     classCountStr,
-                    style: const TextStyle(
-                      color: ClassManagementColors.textDark,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 32,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -59,10 +77,10 @@ class ClassSummaryBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Lớp phụ trách',
+                Text(
+                  'Môn phụ trách',
                   style: TextStyle(
-                    color: ClassManagementColors.textMuted,
+                    color: mutedColor,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -75,7 +93,7 @@ class ClassSummaryBanner extends StatelessWidget {
           Container(
             width: 1,
             height: 44,
-            color: const Color(0xFFFFE0D3),
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFFFE0D3),
           ),
           const SizedBox(width: 24),
 
@@ -99,10 +117,10 @@ class ClassSummaryBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Sinh viên',
                   style: TextStyle(
-                    color: ClassManagementColors.textMuted,
+                    color: mutedColor,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -115,4 +133,3 @@ class ClassSummaryBanner extends StatelessWidget {
     );
   }
 }
-

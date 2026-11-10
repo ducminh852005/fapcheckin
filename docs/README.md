@@ -2,7 +2,7 @@
 
 > Nguồn gốc: `FAP-Checkin-Kien-truc.docx` (REV. v2, 12/09/2026), cập nhật khi chuyển toàn bộ backend và cơ sở dữ liệu sang Firebase.
 
-Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR; sinh viên chỉ cần dùng camera điện thoại quét mã và mở một trang web nhẹ (host trên Firebase Hosting) — không cần cài app. Backend là **Firebase**: Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting và một Cloud Function (OCR). Không còn Google Apps Script hay Google Sheet.
+Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR; sinh viên chỉ cần dùng camera điện thoại quét mã và mở một trang web nhẹ (host trên Firebase Hosting) — không cần cài app. Backend là **Firebase**: Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting và Cloud Functions (OCR, nhắc lịch, góp ý, đồng bộ FAP, trợ lý AI). Không còn Google Apps Script hay Google Sheet.
 
 | | |
 |---|---|
@@ -10,7 +10,7 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | **Thời hạn** | 14 ngày |
 | **Nền tảng** | Flutter (GV, `mobile/`) · Web check-in (SV, `web/checkin/`) · Web Admin (`web/admin/`, React + Vite, UI prototype) |
 | **Kiến trúc app GV** | MVVM; model/Repository/design system dùng chung ở `packages/core/` |
-| **Backend** | Firebase: Auth (Google) · Firestore + Rules · Storage · Remote Config · Hosting · Cloud Functions (chỉ OCR) |
+| **Backend** | Firebase: Auth (Google) · Firestore + Rules · Storage · Remote Config · Hosting · Cloud Functions (OCR, nhắc lịch, góp ý, `syncToFap`, `aiAssistant`) |
 | **Phân quyền** | RBAC `user` (SV) · `staff` (GV) · `admin` bằng Security Rules, có test trên Emulator |
 
 ## Giả định & phạm vi
@@ -40,12 +40,14 @@ Giảng viên dùng app Flutter (MVVM) để mở buổi điểm danh bằng QR;
 | 07 | [Import thời khóa biểu bằng ảnh (OCR)](07-timetable-ocr.md) |
 | 08 | [Security Rules & kiểm thử](08-security-rules.md) |
 | 09 | [Repository (cách app đọc/ghi dữ liệu)](09-repository-api.md) |
+| — | [Trợ lý AI (tab AI): kiến trúc, tool, AI dự phòng Ollama, giọng nói/Live/ngắt AI, triển khai, kiểm thử](ai-assistant.md) |
 | — | [Quick Start — Pattern MVVM + Repository trên Firebase](quick-start.md) |
 | — | [Quick Start Mobile — chạy & build app GV trên Android/iOS](quick-start-mobile.md) |
 | — | [Thiết lập & deploy Firebase, migrate dữ liệu cũ](deploy-firebase.md) |
 | — | [Thiết lập đăng nhập Google (Firebase Auth)](google-oauth-setup.md) |
 | — | [ERD (Mermaid)](db-erd.mermaid) |
 | — | [Data model — đặc tả collection, quyền và rule](data-model.md) |
-| — | [Gap review — khoảng cách Lab 2/3 so với Final](gap-review.md) |
+| — | [Kết nối mobile ↔ Firebase: màn hình ↔ repository](mobile-api-integration.md) |
+| — | [Tài liệu bài nộp môn học (báo cáo cuối, persona, báo cáo test, gap review…)](course/README.md) |
 
 Mã nguồn tương ứng: [`firebase/`](../firebase) (rules, test, script, function) · [`packages/core/`](../packages/core) · [`mobile/`](../mobile) · [`web/`](../web) · [`e2e_test/`](../e2e_test).

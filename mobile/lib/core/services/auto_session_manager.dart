@@ -84,9 +84,8 @@ class TimeSlotHelper {
   }
 }
 
-/// Tự động quản lý vòng đời phiên học theo thời gian thực (Real-time Session Manager):
-/// 1. Tự động mở phiên khi chạm vào khung giờ ca học (now >= startDt && now < endDt)
-/// 2. Tự động kết thúc phiên khi hết giờ ca học (now >= endDt)
+/// Tự động mở phiên điểm danh khi ca học bắt đầu và đóng phiên khi hết giờ.
+/// Áp dụng cho cả lịch chính khóa và lịch học bù của ngày hiện tại.
 class AutoSessionManager {
   final LiveSessionViewModel liveSessionViewModel;
   final DashboardViewModel dashboardViewModel;
@@ -101,6 +100,7 @@ class AutoSessionManager {
   }) : _now = now ?? DateTime.now;
 
   Timer? _timer;
+  final Set<String> _autoStartedSessionsToday = {};
   final Set<String> _autoClosedSessionsToday = {};
   String? _currentDayKey;
   bool _isProcessing = false;
@@ -131,14 +131,17 @@ class AutoSessionManager {
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       if (_currentDayKey != todayStr) {
         _currentDayKey = todayStr;
+        _autoStartedSessionsToday.clear();
         _autoClosedSessionsToday.clear();
       }
 
       for (final c in classes) {
         final info = SlotCodeParser.parse(c.slotCode);
-        final isToday = info != null
+        // Makeup cards are returned only on their scheduled date, so their
+        // one-off date takes precedence over the slot's recurring weekdays.
+        final isToday = c.isMakeup || (info != null
             ? info.weekdays.contains(now.weekday)
-            : false;
+            : false);
         if (!isToday) continue;
 
         final (startDt, endDt) = TimeSlotHelper.resolveSlotRange(now, c);
@@ -146,7 +149,30 @@ class AutoSessionManager {
 
         final classKey = '${c.classCode}_${todayStr}_${c.slotCode}';
 
-        // 1. Tự động đóng lớp khi hết thời gian ca học (now >= endDt)
+        final isWithinSlot = !now.isBefore(startDt) && now.isBefore(endDt);
+        final sameSessionAlreadyOpen =
+            liveSessionViewModel.session?.isOpen == true &&
+            liveSessionViewModel.session?.classCode == c.classCode &&
+            liveSessionViewModel.session?.slotCode == c.slotCode;
+
+        if (isWithinSlot &&
+            !c.isActive &&
+            !sameSessionAlreadyOpen &&
+            !_autoStartedSessionsToday.contains(classKey)) {
+          await liveSessionViewModel.startSession(
+            classSection: c,
+            slotCode: c.slotCode,
+            ipCheck: false,
+          );
+          if (liveSessionViewModel.session?.isOpen == true &&
+              liveSessionViewModel.session?.classCode == c.classCode &&
+              liveSessionViewModel.session?.slotCode == c.slotCode) {
+            _autoStartedSessionsToday.add(classKey);
+            await dashboardViewModel.loadClasses();
+          }
+        }
+
+        // Tự động đóng lớp khi hết thời gian ca học (now >= endDt).
         if (now.isAfter(endDt) || now.isAtSameMomentAs(endDt)) {
           if (!_autoClosedSessionsToday.contains(classKey)) {
             if (liveSessionViewModel.session?.isOpen == true &&
@@ -177,30 +203,6 @@ class AutoSessionManager {
                 accentColor: AppColors.statusPresent,
               );
             }
-          }
-        }
-        // 2. Tự động mở lớp khi đến thời gian ca học (now >= startDt && now < endDt)
-        else if ((now.isAfter(startDt) || now.isAtSameMomentAs(startDt)) &&
-            now.isBefore(endDt)) {
-          if (!c.isActive &&
-              !_autoClosedSessionsToday.contains(classKey) &&
-              !liveSessionViewModel.isLoading &&
-              (liveSessionViewModel.session == null ||
-                  !liveSessionViewModel.session!.isOpen)) {
-            await liveSessionViewModel.startSession(
-              classSection: c,
-              slotCode: c.slotCode,
-              ipCheck: liveSessionViewModel.ipCheckDefault,
-            );
-            await dashboardViewModel.loadClasses();
-            liveSessionViewModel.triggerToast(
-              type: ToastType.startSession,
-              title: 'Tự động mở lớp học!',
-              message:
-                  'Đã đến giờ ca dạy lớp ${c.classCode} (${c.subjectCode}). Phiên điểm danh đã sẵn sàng.',
-              icon: Icons.qr_code_scanner,
-              accentColor: AppColors.statusPresent,
-            );
           }
         }
       }

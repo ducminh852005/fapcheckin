@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../class_management_colors.dart';
 
-/// Thanh tìm kiếm lớp học theo tên lớp, mã môn hoặc tên sinh viên
+/// Thanh tìm kiếm môn học theo mã môn, tên môn hoặc mã lớp.
 class ClassSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
@@ -16,22 +17,29 @@ class ClassSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        boxShadow: ClassManagementColors.cardShadow,
+        border: Border.all(
+          color: isDark
+              ? Theme.of(context).colorScheme.outline
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: isDark ? null : ClassManagementColors.cardShadow,
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: ClassManagementColors.textDark,
+        style: TextStyle(
+          color: isDark ? Colors.white : ClassManagementColors.textDark,
           fontSize: 13.5,
         ),
         decoration: InputDecoration(
-          hintText: 'Tìm lớp, mã môn hoặc tên sinh viên...',
+          hintText: 'Tìm mã môn, tên môn hoặc mã lớp...',
           hintStyle: const TextStyle(
             color: ClassManagementColors.textSubtle,
             fontSize: 13,
@@ -62,4 +70,3 @@ class ClassSearchBar extends StatelessWidget {
     );
   }
 }
-

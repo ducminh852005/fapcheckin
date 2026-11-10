@@ -207,7 +207,7 @@ Một case chỉ Pass khi toàn bộ expected result đạt. Luồng thiếu UI 
 
 ## 6.4. Quản lý minh chứng
 
-Kết quả tổng hợp nằm trong `e2e_test/results/android-summary.json` và `docs/test-report.md`. Log TAP của Functions được commit. Evidence có PII nằm trong thư mục Git-ignore và không đưa vào repository công khai.
+Kết quả tổng hợp nằm trong `e2e_test/results/android-summary.json` và `docs/course/test-report.md`. Log TAP của Functions được commit. Evidence có PII nằm trong thư mục Git-ignore và không đưa vào repository công khai.
 
 <!-- PAGE -->
 # 7. KẾT QUẢ KIỂM THỬ
@@ -325,7 +325,7 @@ FAP Check-in đã hình thành nền tảng mobile–Firebase có khả năng đ
 
 ## 10.3. Minh chứng và Git history
 
-- `docs/test-report.md`, `docs/test-cases.md`, `docs/ai-code-review.md`.
+- `docs/course/test-report.md`, `docs/course/test-cases.md`, `docs/course/ai-code-review.md`.
 - `e2e_test/README.md`, `e2e_test/results/android-summary.json` và TAP regression.
 - Commit QA: `88f3348`, `d9cae28`, `a18bbb8`, `e9741f9`.
 - Commit sửa finding: `4b73278`, `6c5cf6c`, `9e0c46a`.

@@ -100,3 +100,11 @@ fapcheckin-*-[0-9a-f]*.json
 # Checkpoint của script copy-firestore
 *.checkpoint.json
 firebase/scripts/.copy-firestore.checkpoint.json
+
+# Bí mật cục bộ cho Functions emulator (GEMINI_API_KEY...) — không bao giờ commit
+.secret.local
+**/.secret.local
+
+# Ảnh chụp emulator / log sự cố cục bộ ở thư mục gốc
+/emulator_*.png
+/crash-log.txt

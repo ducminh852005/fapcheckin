@@ -10,6 +10,9 @@ class HistoryStudent {
       revision,
       method;
   final int absenceCount, totalSessions;
+
+  /// Ngành và ảnh đại diện (nếu dữ liệu ghi danh có); rỗng khi chưa có. Dùng ở màn hồ sơ sinh viên.
+  final String major, avatarPath;
   const HistoryStudent({
     required this.rollNumber,
     required this.fullName,
@@ -21,6 +24,8 @@ class HistoryStudent {
     required this.method,
     required this.absenceCount,
     required this.totalSessions,
+    this.major = '',
+    this.avatarPath = '',
   });
   factory HistoryStudent.fromJson(Map<String, dynamic> json) => HistoryStudent(
     rollNumber: jsonText(json['rollNumber']) ?? '',
@@ -33,6 +38,8 @@ class HistoryStudent {
     method: jsonText(json['networkVerificationResult']) ?? '',
     absenceCount: jsonNumber(json['absenceCount'])?.toInt() ?? 0,
     totalSessions: jsonNumber(json['totalSessions'])?.toInt() ?? 0,
+    major: jsonText(json['major']) ?? '',
+    avatarPath: jsonText(json['avatarPath']) ?? '',
   );
   double get absenceRate =>
       totalSessions == 0 ? 0 : absenceCount / totalSessions;
@@ -47,6 +54,8 @@ class HistoryStudent {
     method: method,
     absenceCount: absenceCount,
     totalSessions: totalSessions,
+    major: major,
+    avatarPath: avatarPath,
   );
 }
 

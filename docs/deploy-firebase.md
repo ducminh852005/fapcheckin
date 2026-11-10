@@ -15,7 +15,7 @@ Toàn bộ backend là Firebase; script [`scripts/deploy.ps1`](../scripts/deploy
 | Firestore rules / indexes | `firebase/firestore.rules`, `firebase/firestore.indexes.json` | Firestore |
 | Storage rules | `firebase/storage.rules` | Storage |
 | Remote Config | `firebase/remoteconfig.template.json` | Remote Config (`qr_refresh_seconds`, `ip_check_default`, `maintenance_mode`) |
-| Cloud Function OCR | `firebase/functions/` (`scanTimetable`, region `asia-southeast1`) | Functions (cần Blaze) |
+| Cloud Functions | `firebase/functions/` (`scanTimetable`, `sendTeachingReminders`, `onFeedbackCreated/Updated`, `resolveFeedback`, `syncToFap`, `aiAssistant`, `aiSpeak`; region `asia-southeast1`) | Functions (cần Blaze; `aiAssistant` cần secret `GEMINI_API_KEY`) |
 | App Giảng viên | `mobile/` | **Không deploy ở đây** |
 | Web Admin | `web/admin/` | Chưa triển khai |
 
@@ -39,7 +39,18 @@ Project mặc định: `fapcheckin-3bn2di` (`.firebaserc`).
    ```powershell
    cd firebase; npm ci; cd functions; npm ci; cd ../../e2e_test; npm ci; cd ..
    ```
-5. **Domain được phép cho Auth**: *Authentication → Settings → Authorized domains* đã có `<project-id>.web.app`; thêm `localhost` nếu chạy thử cục bộ.
+5. **Trợ lý AI (tab AI)**: tạo API key Gemini tại [Google AI Studio](https://aistudio.google.com/apikey) rồi lưu làm secret (key không nằm trong app/repo):
+   ```powershell
+   firebase functions:secrets:set GEMINI_API_KEY
+   ```
+   Chưa đặt secret thì deploy `aiAssistant` sẽ báo thiếu secret; app vẫn chạy, tab AI trả lỗi "chưa được cấu hình". Đổi model bằng biến môi trường `GEMINI_MODEL` (mặc định `gemini-3.5-flash`). AI dự phòng khi Gemini quá tải (Ollama local + tunnel, đổi nguồn không cần deploy): [ai-assistant.md §G](ai-assistant.md#g-ai-dự-phòng-ollama-local-khi-gemini-quá-tải). Chi tiết: [ai-assistant.md](ai-assistant.md).
+6. **Giọng đọc của trợ lý AI (Google Cloud Text-to-Speech)**: bật API cho project và deploy hàm `aiSpeak` (project cần billing; không cần secret):
+   ```powershell
+   gcloud services enable texttospeech.googleapis.com --project <project-id>
+   firebase deploy --only functions:aiSpeak --project <project-id>
+   ```
+   Chưa bật thì app tự dùng giọng của máy (có toast báo). Chi tiết: [ai-assistant.md](ai-assistant.md).
+7. **Domain được phép cho Auth**: *Authentication → Settings → Authorized domains* đã có `<project-id>.web.app`; thêm `localhost` nếu chạy thử cục bộ.
 
 ## 3. Tài khoản Admin đầu tiên
 

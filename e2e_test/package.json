@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Kịch bản end-to-end trên Firebase Emulator: admin -> GV mở phiên -> SV điểm danh -> GV đóng phiên",
   "scripts": {
-    "test": "firebase emulators:exec --project demo-fapcheckin --only auth,firestore \"node --test e2e.test.mjs\""
+    "test": "firebase emulators:exec --project demo-fapcheckin --only auth,firestore \"node --test e2e.test.mjs\"",
+    "test:ai": "node run-ai-e2e.mjs"
   },
   "devDependencies": {
     "firebase": "^12.0.0",

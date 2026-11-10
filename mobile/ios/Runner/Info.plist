@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dùng micro để giảng viên ra lệnh bằng giọng nói cho trợ lý AI.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Chuyển giọng nói thành văn bản để trò chuyện với trợ lý AI.</string>
 </dict>
 </plist>

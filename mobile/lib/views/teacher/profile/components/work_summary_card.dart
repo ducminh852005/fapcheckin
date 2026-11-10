@@ -20,14 +20,32 @@ class WorkSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : ProfileColors.cardBg;
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : ProfileColors.borderSubtle;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ProfileColors.textDark;
+    final mutedColor = isDark
+        ? const Color(0xFF94A3B8)
+        : ProfileColors.textMuted;
+    final iconBg = isDark
+        ? ProfileColors.orangePrimary.withValues(alpha: 0.16)
+        : ProfileColors.orangeLight;
+    final badgeBg = isDark
+        ? const Color(0xFF14532D).withValues(alpha: 0.4)
+        : ProfileColors.statusGreenLight;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ProfileColors.cardBg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ProfileColors.borderSubtle),
-        boxShadow: ProfileColors.cardShadow,
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? null : ProfileColors.cardShadow,
       ),
       child: Row(
         children: [
@@ -36,7 +54,7 @@ class WorkSummaryCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: ProfileColors.orangeLight,
+              color: iconBg,
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -57,19 +75,19 @@ class WorkSummaryCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: ProfileColors.textDark,
+                      color: textColor,
                     ),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   roleTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: ProfileColors.textMuted,
+                    color: mutedColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -82,7 +100,7 @@ class WorkSummaryCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: ProfileColors.statusGreenLight,
+              color: badgeBg,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

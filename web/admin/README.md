@@ -44,7 +44,7 @@ Các phần sau đã được bỏ khỏi navigation cho đến khi có schema/b
 - Biểu đồ chuyên cần, top môn vắng, học kỳ và activity realtime dùng số liệu mẫu.
 - Trạng thái/lưu trữ lớp vì `classes` chưa có `status`, `semester` hay `archivedAt`.
 
-Giao diện mới không hiển thị số liệu giả và không giả lập thao tác ghi thành công. Chi tiết đối chiếu dữ liệu: [`../../docs/firestore-admin-audit-notes.md`](../../docs/firestore-admin-audit-notes.md).
+Giao diện mới không hiển thị số liệu giả và không giả lập thao tác ghi thành công. Cấu trúc dữ liệu thật: [`docs/03-du-lieu-firestore.md`](../../docs/03-du-lieu-firestore.md), [`docs/data-model.md`](../../docs/data-model.md).
 
 ### Kết nối Firestore đã triển khai
 

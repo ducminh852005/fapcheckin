@@ -14,17 +14,23 @@ class ReportCustomHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? const Color(0xFFF8FAFC) : ReportColors.textDark;
+    final iconColor = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF334155);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Expanded(
+        Expanded(
           child: Text(
             'Báo cáo chuyên cần',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
-              color: ReportColors.textDark,
+              color: textColor,
               letterSpacing: -0.5,
             ),
           ),
@@ -32,39 +38,12 @@ class ReportCustomHeader extends StatelessWidget {
         if (onDownload != null)
           Tooltip(
             message: 'Xuất báo cáo Excel',
-            child: Semantics(
-              button: true,
-              label: 'Xuất báo cáo Excel',
-              child: Material(
-                color: Colors.white,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: onDownload,
-                  customBorder: const CircleBorder(),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: ReportColors.borderSubtle,
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.file_download_outlined,
-                      size: 22,
-                      color: Color(0xFF334155),
-                    ),
-                  ),
-                ),
+            child: IconButton(
+              onPressed: onDownload,
+              icon: Icon(
+                Icons.file_download_outlined,
+                size: 25,
+                color: iconColor,
               ),
             ),
           ),

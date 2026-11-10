@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Trợ lý AI: nhập bằng giọng nói (speech_to_text). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="fapcheckin"
         android:name="${applicationName}"
@@ -31,10 +34,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Tắt Impeller trên Android để tránh lỗi màn hình đen trên Emulator/thiết bị OpenGL -->
+        <!-- Required by firebase_messaging to create an FCM registration token. -->
         <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -42,6 +45,13 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <!-- Trợ lý AI đọc to câu trả lời (flutter_tts): Android 11+ cần khai báo để thấy engine TTS. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

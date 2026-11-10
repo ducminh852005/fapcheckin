@@ -40,14 +40,22 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modalBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final closeBtnBg = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+    final closeIconColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: modalBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: const [
           BoxShadow(
             color: Color(0x2E000000),
             blurRadius: 40,
@@ -64,11 +72,11 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
             const SizedBox(height: 10),
             Center(
               child: Container(
-                width: 48,
-                height: 5,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
-                  borderRadius: BorderRadius.circular(2.5),
+                  color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
@@ -100,17 +108,17 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         RichText(
-                          text: const TextSpan(
+                          text: TextSpan(
                             children: [
                               TextSpan(
                                 text: 'Góp ý đã gửi',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
+                                  color: titleColor,
                                 ),
                               ),
-                              TextSpan(
+                              const TextSpan(
                                 text: ' / My feedback',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -122,11 +130,11 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
+                        Text(
                           'Hệ thống ghi nhận và phản hồi từ FPT Edu IT Support',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF64748B),
+                            color: subtitleColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -134,19 +142,25 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
                       ],
                     ),
                   ),
-                  GestureDetector(
+                  InkWell(
                     onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF1F5F9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: Color(0xFF64748B),
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: closeBtnBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: closeIconColor,
+                        ),
                       ),
                     ),
                   ),
@@ -156,7 +170,7 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
             const SizedBox(height: 10),
 
             // Dải phân cách viền
-            const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
+            Divider(height: 1, thickness: 1, color: dividerColor),
 
             // Content & List
             Expanded(
@@ -329,18 +343,21 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
     required Color badgeText,
   }) {
     final isSelected = _activeFilter == key;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => setState(() => _activeFilter = key),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEA580C) : Colors.white,
+          color: isSelected
+              ? const Color(0xFFEA580C)
+              : (isDark ? const Color(0xFF334155) : Colors.white),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFEA580C)
-                : const Color(0xFFE2E8F0),
+                : (isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0)),
           ),
           boxShadow: isSelected
               ? const [
@@ -360,7 +377,9 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? Colors.white : const Color(0xFF475569),
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
               ),
             ),
             const SizedBox(width: 6),
@@ -435,19 +454,25 @@ class _FeedbackHistoryModalSheetState extends State<FeedbackHistoryModalSheet> {
         ? '${replyAt.toDate().hour.toString().padLeft(2, '0')}:${replyAt.toDate().minute.toString().padLeft(2, '0')} • ${replyAt.toDate().day.toString().padLeft(2, '0')}/${replyAt.toDate().month.toString().padLeft(2, '0')}'
         : 'Hôm nay';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0A0F172A),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

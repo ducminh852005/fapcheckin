@@ -5,7 +5,6 @@ import {
   BookOpen,
   CalendarDays,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -43,23 +42,21 @@ export function ToastMessage({
 }) {
   return (
     <div className={`toast toast-${toast.tone ?? "success"}`}>
-      <span>
-        {toast.tone === "error" ? (
-          <XCircle size={20} />
-        ) : (
-          <CheckCircle2 size={20} />
-        )}
+      <span className="toast-icon" aria-hidden="true">
+        {toast.tone === "error" ? <X size={22} /> : <Check size={24} />}
       </span>
       <div>
         <b>{toast.title}</b>
         <p>{toast.detail}</p>
       </div>
-      <Button variant="icon" onClick={close}>
+      <Button
+        variant="icon"
+        className="toast-close"
+        onClick={close}
+        aria-label="Đóng thông báo"
+      >
         <X size={17} />
       </Button>
     </div>
   )
 }
-
-
-

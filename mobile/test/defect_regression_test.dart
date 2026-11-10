@@ -8,6 +8,8 @@ import 'package:fapcheckin_core/models/session_model.dart';
 import 'package:fapcheckin_core/models/roster_entry_model.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin_core/repositories/auth_repository.dart';
+import 'package:fapcheckin_core/repositories/report_repository.dart';
+import 'package:fapcheckin/viewmodels/report_viewmodel.dart';
 import 'package:fapcheckin_core/session/current_user.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
@@ -148,6 +150,9 @@ void main() {
           ChangeNotifierProvider.value(value: dashboard),
           ChangeNotifierProvider.value(value: live),
           ChangeNotifierProvider.value(value: auth),
+          ChangeNotifierProvider.value(
+            value: ReportViewModel(ReportRepository(currentUser: CurrentUser())),
+          ),
         ],
         child: const MaterialApp(home: DashboardBody()),
       ),
