@@ -3,9 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:fapcheckin_core/models/history_detail.dart';
 import 'package:fapcheckin_core/models/session_model.dart';
 import 'package:fapcheckin_core/result/api_result.dart';
+import 'package:fapcheckin_core/repositories/request_repository.dart';
 
 import '../../../viewmodels/attendance_history_viewmodel.dart';
+import '../../../viewmodels/auth_viewmodel.dart';
 import '../../../viewmodels/dashboard_viewmodel.dart';
+import '../../../core/widgets/app_toast.dart';
 import 'attendance_history_colors.dart';
 import 'components/attendance_history_header.dart';
 import 'components/attendance_summary_card.dart';
@@ -13,6 +16,7 @@ import 'components/attendance_search_filter_bar.dart';
 import 'components/attendance_session_selector.dart';
 import 'components/attendance_student_card.dart';
 import 'components/attendance_save_action_button.dart';
+import 'components/student_profile_sheet.dart';
 import 'history_actions.dart';
 
 class _PendingEdit {
@@ -1224,10 +1228,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 _pendingEdits.clear();
               });
               if (vm.selectedClassCode != null) {
-                _loadSessionDetail(
-                  vm.selectedClassCode!,
-                  sessionId,
-                );
+                _loadSessionDetail(vm.selectedClassCode!, sessionId);
               }
             },
           ),
@@ -1255,15 +1256,12 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
                 const SizedBox(height: 4),
                 const Text(
                   'Chỉ được điểm danh trực tiếp đến 23:59 của ngày học. Sau thời hạn này, hãy gửi yêu cầu để admin duyệt.',
-                  style: TextStyle(
-                    color: Color(0xFF991B1B),
-                    fontSize: 12.5,
-                  ),
+                  style: TextStyle(color: Color(0xFF991B1B), fontSize: 12.5),
                 ),
                 TextButton.icon(
-                  onPressed: () => context
-                      .read<DashboardViewModel>()
-                      .navigate('cai-dat-tro-giup'),
+                  onPressed: () => context.read<DashboardViewModel>().navigate(
+                    'cai-dat-tro-giup',
+                  ),
                   icon: const Icon(Icons.settings_outlined),
                   label: const Text('Đi tới Cài đặt & Trợ giúp'),
                 ),
@@ -1325,10 +1323,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
           alignment: Alignment.center,
           child: const Text(
             'Chưa có lớp học được phân công.',
-            style: TextStyle(
-              fontSize: 13.5,
-              color: Color(0xFF64748B),
-            ),
+            style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B)),
           ),
         ),
       ];
@@ -1349,10 +1344,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
               const SizedBox(height: 8),
               Text(
                 'Không tìm thấy sinh viên phù hợp',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ],
           ),
@@ -1364,6 +1356,7 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
       ...filteredList.map(
         (student) => AttendanceStudentCard(
           student: student,
+          onTap: () => _showStudentProfile(vm, student),
           onManualCheckin: canEditManualAttendance
               ? () => _handleManualCheckin(student)
               : _showExpiredManualAttendanceGuidance,
@@ -1380,12 +1373,141 @@ class _AttendanceHistoryBodyState extends State<AttendanceHistoryBody> {
         AttendanceSaveActionButton(
           sessionNumber: sessionNumber > 0 ? sessionNumber : 1,
           onSave: canEditManualAttendance
-              ? () => _handleSave(
-                  sessionNumber > 0 ? sessionNumber : 1,
-                )
+              ? () => _handleSave(sessionNumber > 0 ? sessionNumber : 1)
               : _showExpiredManualAttendanceGuidance,
         ),
       const SizedBox(height: 20),
     ];
+  }
+
+  void _showStudentProfile(
+    AttendanceHistoryViewModel vm,
+    StudentAttendanceModel student,
+  ) {
+    final info = _detail?.classInfo ?? vm.summary?.classInfo;
+    if (info == null) return;
+    final summary = vm.summary?.students
+        .where((item) => item.rollNumber == student.rollNumber)
+        .firstOrNull;
+    final detailStudent = _detail?.students
+        .where((item) => item.rollNumber == student.rollNumber)
+        .firstOrNull;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: .48),
+      builder: (_) => StudentProfileSheet(
+        student: student,
+        subjectCode: info.subjectCode,
+        subjectName: info.subjectName,
+        classCode: info.classCode,
+        summary: summary,
+        major: detailStudent?.major ?? summary?.major ?? '',
+        avatarPath: detailStudent?.avatarPath ?? summary?.avatarPath ?? '',
+        onChangeStatus: () {
+          Navigator.pop(context);
+          _toggleStudentStatus(vm, student);
+        },
+        onReport: () {
+          Navigator.pop(context);
+          _reportStudentAttendance(vm, student);
+        },
+      ),
+    );
+  }
+
+  Future<void> _toggleStudentStatus(
+    AttendanceHistoryViewModel vm,
+    StudentAttendanceModel student,
+  ) async {
+    final classCode = vm.selectedClassCode;
+    final sessionId = _selectedSessionId;
+    if (classCode == null || sessionId == null) {
+      showAppToast(
+        context,
+        message: 'Hãy chọn một buổi học trước khi thay đổi trạng thái.',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
+    final targetStatus = student.isPresent ? 'Absent' : 'ManualByGV';
+    final result = await vm.repository.save(classCode, sessionId, [
+      {
+        'rollNumber': student.rollNumber,
+        'status': targetStatus,
+        'note': targetStatus == 'Absent'
+            ? 'Giảng viên chuyển trạng thái từ hồ sơ sinh viên'
+            : 'Giảng viên xác nhận có mặt từ hồ sơ sinh viên',
+        'revision': _findRevision(student.rollNumber),
+      },
+    ]);
+    if (!mounted) return;
+    switch (result) {
+      case ApiSuccess<HistoryDetail>(:final data):
+        setState(() {
+          _detail = data;
+          _pendingEdits.remove(student.rollNumber);
+        });
+        await vm.refreshSummary();
+        if (!mounted) return;
+        showAppToast(
+          context,
+          message: targetStatus == 'Absent'
+              ? 'Đã chuyển ${student.fullName} sang vắng mặt.'
+              : 'Đã xác nhận ${student.fullName} có mặt.',
+          type: AppToastType.success,
+        );
+      case ApiFailure<HistoryDetail>(:final error):
+        showAppToast(context, message: error.message, type: AppToastType.error);
+    }
+  }
+
+  Future<void> _reportStudentAttendance(
+    AttendanceHistoryViewModel vm,
+    StudentAttendanceModel student,
+  ) async {
+    final auth = context.read<AuthViewModel>();
+    final session = auth.session;
+    final classCode = vm.selectedClassCode;
+    if (session == null || classCode == null) {
+      showAppToast(
+        context,
+        message: 'Không thể xác định tài khoản hoặc lớp học.',
+        type: AppToastType.error,
+      );
+      return;
+    }
+    final selectedSession = _detail?.selectedSession;
+    final status = student.isPresent ? 'Có mặt' : 'Vắng mặt';
+    final repository = RequestRepository(
+      uid: session.token,
+      memberCode: session.user.memberCode,
+    );
+    final result = await repository.submit(
+      id: '${session.token}_${DateTime.now().microsecondsSinceEpoch}',
+      type: 'attendance_fix',
+      classCode: classCode,
+      sessionId: _selectedSessionId,
+      reason:
+          'Báo cáo trạng thái điểm danh sinh viên ${student.fullName} '
+          '(${student.rollNumber}) tại lớp $classCode, '
+          'buổi ${selectedSession?.sessionDate ?? _selectedSessionId ?? 'đang chọn'}: '
+          '$status. Giảng viên đề nghị quản trị viên kiểm tra.',
+    );
+    if (!mounted) return;
+    switch (result) {
+      case ApiSuccess<void>():
+        showAppToast(
+          context,
+          message: 'Đã gửi báo cáo lên quản trị viên.',
+          type: AppToastType.success,
+        );
+      case ApiFailure<void>(:final error):
+        showAppToast(context, message: error.message, type: AppToastType.error);
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 # 01 · Kiến trúc tổng thể hệ thống
 
-Toàn bộ backend và cơ sở dữ liệu là **Firebase**. Không còn máy chủ trung gian: app giảng viên và trang điểm danh của sinh viên nói chuyện **trực tiếp** với Cloud Firestore bằng Firebase SDK, và **Security Rules** (`deny by default`) quyết định ai được đọc/ghi gì. Phần việc duy nhất cần máy chủ — OCR ảnh thời khóa biểu — là một Cloud Function.
+Toàn bộ backend và cơ sở dữ liệu là **Firebase**. Không còn máy chủ trung gian: app giảng viên và trang điểm danh của sinh viên nói chuyện **trực tiếp** với Cloud Firestore bằng Firebase SDK, và **Security Rules** (`deny by default`) quyết định ai được đọc/ghi gì. Phần việc cần máy chủ (OCR ảnh thời khóa biểu, nhắc lịch, góp ý, đồng bộ FAP, proxy Gemini cho trợ lý AI) chạy trong các Cloud Function.
 
 ```mermaid
 flowchart LR
@@ -13,7 +13,9 @@ flowchart LR
     SV --> FS
     ADM -.-> FS
     GV --> ST[(Cloud Storage<br/>ảnh TKB tạm)]
-    GV --> FN["Cloud Function<br/>scanTimetable (OCR)"]
+    GV --> FN["Cloud Functions<br/>scanTimetable · syncToFap · aiAssistant · aiSpeak"]
+    FN --> GEM[Gemini API]
+    FN --> TTS[Cloud Text-to-Speech]
     FN --> ST
     FN --> VIS[Cloud Vision API]
     FN --> FS
@@ -25,12 +27,12 @@ flowchart LR
 
 | Thành phần | Công nghệ | Thư mục | Vai trò |
 |---|---|---|---|
-| App Giảng viên | Flutter (MVVM) | [`mobile/`](../mobile) | Đăng nhập, mở phiên, hiện QR xoay 60 giây, roster, lịch sử, báo cáo, import TKB. **Không** deploy lên Firebase. |
+| App Giảng viên | Flutter (MVVM) | [`mobile/`](../mobile) | Đăng nhập, mở phiên, hiện QR xoay 60 giây, roster, lịch sử, báo cáo chuyên cần (ở Tổng quan), trợ lý AI (tab AI), import TKB. **Không** deploy lên Firebase. |
 | Mã dùng chung | Dart package `fapcheckin_core` | [`packages/core/`](../packages/core) | Model, Repository Firestore, design system/theme — dùng lại cho Web Admin. |
 | Trang điểm danh SV | HTML + Firebase JS SDK | [`web/checkin/`](../web/checkin) | SV quét QR → đăng nhập Google → ghi `attendance_records`. Host trên Firebase Hosting. |
 | Web Admin | (chưa triển khai) | [`web/admin/`](../web/admin) | Cấp tài khoản, quản lý lớp, duyệt `requests`, phát `announcements`. |
 | Backend | Firestore + Security Rules, Auth, Storage, Remote Config, Hosting | [`firebase/`](../firebase), `firebase.json` | Nguồn dữ liệu duy nhất và nơi thực thi phân quyền. |
-| Cloud Function | Node 22, `onCall` | [`firebase/functions/`](../firebase/functions) | `scanTimetable`: OCR ảnh thời khóa biểu (cần gói Blaze). |
+| Cloud Functions | Node 22 (`onCall`, `onSchedule`, trigger Firestore) | [`firebase/functions/`](../firebase/functions) | `scanTimetable` (OCR), `sendTeachingReminders` (nhắc lịch dạy, FCM), `onFeedbackCreated/Updated` + `resolveFeedback` (góp ý), `syncToFap` (đồng bộ FAP), `aiAssistant` (proxy Gemini cho tab AI) và `aiSpeak` (giọng đọc Google Cloud Text-to-Speech) — [ai-assistant.md](ai-assistant.md). Cần gói Blaze. |
 | Test | `node:test` + Emulator | [`firebase/tests/`](../firebase/tests), [`e2e_test/`](../e2e_test) | Test Security Rules (allowed/denied theo role) và một luồng end-to-end. |
 
 ## Vì sao "Rules-first", không có backend riêng?

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../class_management_colors.dart';
 
-/// Thanh tìm kiếm lớp học theo tên lớp, mã môn hoặc tên sinh viên
+/// Thanh tìm kiếm môn học theo mã môn, tên môn hoặc mã lớp.
 class ClassSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
@@ -38,7 +39,7 @@ class ClassSearchBar extends StatelessWidget {
           fontSize: 13.5,
         ),
         decoration: InputDecoration(
-          hintText: 'Tìm lớp, mã môn hoặc tên sinh viên...',
+          hintText: 'Tìm mã môn, tên môn hoặc mã lớp...',
           hintStyle: const TextStyle(
             color: ClassManagementColors.textSubtle,
             fontSize: 13,
@@ -69,4 +70,3 @@ class ClassSearchBar extends StatelessWidget {
     );
   }
 }
-

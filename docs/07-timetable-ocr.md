@@ -4,7 +4,7 @@
 
 Giảng viên chụp/tải ảnh thời khóa biểu (ví dụ ảnh chụp trang FAP). Hệ thống nhận dạng chữ, tìm các cặp mã lớp–môn (`SE1917-PRN232`), đối chiếu với collection `classes` và cho giảng viên chọn những lớp chưa có người phụ trách để **nhận lớp**.
 
-Đây là tính năng duy nhất cần máy chủ, nên là Cloud Function duy nhất của dự án.
+Đây là tính năng cần máy chủ đầu tiên của dự án (về sau thêm các Cloud Function khác: nhắc lịch, góp ý, `syncToFap`, `aiAssistant`).
 
 ```mermaid
 sequenceDiagram

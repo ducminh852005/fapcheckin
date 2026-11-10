@@ -1,6 +1,6 @@
 # PRM323 / PRM393 - User Persona & Problem Statement
-> **Tài liệu đặc tả đầy đủ theo chuẩn Persona Guideline PRM393 (V1.0 - 2026):** Xem chi tiết tại [docs/prm393-persona-document.md](../docs/prm393-persona-document.md)  
-> **Slide trình chiếu thuyết trình Persona tương tác:** Xem tại [docs/persona-slides/index.html](../docs/persona-slides/index.html)
+> **Tài liệu đặc tả đầy đủ theo chuẩn Persona Guideline PRM393 (V1.0 - 2026):** Xem chi tiết tại [docs/course/prm393-persona-document.md](../docs/course/prm393-persona-document.md)  
+> **Slide trình chiếu thuyết trình Persona tương tác:** Xem tại [docs/course/persona-slides/index.html](../docs/course/persona-slides/index.html)
 
 ---
 
@@ -90,4 +90,4 @@ FAP Check-in giải quyết triệt để vấn đề này bằng cách:
 
 ## 5. Tự đánh giá theo Rubric 100 điểm (Gate G2)
 - **Điểm số tự đánh giá:** **99 / 100 Điểm** (Xếp loại: Xuất sắc - Đạt chuẩn C1).
-- **Chi tiết từng tiêu chí:** Đọc đầy đủ tại [docs/prm393-persona-document.md#09-checklist-tự-đánh-giá-persona-rubric-100-điểm](../docs/prm393-persona-document.md#09-checklist-tự-đánh-giá-persona-rubric-100-điểm).
+- **Chi tiết từng tiêu chí:** Đọc đầy đủ tại [docs/course/prm393-persona-document.md#09-checklist-tự-đánh-giá-persona-rubric-100-điểm](../docs/course/prm393-persona-document.md#09-checklist-tự-đánh-giá-persona-rubric-100-điểm).

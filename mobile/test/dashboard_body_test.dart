@@ -10,6 +10,8 @@ import 'package:fapcheckin/core/services/google_auth_service.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
+import 'package:fapcheckin/viewmodels/report_viewmodel.dart';
+import 'package:fapcheckin_core/repositories/report_repository.dart';
 import 'package:fapcheckin/views/teacher/dashboard/dashboard_body.dart';
 import 'package:fapcheckin/views/teacher/dashboard/components/dashboard_header.dart';
 
@@ -75,6 +77,9 @@ void main() {
             ChangeNotifierProvider.value(value: authVm),
             ChangeNotifierProvider.value(value: dashboardVm),
             ChangeNotifierProvider.value(value: liveSessionVm),
+            ChangeNotifierProvider.value(
+              value: ReportViewModel(ReportRepository(currentUser: user)),
+            ),
           ],
           child: const MaterialApp(home: Scaffold(body: DashboardBody())),
         ),
@@ -93,12 +98,11 @@ void main() {
       expect(find.text('Chưa có lớp học được phân công'), findsOneWidget);
       expect(find.text('Mở Lịch dạy & Quét TKB'), findsOneWidget);
 
-      // Verify WeeklyOverviewCards keeps 0.0% and navigates to lich-su-diem-danh on tap
-      expect(find.text('Chuyên cần'), findsOneWidget);
-      expect(find.text('0.0%'), findsOneWidget);
-      await tester.tap(find.text('Lịch sử'));
-      await tester.pump();
-      expect(dashboardVm.currentRoute, 'lich-su-diem-danh');
+      // Thẻ tổng quan nhanh (giao diện mới) vẫn hiện đủ ba chỉ số khi chưa có lớp.
+      expect(find.text('TỔNG QUAN NHANH'), findsOneWidget);
+      expect(find.text('Lớp phụ trách'), findsOneWidget);
+      expect(find.text('Buổi đã dạy'), findsOneWidget);
+      expect(find.text('Sinh viên'), findsOneWidget);
     },
   );
 
@@ -126,6 +130,9 @@ void main() {
           ChangeNotifierProvider.value(value: authVm),
           ChangeNotifierProvider.value(value: dashboardVm),
           ChangeNotifierProvider.value(value: liveSessionVm),
+            ChangeNotifierProvider.value(
+              value: ReportViewModel(ReportRepository(currentUser: user)),
+            ),
         ],
         child: const MaterialApp(home: Scaffold(body: DashboardBody())),
       ),

@@ -24,7 +24,7 @@ fapcheckin/
 │  └─ admin/                       # Web Admin (React + Vite, UI prototype)
 ├─ firebase/
 │  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
-│  ├─ functions/                   # Cloud Function scanTimetable (OCR)
+│  ├─ functions/                   # Cloud Functions: scanTimetable, reminders, feedback, syncToFap, aiAssistant, aiSpeak (src/*.js)
 │  ├─ tests/                       # test Security Rules trên Emulator
 │  └─ scripts/                     # seed-admin, seed-reference, migrate-legacy
 ├─ e2e_test/                       # luồng end-to-end trên Emulator

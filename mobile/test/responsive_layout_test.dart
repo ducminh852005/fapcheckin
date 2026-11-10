@@ -9,7 +9,10 @@ import 'package:fapcheckin_core/repositories/attendance_history_repository.dart'
 import 'package:fapcheckin_core/repositories/report_repository.dart';
 import 'package:fapcheckin_core/repositories/teacher_repository.dart';
 import 'package:fapcheckin/viewmodels/attendance_history_viewmodel.dart';
+import 'package:fapcheckin/viewmodels/ai_chat_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/auth_viewmodel.dart';
+import 'package:fapcheckin_core/ai/ai_tool_executor.dart';
+import 'package:fapcheckin_core/repositories/ai_assistant_repository.dart';
 import 'package:fapcheckin/viewmodels/dashboard_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/live_session_viewmodel.dart';
 import 'package:fapcheckin/viewmodels/report_viewmodel.dart';
@@ -51,7 +54,17 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
   final history = AttendanceHistoryViewModel(
     AttendanceHistoryRepository(currentUser: user),
   );
-  final report = ReportViewModel(ReportRepository(currentUser: user));
+  final reportRepo = ReportRepository(currentUser: user);
+  final report = ReportViewModel(reportRepo);
+  final ai = AiChatViewModel(
+    repository: AiAssistantRepository(),
+    executor: AiToolExecutor(
+      teacher: teacherRepo,
+      history: AttendanceHistoryRepository(currentUser: user),
+      report: reportRepo,
+      currentUser: user,
+    ),
+  );
 
   await tester.pumpWidget(
     MultiProvider(
@@ -62,6 +75,7 @@ Future<void> _pumpMainScreen(WidgetTester tester, Size size) async {
         ChangeNotifierProvider.value(value: live),
         ChangeNotifierProvider.value(value: history),
         ChangeNotifierProvider.value(value: report),
+        ChangeNotifierProvider.value(value: ai),
       ],
       child: const MaterialApp(home: MainScreen()),
     ),
@@ -93,6 +107,9 @@ void main() {
     testWidgets('phone: bottom NavigationBar, no sidebar', (tester) async {
       await _pumpMainScreen(tester, const Size(360, 800));
       expect(find.text('Trang chủ'), findsOneWidget);
+      // Tab 4 là "AI"; mục "Báo cáo" đã chuyển vào Tổng quan.
+      expect(find.text('AI'), findsOneWidget);
+      expect(find.text('Báo cáo'), findsNothing);
       expect(find.byType(Sidebar), findsNothing);
       _expectNoErrors(tester);
     });
@@ -108,7 +125,7 @@ void main() {
         'tong-quan',
         'lich-hoc',
         'lop-hoc',
-        'bao-cao',
+        'ai',
         'cai-dat',
         'thong-tin-ca-nhan',
         'thong-tin-cong-tac',
