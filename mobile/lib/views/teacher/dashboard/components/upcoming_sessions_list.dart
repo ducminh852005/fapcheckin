@@ -15,23 +15,27 @@ class UpcomingSessionsList extends StatelessWidget {
     final dashboardVm = context.watch<DashboardViewModel>();
 
     // Lọc các lớp chưa diễn ra trong danh sách classes
-    final upcomingFromClasses = dashboardVm.classes
-        .where(
-          (c) =>
-              !c.isActive &&
-              (SlotCodeParser.parse(c.slotCode)?.weekdays
-                      .contains(DateTime.now().weekday) ??
-                  false),
-        )
-        .toList()
-      ..sort(
-        (a, b) => (SlotCodeParser.parse(a.slotCode)?.slot ?? 99)
-            .compareTo(SlotCodeParser.parse(b.slotCode)?.slot ?? 99),
-      );
+    final upcomingFromClasses =
+        dashboardVm.classes
+            .where(
+              (c) =>
+                  !c.isActive &&
+                  (c.isMakeup ||
+                      (SlotCodeParser.parse(c.slotCode)?.weekdays
+                              .contains(DateTime.now().weekday) ??
+                          false)),
+            )
+            .toList()
+          ..sort(
+            (a, b) => (SlotCodeParser.parse(a.slotCode)?.slot ?? 99).compareTo(
+              SlotCodeParser.parse(b.slotCode)?.slot ?? 99,
+            ),
+          );
 
     final List<_UpcomingSessionItemData> items = [];
     if (upcomingFromClasses.isNotEmpty) {
-      for (final c in upcomingFromClasses) {
+      // Trang chủ chỉ giữ ba ca gần nhất; lịch đầy đủ nằm ở màn Lịch dạy.
+      for (final c in upcomingFromClasses.take(3)) {
         items.add(_UpcomingSessionItemData.fromModel(c));
       }
     }
@@ -196,11 +200,7 @@ class UpcomingSessionsList extends StatelessWidget {
                 ? 'Vào mục Lịch dạy để quét thời khóa biểu FAP hoặc kiểm tra lịch phân công.'
                 : 'Bạn đã hoàn thành các ca dạy trong ngày hoặc có thể xem toàn bộ lịch tuần.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: mutedColor,
-              fontSize: 12,
-              height: 1.4,
-            ),
+            style: TextStyle(color: mutedColor, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 14),
           SizedBox(

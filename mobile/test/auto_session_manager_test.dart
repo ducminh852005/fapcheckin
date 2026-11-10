@@ -115,7 +115,7 @@ void main() {
   });
 
   group('AutoSessionManager', () {
-    test('does not auto-start and only auto-closes a teacher-opened session', () async {
+    test('auto-starts at slot time, does not duplicate, and auto-closes', () async {
       final repo = _FakeTeacherRepository();
       final dashboardVm = DashboardViewModel(repo);
       final liveVm = LiveSessionViewModel(repo);
@@ -153,17 +153,11 @@ void main() {
 
       await manager.checkRealtimeSessions();
 
-      // A scheduled class must remain closed until the teacher explicitly opens it.
-      expect(repo.startSessionCalls, 0);
-      expect(liveVm.session, isNull);
-
-      await liveVm.startSession(
-        classSection: cls,
-        slotCode: cls.slotCode,
-        ipCheck: false,
-      );
       expect(repo.startSessionCalls, 1);
       expect(liveVm.session?.isOpen, isTrue);
+
+      await manager.checkRealtimeSessions();
+      expect(repo.startSessionCalls, 1);
 
       // Now time passes to 11:50 AM (past 11:45)
       currentTime = DateTime(2026, 11, 3, 11, 50);
@@ -172,6 +166,51 @@ void main() {
       expect(repo.closeSessionCalls, 1);
       expect(liveVm.isClosed, isTrue);
 
+      manager.stop();
+    });
+
+    test('auto-starts a makeup class outside recurring weekdays', () async {
+      final repo = _FakeTeacherRepository();
+      final dashboardVm = DashboardViewModel(repo);
+      final liveVm = LiveSessionViewModel(repo);
+
+      const makeup = ClassSectionModel(
+        classCode: 'PRM393_SE1917',
+        subjectCode: 'PRM393',
+        subjectName: 'Mobile Programming',
+        room: '602',
+        studentCount: 35,
+        teacherMemberCode: 'GV01',
+        slotCode: 'A1',
+        startTime: '07:00',
+        endTime: '09:15',
+        timeLabel: '[Makeup] Slot A1 (07:00 - 09:15)',
+        completedSessions: 0,
+        totalSessions: 30,
+        averageAttendance: 0,
+        isActive: false,
+        isMakeup: true,
+      );
+      repo.fakeClasses = [makeup];
+      dashboardVm.setTeacherInfo(
+        name: 'GV',
+        email: 'gv@fe.edu.vn',
+        memberCode: 'GV01',
+      );
+      await dashboardVm.loadClasses();
+
+      final manager = AutoSessionManager(
+        liveSessionViewModel: liveVm,
+        dashboardViewModel: dashboardVm,
+        teacherRepository: repo,
+        now: () => DateTime(2026, 11, 7, 7, 30),
+      );
+
+      await manager.checkRealtimeSessions();
+
+      expect(repo.startSessionCalls, 1);
+      expect(liveVm.session?.classCode, 'PRM393_SE1917');
+      expect(liveVm.session?.slotCode, 'A1');
       manager.stop();
     });
   });

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Pagination } from "../components/Pagination"
 import { ToastMessage } from "../components/ToastMessage"
 import { useAsyncData } from "../hooks/useAsyncData"
 import {
   AlertCircle,
+  ArrowLeft,
   Bell,
   Bold,
   Check,
@@ -22,8 +23,10 @@ import {
   MessageSquare,
   Pin,
   Play,
+  Plus,
   Radio,
   Save,
+  Search,
   Send,
   Shield,
   Smartphone,
@@ -32,6 +35,7 @@ import {
 } from "lucide-react"
 import {
   getAnnouncementHistory,
+  getAnnouncementSubjectTargets,
   getAnnouncementTargets,
   saveAnnouncementDraft,
   sendAnnouncement,
@@ -48,12 +52,16 @@ export function AnnouncementPage({
 }) {
   const targetsLoader = useCallback(getAnnouncementTargets, [])
   const { data: targetsData } = useAsyncData(targetsLoader)
+  const subjectTargetsLoader = useCallback(getAnnouncementSubjectTargets, [])
+  const { data: subjectTargetsData, loading: subjectTargetsLoading } = useAsyncData(subjectTargetsLoader)
 
   // Form State
   const [title, setTitle] = useState(
     "Thông báo thay đổi phòng học & cập nhật lịch thi Slot 2",
   )
-  const targetAudience = "teachers" as const
+  const targetAudience = "subject_teachers" as const
+  const [subjectCode, setSubjectCode] = useState("")
+  const [subjectMenuOpen, setSubjectMenuOpen] = useState(false)
   const [priority, setPriority] = useState<"normal" | "important" | "urgent">(
     "urgent",
   )
@@ -67,9 +75,12 @@ export function AnnouncementPage({
   const [isSending, setIsSending] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(false)
   const [historyList, setHistoryList] = useState<AnnouncementHistoryItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [historyPage, setHistoryPage] = useState(1)
   const contentRef = useRef<HTMLDivElement>(null)
+  const subjectMenuRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (contentRef.current && !contentRef.current.textContent) {
       contentRef.current.textContent = contentText
@@ -80,7 +91,43 @@ export function AnnouncementPage({
     return historyList.slice(start, start + 10)
   }, [historyList, historyPage])
 
-  const estimatedRecipients = targetsData?.teacherCount ?? 0
+  const selectedSubjectTarget = subjectTargetsData?.find((item) => item.subjectCode === subjectCode)
+  const selectedTeachers = selectedSubjectTarget?.teachers ?? []
+  const estimatedRecipients = selectedTeachers.length
+
+  useEffect(() => {
+    if (!subjectCode && subjectTargetsData?.length) setSubjectCode(subjectTargetsData[0].subjectCode)
+  }, [subjectCode, subjectTargetsData])
+
+  useEffect(() => {
+    const closeSubjectMenu = (event: MouseEvent) => {
+      if (subjectMenuRef.current && !subjectMenuRef.current.contains(event.target as Node)) setSubjectMenuOpen(false)
+    }
+    document.addEventListener("mousedown", closeSubjectMenu)
+    return () => document.removeEventListener("mousedown", closeSubjectMenu)
+  }, [])
+
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      setHistoryList(await getAnnouncementHistory())
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadHistory()
+  }, [])
+
+  useEffect(() => {
+    if (!composerOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setComposerOpen(false)
+    }
+    document.addEventListener("keydown", closeOnEscape)
+    return () => document.removeEventListener("keydown", closeOnEscape)
+  }, [composerOpen])
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -90,6 +137,10 @@ export function AnnouncementPage({
   const handleSend = async () => {
     if (!title.trim() || !contentText.trim()) {
       showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung thông báo.")
+      return
+    }
+    if (!selectedSubjectTarget || !selectedTeachers.length) {
+      showToast("Vui lòng chọn mã môn có giảng viên đã được phân công.")
       return
     }
     setIsSending(true)
@@ -103,7 +154,10 @@ export function AnnouncementPage({
         pinToTop,
         recipientCount: estimatedRecipients,
         createdBy: adminEmail,
+        subjectCode,
+        teacherMemberCodes: selectedTeachers.map((item) => item.memberCode),
       })
+      await loadHistory()
       showToast(
         `Đã đăng thông báo cho ${estimatedRecipients.toLocaleString("vi-VN")} giảng viên.`,
       )
@@ -125,9 +179,12 @@ export function AnnouncementPage({
         targetAudience,
         priority,
         pinToTop,
-        recipientCount: estimatedRecipients,
-        createdBy: adminEmail,
+      recipientCount: estimatedRecipients,
+      createdBy: adminEmail,
+      subjectCode,
+        teacherMemberCodes: selectedTeachers.map((item) => item.memberCode),
       })
+      await loadHistory()
       showToast("Đã lưu bản nháp thông báo vào Firestore thành công.")
     } catch {
       showToast("Không thể lưu bản nháp vào Firestore.")
@@ -136,8 +193,7 @@ export function AnnouncementPage({
 
   const openHistory = async () => {
     setShowHistory(true)
-    const list = await getAnnouncementHistory()
-    setHistoryList(list)
+    await loadHistory()
   }
 
   const syncEditorContent = () => {
@@ -208,9 +264,10 @@ export function AnnouncementPage({
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className={composerOpen ? "text-2xl font-bold tracking-tight text-slate-900" : "sr-only"}>
             Tạo thông báo &amp; Truyền thông FAP
           </h1>
+          {!composerOpen && <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Trung tâm Thông báo &amp; Cảnh báo</h1>}
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
             Gửi thông tin tức thời hoặc hẹn giờ phát sóng tới giảng viên trên
             ứng dụng FAP Mobile.
@@ -219,6 +276,14 @@ export function AnnouncementPage({
 
         {/* Top Right Actions */}
         <div className="flex items-center gap-2.5">
+          {composerOpen && <button
+            type="button"
+            onClick={() => setComposerOpen(false)}
+            className="h-9 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            <span>Quay lại danh sách</span>
+          </button>}
           <button
             type="button"
             onClick={openHistory}
@@ -227,18 +292,28 @@ export function AnnouncementPage({
             <History size={14} className="text-slate-500" />
             <span>Xem lịch sử thông báo</span>
           </button>
-
-          <button
+          {!composerOpen && <button
             type="button"
-            onClick={handleSaveDraft}
+            onClick={() => setComposerOpen(true)}
             className="h-9 flex items-center gap-2 px-4 bg-[#C2410C] hover:bg-[#9A3412] text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Save size={14} />
-            <span>Lưu bản nháp</span>
-          </button>
+            <Plus size={15} />
+            <span>Tạo thông báo mới</span>
+          </button>}
+
         </div>
       </div>
 
+      <AnnouncementCentre history={historyList} loading={historyLoading} recipients={estimatedRecipients} />
+
+      {composerOpen && <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6" role="presentation">
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onMouseDown={() => setComposerOpen(false)} />
+      <section role="dialog" aria-modal="true" aria-labelledby="announcement-composer-title" className="relative flex max-h-[94vh] w-full max-w-[1440px] flex-col overflow-hidden rounded-3xl border border-white/70 bg-[#f7f9fc] shadow-2xl">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white/85 px-5 py-4 backdrop-blur sm:px-7">
+        <div><p className="text-[11px] font-bold uppercase tracking-wider text-[#C2410C]">Truyền thông FAP</p><h2 id="announcement-composer-title" className="mt-0.5 text-lg font-extrabold text-slate-900">Tạo thông báo mới</h2></div>
+        <button type="button" onClick={() => setComposerOpen(false)} className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"><X size={16} /> Đóng</button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
       {/* Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: FORM (lg:col-span-8 ~ 67%) */}
@@ -264,17 +339,40 @@ export function AnnouncementPage({
 
           {/* 2. Đối tượng người nhận */}
           <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#EA580C] shadow-xs">
                 <GraduationCap size={20} />
               </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Gửi tới toàn bộ giảng viên
+              <div className="min-w-0 flex-1">
+                <label className="text-xs font-bold text-slate-900" htmlFor="announcement-subject">Gửi tới giảng viên theo mã môn</label>
+                <p className="mt-1 text-[11px] text-slate-500">Chọn môn học để gửi đến toàn bộ giảng viên đang được phân công lớp thuộc môn đó.</p>
+                <div ref={subjectMenuRef} className="relative mt-3">
+                  <button
+                    id="announcement-subject"
+                    type="button"
+                    disabled={subjectTargetsLoading || !subjectTargetsData?.length}
+                    onClick={() => setSubjectMenuOpen((open) => !open)}
+                    aria-haspopup="listbox"
+                    aria-expanded={subjectMenuOpen}
+                    className={`flex h-11 w-full items-center justify-between rounded-xl border bg-white px-3 text-left text-xs font-semibold text-slate-800 outline-none transition focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-60 ${subjectMenuOpen ? "border-[#EA580C] ring-2 ring-orange-100" : "border-orange-200 hover:border-orange-300"}`}
+                  >
+                    <span className="truncate">{subjectTargetsLoading ? "Đang tải mã môn..." : selectedSubjectTarget ? `${selectedSubjectTarget.subjectCode} · ${selectedSubjectTarget.subjectName}` : "Chưa có môn được phân công"}</span>
+                    <ChevronDown size={16} className={`ml-3 shrink-0 text-[#C2410C] transition-transform ${subjectMenuOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {subjectMenuOpen && subjectTargetsData?.length ? <div role="listbox" aria-labelledby="announcement-subject" className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-orange-100 bg-white p-1.5 shadow-[0_14px_30px_rgba(154,52,18,.16)]">
+                    {subjectTargetsData.map((item) => {
+                      const active = item.subjectCode === subjectCode
+                      return <button key={item.subjectCode} type="button" role="option" aria-selected={active} onClick={() => { setSubjectCode(item.subjectCode); setSubjectMenuOpen(false) }} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition ${active ? "bg-orange-50 text-[#9A3412]" : "text-slate-700 hover:bg-slate-50"}`}>
+                        <span className="min-w-0"><b className="block text-xs">{item.subjectCode}</b><small className="mt-0.5 block truncate text-[10px] font-medium text-slate-500">{item.subjectName}</small></span>
+                        {active && <Check size={15} className="ml-3 shrink-0 text-[#C2410C]" />}
+                      </button>
+                    })}
+                  </div> : null}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500">
-                  {(targetsData?.teacherCount ?? 0).toLocaleString("vi-VN")} tài
-                  khoản giảng viên trên FAP Mobile
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="rounded-full bg-white px-2.5 py-1 font-bold text-[#C2410C]">{estimatedRecipients} giảng viên được nhận</span>
+                  {selectedTeachers.slice(0, 3).map((teacher) => <span key={teacher.memberCode} className="rounded-full border border-orange-100 bg-white/80 px-2 py-1 text-slate-600">{teacher.fullName}</span>)}
+                  {selectedTeachers.length > 3 && <span className="text-slate-500">+{selectedTeachers.length - 3} giảng viên</span>}
                 </div>
               </div>
             </div>
@@ -287,20 +385,18 @@ export function AnnouncementPage({
               <label className="text-xs font-bold text-slate-800 block">
                 Mức độ ưu tiên
               </label>
-              <div className="relative">
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
-                  className="w-full text-xs font-semibold text-slate-800 bg-slate-50/70 border border-slate-200 rounded-xl px-3.5 py-2.5 appearance-none focus:outline-none focus:border-[#EA580C] cursor-pointer"
-                >
-                  <option value="urgent">Khẩn cấp / Cảnh báo tức thì</option>
-                  <option value="important">Quan trọng / Cần chú ý</option>
-                  <option value="normal">Bình thường / Tin tức</option>
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="absolute right-3.5 top-3 text-slate-400 pointer-events-none"
-                />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Mức độ ưu tiên">
+                {([
+                  ["normal", "Bình thường", "Tin tức thường nhật", "bg-slate-100 text-slate-600"],
+                  ["important", "Quan trọng", "Cần chú ý", "bg-amber-100 text-amber-700"],
+                  ["urgent", "Khẩn cấp", "Cảnh báo tức thì", "bg-rose-100 text-rose-700"],
+                ] as const).map(([value, label, hint, tone]) => (
+                  <label key={value} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${priority === value ? "border-[#EA580C] bg-orange-50/60 shadow-sm" : "border-slate-200 bg-slate-50/60 hover:border-orange-200"}`}>
+                    <input type="radio" name="announcement-priority" value={value} checked={priority === value} onChange={() => setPriority(value)} className="h-4 w-4 accent-[#C2410C]" />
+                    <span className="min-w-0"><b className="block text-xs text-slate-800">{label}</b><small className="mt-0.5 block text-[10px] text-slate-500">{hint}</small></span>
+                    <span className={`ml-auto h-2 w-2 shrink-0 rounded-full ${tone}`} />
+                  </label>
+                ))}
               </div>
             </div>
           </div>
@@ -617,6 +713,9 @@ export function AnnouncementPage({
           </div>
         </div>
       </div>
+      </div>
+      </section>
+      </div>}
 
       {/* History Drawer Modal */}
       {showHistory && (
@@ -701,4 +800,75 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
+}
+
+function AnnouncementCentre({
+  history,
+  loading,
+  recipients,
+}: {
+  history: AnnouncementHistoryItem[]
+  loading: boolean
+  recipients: number
+}) {
+  const [query, setQuery] = useState("")
+  const [filter, setFilter] = useState<"all" | "sent" | "draft">("all")
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+  const visible = history.filter((item) => {
+    const matchQuery = `${item.title} ${item.body}`.toLowerCase().includes(query.toLowerCase())
+    return matchQuery && (filter === "all" || item.status === filter)
+  })
+  const sentCount = history.filter((item) => item.status === "sent").length
+  const draftCount = history.filter((item) => item.status === "draft").length
+  const pageRows = visible.slice((page - 1) * pageSize, page * pageSize)
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, filter])
+
+  return (
+    <section className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard icon={<Bell size={19} />} label="Tổng thông báo" value={loading ? "…" : history.length} tone="orange" note="Lịch sử phát hành" />
+        <MetricCard icon={<Send size={19} />} label="Đã phát hành" value={loading ? "…" : sentCount} tone="green" note="Thông báo đã gửi" />
+        <MetricCard icon={<Save size={19} />} label="Bản nháp" value={loading ? "…" : draftCount} tone="blue" note="Sẵn sàng hoàn thiện" />
+        <MetricCard icon={<GraduationCap size={19} />} label="Người nhận" value={recipients.toLocaleString("vi-VN")} tone="dark" note="Giảng viên trên FAP" />
+      </div>
+
+      <div className="dashboard-surface rounded-2xl border border-slate-200/80 p-4 sm:p-5">
+        <div className="border-b border-slate-100 pb-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Thông báo gần đây</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Quản lý nội dung đã gửi và các bản nháp từ Firestore.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
+          <label className="search-box flex-1">
+            <Search size={16} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tiêu đề hoặc nội dung thông báo..." />
+          </label>
+          <div className="flex gap-1 rounded-xl bg-slate-100 p-1 text-xs">
+            {([['all', 'Tất cả'], ['sent', 'Đã gửi'], ['draft', 'Bản nháp']] as const).map(([id, label]) => <button key={id} type="button" onClick={() => setFilter(id)} className={`rounded-lg px-3 py-2 font-semibold transition ${filter === id ? "bg-white text-[#C2410C] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{label}</button>)}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] text-left">
+            <thead><tr className="border-y border-slate-100 bg-slate-50/70 text-[10px] font-bold uppercase tracking-wide text-slate-400"><th className="px-4 py-3">Thông báo</th><th className="px-4 py-3">Đối tượng</th><th className="px-4 py-3">Thời gian</th><th className="px-4 py-3">Trạng thái</th></tr></thead>
+            <tbody>
+              {loading ? <tr><td colSpan={4} className="px-4 py-12 text-center text-xs text-slate-400">Đang tải thông báo...</td></tr> : visible.length === 0 ? <tr><td colSpan={4} className="px-4 py-12 text-center text-xs text-slate-400">Chưa tìm thấy thông báo phù hợp.</td></tr> : pageRows.map((item) => <tr key={item.id} className="border-b border-slate-100 last:border-0 hover:bg-orange-50/30"><td className="px-4 py-3.5"><b className="block text-xs text-slate-800">{item.title}</b><span className="mt-1 block max-w-xl truncate text-[11px] text-slate-500">{item.body || "Chưa có nội dung"}</span></td><td className="px-4 py-3.5 text-xs text-slate-600">{item.targetAudience}</td><td className="px-4 py-3.5 text-[11px] text-slate-500">{item.sentAt}</td><td className="px-4 py-3.5"><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${item.status === "draft" ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-700"}`}>{item.status === "draft" ? "Bản nháp" : "Đã gửi"}</span></td></tr>)}
+            </tbody>
+          </table>
+        </div>
+        <Pagination currentPage={page} totalItems={visible.length} pageSize={pageSize} onPageChange={setPage} itemLabel="thông báo" />
+      </div>
+    </section>
+  )
+}
+
+function MetricCard({ icon, label, value, tone, note }: { icon: ReactNode; label: string; value: string | number; tone: "orange" | "green" | "blue" | "dark"; note: string }) {
+  const tones = { orange: "bg-orange-50 text-[#C2410C]", green: "bg-emerald-50 text-emerald-600", blue: "bg-blue-50 text-blue-600", dark: "bg-slate-800 text-white" }
+  return <article className="dashboard-surface rounded-2xl border border-slate-200/80 p-5"><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]}`}>{icon}</span><p className="mt-4 text-xs font-medium text-slate-500">{label}</p><strong className="mt-1 block text-3xl font-extrabold tracking-tight text-slate-900">{value}</strong><p className="mt-1 text-[11px] text-slate-400">{note}</p></article>
 }

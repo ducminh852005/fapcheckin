@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../attendance_history_colors.dart';
 
 enum StudentAttendanceState {
@@ -75,6 +76,7 @@ class AttendanceStudentCard extends StatelessWidget {
   final VoidCallback? onManualCheckin;
   final VoidCallback? onChangeStatus;
   final VoidCallback? onOptions;
+  final VoidCallback? onTap;
 
   const AttendanceStudentCard({
     super.key,
@@ -82,6 +84,7 @@ class AttendanceStudentCard extends StatelessWidget {
     this.onManualCheckin,
     this.onChangeStatus,
     this.onOptions,
+    this.onTap,
   });
 
   @override
@@ -102,137 +105,149 @@ class AttendanceStudentCard extends StatelessWidget {
           : const Color(0xFFFEF08A); // Viền vàng nhạt
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
         color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Row(
-        children: [
-          // ── Avatar tròn + Chấm trạng thái ──────────────────────────────────
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: student.avatarBgColor,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  student.initials,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: student.avatarTextColor,
-                  ),
-                ),
-              ),
-              // Chấm trạng thái góc dưới phải avatar
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 9.5,
-                  height: 9.5,
-                  decoration: BoxDecoration(
-                    color: _getStatusDotColor(student.state),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 10),
-
-          // ── Tên sinh viên + Cảnh báo + MSSV ─────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor, width: 1.2),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Row(
               children: [
-                Row(
+                // ── Avatar tròn + Chấm trạng thái ──────────────────────────────────
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Flexible(
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: student.avatarBgColor,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
                       child: Text(
-                        student.fullName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        student.initials,
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? Colors.white
-                              : AttendanceHistoryColors.textDark,
-                          letterSpacing: -0.2,
+                          color: student.avatarTextColor,
                         ),
                       ),
                     ),
-                    if (student.warningText != null) ...[
-                      const SizedBox(width: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1.5,
-                        ),
+                    // Chấm trạng thái góc dưới phải avatar
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 9.5,
+                        height: 9.5,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE4E6),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          student.warningText!,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFE11D48),
+                          color: _getStatusDotColor(student.state),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF1E293B)
+                                : Colors.white,
+                            width: 1.5,
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 2.5),
-                Text(
-                  _buildSubtitleText(student),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: student.state ==
-                            StudentAttendanceState.absentUnscanned
-                        ? AttendanceHistoryColors.orangePrimary
-                        : const Color(0xFF64748B),
+
+                const SizedBox(width: 10),
+
+                // ── Tên sinh viên + Cảnh báo + MSSV ─────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              student.fullName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? Colors.white
+                                    : AttendanceHistoryColors.textDark,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          if (student.warningText != null) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFE4E6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                student.warningText!,
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFE11D48),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2.5),
+                      Text(
+                        _buildSubtitleText(student),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              student.state ==
+                                  StudentAttendanceState.absentUnscanned
+                              ? AttendanceHistoryColors.orangePrimary
+                              : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
+                const SizedBox(width: 8),
+
+                // ── Cột phải: Badge trạng thái hoặc Nút hành động ────────────────────
+                _buildTrailingAction(context),
               ],
             ),
           ),
-
-          const SizedBox(width: 8),
-
-          // ── Cột phải: Badge trạng thái hoặc Nút hành động ────────────────────
-          _buildTrailingAction(context),
-        ],
+        ),
       ),
     );
   }
@@ -357,8 +372,9 @@ class AttendanceStudentCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: AttendanceHistoryColors.orangePrimary
-                      .withValues(alpha: 0.28),
+                  color: AttendanceHistoryColors.orangePrimary.withValues(
+                    alpha: 0.28,
+                  ),
                   blurRadius: 5,
                   offset: const Offset(0, 2),
                 ),
@@ -367,11 +383,7 @@ class AttendanceStudentCard extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.how_to_reg_rounded,
-                  size: 14,
-                  color: Colors.white,
-                ),
+                Icon(Icons.how_to_reg_rounded, size: 14, color: Colors.white),
                 SizedBox(width: 4),
                 Text(
                   'Điểm danh',
@@ -411,8 +423,10 @@ class AttendanceStudentCard extends StatelessWidget {
               onTap: onChangeStatus,
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4.5,
+                ),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF334155) : Colors.white,
                   borderRadius: BorderRadius.circular(8),

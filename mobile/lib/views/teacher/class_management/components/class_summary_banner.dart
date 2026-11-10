@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../class_management_colors.dart';
 
 /// Thẻ tóm tắt tổng số lớp và số sinh viên phụ trách (Thẻ màu xanh đen - Dark Navy)
@@ -15,7 +16,9 @@ class ClassSummaryBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final cardBg = isDark
+        ? Theme.of(context).colorScheme.surface
+        : Colors.white;
     final borderColor = isDark
         ? const Color(0xFF334155)
         : const Color(0xFFFFE5D9);
@@ -26,8 +29,9 @@ class ClassSummaryBanner extends StatelessWidget {
         ? const Color(0xFF94A3B8)
         : ClassManagementColors.textMuted;
 
-    final classCountStr =
-        classCount < 10 ? '0$classCount' : classCount.toString();
+    final classCountStr = classCount < 10
+        ? '0$classCount'
+        : classCount.toString();
 
     return Container(
       width: double.infinity,
@@ -74,7 +78,7 @@ class ClassSummaryBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Lớp phụ trách',
+                  'Môn phụ trách',
                   style: TextStyle(
                     color: mutedColor,
                     fontSize: 12.5,
@@ -129,4 +133,3 @@ class ClassSummaryBanner extends StatelessWidget {
     );
   }
 }
-

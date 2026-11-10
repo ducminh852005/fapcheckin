@@ -11,6 +11,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import vision from '@google-cloud/vision';
+import { BigQuery } from '@google-cloud/bigquery';
 import { runScan, ScanError } from './src/scan.js';
 import { runReminders } from './src/reminders.js';
 import {
@@ -20,11 +21,13 @@ import { FapSyncError, runFapSync } from './src/fap_sync.js';
 import { AiError, runAiAssistant } from './src/ai_assistant.js';
 import { SpeakError, runSpeak } from './src/ai_speak.js';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { CrashlyticsError, loadCrashlyticsDashboard } from './src/crashlytics.js';
 
 initializeApp();
 
 const REGION = 'asia-southeast1';
 let visionClient;
+let bigQueryClient;
 
 /** Phụ thuộc chung cho thông báo; emulator không có FCM thật nên bỏ push. */
 function notifyDeps() {
@@ -170,6 +173,26 @@ export const aiSpeak = onCall(
       }
       console.error('aiSpeak failed', error);
       throw new HttpsError('internal', 'Giọng đọc gặp lỗi.', { code: 'INTERNAL' });
+    }
+  },
+);
+
+/** Callable cho admin: trả dashboard fatal crashes từ Crashlytics BigQuery export. */
+export const getCrashlyticsDashboard = onCall(
+  { region: REGION, memory: '512MiB', timeoutSeconds: 60, maxInstances: 5, invoker: 'public' },
+  async (request) => {
+    try {
+      bigQueryClient ??= new BigQuery();
+      return await loadCrashlyticsDashboard(
+        { db: getFirestore(), bigquery: bigQueryClient, projectId: process.env.GCLOUD_PROJECT || 'ducminh-41459' },
+        { uid: request.auth?.uid, days: request.data?.days ?? 7 },
+      );
+    } catch (error) {
+      if (error instanceof CrashlyticsError) {
+        throw new HttpsError(error.status, error.message, { code: error.code });
+      }
+      console.error('getCrashlyticsDashboard failed', error);
+      throw new HttpsError('internal', 'Không thể tải dữ liệu Crashlytics lúc này.', { code: 'INTERNAL' });
     }
   },
 );

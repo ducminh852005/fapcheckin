@@ -5,6 +5,7 @@ import 'package:fapcheckin_core/constants/app_spacing.dart';
 import 'package:fapcheckin_core/constants/app_text_styles.dart';
 import 'package:fapcheckin_core/responsive/breakpoints.dart';
 import 'package:fapcheckin_core/models/student_checkin.dart';
+
 import '../../../../viewmodels/live_session_viewmodel.dart';
 
 import '../dialogs/manual_attendance_dialog.dart';
@@ -105,55 +106,60 @@ class _ManualButtonState extends State<_ManualButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (context) => ManualAttendanceDialog(),
-          );
-        },
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: context.isMobile ? 12 : 8,
-          ),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? AppColors.primaryDark
-                : AppColors.primaryContainer,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0A142433),
-                blurRadius: 2,
-                offset: Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: context.isMobile
-                ? MainAxisSize.max
-                : MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.edit_calendar_outlined,
-                size: 18,
-                color: AppColors.onPrimary,
-              ),
-              SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  'Điểm danh thủ công',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.labelMd.copyWith(
-                    color: AppColors.onPrimary,
+      child: Semantics(
+        button: true,
+        label: 'Điểm danh thủ công',
+        hint: 'Mở hộp thoại đánh dấu điểm danh cho sinh viên',
+        child: GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => ManualAttendanceDialog(),
+            );
+          },
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: context.isMobile ? 12 : 8,
+            ),
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? AppColors.primaryDark
+                  : AppColors.primaryContainer,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x0A142433),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: context.isMobile
+                  ? MainAxisSize.max
+                  : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.edit_calendar_outlined,
+                  size: 18,
+                  color: AppColors.onPrimary,
+                ),
+                SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Điểm danh thủ công',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.labelMd.copyWith(
+                      color: AppColors.onPrimary,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -460,29 +466,34 @@ class _FilterTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Color(0x0A142433),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.labelSm.copyWith(
-            color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: 'Lọc danh sách: $label',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Color(0x0A142433),
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.labelSm.copyWith(
+              color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+            ),
           ),
         ),
       ),

@@ -51,6 +51,7 @@ export function AdminShell({
   const [pendingFeedbackCount, setPendingFeedbackCount] = useState<number | null>(null)
   const [notifications, setNotifications] = useState<HeaderNotificationItem[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<HeaderNotificationItem | null>(null)
   const [notifFilter, setNotifFilter] = useState<"all" | "academic" | "announcement" | "system">("all")
   const userMenuRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -109,8 +110,28 @@ export function AdminShell({
       prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
     )
     setShowNotifications(false)
-    go(item.targetPage)
+    setSelectedNotification(item)
   }
+
+  useEffect(() => {
+    if (!selectedNotification) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedNotification(null)
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [selectedNotification])
+
+  useEffect(() => {
+    if (!mobileNav) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNav(false)
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [mobileNav])
 
   const handleMouseEnter = () => {
     if (closeTimerRef.current) {
@@ -140,101 +161,101 @@ export function AdminShell({
       badge: ReactNode
     }>
   }> = [
-    {
-      title: "DANH MỤC NGHIỆP VỤ",
-      items: [
-        {
-          id: "dashboard",
-          label: "Tổng quan",
-          icon: <LayoutDashboard size={18} />,
-          badge: null,
-        },
-        {
-          id: "academic",
-          label: "Quản lý Danh mục",
-          icon: <FolderKanban size={18} />,
-          badge:
-            classesCount !== null ? (
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {classesCount}
+      {
+        title: "DANH MỤC NGHIỆP VỤ",
+        items: [
+          {
+            id: "dashboard",
+            label: "Tổng quan",
+            icon: <LayoutDashboard size={18} />,
+            badge: null,
+          },
+          {
+            id: "attendance",
+            label: "Xét duyệt điểm danh",
+            icon: <ClipboardCheck size={18} />,
+            badge:
+              openSessionsCount !== null && openSessionsCount > 0 ? (
+                <span className="text-[11px] font-bold text-white bg-[#EA580C] px-1.5 py-0.2 rounded-full min-w-[20px] text-center">
+                  {openSessionsCount}
+                </span>
+              ) : null,
+          },
+          {
+            id: "announcements",
+            label: "Thông báo",
+            icon: <Megaphone size={18} />,
+            badge: (
+              <span className="text-[10px] font-bold text-white bg-[#9A3412] px-2 py-0.5 rounded-full">
+                New
               </span>
-            ) : null,
-        },
-        {
-          id: "attendance",
-          label: "Xét duyệt điểm danh",
-          icon: <ClipboardCheck size={18} />,
-          badge:
-            openSessionsCount !== null && openSessionsCount > 0 ? (
-              <span className="text-[11px] font-bold text-white bg-[#EA580C] px-1.5 py-0.2 rounded-full min-w-[20px] text-center">
-                {openSessionsCount}
-              </span>
-            ) : null,
-        },
-        {
-          id: "announcements",
-          label: "Đăng thông báo",
-          icon: <Megaphone size={18} />,
-          badge: (
-            <span className="text-[10px] font-bold text-white bg-[#9A3412] px-2 py-0.5 rounded-full">
-              New
-            </span>
-          ),
-        },
-        {
-          id: "reports",
-          label: "Báo cáo chuyên cần",
-          icon: <LineChart size={18} />,
-          badge: null,
-        },
-        {
-          id: "feedback",
-          label: "Tiếp nhận báo lỗi",
-          icon: <Bug size={18} />,
-          badge:
-            pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
-              <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
-                {pendingFeedbackCount > 99 ? "99+" : pendingFeedbackCount}
-              </span>
-            ) : null,
-        },
-        {
-          id: "feedback-history",
-          label: "Lịch sử góp ý",
-          icon: <History size={18} />,
-          badge: null,
-        },
-      ],
-    },
-    {
-      title: "HỆ THỐNG",
-      items: [
-        {
-          id: "accounts",
-          label: "Quyền truy cập",
-          icon: <KeyRound size={18} />,
-          badge: null,
-        },
-        {
-          id: "crashlytics",
-          label: "Firebase Crashlytics",
-          icon: <Activity size={18} />,
-          badge: null,
-        },
-        {
-          id: "settings",
-          label: "Cài đặt hệ thống",
-          icon: <Settings size={18} />,
-          badge: null,
-        },
-      ],
-    },
-  ]
+            ),
+          },
+          {
+            id: "reports",
+            label: "Báo cáo chuyên cần",
+            icon: <LineChart size={18} />,
+            badge: null,
+          },
+          {
+            id: "feedback",
+            label: "Báo cáo lỗi",
+            icon: <Bug size={18} />,
+            badge:
+              pendingFeedbackCount !== null && pendingFeedbackCount > 0 ? (
+                <span className="min-w-[20px] rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white">
+                  {pendingFeedbackCount > 99 ? "99+" : pendingFeedbackCount}
+                </span>
+              ) : null,
+          },
+          {
+            id: "feedback-history",
+            label: "Lịch sử góp ý",
+            icon: <History size={18} />,
+            badge: null,
+          },
+          {
+            id: "academic",
+            label: "Danh mục học vụ",
+            icon: <FolderKanban size={18} />,
+            badge:
+              classesCount !== null ? (
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {classesCount}
+                </span>
+              ) : null,
+          },
+        ],
+      },
+      {
+        title: "HỆ THỐNG",
+        items: [
+          {
+            id: "accounts",
+            label: "Quyền truy cập",
+            icon: <KeyRound size={18} />,
+            badge: null,
+          },
+          {
+            id: "crashlytics",
+            label: "Firebase Crashlytics",
+            icon: <Activity size={18} />,
+            badge: null,
+          },
+          {
+            id: "settings",
+            label: "Cài đặt hệ thống",
+            icon: <Settings size={18} />,
+            badge: null,
+          },
+        ],
+      },
+    ]
 
   const userInitials = initials(profile.fullName || "HAC")
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
+    <div className="admin-shell min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
       {/* Mobile Drawer Backdrop */}
       {mobileNav && (
         <div
@@ -246,12 +267,13 @@ export function AdminShell({
       <div className="flex flex-1">
         {/* Left Sidebar */}
         <aside
-          className={`admin-sidebar fixed top-0 bottom-0 left-0 z-50 w-[272px] bg-white border-r border-slate-200/90 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 ${
-            mobileNav ? "translate-x-0" : "-translate-x-full"
-          }`}
+          id="admin-navigation"
+          className={`admin-sidebar fixed top-0 bottom-0 left-0 z-50 w-[272px] bg-white border-r border-slate-200/90 flex flex-col justify-between transition-transform duration-200 lg:translate-x-0 ${mobileNav ? "tablet-nav-open" : ""
+            } ${mobileNav ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
-          {/* Top of Sidebar */}
-          <div>
+          {/* Top & Nav of Sidebar (scrollable if screen height is small) */}
+          <div className="flex-1 min-h-0 flex flex-col">
             {/* Logo & Campus header */}
             <div className="h-16 px-[18px] border-b border-slate-200/90 flex items-center justify-between shrink-0 overflow-hidden">
               <div className="flex items-center gap-3 shrink-0">
@@ -275,15 +297,17 @@ export function AdminShell({
                 </div>
               </div>
               <button
+                type="button"
                 className="lg:hidden text-slate-400 hover:text-slate-600 p-1"
                 onClick={() => setMobileNav(false)}
+                aria-label="Đóng điều hướng"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Navigation links */}
-            <nav className="p-3 space-y-2">
+            <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 space-y-2">
               {navGroups.map((group, groupIdx) => (
                 <div key={group.title} className="space-y-1">
                   {groupIdx > 0 && (
@@ -303,20 +327,18 @@ export function AdminShell({
                         key={item.id}
                         onClick={() => go(item.id)}
                         title={item.label}
-                        className={`sidebar-nav-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer overflow-hidden ${
-                          isActive
+                        className={`sidebar-nav-btn w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer overflow-hidden ${isActive
                             ? "bg-[#FFF0E6] text-[#C2410C]"
                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3 shrink-0">
                           {isActive && (
                             <span className="sidebar-active-indicator w-1.5 h-4 bg-[#EA580C] rounded-full shrink-0 -ml-1 mr-0" />
                           )}
                           <span
-                            className={`w-6 h-6 flex items-center justify-center shrink-0 ${
-                              isActive ? "text-[#C2410C]" : "text-slate-400"
-                            }`}
+                            className={`w-6 h-6 flex items-center justify-center shrink-0 ${isActive ? "text-[#C2410C]" : "text-slate-400"
+                              }`}
                           >
                             {item.icon}
                           </span>
@@ -349,14 +371,18 @@ export function AdminShell({
         </aside>
 
         {/* Right Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-[72px] transition-all duration-300">
+        <div className="flex-1 flex flex-col min-w-0 md:pl-[72px] transition-[padding] duration-200">
           {/* Top Bar */}
           <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
             {/* Left: Mobile hamburger */}
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 className="lg:hidden p-2 text-slate-500 hover:text-slate-700 cursor-pointer"
                 onClick={() => setMobileNav(true)}
+                aria-label="Mở điều hướng"
+                aria-expanded={mobileNav}
+                aria-controls="admin-navigation"
               >
                 <Menu size={20} />
               </button>
@@ -369,11 +395,10 @@ export function AdminShell({
                 <button
                   type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className={`relative p-2 rounded-full cursor-pointer transition-colors ${
-                    showNotifications
+                  className={`relative p-2 rounded-full cursor-pointer transition-colors ${showNotifications
                       ? "bg-orange-50 text-[#C2410C]"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                  }`}
+                    }`}
                   title="Thông báo hệ thống"
                   aria-label="Thông báo"
                 >
@@ -428,11 +453,10 @@ export function AdminShell({
                           key={tab.id}
                           type="button"
                           onClick={() => setNotifFilter(tab.id)}
-                          className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
-                            notifFilter === tab.id
+                          className={`px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${notifFilter === tab.id
                               ? "bg-slate-900 text-white font-semibold"
                               : "text-slate-600 hover:bg-slate-100"
-                          }`}
+                            }`}
                         >
                           {tab.label}
                         </button>
@@ -455,23 +479,22 @@ export function AdminShell({
                             notifFilter === "all" ? true : n.category === notifFilter
                           )
                           .map((item) => (
-                            <div
+                            <button
+                              type="button"
                               key={item.id}
                               onClick={() => handleItemClick(item)}
-                              className={`p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${
-                                item.unread ? "bg-orange-50/25" : ""
-                              }`}
+                              className={`w-full text-left p-3.5 px-4 hover:bg-slate-50 transition cursor-pointer flex gap-3 items-start ${item.unread ? "bg-orange-50/25" : ""
+                                }`}
                             >
                               <div
-                                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                  item.type === "announcement"
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.type === "announcement"
                                     ? "bg-blue-50 text-blue-600"
                                     : item.type === "attendance"
                                       ? "bg-orange-50 text-[#EA580C]"
                                       : item.type === "request"
                                         ? "bg-amber-50 text-amber-600"
                                         : "bg-purple-50 text-purple-600"
-                                }`}
+                                  }`}
                               >
                                 {item.type === "announcement" ? (
                                   <Megaphone size={15} />
@@ -486,11 +509,10 @@ export function AdminShell({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
                                   <h4
-                                    className={`text-xs truncate ${
-                                      item.unread
+                                    className={`text-xs truncate ${item.unread
                                         ? "font-bold text-slate-900"
                                         : "font-semibold text-slate-700"
-                                    }`}
+                                      }`}
                                   >
                                     {item.title}
                                   </h4>
@@ -505,7 +527,7 @@ export function AdminShell({
                               {item.unread && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] shrink-0 mt-2" />
                               )}
-                            </div>
+                            </button>
                           ))
                       )}
                     </div>
@@ -582,6 +604,72 @@ export function AdminShell({
           </main>
         </div>
       </div>
+
+      {selectedNotification && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedNotification(null)
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-detail-title"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#EA580C]">
+                  {selectedNotification.type === "announcement" ? (
+                    <Megaphone size={19} />
+                  ) : selectedNotification.type === "attendance" ? (
+                    <ClipboardCheck size={19} />
+                  ) : selectedNotification.type === "audit" ? (
+                    <ShieldCheck size={19} />
+                  ) : (
+                    <Bell size={19} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C2410C]">
+                    Chi tiết thông báo
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">{selectedNotification.time}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNotification(null)}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700"
+                aria-label="Đóng thông báo"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-5 sm:px-6">
+              <h2 id="notification-detail-title" className="text-base font-bold leading-6 text-slate-900 sm:text-lg">
+                {selectedNotification.title}
+              </h2>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+                {selectedNotification.description}
+              </p>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => setSelectedNotification(null)}
+                className="rounded-lg bg-[#EA580C] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#C2410C]"
+              >
+                Đóng
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
