@@ -1,0 +1,55 @@
+# AI dự phòng cho buổi demo: Ollama (LLM chạy local) + Cloudflare quick tunnel để Cloud Function gọi tới được.
+# Điều khiển bằng scripts/ai-fallback.ps1 (up | switch | status | down) — xem docs/ai-assistant.md §Dự phòng.
+#
+#   docker compose -f ops/ollama/docker-compose.yml up -d
+#
+# Model mặc định qwen2.5:7b (~4.7 GB, hỗ trợ tool-calling, tiếng Việt khá). Đổi bằng biến OLLAMA_MODEL.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: fap-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h          # giữ model trong RAM để lượt đầu không bị chờ nạp
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+    # Có GPU NVIDIA: bỏ comment khối dưới (cần NVIDIA Container Toolkit) để nhanh hơn nhiều.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Chạy một lần: tải model về volume (lần đầu vài phút, các lần sau dùng cache).
+  pull:
+    image: ollama/ollama:latest
+    container_name: fap-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:7b}"]
+    restart: "no"
+
+  # URL công khai tạm thời (https://<ngẫu-nhiên>.trycloudflare.com) trỏ vào Ollama. URL đổi mỗi lần khởi động
+  # tunnel — script `ai-fallback.ps1 up` tự đọc URL và ghi vào Firestore. Ai có URL đều gọi được model: chỉ bật khi demo.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: fap-ollama-tunnel
+    command: tunnel --no-autoupdate --http-host-header localhost:11434 --url http://ollama:11434
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:

@@ -1,7 +1,8 @@
 # FAP Check-in
 
-Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. **Toàn bộ backend và cơ sở dữ liệu là Firebase** (Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting, và một Cloud Function cho OCR); phân quyền theo vai trò `user` / `staff` / `admin` được kiểm thử trên Firebase Emulator. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
+Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. **Toàn bộ backend và cơ sở dữ liệu là Firebase** (Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting, và Cloud Functions cho OCR, nhắc lịch, góp ý, đồng bộ FAP và trợ lý AI); phân quyền theo vai trò `user` / `staff` / `admin` được kiểm thử trên Firebase Emulator. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
 
+**Trợ lý AI:** [docs/ai-assistant.md](docs/ai-assistant.md) ·
 **Tài liệu kiến trúc đầy đủ:** [docs/README.md](docs/README.md) ·
 **Pattern code:** [docs/quick-start.md](docs/quick-start.md) ·
 **Chạy & build app mobile:** [docs/quick-start-mobile.md](docs/quick-start-mobile.md) ·
@@ -19,18 +20,19 @@ fapcheckin/
 │  └─ admin/          # Web Admin (React + Vite, UI prototype dữ liệu mẫu)
 ├─ firebase/
 │  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
-│  ├─ functions/      # Cloud Function scanTimetable (OCR thời khóa biểu)
+│  ├─ functions/      # Cloud Functions: scanTimetable (OCR), reminders, feedback, syncToFap, aiAssistant (Gemini)
 │  ├─ tests/          # Test Security Rules chạy trên Firebase Emulator
 │  └─ scripts/        # seed-admin, seed-reference, migrate-legacy (Node + Admin SDK)
 ├─ e2e_test/          # Luồng end-to-end trên Emulator: admin → GV mở phiên → SV điểm danh → GV đóng phiên
 ├─ scripts/deploy.ps1 # Chạy test Rules rồi firebase deploy
+├─ scripts/ai-fallback.ps1 + ops/ollama/  # AI dự phòng (Ollama local + tunnel), đổi nguồn nhanh khi demo
 ├─ firebase.json, .firebaserc
 └─ docs/              # Blueprint kiến trúc (01–09) + quick-start
 ```
 
 | Vai trò | Ứng dụng | Quyền chính |
 |---|---|---|
-| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử, báo cáo |
+| `staff` (giảng viên) | `mobile/` | Quản lý lớp mình phụ trách: mở phiên, QR xoay 60 giây, điểm danh tay, lịch sử; báo cáo chuyên cần ở Tổng quan; tab **AI** (chat, giọng nói tiếng Việt, chế độ Live rảnh tay, đọc to tóm tắt bằng giọng Google Cloud TTS, ngắt AI giữa chừng) để điểm danh/tra cứu/báo cáo bằng ngôn ngữ tự nhiên, lệnh ghi luôn qua xác nhận; tự chuyển sang AI dự phòng (Ollama local) khi Gemini quá tải — xem [docs/ai-assistant.md](docs/ai-assistant.md) |
 | `user` (sinh viên) | `web/checkin/` (quét QR) | Tạo bản ghi điểm danh của chính mình; xem dữ liệu của mình |
 | `admin` | `web/admin/` (UI prototype, chưa nối Firebase) | Cấp tài khoản, quản lý lớp/ghi danh, duyệt đơn, phát thông báo |
 
@@ -52,10 +54,11 @@ node scripts/seed-admin.mjs --emulator --email admin@fpt.edu.vn --password Passw
 
 ```bash
 cd firebase && npm test              # Security Rules (Firestore + Storage) trên Emulator — 77 test
-cd firebase/functions && npm test    # Parser/OCR của Cloud Function
+cd firebase/functions && npm test    # Unit test Cloud Functions (OCR, nhắc lịch, góp ý, FAP sync, trợ lý AI)
 cd e2e_test && npm test              # Luồng end-to-end trên Emulator
+cd e2e_test && npm run test:ai       # Trợ lý AI: callable + Rules trên Emulator (Gemini giả)
 cd packages/core && flutter test     # Repository (fake_cloud_firestore)
-cd mobile && flutter test            # Model, ViewModel, widget (xem lưu ý 2 test lỗi sẵn có ở docs/quick-start-mobile.md §7)
+cd mobile && flutter test            # Model, ViewModel, widget, trợ lý AI/giọng nói (xem lưu ý 3 test lỗi sẵn có ở docs/quick-start-mobile.md §7)
 ```
 
 ## Chạy app giảng viên

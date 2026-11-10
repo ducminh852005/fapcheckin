@@ -27,8 +27,8 @@ from reportlab.platypus import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs" / "final-report-source.md"
-OUTPUT = ROOT / "docs" / "final-report.pdf"
+SOURCE = ROOT / "docs" / "course" / "final-report-source.md"
+OUTPUT = ROOT / "docs" / "course" / "final-report.pdf"
 
 NAVY = colors.HexColor("#17324D")
 BLUE = colors.HexColor("#2563A6")

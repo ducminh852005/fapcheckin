@@ -44,6 +44,12 @@ const List<NavDestination> kNavDestinations = [
     activeRoutes: {'diem-danh-qr', 'lich-su-diem-danh'},
   ),
   NavDestination(
+    icon: Icons.auto_awesome_outlined,
+    selectedIcon: Icons.auto_awesome_rounded,
+    label: 'AI',
+    route: 'ai',
+  ),
+  NavDestination(
     icon: Icons.person_outline_rounded,
     selectedIcon: Icons.person_rounded,
     label: 'Hồ sơ',

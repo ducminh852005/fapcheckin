@@ -14,6 +14,7 @@ import './teacher/schedule/schedule_body.dart';
 import './teacher/live_session/live_session_body.dart';
 import './teacher/class_management/class_management_body.dart';
 import './teacher/attendance_history/attendance_history_body.dart';
+import './teacher/ai/ai_body.dart';
 import './teacher/profile/profile_body.dart';
 import './teacher/profile/personal_info_body.dart';
 import './teacher/profile/work_info_body.dart';
@@ -122,6 +123,11 @@ class _MainScreenState extends State<MainScreen> {
       case 'yeu-cau':
         body = const RequestsBody();
         break;
+      case 'ai':
+        body = const AiBody();
+        break;
+      // 'bao-cao' (cũ) rơi về Tổng quan — báo cáo nay nằm trong Tổng quan.
+      case 'bao-cao':
       case 'tong-quan':
       default:
         body = const DashboardBody();
