@@ -17,7 +17,7 @@ flowchart LR
   subgraph App["mobile/ (Flutter, Provider)"]
     NAV["nav_destinations.dart:50<br/>tab 'AI' → route 'ai'"] --> MAIN["main_screen.dart:125<br/>case 'ai' → AiBody"]
     MAIN --> AIBODY["views/teacher/ai/ai_body.dart<br/>bubble · thẻ xác nhận · mic"]
-    MAIN --> DASH["dashboard_body.dart:161<br/>+ ReportSection"]
+    MAIN --> DASH["dashboard_body.dart<br/>+ ReportBody(embedded: true)"]
     AIBODY --> VM["viewmodels/ai_chat_viewmodel.dart:36"]
     AIBODY --> SPEECH["core/services/speech_service.dart<br/>speech_to_text, vi-VN"]
     VM --> TTS["core/services/tts_service.dart<br/>flutter_tts, vi-VN"]
@@ -88,10 +88,10 @@ sequenceDiagram
 
 ```
 DashboardBody (dashboard_body.dart)
- ├─ bottomContent: … UpcomingSessionsList → ReportSection   (:161)
- └─ RefreshIndicator.onRefresh = refreshAll (:34) = loadClasses + ReportViewModel.load(force: true)
+ ├─ bottomContent: … UpcomingSessionsList → ReportBody(embedded: true)
+ └─ RefreshIndicator.onRefresh = _refreshAll = loadClasses + ReportViewModel.load(force: true)
 
-ReportSection (views/teacher/report/report_section.dart:19)
+ReportBody (views/teacher/report/report_body.dart) — dùng chung: `embedded: true` khi nằm trong Tổng quan (không còn tab Báo cáo riêng)
  ├─ initState → ReportViewModel.load()
  ├─ ReportWeekSelector → showReportScopeBottomSheet → ReportViewModel.setRange
  ├─ ReportMiniKpiBar · ReportDailyChart · ReportSubjectSummary   (views/teacher/report/components/)
