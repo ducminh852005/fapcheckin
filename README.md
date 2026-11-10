@@ -1,6 +1,6 @@
 # FAP Check-in
 
-Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. **Toàn bộ backend và cơ sở dữ liệu là Firebase** (Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting, và một Cloud Function cho OCR); phân quyền theo vai trò `user` / `staff` / `admin` được kiểm thử trên Firebase Emulator. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
+Điểm danh bằng QR: giảng viên dùng app Flutter (MVVM) mở buổi điểm danh, sinh viên quét QR bằng camera điện thoại và điểm danh qua một trang web nhẹ — không cần cài app. **Toàn bộ backend và cơ sở dữ liệu là Firebase** (Authentication, Cloud Firestore + Security Rules, Storage, Remote Config, Hosting, và Cloud Functions cho OCR, nhắc lịch, góp ý, đồng bộ FAP và trợ lý AI); phân quyền theo vai trò `user` / `staff` / `admin` được kiểm thử trên Firebase Emulator. Kiểm tra IP mạng là tùy chọn của từng phiên (mặc định tắt).
 
 **Trợ lý AI:** [docs/ai-assistant.md](docs/ai-assistant.md) ·
 **Tài liệu kiến trúc đầy đủ:** [docs/README.md](docs/README.md) ·
@@ -20,7 +20,7 @@ fapcheckin/
 │  └─ admin/          # Web Admin (React + Vite, UI prototype dữ liệu mẫu)
 ├─ firebase/
 │  ├─ firestore.rules, storage.rules, firestore.indexes.json, remoteconfig.template.json
-│  ├─ functions/      # Cloud Function scanTimetable (OCR thời khóa biểu)
+│  ├─ functions/      # Cloud Functions: scanTimetable (OCR), reminders, feedback, syncToFap, aiAssistant (Gemini)
 │  ├─ tests/          # Test Security Rules chạy trên Firebase Emulator
 │  └─ scripts/        # seed-admin, seed-reference, migrate-legacy (Node + Admin SDK)
 ├─ e2e_test/          # Luồng end-to-end trên Emulator: admin → GV mở phiên → SV điểm danh → GV đóng phiên
@@ -53,7 +53,7 @@ node scripts/seed-admin.mjs --emulator --email admin@fpt.edu.vn --password Passw
 
 ```bash
 cd firebase && npm test              # Security Rules (Firestore + Storage) trên Emulator — 77 test
-cd firebase/functions && npm test    # Parser/OCR của Cloud Function
+cd firebase/functions && npm test    # Unit test Cloud Functions (OCR, nhắc lịch, góp ý, FAP sync, trợ lý AI)
 cd e2e_test && npm test              # Luồng end-to-end trên Emulator
 cd e2e_test && npm run test:ai       # Trợ lý AI: callable + Rules trên Emulator (Gemini giả)
 cd packages/core && flutter test     # Repository (fake_cloud_firestore)

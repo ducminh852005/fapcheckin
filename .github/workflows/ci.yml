@@ -100,8 +100,8 @@ jobs:
     name: mobile
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Còn 2 test thất bại từ trước khi chuyển sang Firebase (api_models_test: thứ tự dashboard;
-    # create_class_dialog_test: tràn layout) — xem docs/quick-start-mobile.md §7.
+    # Còn 3 test thất bại sẵn (create_class_dialog, create_schedule_bottom_sheet, requests)
+    # — xem docs/quick-start-mobile.md §7.
     # Bỏ continue-on-error khi đã sửa.
     continue-on-error: true
     defaults:

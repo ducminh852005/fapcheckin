@@ -15,7 +15,7 @@ Toàn bộ backend là Firebase; script [`scripts/deploy.ps1`](../scripts/deploy
 | Firestore rules / indexes | `firebase/firestore.rules`, `firebase/firestore.indexes.json` | Firestore |
 | Storage rules | `firebase/storage.rules` | Storage |
 | Remote Config | `firebase/remoteconfig.template.json` | Remote Config (`qr_refresh_seconds`, `ip_check_default`, `maintenance_mode`) |
-| Cloud Function OCR | `firebase/functions/` (`scanTimetable`, region `asia-southeast1`) | Functions (cần Blaze) |
+| Cloud Functions | `firebase/functions/` (`scanTimetable`, `sendTeachingReminders`, `onFeedbackCreated/Updated`, `resolveFeedback`, `syncToFap`, `aiAssistant`; region `asia-southeast1`) | Functions (cần Blaze; `aiAssistant` cần secret `GEMINI_API_KEY`) |
 | App Giảng viên | `mobile/` | **Không deploy ở đây** |
 | Web Admin | `web/admin/` | Chưa triển khai |
 

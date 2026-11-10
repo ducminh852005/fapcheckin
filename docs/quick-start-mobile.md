@@ -120,11 +120,14 @@ cd mobile && flutter analyze && flutter test            # model, ViewModel, widg
 flutter test test/responsive_layout_test.dart           # bố cục 320/360/412 dp và 1280 dp
 cd firebase && npm test                                 # Security Rules trên Emulator
 cd e2e_test && npm test                                 # luồng admin → GV → SV
+cd e2e_test && npm run test:ai                          # trợ lý AI: Functions + Rules trên Emulator (Gemini giả)
 ```
 
 `responsive_layout_test.dart` fail khi có `RenderFlex overflow`; test dùng font Ahem (rộng hơn font thật) nên có thể báo overflow mà máy thật không bị.
 
-**Hai test của `mobile/` thất bại từ trước khi chuyển sang Firebase** (đã kiểm chứng trên commit trước): `api_models_test.dart › dashboard prioritizes active, upcoming, then completed classes` (thứ tự sắp xếp thẻ lớp, phụ thuộc giờ trong ngày) và `create_class_dialog_test.dart › real options, required fields and idempotent timeout retry` (tràn layout trong hộp thoại ở kích thước test). Chưa sửa vì ngoài phạm vi; job `flutter-mobile` trong CI đặt `continue-on-error` cho tới khi sửa.
+**Ba test của `mobile/` đang thất bại sẵn** (đã kiểm chứng trên cây chưa có tính năng AI): `create_class_dialog_test.dart › real options, required fields and idempotent timeout retry`, `create_schedule_bottom_sheet_test.dart › CreateScheduleBottomSheet selects options and submits to backend` và `requests_test.dart › TC08: submit request and display subsequent approval/rejection from stream` (lỗi `RangeError`/layout trong test, chưa điều tra). Job `flutter-mobile` trong CI đặt `continue-on-error` cho tới khi sửa.
+
+Trợ lý AI: bản đầu có test luồng giao diện đầu-cuối `test/ai_assistant_flow_test.dart` (Gemini, Firestore và micro giả) — xem [ai-assistant.md](ai-assistant.md). Nhận dạng giọng nói thật cần thử tay trên thiết bị có gói giọng `vi-VN` và cấp quyền micro.
 
 ## 8. Lỗi thường gặp
 

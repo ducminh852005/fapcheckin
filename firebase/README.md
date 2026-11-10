@@ -1,6 +1,6 @@
 # firebase/
 
-Backend của FAP Check-in: Security Rules, test Rules, script vận hành và Cloud Function. Cấu hình `firebase.json` / `.firebaserc` nằm ở thư mục gốc repo (CLI tìm từ thư mục hiện tại trở lên).
+Backend của FAP Check-in: Security Rules, test Rules, script vận hành và Cloud Functions. Cấu hình `firebase.json` / `.firebaserc` nằm ở thư mục gốc repo (CLI tìm từ thư mục hiện tại trở lên).
 
 | Đường dẫn | Nội dung |
 |---|---|
@@ -9,7 +9,7 @@ Backend của FAP Check-in: Security Rules, test Rules, script vận hành và C
 | `firestore.indexes.json` | Composite index cho truy vấn có sắp xếp |
 | `remoteconfig.template.json` | `qr_refresh_seconds`, `ip_check_default`, `maintenance_mode` |
 | `tests/` | Test Rules (`@firebase/rules-unit-testing` + `node:test`) chạy trên Emulator |
-| `functions/` | Cloud Function `scanTimetable` (OCR) — `npm test` chạy parser/luồng với Vision giả |
+| `functions/` | Cloud Functions: `scanTimetable` (OCR), `sendTeachingReminders`, `onFeedbackCreated/Updated`, `resolveFeedback`, `syncToFap`, `aiAssistant` (trợ lý AI, Gemini — cần secret `GEMINI_API_KEY`, xem [docs/ai-assistant.md](../docs/ai-assistant.md)). `npm test` chạy unit test với Vision/Gemini giả |
 | `scripts/` | `seed-reference.mjs`, `seed-admin.mjs`, `migrate-legacy.mjs` (Node + Admin SDK) |
 
 ```bash
