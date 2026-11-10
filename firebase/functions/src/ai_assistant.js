@@ -296,7 +296,14 @@ export async function runAiAssistant(deps, { uid, history } = {}) {
 
   const clean = validateHistory(history);
   if (!apiKey) throw new AiError('failed-precondition', 'AI_NOT_CONFIGURED', 'Trợ lý AI chưa được cấu hình.');
-  await checkRateLimit(db, uid, now().getTime());
+  try {
+    await checkRateLimit(db, uid, now().getTime());
+  } catch (error) {
+    if (error instanceof AiError) throw error;
+    // Bộ đếm lỗi (vd. tài khoản chạy hàm thiếu quyền ghi Firestore) không được làm hỏng cả tính năng:
+    // vẫn đã xác thực + kiểm quyền GV ở trên, chỉ mất lớp giới hạn tần suất cho tới khi sửa quyền.
+    console.error('aiAssistant: rate-limit unavailable', error);
+  }
 
   let response;
   try {

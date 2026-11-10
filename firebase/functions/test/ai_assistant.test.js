@@ -193,4 +193,22 @@ describe('runAiAssistant', () => {
     await assert.rejects(runAiAssistant({ db, apiKey: 'k', fetchImpl: okFetch(textBody('ok')) }, { uid: 'gv1', history: [] }), AiError);
     assert.equal(db.store.has('ai_usage/gv1'), false);
   });
+
+  it('bộ đếm rate-limit lỗi (thiếu quyền ghi) -> vẫn trả lời, không làm hỏng yêu cầu', async () => {
+    const db = teacherDb();
+    const realDoc = db.doc;
+    db.doc = (path) => {
+      const ref = realDoc(path);
+      if (path.startsWith('ai_usage/')) ref.set = async () => { throw new Error('7 PERMISSION_DENIED'); };
+      return ref;
+    };
+    const orig = console.error;
+    console.error = () => {};
+    try {
+      const r = await runAiAssistant({ db, apiKey: 'k', fetchImpl: okFetch(textBody('ok')) }, { uid: 'gv1', history: [user('a')] });
+      assert.equal(r.type, 'text');
+    } finally {
+      console.error = orig;
+    }
+  });
 });
